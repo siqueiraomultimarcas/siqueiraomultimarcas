@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Abastecimentos - Locadora{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-gas-pump"></i> Controle de Abastecimentos</h1>
+    <button class="btn btn-primary" onclick="abrirModalAbastecimento()">
+        <i class="fas fa-plus"></i> Novo Abastecimento
+    </button>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="margin-bottom: 20px;">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-tint"></i></div>
+        <div class="stat-info">
+            <h3 id="totalLitros">0 L</h3>
+            <p>Total de Litros</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-dollar-sign"></i></div>
+        <div class="stat-info">
+            <h3 id="totalGasto">R$ 0,00</h3>
+            <p>Total Gasto</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-percentage"></i></div>
+        <div class="stat-info">
+            <h3 id="mediaPreco">R$ 0,00/L</h3>
+            <p>Média Preço/Litro</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card">
+    <div class="toolbar">
+        <select class="form-control" id="filtroVeiculoAbast" onchange="filtrarAbastecimentos()" style="width: 200px;">
+            <option value="todos">Todos os Veículos</option>
+        </select>
+        <input type="date" class="form-control" id="filtroDataAbast" onchange="filtrarAbastecimentos()" style="width: 150px;">
+    </div>
+</div>
+
+<!-- Tabela de Abastecimentos -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Veículo</th>
+                    <th>Litros</th>
+                    <th>Preço/Litro</th>
+                    <th>Total</th>
+                    <th>Km</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaAbastecimentos">
+                <tr><td colspan="7" style="text-align:center">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let abastecimentos = [];
+    let veiculos = [];
+    
+    // Carregar dados
+    async function carregarDados() {
+        try {
+            const [respAbast, respVeic] = await Promise.all([
+                fetch('/api/abastecimentos'),
+                fetch('/api/veiculos')
+            ]);
+            abastecimentos = await respAbast.json();
+            veiculos = await respVeic.json();
+            
+            // Preencher filtro de veículos
+            const selectVeic = document.getElementById('filtroVeiculoAbast');
+            veiculos.forEach(v => {
+                selectVeic.innerHTML += `<option value="${v.id}">${v.placa} - ${v.marca} ${v.modelo}</option>`;
+            });
+            
+            atualizarEstatisticas();
+            renderizarAbastecimentos(abastecimentos);
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+        }
+    }
+    
+    function atualizarEstatisticas() {
+        const totalLitros = abastecimentos.reduce((sum, a) => sum + (parseFloat(a.litros) || 0), 0);
+        const totalGasto = abastecimentos.reduce((sum, a) => sum + (parseFloat(a.total) || 0), 0);
+        const mediaPreco = totalLitros > 0 ? totalGasto / totalLitros : 0;
+        
+        document.getElementById('totalLitros').textContent = totalLitros.toFixed(2) + ' L';
+        document.getElementById('totalGasto').textContent = formatCurrency(totalGasto);
+        document.getElementById('mediaPreco').textContent = 'R$ ' + mediaPreco.toFixed(2) + '/L';
+    }
+    
+    function renderizarAbastecimentos(lista) {
+        const tbody = document.getElementById('tabelaAbastecimentos');
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum abastecimento encontrado</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = lista.map(a => `
+            <tr>
+                <td>${formatDate(a.data_abastecimento)}</td>
+                <td>${a.placa || '-'} - ${a.marca || ''} ${a.modelo || ''}</td>
+                <td>${parseFloat(a.litros).toFixed(2)} L</td>
+                <td>${formatCurrency(a.valor_litro)}</td>
+                <td><strong>${formatCurrency(a.total)}</strong></td>
+                <td>${a.km_abastecimento ? a.km_abastecimento.toLocaleString() + ' km' : '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="excluirAbastecimento(${a.id})" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function filtrarAbastecimentos() {
+        const veiculo = document.getElementById('filtroVeiculoAbast').value;
+        const data = document.getElementById('filtroDataAbast').value;
+        
+        const filtrados = abastecimentos.filter(a => {
+            const matchVeiculo = veiculo === 'todos' || a.veiculo_id == veiculo;
+            const matchData = !data || (a.data_abastecimento && a.data_abastecimento.startsWith(data));
+            return matchVeiculo && matchData;
+        });
+        
+        renderizarAbastecimentos(filtrados);
+    }
+    
+    function abrirModalAbastecimento() {
+        // Options de veículos
+        let optionsVeiculos = '<option value="">Selecione o veículo</option>';
+        veiculos.forEach(v => {
+            optionsVeiculos += `<option value="${v.id}" data-km="${v.km_atual}">${v.placa} - ${v.marca} ${v.modelo}</option>`;
+        });
+        
+        const content = `
+            <form id="formAbastecimento" onsubmit="salvarAbastecimento(event)">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Veículo *</label>
+                        <select class="form-control" name="veiculo_id" id="selectVeiculoAbast" required onchange="atualizarKm()">
+                            ${optionsVeiculos}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Data do Abastecimento</label>
+                        <input type="date" class="form-control" name="data_abastecimento" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Quantidade (Litros)</label>
+                        <input type="number" class="form-control" name="litros" id="litros" step="0.01" min="0" required onchange="calcularTotalAbast()">
+                    </div>
+                    <div class="form-group">
+                        <label>Preço por Litro (R$)</label>
+                        <input type="number" class="form-control" name="valor_litro" id="valorLitro" step="0.001" min="0" onchange="calcularTotalAbast()">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Km do Abastecimento</label>
+                        <input type="number" class="form-control" name="km_abastecimento" id="kmAbastecimento" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Total</label>
+                        <div id="totalAbast" style="font-size: 1.5rem; font-weight: bold; color: #2563eb;">R$ 0,00</div>
+                    </div>
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="fecharModal()" style="background: #6b7280; color: white; margin-right: 10px;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Cadastrar</button>
+                </div>
+            </form>
+        `;
+        abrirModal('Novo Abastecimento', content);
+    }
+    
+    function atualizarKm() {
+        const select = document.getElementById('selectVeiculoAbast');
+        const option = select.options[select.selectedIndex];
+        const km = option.dataset.km || 0;
+        document.getElementById('kmAbastecimento').value = km;
+    }
+    
+    function calcularTotalAbast() {
+        const litros = parseFloat(document.getElementById('litros').value) || 0;
+        const preco = parseFloat(document.getElementById('valorLitro').value) || 0;
+        const total = litros * preco;
+        document.getElementById('totalAbast').textContent = formatCurrency(total);
+    }
+    
+    async function salvarAbastecimento(e) {
+        e.preventDefault();
+        const form = document.getElementById('formAbastecimento');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        
+        // Converter valores
+        if (data.veiculo_id) data.veiculo_id = parseInt(data.veiculo_id);
+        if (data.litros) data.litros = parseFloat(data.litros);
+        if (data.valor_litro) data.valor_litro = parseFloat(data.valor_litro);
+        if (data.km_abastecimento) data.km_abastecimento = parseInt(data.km_abastecimento);
+        
+        try {
+            const response = await fetch('/api/abastecimentos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                fecharModal();
+                carregarDados();
+            } else {
+                alert('Erro ao salvar abastecimento');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao salvar abastecimento');
+        }
+    }
+    
+    async function excluirAbastecimento(id) {
+        if (confirm('Tem certeza que deseja excluir este abastecimento?')) {
+            try {
+                await fetch(`/api/abastecimentos/${id}`, { method: 'DELETE' });
+                carregarDados();
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao excluir abastecimento');
+            }
+        }
+    }
+    
+    window.addEventListener('load', carregarDados);
+</script>
+{% endblock %}

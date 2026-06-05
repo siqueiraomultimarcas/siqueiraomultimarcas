@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+
+{% block title %}Veículos - Locadora{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-car"></i> Frota de Veículos</h1>
+    <button class="btn btn-primary" onclick="abrirModalVeiculo()">
+        <i class="fas fa-plus"></i> Novo Veículo
+    </button>
+</div>
+
+<!-- Stats por Status -->
+<div class="stats-grid" style="margin-bottom: 20px;">
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info">
+            <h3 id="countDisponivel">0</h3>
+            <p>Disponíveis</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-key"></i></div>
+        <div class="stat-info">
+            <h3 id="countLocado">0</h3>
+            <p>Locados</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-tools"></i></div>
+        <div class="stat-info">
+            <h3 id="countManutencao">0</h3>
+            <p>Em Manutenção</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-ban"></i></div>
+        <div class="stat-info">
+            <h3 id="countIndisponivel">0</h3>
+            <p>Indisponíveis</p>
+        </div>
+    </div>
+</div>
+
+<!-- Análise de Custos de Manutenção -->
+<div class="card" style="margin-bottom: 20px;">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-chart-line"></i> Custo de Manutenção por Km Rodado</h3>
+    </div>
+    <div class="table-container">
+        <table id="tabelaCustos">
+            <thead>
+                <tr>
+                    <th>Posição</th>
+                    <th>Placa</th>
+                    <th>Veículo</th>
+                    <th>Km Atual</th>
+                    <th>Custo Total</th>
+                    <th>Custo/Km</th>
+                    <th>Alerta</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaCustosBody">
+                <tr><td colspan="7" style="text-align:center">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card">
+    <div class="toolbar">
+        <input type="text" class="form-control search" placeholder="Buscar veículo por placa, marca ou modelo..." id="buscaVeiculo" onkeyup="filtrarVeiculos()">
+        <select class="form-control" id="filtroStatus" onchange="filtrarVeiculos()" style="width: 150px;">
+            <option value="todos">Todos Status</option>
+            <option value="disponivel">Disponível</option>
+            <option value="locado">Locado</option>
+            <option value="manutencao">Manutenção</option>
+            <option value="indisponivel">Indisponível</option>
+        </select>
+        <select class="form-control" id="filtroCategoria" onchange="filtrarVeiculos()" style="width: 150px;">
+            <option value="todos">Todas Categorias</option>
+            <option value="Econômico">Econômico</option>
+            <option value="Intermediário">Intermediário</option>
+            <option value="Executivo">Executivo</option>
+            <option value="Utilitário">Utilitário</option>
+            <option value="SUV">SUV</option>
+        </select>
+    </div>
+</div>
+
+<!-- Tabela de Veículos -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Placa</th>
+                    <th>Marca/Modelo</th>
+                    <th>Ano</th>
+                    <th>Cor</th>
+                    <th>Categoria</th>
+                    <th>Diária</th>
+                    <th>Km</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaVeiculos">
+                <tr><td colspan="9" style="text-align:center">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .alerta-custo { background: #fee2e2 !important; }
+    .badge-alerta { background: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge-ok { background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .custo-alto { color: #ef4444; font-weight: 700; }
+    .custo-medio { color: #f59e0b; font-weight: 600; }
+    .custo-baixo { color: #10b981; font-weight: 600; }
+    .foto-preview { max-width: 100%; max-height: 150px; object-fit: contain; border-radius: 8px; display: block; margin: 0 auto; }
+    .foto-thumbnail { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+</style>
+
+<script>
+    let veiculos = [];
+    let custosVeiculos = [];
+    
+    async function carregarVeiculos() {
+        try {
+            const response = await fetch('/api/veiculos');
+            veiculos = await response.json();
+            atualizarContadores();
+            renderizarVeiculos(veiculos);
+            await carregarCustos();
+        } catch (error) {
+            console.error('Erro ao carregar veículos:', error);
+        }
+    }
+    
+    async function carregarCustos() {
+        try {
+            const response = await fetch('/api/custos-veiculos');
+            custosVeiculos = await response.json();
+            renderizarCustos();
+        } catch (error) {
+            console.error('Erro ao carregar custos:', error);
+        }
+    }
+    
+    function renderizarCustos() {
+        const tbody = document.getElementById('tabelaCustosBody');
+        if (custosVeiculos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum dado disponível</td></tr>';
+            return;
+        }
+        
+        const custos = custosVeiculos.map(v => v.custo_por_km);
+        const media = custos.reduce((a, b) => a + b, 0) / custos.length;
+        const limiteAlto = media * 1.5;
+        
+        tbody.innerHTML = custosVeiculos.map((v, index) => {
+            const alerta = v.custo_por_km >= limiteAlto;
+            const custoClass = v.custo_por_km >= limiteAlto ? 'custo-alto' : (v.custo_por_km > media ? 'custo-medio' : 'custo-baixo');
+            
+            return '<tr class="' + (alerta ? 'alerta-custo' : '') + '">' +
+                '<td>' + (index + 1) + '</td>' +
+                '<td><strong>' + v.placa.toUpperCase() + '</strong></td>' +
+                '<td>' + v.marca + ' ' + v.modelo + ' ' + (v.ano || '') + '</td>' +
+                '<td>' + v.km_atual.toLocaleString() + ' km</td>' +
+                '<td>' + formatCurrency(v.custo_total) + '</td>' +
+                '<td class="' + custoClass + '">' + v.custo_por_km.toFixed(4) + ' R$/km</td>' +
+                '<td>' + (alerta ? '<span class="badge-alerta">ALTO CUSTO</span>' : '<span class="badge-ok">OK</span>') + '</td>' +
+            '</tr>';
+        }).join('');
+    }
+    
+    function atualizarContadores() {
+        const count = { disponivel: 0, locado: 0, manutencao: 0, indisponivel: 0 };
+        veiculos.forEach(v => {
+            if (count[v.status] !== undefined) count[v.status]++;
+        });
+        document.getElementById('countDisponivel').textContent = count.disponivel;
+        document.getElementById('countLocado').textContent = count.locado;
+        document.getElementById('countManutencao').textContent = count.manutencao;
+        document.getElementById('countIndisponivel').textContent = count.indisponivel;
+    }
+    
+    function getStatusBadge(status) {
+        const badges = { 'disponivel': 'badge-success', 'locado': 'badge-warning', 'manutencao': 'badge-danger', 'indisponivel': 'badge-info' };
+        const labels = { 'disponivel': 'Disponível', 'locado': 'Locado', 'manutencao': 'Manutenção', 'indisponivel': 'Indisponível' };
+        return '<span class="badge ' + (badges[status] || 'badge-info') + '">' + (labels[status] || status) + '</span>';
+    }
+    
+    function renderizarVeiculos(lista) {
+        const tbody = document.getElementById('tabelaVeiculos');
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum veículo encontrado</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = lista.map(v => {
+            const fotoHtml = v.foto ? '<img src="/static/uploads/veiculos/' + v.foto + '" class="foto-thumbnail">' : '';
+            return '<tr>' +
+                '<td><strong>' + v.placa.toUpperCase() + '</strong></td>' +
+                '<td><div style="display:flex;align-items:center;gap:10px;">' + fotoHtml + '<span>' + v.marca + ' ' + v.modelo + '</span></div></td>' +
+                '<td>' + (v.ano || '-') + '</td>' +
+                '<td>' + (v.cor || '-') + '</td>' +
+                '<td>' + (v.categoria || '-') + '</td>' +
+                '<td>' + formatCurrency(v.diaria) + '</td>' +
+                '<td>' + (v.km_atual ? v.km_atual.toLocaleString() : 0) + ' km</td>' +
+                '<td>' + getStatusBadge(v.status) + '</td>' +
+                '<td>' +
+                    '<button class="btn btn-sm btn-primary" onclick="editarVeiculo(' + v.id + ')" title="Editar"><i class="fas fa-edit"></i></button> ' +
+                    '<button class="btn btn-sm btn-danger" onclick="excluirVeiculo(' + v.id + ')" title="Excluir"><i class="fas fa-trash"></i></button>' +
+                '</td>' +
+            '</tr>';
+        }).join('');
+    }
+    
+    function filtrarVeiculos() {
+        const busca = document.getElementById('buscaVeiculo').value.toLowerCase();
+        const status = document.getElementById('filtroStatus').value;
+        const categoria = document.getElementById('filtroCategoria').value;
+        
+        const filtrados = veiculos.filter(v => {
+            const matchBusca = v.placa.toLowerCase().includes(busca) || v.marca.toLowerCase().includes(busca) || v.modelo.toLowerCase().includes(busca);
+            const matchStatus = status === 'todos' || v.status === status;
+            const matchCategoria = categoria === 'todos' || v.categoria === categoria;
+            return matchBusca && matchStatus && matchCategoria;
+        });
+        
+        renderizarVeiculos(filtrados);
+    }
+    
+    function abrirModalVeiculo(veiculo = null) {
+        const isEdit = veiculo !== null;
+        const temFoto = veiculo && veiculo.foto;
+        
+        let fotoHtml = '';
+        if (temFoto) {
+            fotoHtml = '<img id="preview-img" src="/static/uploads/veiculos/' + veiculo.foto + '" class="foto-preview">';
+        } else {
+            fotoHtml = '<div id="preview-placeholder" style="width:100%;height:150px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;border-radius:8px;border:2px dashed #d1d5db;"><i class="fas fa-car" style="font-size:3rem;color:#9ca3af;"></i></div><img id="preview-img" style="display:none;" class="foto-preview">';
+        }
+        
+        const content = '<form id="formVeiculo">' +
+            '<div class="form-group" style="margin-bottom:20px;">' +
+                '<label>Foto do Veículo</label>' +
+                '<div style="display:flex;flex-direction:column;gap:10px;">' +
+                    '<div>' + fotoHtml + '</div>' +
+                    '<div style="display:flex;gap:10px;align-items:center;">' +
+                        '<input type="file" id="input-foto" accept="image/*" onchange="previewFoto(this)" style="display:none;">' +
+                        '<button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById(\'input-foto\').click()">' +
+                            '<i class="fas fa-upload"></i> Escolher Foto' +
+                        '</button>' +
+                        (temFoto ? '<button type="button" class="btn btn-sm btn-danger" onclick="removerFoto(' + veiculo.id + ')"><i class="fas fa-trash"></i> Remover</button>' : '') +
+                    '</div>' +
+                    '<small style="color:#6b7280;">Formatos: JPG, PNG, GIF (máx 16MB)</small>' +
+                '</div>' +
+            '</div>' +
+            '<div class="grid-2">' +
+                '<div class="form-group"><label>Placa *</label><input type="text" class="form-control" name="placa" value="' + (veiculo ? veiculo.placa : '') + '" required style="text-transform:uppercase;"></div>' +
+                '<div class="form-group"><label>Marca *</label><input type="text" class="form-control" name="marca" value="' + (veiculo ? veiculo.marca : '') + '" required></div>' +
+            '</div>' +
+            '<div class="grid-2">' +
+                '<div class="form-group"><label>Modelo *</label><input type="text" class="form-control" name="modelo" value="' + (veiculo ? veiculo.modelo : '') + '" required></div>' +
+                '<div class="form-group"><label>Ano</label><input type="number" class="form-control" name="ano" value="' + (veiculo ? veiculo.ano : '') + '" min="1900" max="2100"></div>' +
+            '</div>' +
+            '<div class="grid-2">' +
+                '<div class="form-group"><label>Cor</label><input type="text" class="form-control" name="cor" value="' + (veiculo ? veiculo.cor : '') + '"></div>' +
+                '<div class="form-group"><label>Categoria</label>' +
+                    '<select class="form-control" name="categoria">' +
+                        '<option value="">Selecione</option>' +
+                        '<option value="Econômico" ' + (veiculo && veiculo.categoria === 'Econômico' ? 'selected' : '') + '>Econômico</option>' +
+                        '<option value="Intermediário" ' + (veiculo && veiculo.categoria === 'Intermediário' ? 'selected' : '') + '>Intermediário</option>' +
+                        '<option value="Executivo" ' + (veiculo && veiculo.categoria === 'Executivo' ? 'selected' : '') + '>Executivo</option>' +
+                        '<option value="Utilitário" ' + (veiculo && veiculo.categoria === 'Utilitário' ? 'selected' : '') + '>Utilitário</option>' +
+                        '<option value="SUV" ' + (veiculo && veiculo.categoria === 'SUV' ? 'selected' : '') + '>SUV</option>' +
+                    '</select></div>' +
+            '</div>' +
+            '<div class="grid-2">' +
+                '<div class="form-group"><label>Valor Diária (R$)</label><input type="number" class="form-control" name="diaria" value="' + (veiculo ? veiculo.diaria : '') + '" step="0.01"></div>' +
+                '<div class="form-group"><label>Km Atual</label><input type="number" class="form-control" name="km_atual" value="' + (veiculo ? veiculo.km_atual : '0') + '"></div>' +
+            '</div>' +
+            '<div class="grid-2">' +
+                '<div class="form-group"><label>Status</label>' +
+                    '<select class="form-control" name="status">' +
+                        '<option value="disponivel" ' + (veiculo && veiculo.status === 'disponivel' ? 'selected' : '') + '>Disponível</option>' +
+                        '<option value="locado" ' + (veiculo && veiculo.status === 'locado' ? 'selected' : '') + '>Locado</option>' +
+                        '<option value="manutencao" ' + (veiculo && veiculo.status === 'manutencao' ? 'selected' : '') + '>Em Manutenção</option>' +
+                        '<option value="indisponivel" ' + (veiculo && veiculo.status === 'indisponivel' ? 'selected' : '') + '>Indisponível</option>' +
+                    '</select></div>' +
+                '<div class="form-group"><label>Combustível</label>' +
+                    '<select class="form-control" name="combustivel">' +
+                        '<option value="">Selecione</option>' +
+                        '<option value="Gasolina" ' + (veiculo && veiculo.combustivel === 'Gasolina' ? 'selected' : '') + '>Gasolina</option>' +
+                        '<option value="Álcool" ' + (veiculo && veiculo.combustivel === 'Álcool' ? 'selected' : '') + '>Álcool</option>' +
+                        '<option value="Flex" ' + (veiculo && veiculo.combustivel === 'Flex' ? 'selected' : '') + '>Flex</option>' +
+                        '<option value="Diesel" ' + (veiculo && veiculo.combustivel === 'Diesel' ? 'selected' : '') + '>Diesel</option>' +
+                    '</select></div>' +
+            '</div>' +
+            '<div class="form-group"><label>Observações</label><textarea class="form-control" name="observacoes" rows="3">' + (veiculo ? veiculo.observacoes : '') + '</textarea></div>' +
+            '<div style="text-align:right;margin-top:20px;">' +
+                '<button type="button" class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;margin-right:10px;">Cancelar</button>' +
+                '<button type="button" class="btn btn-primary" onclick="salvarVeiculo(' + (isEdit ? veiculo.id : 'null') + ')">' + (isEdit ? 'Atualizar' : 'Cadastrar') + '</button>' +
+            '</div>' +
+        '</form>';
+        
+        abrirModal(isEdit ? 'Editar Veículo' : 'Novo Veículo', content);
+    }
+    
+    async function salvarVeiculo(id) {
+        const form = document.getElementById('formVeiculo');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        
+        if (data.diaria) data.diaria = parseFloat(data.diaria);
+        if (data.ano) data.ano = parseInt(data.ano);
+        if (data.km_atual) data.km_atual = parseInt(data.km_atual);
+        
+        const inputFoto = document.getElementById('input-foto');
+        const novaFoto = inputFoto && inputFoto.files && inputFoto.files[0];
+        
+        try {
+            // 1. Primeiro salva/atualiza os dados do veículo
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? '/api/veiculos/' + id : '/api/veiculos';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                alert('Erro ao salvar veículo');
+                return;
+            }
+            
+            const result = await response.json();
+            const veiculoId = id || result.id;
+            
+            // 2. Se tem nova foto, faz upload
+            if (novaFoto) {
+                const fotoData = new FormData();
+                fotoData.append('foto', inputFoto.files[0]);
+                
+                try {
+                    const fotoResponse = await fetch('/api/veiculos/' + veiculoId + '/foto', {
+                        method: 'POST',
+                        body: fotoData
+                    });
+                    
+                    const fotoResult = await fotoResponse.json();
+                    if (!fotoResponse.ok) {
+                        alert('Erro ao fazer upload da foto: ' + (fotoResult.error || 'Erro desconhecido'));
+                        return;
+                    }
+                } catch (fotoError) {
+                    alert('Erro ao fazer upload da foto: ' + fotoError.message);
+                    return;
+                }
+            }
+            
+            fecharModal();
+            carregarVeiculos();
+            
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao salvar veículo');
+        }
+    }
+    
+    function previewFoto(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const placeholder = document.getElementById('preview-placeholder');
+                const img = document.getElementById('preview-img');
+                if (placeholder) placeholder.style.display = 'none';
+                if (img) {
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                }
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    
+    async function removerFoto(id) {
+        if (confirm('Tem certeza que deseja remover a foto?')) {
+            try {
+                const response = await fetch('/api/veiculos/' + id + '/foto', { method: 'DELETE' });
+                if (response.ok) {
+                    // Recarrega o modal sem a foto
+                    const veiculo = veiculos.find(v => v.id === id);
+                    if (veiculo) {
+                        veiculo.foto = null;
+                        abrirModalVeiculo(veiculo);
+                    }
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+            }
+        }
+    }
+    
+    async function editarVeiculo(id) {
+        const veiculo = veiculos.find(v => v.id === id);
+        if (veiculo) {
+            abrirModalVeiculo(veiculo);
+        }
+    }
+    
+    async function excluirVeiculo(id) {
+        if (confirm('Tem certeza que deseja excluir este veículo?')) {
+            try {
+                await fetch('/api/veiculos/' + id, { method: 'DELETE' });
+                carregarVeiculos();
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao excluir veículo');
+            }
+        }
+    }
+    
+    window.addEventListener('load', carregarVeiculos);
+</script>
+{% endblock %}

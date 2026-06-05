@@ -1,0 +1,440 @@
+
+{% block title %}Multas - Locadora{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-file-invoice-dollar"></i> Controle de Multas</h1>
+    <div>
+        <button class="btn btn-primary" onclick="abrirModalMulta()" style="margin-right: 10px;">
+            <i class="fas fa-plus"></i> Nova Multa
+        </button>
+        <button class="btn btn-info" onclick="abrirModalBuscarMultas()">
+            <i class="fas fa-search"></i> Buscar Multas Online
+        </button>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="margin-bottom: 20px;">
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-clock"></i></div>
+        <div class="stat-info">
+            <h3 id="countPendente">0</h3>
+            <p>Pendentes</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check"></i></div>
+        <div class="stat-info">
+            <h3 id="countPago">0</h3>
+            <p>Pagas</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-dollar-sign"></i></div>
+        <div class="stat-info">
+            <h3 id="totalMultas">R$ 0,00</h3>
+            <p>Total em Multas</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="stat-info">
+            <h3 id="totalPontos">0</h3>
+            <p>Pontos Acumulados</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card">
+    <div class="toolbar">
+        <select class="form-control" id="filtroVeiculoMulta" onchange="filtrarMultas()" style="width: 200px;">
+            <option value="todos">Todos os Veículos</option>
+        </select>
+        <select class="form-control" id="filtroMotoristaMulta" onchange="filtrarMultas()" style="width: 200px;">
+            <option value="todos">Todos os Motoristas</option>
+        </select>
+        <select class="form-control" id="filtroStatusMulta" onchange="filtrarMultas()" style="width: 150px;">
+            <option value="todos">Todos Status</option>
+            <option value="pendente">Pendente</option>
+            <option value="pago">Pago</option>
+        </select>
+    </div>
+</div>
+
+<!-- Tabela de Multas -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Veículo</th>
+                    <th>Motorista</th>
+                    <th>Descrição</th>
+                    <th>Local</th>
+                    <th>Valor</th>
+                    <th>Pontos</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaMultas">
+                <tr><td colspan="9" style="text-align:center">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let multas = [];
+    let veiculos = [];
+    let clientes = [];
+    
+    // Carregar dados
+    async function carregarDados() {
+        try {
+            const [respMultas, respVeic, respCli] = await Promise.all([
+                fetch('/api/multas'),
+                fetch('/api/veiculos'),
+                fetch('/api/clientes')
+            ]);
+            multas = await respMultas.json();
+            veiculos = await respVeic.json();
+            clientes = await respCli.json();
+            
+            // Preencher filtros
+            const selectVeic = document.getElementById('filtroVeiculoMulta');
+            veiculos.forEach(v => {
+                selectVeic.innerHTML += `<option value="${v.id}">${v.placa} - ${v.marca} ${v.modelo}</option>`;
+            });
+            
+            const selectCli = document.getElementById('filtroMotoristaMulta');
+            clientes.forEach(c => {
+                selectCli.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+            });
+            
+            atualizarEstatisticas();
+            renderizarMultas(multas);
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+        }
+    }
+    
+    function atualizarEstatisticas() {
+        const pendentes = multas.filter(m => m.status === 'pendente').length;
+        const pagas = multas.filter(m => m.status === 'pago').length;
+        const totalValor = multas.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
+        const totalPontos = multas.reduce((sum, m) => sum + (parseInt(m.pontos) || 0), 0);
+        
+        document.getElementById('countPendente').textContent = pendentes;
+        document.getElementById('countPago').textContent = pagas;
+        document.getElementById('totalMultas').textContent = formatCurrency(totalValor);
+        document.getElementById('totalPontos').textContent = totalPontos;
+    }
+    
+    function getStatusBadge(status) {
+        return status === 'pendente' 
+            ? '<span class="badge badge-warning">Pendente</span>'
+            : '<span class="badge badge-success">Pago</span>';
+    }
+    
+    function renderizarMultas(lista) {
+        const tbody = document.getElementById('tabelaMultas');
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhuma multa encontrada</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = lista.map(m => `
+            <tr>
+                <td>${formatDate(m.data_infracao)}</td>
+                <td>${m.placa || '-'} - ${m.marca || ''} ${m.modelo || ''}</td>
+                <td>${m.nome_motorista || '-'}</td>
+                <td>${m.descricao || '-'}</td>
+                <td>${m.local_infracao || '-'}</td>
+                <td><strong>${formatCurrency(m.valor)}</strong></td>
+                <td>${m.pontos || 0}</td>
+                <td>${getStatusBadge(m.status)}</td>
+                <td>
+                    <button class="btn btn-sm btn-success" onclick="pagarMulta(${m.id})" title="${m.status === 'pendente' ? 'Pagar' : 'já Pago'}">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="excluirMulta(${m.id})" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function filtrarMultas() {
+        const veiculo = document.getElementById('filtroVeiculoMulta').value;
+        const motorista = document.getElementById('filtroMotoristaMulta').value;
+        const status = document.getElementById('filtroStatusMulta').value;
+        
+        const filtradas = multas.filter(m => {
+            const matchVeiculo = veiculo === 'todos' || m.veiculo_id == veiculo;
+            const matchMotorista = motorista === 'todos' || m.motorista_id == motorista;
+            const matchStatus = status === 'todos' || m.status === status;
+            return matchVeiculo && matchMotorista && matchStatus;
+        });
+        
+        renderizarMultas(filtradas);
+    }
+    
+    function abrirModalMulta(multa = null) {
+        const isEdit = multa !== null;
+        
+        // Options de veículos
+        let optionsVeiculos = '<option value="">Selecione o veículo</option>';
+        veiculos.forEach(v => {
+            const selected = multa && multa.veiculo_id === v.id ? 'selected' : '';
+            optionsVeiculos += `<option value="${v.id}" ${selected}>${v.placa} - ${v.marca} ${v.modelo}</option>`;
+        });
+        
+        // Options de clientes (motoristas)
+        let optionsMotoristas = '<option value="">Selecione o motorista</option>';
+        clientes.forEach(c => {
+            const selected = multa && multa.motorista_id === c.id ? 'selected' : '';
+            optionsMotoristas += `<option value="${c.id}" ${selected}>${c.nome}</option>`;
+        });
+        
+        const content = `
+            <form id="formMulta" onsubmit="salvarMulta(event, ${multa ? multa.id : 'null'})">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Veículo *</label>
+                        <select class="form-control" name="veiculo_id" required>
+                            ${optionsVeiculos}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Motorista *</label>
+                        <select class="form-control" name="motorista_id" required>
+                            ${optionsMotoristas}
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Data da Infração *</label>
+                        <input type="date" class="form-control" name="data_infracao" value="${multa ? multa.data_infracao : ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição</label>
+                        <input type="text" class="form-control" name="descricao" value="${multa ? multa.descricao : ''}" placeholder="Ex: Excesso de velocidade">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Local da Infração</label>
+                        <input type="text" class="form-control" name="local_infracao" value="${multa ? multa.local_infracao : ''}" placeholder="Ex: Av. Brasil, 500">
+                    </div>
+                    <div class="form-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" class="form-control" name="valor" value="${multa ? multa.valor : ''}" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Pontos na CNH</label>
+                        <input type="number" class="form-control" name="pontos" value="${multa ? multa.pontos : ''}" min="0" max="40">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select class="form-control" name="status">
+                            <option value="pendente" ${multa && multa.status === 'pendente' ? 'selected' : ''}>Pendente</option>
+                            <option value="pago" ${multa && multa.status === 'pago' ? 'selected' : ''}>Pago</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Observações</label>
+                    <textarea class="form-control" name="observaciones" rows="2">${multa ? multa.observaciones : ''}</textarea>
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="fecharModal()" style="background: #6b7280; color: white; margin-right: 10px;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">${isEdit ? 'Atualizar' : 'Cadastrar'}</button>
+                </div>
+            </form>
+        `;
+        abrirModal(isEdit ? 'Editar Multa' : 'Nova Multa', content);
+    }
+    
+    async function salvarMulta(e, id) {
+        e.preventDefault();
+        const form = document.getElementById('formMulta');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        
+        // Converter valores
+        if (data.veiculo_id) data.veiculo_id = parseInt(data.veiculo_id);
+        if (data.motorista_id) data.motorista_id = parseInt(data.motorista_id);
+        if (data.valor) data.valor = parseFloat(data.valor);
+        if (data.pontos) data.pontos = parseInt(data.pontos);
+        
+        try {
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/multas/${id}` : '/api/multas';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                fecharModal();
+                carregarDados();
+            } else {
+                alert('Erro ao salvar multa');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao salvar multa');
+        }
+    }
+    
+    async function pagarMulta(id) {
+        const multa = multas.find(m => m.id === id);
+        if (!multa) return;
+        
+        const novoStatus = multa.status === 'pendente' ? 'pago' : 'pendente';
+        
+        try {
+            const response = await fetch(`/api/multas/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...multa, status: novoStatus })
+            });
+            
+            if (response.ok) {
+                carregarDados();
+            } else {
+                alert('Erro ao atualizar status da multa');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao atualizar status da multa');
+        }
+    }
+    
+    async function excluirMulta(id) {
+        if (confirm('Tem certeza que deseja excluir esta multa?')) {
+            try {
+                await fetch(`/api/multas/${id}`, { method: 'DELETE' });
+                carregarDados();
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao excluir multa');
+            }
+        }
+    }
+    
+    // Modal para buscar multas online
+    function abrirModalBuscarMultas() {
+        let optionsVeiculos = '<option value="">Selecione o veículo</option>';
+        veiculos.forEach(v => {
+            optionsVeiculos += `<option value="${v.placa}">${v.placa} - ${v.marca} ${v.modelo}</option>`;
+        });
+        
+        const content = `
+            <div style="text-align: center; padding: 20px 0;">
+                <i class="fas fa-globe" style="font-size: 48px; color: #2563eb; margin-bottom: 20px;"></i>
+                <h3 style="margin-bottom: 10px;">Buscar Multas Online</h3>
+                <p style="color: #6b7280; margin-bottom: 20px;">
+                    Selecione um veículo para verificar se existem multas pendentes no DETRAN.
+                </p>
+                <div class="form-group" style="max-width: 400px; margin: 0 auto 20px;">
+                    <label style="display: block; text-align: left; font-weight: 600;">Selecione o Veículo:</label>
+                    <select class="form-control" id="veiculoParaBuscarMultas">
+                        ${optionsVeiculos}
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button class="btn" onclick="fecharModal()" style="background: #6b7280; color: white;">
+                        Cancelar
+                    </button>
+                    <button class="btn btn-info" onclick="buscarMultasOnline()">
+                        <i class="fas fa-search"></i> Buscar Multas
+                    </button>
+                </div>
+            </div>
+        `;
+        abrirModal('Buscar Multas Online', content);
+    }
+    
+    async function buscarMultasOnline() {
+        const placa = document.getElementById('veiculoParaBuscarMultas').value;
+        
+        if (!placa) {
+            alert('Por favor, selecione um veículo.');
+            return;
+        }
+        
+        // Mostrar loading no modal
+        const modalContent = document.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #2563eb;"></i>
+                    <h3 style="margin-top: 20px;">Buscando multas...</h3>
+                    <p style="color: #6b7280;">Consultando portais de trânsito</p>
+                </div>
+            `;
+        }
+        
+        try {
+            const response = await fetch('/api/buscar-multas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ placa: placa })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                let htmlResultado = `
+                    <div style="text-align: center; padding: 20px 0;">
+                        <i class="fas fa-${data.resultados.some(r => r.encontrado) ? 'check-circle' : 'info-circle'}" 
+                           style="font-size: 48px; color: ${data.resultados.some(r => r.encontrado) ? '#10b981' : '#2563eb'}; margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 10px;">Resultado da Busca</h3>
+                        <p style="color: #6b7280; margin-bottom: 20px;">Placa: <strong>${placa}</strong></p>
+                `;
+                
+                // Mostrar resultados de cada fonte
+                data.resultados.forEach(r => {
+                    const cor = r.encontrado === true ? '#10b981' : (r.encontrado === false ? '#f59e0b' : '#6b7280');
+                    htmlResultado += `
+                        <div style="text-align: left; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 10px;">
+                            <strong style="color: ${cor};">${r.fonte}</strong>
+                            <p style="margin: 5px 0 0 0; color: #374151;">${r.mensagem}</p>
+                            ${r.sugestao_url ? `<a href="${r.sugestao_url}" target="_blank" style="color: #2563eb; font-size: 14px;">Clique aqui para buscar no Google</a>` : ''}
+                        </div>
+                    `;
+                });
+                
+                htmlResultado += `
+                        <button class="btn btn-primary" onclick="fecharModal()" style="margin-top: 15px;">
+                            Fechar
+                        </button>
+                    </div>
+                `;
+                
+                if (modalContent) {
+                    modalContent.innerHTML = htmlResultado;
+                }
+            } else {
+                alert('Erro ao buscar multas: ' + (data.error || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao buscar multas. Tente novamente.');
+        }
+    }
+    
+    window.addEventListener('load', carregarDados);
+</script>
+{% endblock %}

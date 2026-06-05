@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Banco - LSERP</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #ffc107; --success: #28a745; --info: #007bff; --danger: #dc3545; --warning: #ffc107; --dark: #343a40; --light: #f8f9fa; --black: #1a1a1a; }
+        body { font-family: 'Poppins', sans-serif; background: var(--light); color: #333; }
+        
+        .header { background: linear-gradient(135deg, var(--primary), #e0a800); padding: 28px; text-align: center; color: var(--black); }
+        .header h1 { margin-bottom: 6px; font-size: 1.8rem; font-weight: 700; }
+        .header p { opacity: 0.8; font-size: 0.95rem; }
+        .header-badge { display: inline-block; background: var(--black); color: var(--primary); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; margin-top: 10px; font-weight: 600; }
+        
+        .container { max-width: 1600px; margin: 0 auto; padding: 24px; }
+        
+        .nav-grid { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+        .nav-btn { padding: 12px 20px; border-radius: 10px; text-decoration: none; color: var(--black); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); background: var(--primary); border: 2px solid var(--dark); }
+        .nav-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); background: var(--warning); }
+        .nav-btn.vendas { background: linear-gradient(135deg, #0984e3, #00cec9); color: white; border-color: transparent; }
+        .nav-btn.executor { background: linear-gradient(135deg, #00b894, #00cec9); color: white; border-color: transparent; }
+        .nav-btn.estoque { background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; border-color: transparent; }
+        .nav-btn.banco { background: var(--primary); color: var(--black); border-color: var(--dark); }
+        
+        .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 24px; border: 2px solid var(--dark); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid var(--primary); flex-wrap: wrap; gap: 10px; }
+        .card-header h3 { display: flex; align-items: center; gap: 10px; color: var(--dark); font-size: 1.1rem; }
+        
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .kpi-card { background: white; padding: 22px; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-left: 5px solid var(--primary); border: 2px solid var(--dark); position: relative; overflow: hidden; transition: all 0.3s; }
+        .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.15); }
+        .kpi-card.success { border-left-color: var(--success); }
+        .kpi-card.info { border-left-color: var(--info); }
+        .kpi-card.warning { border-left-color: var(--warning); }
+        .kpi-card.danger { border-left-color: var(--danger); }
+        .kpi-card.primary { border-left-color: var(--info); background: linear-gradient(135deg, #e3f2fd, #bbdefb); }
+        .kpi-card h4 { color: var(--dark); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600; }
+        .kpi-card .value { font-size: 1.5rem; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+        .kpi-card .sub { font-size: 0.8rem; color: #666; }
+        
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px; }
+        .chart-box { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 2px solid var(--dark); }
+        .chart-box h3 { margin-bottom: 20px; padding-bottom: 12px; border-bottom: 3px solid var(--primary); display: flex; align-items: center; gap: 10px; font-size: 1rem; color: var(--dark); }
+        .chart-box.full { grid-column: 1 / -1; }
+        .chart-wrap { position: relative; height: 280px; }
+        
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { border: 1px solid var(--dark); padding: 14px 12px; text-align: left; }
+        th { background: linear-gradient(135deg, var(--dark), #2d2d2d); color: var(--primary); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; cursor: pointer; user-select: none; }
+        th:hover { background: var(--black); }
+        th:first-child { border-radius: 10px 0 0 0; }
+        th:last-child { border-radius: 0 10px 0 0; }
+        th .sort-arrow { margin-left: 6px; font-size: 0.7rem; }
+        tbody tr { transition: background 0.2s; }
+        tbody tr:hover { background: rgba(255, 193, 7, 0.1); }
+        tbody tr:nth-child(even) { background: #f8f9fa; }
+        tbody tr:nth-child(even):hover { background: rgba(255, 193, 7, 0.15); }
+        tr.destaque { background: rgba(255, 193, 7, 0.2) !important; font-weight: 600; }
+        
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 15px; font-size: 0.75rem; font-weight: 600; }
+        .badge.success { background: var(--success); color: white; }
+        .badge.info { background: var(--info); color: white; }
+        .badge.warning { background: var(--warning); color: var(--dark); }
+        .badge.danger { background: var(--danger); color: white; }
+        
+        .alert-box { background: linear-gradient(135deg, #ffeaa7, var(--primary)); color: var(--dark); padding: 20px; border-radius: 14px; margin-bottom: 24px; display: flex; align-items: center; gap: 15px; border: 2px solid var(--dark); }
+        .alert-icon { font-size: 2rem; }
+        .alert-content h4 { margin: 0 0 5px; font-size: 1rem; font-weight: 600; }
+        .alert-content p { margin: 0; font-size: 0.9rem; }
+        
+        .footer { text-align: center; padding: 24px; color: var(--dark); font-size: 0.85rem; border-top: 2px solid var(--dark); margin-top: 30px; font-weight: 600; }
+        
+        .loading { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 9999; }
+        .loading.active { display: flex; }
+        .loading-box { background: white; padding: 30px 40px; border-radius: 16px; text-align: center; border: 3px solid var(--primary); }
+        .spinner { width: 50px; height: 50px; border: 4px solid var(--dark); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .filtro-data { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .filtro-data input { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--dark); font-size: 0.8rem; }
+        
+        @media (max-width: 992px) { .charts-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 700px) { .kpi-grid { grid-template-columns: 1fr 1fr; } .nav-grid { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🗄 Dashboard Banco - LSERP</h1>
+        <p>Contas a Pagar, Receber e Fluxo de Caixa</p>
+        <span class="header-badge">💰 Controle Financeiro</span>
+    </div>
+    
+    <div class="container">
+        <div class="nav-grid">
+            <a href="/dashboard-vendas" class="nav-btn vendas">📊 Dashboard Vendedor</a>
+            <a href="/dashboard-executor" class="nav-btn executor">🔧 Dashboard Executor</a>
+            <a href="/dashboard-estoque" class="nav-btn estoque">📦 Dashboard Estoque</a>
+            <a href="/dashboard-banco" class="nav-btn banco">🗄 Dashboard Banco</a>
+        </div>
+        
+        <div class="alert-box">
+            <span class="alert-icon">📊</span>
+            <div class="alert-content">
+                <h4>Resumo Financeiro</h4>
+                <p>Visão geral das contas a pagar, receber e do fluxo de caixa da empresa.</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>🔍 Filtros</h3>
+            </div>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                <div>
+                    <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px;">Período:</label>
+                    <select id="filtroPeriodo" onchange="mudouPeriodo()" style="padding: 10px 14px; border-radius: 8px; border: 2px solid var(--dark); font-size: 0.9rem; font-weight: 500; min-width: 180px;">
+                        <option value="todos">Todos</option>
+                        <option value="30">Últimos 30 dias</option>
+                        <option value="60">Últimos 60 dias</option>
+                        <option value="90">Últimos 90 dias</option>
+                        <option value="ano">Este ano</option>
+                        <option value="personalizado">Personalizado</option>
+                    </select>
+                </div>
+                <div id="periodoPersonalizado" style="display: none;">
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px;">Data Início:</label>
+                        <input type="date" id="dataInicio" onchange="mudarFiltro()" style="padding: 10px 14px; border-radius: 8px; border: 2px solid var(--dark); font-size: 0.9rem;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px;">Data Fim:</label>
+                        <input type="date" id="dataFim" onchange="mudarFiltro()" style="padding: 10px 14px; border-radius: 8px; border: 2px solid var(--dark); font-size: 0.9rem;">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px;">Status:</label>
+                    <select id="filtroStatus" onchange="mudarFiltro()" style="padding: 10px 14px; border-radius: 8px; border: 2px solid var(--dark); font-size: 0.9rem; font-weight: 500; min-width: 180px;">
+                        <option value="todos">Todos</option>
+                        <option value="aberto">Em Aberto</option>
+                        <option value="baixado">Baixados/Pagos</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px;">Tipo:</label>
+                    <select id="filtroTipo" onchange="mudarFiltro()" style="padding: 10px 14px; border-radius: 8px; border: 2px solid var(--dark); font-size: 0.9rem; font-weight: 500; min-width: 180px;">
+                        <option value="todos">Todos</option>
+                        <option value="PAGAR">A Pagar</option>
+                        <option value="RECEBER">A Receber</option>
+                    </select>
+                </div>
+                <button onclick="carregarDados()" style="padding: 10px 20px; background: var(--primary); border: 2px solid var(--dark); border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 20px;">🔄 Atualizar</button>
+            </div>
+        </div>
+        
+        <div class="kpi-grid">
+            <div class="kpi-card success"><h4>Total a Receber</h4><div class="value" id="kpiReceber">R$ 0,00</div><div class="sub">Em aberto</div></div>
+            <div class="kpi-card danger"><h4>Total a Pagar</h4><div class="value" id="kpiPagar">R$ 0,00</div><div class="sub">Em aberto</div></div>
+            <div class="kpi-card info"><h4>Recebido (Período)</h4><div class="value" id="kpiRecebido">R$ 0,00</div><div class="sub">Baixado</div></div>
+            <div class="kpi-card warning"><h4>Pago (Período)</h4><div class="value" id="kpiPago">R$ 0,00</div><div class="sub">Baixado</div></div>
+            <div class="kpi-card"><h4>Saldo Projetado</h4><div class="value" id="kpiSaldo">R$ 0,00</div><div class="sub">A receber - A pagar</div></div>
+            <div class="kpi-card"><h4>Qtde Títulos</h4><div class="value" id="kpiQtde">0</div><div class="sub">Total de registros</div></div>
+            <div class="kpi-card primary" id="kpiPedidosCard"><h4>📦 Pedidos Faturados (Mês)</h4><div class="value" id="kpiPedidos">0</div><div class="sub" id="kpiPedidosSub">R$ 0,00 em vendas</div></div>
+        </div>
+        
+        <div class="charts-grid">
+            <div class="chart-box"><h3>📈 A Receber vs A Pagar</h3><div class="chart-wrap"><canvas id="chartComparativo"></canvas></div></div>
+            <div class="chart-box"><h3>📊 Status dos Títulos</h3><div class="chart-wrap"><canvas id="chartStatus"></canvas></div></div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>📋 Títulos em Aberto - Cliente/Fornecedor</h3>
+                <div class="filtro-data">
+                    <input type="date" id="filtroDataAbertoInicio" onchange="filtrarDataAberto()">
+                    <span>até</span>
+                    <input type="date" id="filtroDataAbertoFim" onchange="filtrarDataAberto()">
+                    <span class="badge warning">Ordenável</span>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table id="tabelaAberto">
+                    <thead>
+                        <tr>
+                            <th onclick="ordenarAberto(0)"># <span class="sort-arrow" id="sortA0"></span></th>
+                            <th onclick="ordenarAberto(1)">Cliente/Fornecedor <span class="sort-arrow" id="sortA1"></span></th>
+                            <th onclick="ordenarAberto(2)">Tipo <span class="sort-arrow" id="sortA2"></span></th>
+                            <th onclick="ordenarAberto(3)">N° Docto <span class="sort-arrow" id="sortA3"></span></th>
+                            <th onclick="ordenarAberto(4)">Vencimento <span class="sort-arrow" id="sortA4"></span></th>
+                            <th onclick="ordenarAberto(5)">Valor <span class="sort-arrow" id="sortA5"></span></th>
+                            <th onclick="ordenarAberto(6)">Parcela <span class="sort-arrow" id="sortA6"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="bodyAberto"><tr><td colspan="7">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>✅ Títulos Baixados - Período</h3>
+                <div class="filtro-data">
+                    <input type="date" id="filtroDataBaixadosInicio" onchange="filtrarDataBaixados()">
+                    <span>até</span>
+                    <input type="date" id="filtroDataBaixadosFim" onchange="filtrarDataBaixados()">
+                    <span class="badge success">Ordenável</span>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table id="tabelaBaixados">
+                    <thead>
+                        <tr>
+                            <th onclick="ordenarBaixados(0)"># <span class="sort-arrow" id="sortB0"></span></th>
+                            <th onclick="ordenarBaixados(1)">Cliente/Fornecedor <span class="sort-arrow" id="sortB1"></span></th>
+                            <th onclick="ordenarBaixados(2)">Tipo <span class="sort-arrow" id="sortB2"></span></th>
+                            <th onclick="ordenarBaixados(3)">N° Docto <span class="sort-arrow" id="sortB3"></span></th>
+                            <th onclick="ordenarBaixados(4)">Data Baixa <span class="sort-arrow" id="sortB4"></span></th>
+                            <th onclick="ordenarBaixados(5)">Valor <span class="sort-arrow" id="sortB5"></span></th>
+                            <th onclick="ordenarBaixados(6)">Parcela <span class="sort-arrow" id="sortB6"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="bodyBaixados"><tr><td colspan="7">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="footer">💼 LSERP | Dashboard Banco © 2026 | Sistema de Gestão Integrada</div>
+    </div>
+    
+    <div class="loading" id="loading"><div class="loading-box"><div class="spinner"></div><p>Carregando dados...</p></div></div>
+    
+    <script>
+        let titulosAberto = [];
+        let titulosBaixados = [];
+        let sortA = { col: 4, dir: 'asc', data: [] };
+        let sortB = { col: 4, dir: 'desc', data: [] };
+        
+        function fmtMoney(v) { return 'R$ ' + (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function fmtNum(v) { return (v || 0).toLocaleString('pt-BR'); }
+        function fmtData(d) { if (!d) return '-'; const dt = new Date(d); return dt.toLocaleDateString('pt-BR'); }
+        
+        function setLoading(active) { document.getElementById('loading').classList.toggle('active', active); }
+        
+        function atualizarSetas(prefix, sort) {
+            for (let i = 0; i <= 6; i++) {
+                const el = document.getElementById('sort' + prefix + i);
+                if (el) el.textContent = i === sort.col ? (sort.dir === 'asc' ? '▲' : '▼') : '';
+            }
+        }
+        
+        function ordenarAberto(col) {
+            if (sortA.col === col) { sortA.dir = sortA.dir === 'asc' ? 'desc' : 'asc'; }
+            else { sortA.col = col; sortA.dir = col === 1 ? 'asc' : 'asc'; }
+            sortA.data.sort((a, b) => {
+                let valA, valB;
+                switch(sortA.col) {
+                    case 0: valA = sortA.data.indexOf(a); valB = sortA.data.indexOf(b); break;
+                    case 1: valA = (a.pessoa || '').toLowerCase(); valB = (b.pessoa || '').toLowerCase(); break;
+                    case 2: valA = a.tipo || ''; valB = b.tipo || ''; break;
+                    case 3: valA = a.nro_documento || ''; valB = b.nro_documento || ''; break;
+                    case 4: valA = a.vencimento ? new Date(a.vencimento) : new Date(); valB = b.vencimento ? new Date(b.vencimento) : new Date(); break;
+                    case 5: valA = a.valor || 0; valB = b.valor || 0; break;
+                    case 6: valA = a.parcela || ''; valB = b.parcela || ''; break;
+                    default: valA = a.vencimento ? new Date(a.vencimento) : new Date(); valB = b.vencimento ? new Date(b.vencimento) : new Date();
+                }
+                if (typeof valA === 'string') return sortA.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                return sortA.dir === 'asc' ? valA - valB : valB - valA;
+            });
+            atualizarSetas('A', sortA);
+            renderizarAberto();
+        }
+        
+        function ordenarBaixados(col) {
+            if (sortB.col === col) { sortB.dir = sortB.dir === 'asc' ? 'desc' : 'asc'; }
+            else { sortB.col = col; sortB.dir = col === 1 ? 'asc' : 'desc'; }
+            sortB.data.sort((a, b) => {
+                let valA, valB;
+                switch(sortB.col) {
+                    case 0: valA = sortB.data.indexOf(a); valB = sortB.data.indexOf(b); break;
+                    case 1: valA = (a.pessoa || '').toLowerCase(); valB = (b.pessoa || '').toLowerCase(); break;
+                    case 2: valA = a.tipo || ''; valB = b.tipo || ''; break;
+                    case 3: valA = a.nro_documento || ''; valB = b.nro_documento || ''; break;
+                    case 4: valA = a.data_baixa ? new Date(a.data_baixa) : new Date(); valB = b.data_baixa ? new Date(b.data_baixa) : new Date(); break;
+                    case 5: valA = a.valor || 0; valB = b.valor || 0; break;
+                    case 6: valA = a.parcela || ''; valB = b.parcela || ''; break;
+                    default: valA = a.data_baixa ? new Date(a.data_baixa) : new Date(); valB = b.data_baixa ? new Date(b.data_baixa) : new Date();
+                }
+                if (typeof valA === 'string') return sortB.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                return sortB.dir === 'asc' ? valA - valB : valB - valA;
+            });
+            atualizarSetas('B', sortB);
+            renderizarBaixados();
+        }
+        
+        function renderizarAberto() {
+            const body = document.getElementById('bodyAberto');
+            if (!sortA.data.length) { body.innerHTML = '<tr><td colspan="7">Nenhum título em aberto</td></tr>'; return; }
+            body.innerHTML = sortA.data.map((t, i) => {
+                const tipoBadge = t.tipo === 'RECEBER' ? 'success' : 'danger';
+                const tipoLabel = t.tipo === 'RECEBER' ? 'Receber' : 'Pagar';
+                return `<tr class="${i < 3 ? 'destaque' : ''}">
+                    <td><strong>${i + 1}</strong></td>
+                    <td style="font-weight: 500;">${t.pessoa || '-'}</td>
+                    <td><span class="badge ${tipoBadge}">${tipoLabel}</span></td>
+                    <td>${t.nro_documento || '-'}</td>
+                    <td>${fmtData(t.vencimento)}</td>
+                    <td style="font-weight: 600;">${fmtMoney(t.valor)}</td>
+                    <td>${t.parcela || '-'}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function renderizarBaixados() {
+            const body = document.getElementById('bodyBaixados');
+            if (!sortB.data.length) { body.innerHTML = '<tr><td colspan="7">Nenhum título baixado</td></tr>'; return; }
+            body.innerHTML = sortB.data.map((t, i) => {
+                const tipoBadge = t.tipo === 'RECEBER' ? 'success' : 'danger';
+                const tipoLabel = t.tipo === 'RECEBER' ? 'Receber' : 'Pagar';
+                return `<tr class="${i < 3 ? 'destaque' : ''}">
+                    <td><strong>${i + 1}</strong></td>
+                    <td style="font-weight: 500;">${t.pessoa || '-'}</td>
+                    <td><span class="badge ${tipoBadge}">${tipoLabel}</span></td>
+                    <td>${t.nro_documento || '-'}</td>
+                    <td>${fmtData(t.data_baixa)}</td>
+                    <td style="font-weight: 600;">${fmtMoney(t.valor)}</td>
+                    <td>${t.parcela || '-'}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        let filtroPeriodo = 'todos';
+        let filtroStatus = 'todos';
+        let filtroTipo = 'todos';
+        
+        function mudouPeriodo() {
+            const periodo = document.getElementById('filtroPeriodo').value;
+            const divPersonalizado = document.getElementById('periodoPersonalizado');
+            if (periodo === 'personalizado') {
+                divPersonalizado.style.display = 'flex';
+                divPersonalizado.style.gap = '15px';
+            } else {
+                divPersonalizado.style.display = 'none';
+                mudarFiltro();
+            }
+        }
+        
+        function mudarFiltro() {
+            filtroPeriodo = document.getElementById('filtroPeriodo').value;
+            filtroStatus = document.getElementById('filtroStatus').value;
+            filtroTipo = document.getElementById('filtroTipo').value;
+            aplicarFiltros();
+        }
+        
+        let dataInicioFiltro = null;
+        let dataFimFiltro = null;
+        
+        function aplicarFiltros() {
+            const hoje = new Date();
+            let dataLimite = null;
+            dataInicioFiltro = null;
+            dataFimFiltro = null;
+            
+            if (filtroPeriodo === '30') {
+                dataLimite = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000);
+            } else if (filtroPeriodo === '60') {
+                dataLimite = new Date(hoje.getTime() - 60 * 24 * 60 * 60 * 1000);
+            } else if (filtroPeriodo === '90') {
+                dataLimite = new Date(hoje.getTime() - 90 * 24 * 60 * 60 * 1000);
+            } else if (filtroPeriodo === 'ano') {
+                dataLimite = new Date(hoje.getFullYear(), 0, 1);
+            } else if (filtroPeriodo === 'personalizado') {
+                const dataInicioInput = document.getElementById('dataInicio').value;
+                const dataFimInput = document.getElementById('dataFim').value;
+                if (dataInicioInput) {
+                    dataInicioFiltro = new Date(dataInicioInput);
+                    dataInicioFiltro.setHours(0, 0, 0, 0);
+                }
+                if (dataFimInput) {
+                    dataFimFiltro = new Date(dataFimInput);
+                    dataFimFiltro.setHours(23, 59, 59, 999);
+                }
+            }
+            
+            let filtradosAberto = titulosAberto.filter(t => {
+                if (filtroStatus === 'aberto') return true;
+                if (filtroStatus === 'baixado') return false;
+                if (filtroTipo !== 'todos' && t.tipo !== filtroTipo) return false;
+                
+                if (t.vencimento) {
+                    const dt = new Date(t.vencimento);
+                    if (dataLimite && dt < dataLimite) return false;
+                    if (dataInicioFiltro && dt < dataInicioFiltro) return false;
+                    if (dataFimFiltro && dt > dataFimFiltro) return false;
+                }
+                return true;
+            });
+            
+            let filtradosBaixados = titulosBaixados.filter(t => {
+                if (filtroStatus === 'aberto') return false;
+                if (filtroStatus === 'baixado') return true;
+                if (filtroTipo !== 'todos' && t.tipo !== filtroTipo) return false;
+                
+                if (t.data_baixa) {
+                    const dt = new Date(t.data_baixa);
+                    if (dataLimite && dt < dataLimite) return false;
+                    if (dataInicioFiltro && dt < dataInicioFiltro) return false;
+                    if (dataFimFiltro && dt > dataFimFiltro) return false;
+                }
+                return true;
+            });
+            
+            if (filtroStatus === 'todos') {
+                filtradosAberto = titulosAberto.filter(t => {
+                    if (filtroTipo !== 'todos' && t.tipo !== filtroTipo) return false;
+                    if (t.vencimento) {
+                        const dt = new Date(t.vencimento);
+                        if (dataLimite && dt < dataLimite) return false;
+                        if (dataInicioFiltro && dt < dataInicioFiltro) return false;
+                        if (dataFimFiltro && dt > dataFimFiltro) return false;
+                    }
+                    return true;
+                });
+                filtradosBaixados = titulosBaixados.filter(t => {
+                    if (filtroTipo !== 'todos' && t.tipo !== filtroTipo) return false;
+                    if (t.data_baixa) {
+                        const dt = new Date(t.data_baixa);
+                        if (dataLimite && dt < dataLimite) return false;
+                        if (dataInicioFiltro && dt < dataInicioFiltro) return false;
+                        if (dataFimFiltro && dt > dataFimFiltro) return false;
+                    }
+                    return true;
+                });
+            }
+            
+            sortA.data = filtradosAberto;
+            sortB.data = filtradosBaixados;
+            
+            const totalReceberFiltrado = filtradosAberto.filter(t => t.tipo === 'RECEBER').reduce((s, t) => s + (t.valor || 0), 0);
+            const totalPagarFiltrado = filtradosAberto.filter(t => t.tipo === 'PAGAR').reduce((s, t) => s + (t.valor || 0), 0);
+            const totalRecebidoFiltrado = filtradosBaixados.filter(t => t.tipo === 'RECEBER').reduce((s, t) => s + (t.valor || 0), 0);
+            const totalPagoFiltrado = filtradosBaixados.filter(t => t.tipo === 'PAGAR').reduce((s, t) => s + (t.valor || 0), 0);
+            
+            document.getElementById('kpiReceber').textContent = fmtMoney(totalReceberFiltrado);
+            document.getElementById('kpiPagar').textContent = fmtMoney(totalPagarFiltrado);
+            document.getElementById('kpiRecebido').textContent = fmtMoney(totalRecebidoFiltrado);
+            document.getElementById('kpiPago').textContent = fmtMoney(totalPagoFiltrado);
+            document.getElementById('kpiSaldo').textContent = fmtMoney(totalReceberFiltrado - totalPagarFiltrado);
+            document.getElementById('kpiQtde').textContent = fmtNum(filtradosAberto.length + filtradosBaixados.length);
+            
+            renderizarAberto();
+            renderizarBaixados();
+        }
+        
+        function filtrarDataAberto() {
+            const dataIni = document.getElementById('filtroDataAbertoInicio').value;
+            const dataFim = document.getElementById('filtroDataAbertoFim').value;
+            
+            let filtrados = titulosAberto.filter(t => {
+                if (!t.vencimento) return false;
+                const dt = new Date(t.vencimento);
+                
+                if (dataIni && dataFim) {
+                    const ini = new Date(dataIni);
+                    const fim = new Date(dataFim);
+                    ini.setHours(0,0,0,0);
+                    fim.setHours(23,59,59,999);
+                    return dt >= ini && dt <= fim;
+                } else if (dataIni) {
+                    const ini = new Date(dataIni);
+                    ini.setHours(0,0,0,0);
+                    return dt >= ini;
+                } else if (dataFim) {
+                    const fim = new Date(dataFim);
+                    fim.setHours(23,59,59,999);
+                    return dt <= fim;
+                }
+                return true;
+            });
+            
+            sortA.data = filtrados;
+            renderizarAberto();
+        }
+        
+        function filtrarDataBaixados() {
+            const dataIni = document.getElementById('filtroDataBaixadosInicio').value;
+            const dataFim = document.getElementById('filtroDataBaixadosFim').value;
+            
+            let filtrados = titulosBaixados.filter(t => {
+                if (!t.data_baixa) return false;
+                const dt = new Date(t.data_baixa);
+                
+                if (dataIni && dataFim) {
+                    const ini = new Date(dataIni);
+                    const fim = new Date(dataFim);
+                    ini.setHours(0,0,0,0);
+                    fim.setHours(23,59,59,999);
+                    return dt >= ini && dt <= fim;
+                } else if (dataIni) {
+                    const ini = new Date(dataIni);
+                    ini.setHours(0,0,0,0);
+                    return dt >= ini;
+                } else if (dataFim) {
+                    const fim = new Date(dataFim);
+                    fim.setHours(23,59,59,999);
+                    return dt <= fim;
+                }
+                return true;
+            });
+            
+            sortB.data = filtrados;
+            renderizarBaixados();
+        }
+        
+        async function carregarDados() {
+            setLoading(true);
+            try {
+                const response = await fetch('/api/banco');
+                const data = await response.json();
+                
+                const kpis = data.kpis || {};
+                const totalReceber = kpis.total_receber_aberto || 0;
+                const totalPagar = kpis.total_pagar_aberto || 0;
+                const totalRecebido = kpis.total_receber_baixado || 0;
+                const totalPago = kpis.total_pagar_pago || 0;
+                const saldo = kpis.saldo_projetado || 0;
+                const qtde = kpis.qtde_titulos || 0;
+                
+                document.getElementById('kpiReceber').textContent = fmtMoney(totalReceber);
+                document.getElementById('kpiPagar').textContent = fmtMoney(totalPagar);
+                document.getElementById('kpiRecebido').textContent = fmtMoney(totalRecebido);
+                document.getElementById('kpiPago').textContent = fmtMoney(totalPago);
+                document.getElementById('kpiSaldo').textContent = fmtMoney(saldo);
+                document.getElementById('kpiSaldo').style.color = saldo >= 0 ? 'var(--success)' : 'var(--danger)';
+                document.getElementById('kpiQtde').textContent = fmtNum(qtde);
+                
+                const pedidosMes = kpis.pedidos_faturados_mes || 0;
+                const valorPedidosMes = kpis.valor_pedidos_faturados_mes || 0;
+                document.getElementById('kpiPedidos').textContent = fmtNum(pedidosMes);
+                document.getElementById('kpiPedidosSub').textContent = fmtMoney(valorPedidosMes) + ' em vendas';
+                
+                const titulosAbertoAPI = data.titulos_aberto || [];
+                const titulosBaixadosAPI = data.titulos_baixados || [];
+                
+                titulosAberto = titulosAbertoAPI.map(t => ({
+                    id: t.id,
+                    pessoa: t.cliente_fornecedor,
+                    tipo: t.tipo,
+                    nro_documento: t.n_docto,
+                    vencimento: t.vencimento,
+                    valor: t.valor,
+                    parcela: t.parcela,
+                    situacao: t.situacao
+                }));
+                
+                titulosBaixados = titulosBaixadosAPI.map(t => ({
+                    id: t.id,
+                    pessoa: t.cliente_fornecedor,
+                    tipo: t.tipo,
+                    nro_documento: t.n_docto,
+                    data_baixa: t.data_baixa,
+                    valor: t.valor,
+                    parcela: t.parcela
+                }));
+                
+                aplicarFiltros();
+                renderizarGraficos(totalReceber, totalPagar, data);
+                
+            } catch (e) {
+                console.error('Erro:', e);
+                document.getElementById('bodyAberto').innerHTML = '<tr><td colspan="7">Erro ao carregar dados</td></tr>';
+                document.getElementById('bodyBaixados').innerHTML = '<tr><td colspan="7">Erro ao carregar dados</td></tr>';
+            }
+            setLoading(false);
+        }
+        
+        function renderizarGraficos(totalReceber, totalPagar, data) {
+            const ctxComp = document.getElementById('chartComparativo').getContext('2d');
+            new Chart(ctxComp, {
+                type: 'bar',
+                data: {
+                    labels: ['A Receber', 'A Pagar'],
+                    datasets: [{
+                        label: 'Valores em Aberto',
+                        data: [totalReceber, totalPagar],
+                        backgroundColor: ['#28a745', '#dc3545'],
+                        borderColor: ['#1e7e34', '#bd2130'],
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => 'R$ ' + v.toLocaleString() } } } }
+            });
+            
+            const ctxStatus = document.getElementById('chartStatus').getContext('2d');
+            const qtdReceber = titulosAberto.filter(t => t.tipo === 'RECEBER').length;
+            const qtdPagar = titulosAberto.filter(t => t.tipo === 'PAGAR').length;
+            new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Contas a Receber', 'Contas a Pagar'],
+                    datasets: [{
+                        data: [qtdReceber, qtdPagar],
+                        backgroundColor: ['#28a745', '#dc3545'],
+                        borderColor: ['#1e7e34', '#bd2130'],
+                        borderWidth: 2
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+        
+        carregarDados();
+    </script>
+</body>
+</html>

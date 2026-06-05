@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Locadora{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-chart-line"></i> Dashboard</h1>
+    <span id="dataAtual"></span>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-car"></i></div>
+        <div class="stat-info">
+            <h3 id="totalVeiculos">0</h3>
+            <p>Total de Veículos</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info">
+            <h3 id="veiculosDisponiveis">0</h3>
+            <p>Veículos Disponíveis</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-percentage"></i></div>
+        <div class="stat-info">
+            <h3 id="taxaOcupacao">0%</h3>
+            <p>Taxa de Ocupação</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-users"></i></div>
+        <div class="stat-info">
+            <h3 id="totalClientes">0</h3>
+            <p>Clientes Ativos</p>
+        </div>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-dollar-sign"></i></div>
+        <div class="stat-info">
+            <h3 id="faturamentoMes">R$ 0,00</h3>
+            <p>Faturamento do Mês</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-handshake"></i></div>
+        <div class="stat-info">
+            <h3 id="locacoesAtivas">0</h3>
+            <p>Locações Ativas</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-tools"></i></div>
+        <div class="stat-info">
+            <h3 id="manutencoesPendentes">0</h3>
+            <p>Manutenções Pendentes</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-wrench"></i></div>
+        <div class="stat-info">
+            <h3 id="custoManutencao">R$ 0,00</h3>
+            <p>Custo de Manutenção</p>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="charts-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Faturamento Mensal</h3>
+        </div>
+        <div class="chart-box">
+            <canvas id="chartFaturamento"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Status da Frota</h3>
+        </div>
+        <div class="chart-box">
+            <canvas id="chartFrota"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Info -->
+<div class="charts-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-trophy"></i> Veículos Mais Locados</h3>
+        </div>
+        <div class="table-container">
+            <table id="tabelaVeiculosLocados">
+                <thead>
+                    <tr>
+                        <th>Veículo</th>
+                        <th>Total de Locações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="2" style="text-align:center">Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exclamation-triangle"></i> Alertas e Pendências</h3>
+            </div>
+        <div id="alertas">
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <p>Nenhuma pendência encontrada</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .alert-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    .alert-item.warning { background: #fef3c7; border-left: 4px solid #f59e0b; }
+    .alert-item.danger { background: #fee2e2; border-left: 4px solid #ef4444; }
+    .alert-item.info { background: #dbeafe; border-left: 4px solid #2563eb; }
+    .alert-icon { font-size: 1.2rem; }
+    .alert-text { flex: 1; }
+    .alert-text strong { display: block; margin-bottom: 2px; }
+    .alert-text small { color: #6b7280; }
+</style>
+
+<script>
+    // Data atual
+    document.getElementById('dataAtual').textContent = new Date().toLocaleDateString('pt-BR', { 
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+    });
+    
+    // Chart instances
+    let chartFaturamento, chartFrota;
+    
+    // Carregar dados do dashboard
+    async function carregarDashboard() {
+        try {
+            const response = await fetch('/api/dashboard');
+            const data = await response.json();
+            
+            // Atualizar stats
+            document.getElementById('totalVeiculos').textContent = data.total_veiculos;
+            document.getElementById('veiculosDisponiveis').textContent = data.veiculos_disponiveis;
+            document.getElementById('taxaOcupacao').textContent = data.taxa_ocupacao + '%';
+            document.getElementById('totalClientes').textContent = data.total_clientes;
+            document.getElementById('faturamentoMes').textContent = formatCurrency(data.faturamento_mes);
+            document.getElementById('locacoesAtivas').textContent = data.locacoes_ativas;
+            document.getElementById('manutencoesPendentes').textContent = data.manutencoes_pendentes;
+            document.getElementById('custoManutencao').textContent = formatCurrency(data.custo_manutencao);
+            
+            // Guardar dados de multas pendentes para usar nos alertas
+            window.multasPendentes = data.multas_pendentes;
+            
+            // Atualizar gráficos
+            atualizarGraficos(data);
+            
+            // Atualizar tabela de veículos mais locados
+            atualizarTabelaVeiculos(data.veiculos_mais_locados);
+            
+            // Verificar alertas
+            verificarAlertas(data);
+            
+        } catch (error) {
+            console.error('Erro ao carregar dashboard:', error);
+        }
+    }
+    
+    function atualizarGraficos(data) {
+        // Chart de Faturamento Mensal
+        const ctxFaturamento = document.getElementById('chartFaturamento').getContext('2d');
+        if (chartFaturamento) chartFaturamento.destroy();
+        
+        const meses = data.locacoes_mes.map(l => {
+            const [ano, mes] = l.mes.split('-');
+            const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            return meses[parseInt(mes) - 1];
+        }).reverse();
+        
+        const valores = data.locacoes_mes.map(l => l.total || 0).reverse();
+        const custos = data.locacoes_mes.map(l => l.custo_manutencao || 0).reverse();
+        
+        chartFaturamento = new Chart(ctxFaturamento, {
+            type: 'bar',
+            data: {
+                labels: meses,
+                datasets: [
+                    {
+                        label: 'Faturamento (R$)',
+                        data: valores,
+                        backgroundColor: '#2563eb',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Custo Manutenção (R$)',
+                        data: custos,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: v => formatCurrency(v) } }
+                }
+            }
+        });
+        
+        // Chart de Status da Frota
+        const ctxFrota = document.getElementById('chartFrota').getContext('2d');
+        if (chartFrota) chartFrota.destroy();
+        
+        chartFrota = new Chart(ctxFrota, {
+            type: 'doughnut',
+            data: {
+                labels: ['Disponível', 'Locado', 'Manutenção'],
+                datasets: [{
+                    data: [
+                        data.veiculos_disponiveis,
+                        data.veiculos_locados,
+                        data.veiculos_manutencao
+                    ],
+                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+    
+    function atualizarTabelaVeiculos(veiculos) {
+        const tbody = document.querySelector('#tabelaVeiculosLocados tbody');
+        if (veiculos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="2" style="text-align:center">Nenhuma locação registrada</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = veiculos.map(v => `
+            <tr>
+                <td>${v.placa} - ${v.marca} ${v.modelo}</td>
+                <td><strong>${v.total_locacoes}</strong> locações</td>
+            </tr>
+        `).join('');
+    }
+    
+    function verificarAlertas(data) {
+        const alertas = [];
+        
+        if (data.veiculos_locados > 0) {
+            alertas.push({ type: 'info', icon: 'fa-car', text: `${data.veiculos_locados} veículo(s) locado(s)`, strong: 'Locações Ativas', url: '/locacoes' });
+        }
+        
+        if (data.manutencoes_pendentes > 0) {
+            alertas.push({ type: 'warning', icon: 'fa-tools', text: `${data.manutencoes_pendentes} manutenção(ões) pendente(s)`, strong: 'Manutenção', url: '/manutencoes' });
+        }
+        
+        if (data.multas_pendentes > 0) {
+            alertas.push({ type: 'danger', icon: 'fa-file-invoice-dollar', text: `${data.multas_pendentes} multa(s) pendente(s)`, strong: 'Multas', url: '/multas' });
+        }
+        
+        if (data.taxa_ocupacao < 30) {
+            alertas.push({ type: 'danger', icon: 'fa-exclamation-triangle', text: 'Taxa de ocupação abaixo do esperado', strong: 'Atenção', url: '' });
+        }
+        
+        const divAlertas = document.getElementById('alertas');
+        if (alertas.length === 0) {
+            divAlertas.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-check-circle"></i>
+                    <p>Nenhuma pendência encontrada</p>
+                </div>
+            `;
+        } else {
+            divAlertas.innerHTML = alertas.map(a => `
+                <div class="alert-item ${a.type}" ${a.url ? `style="cursor:pointer" onclick="window.location.href='${a.url}'"` : ''}>
+                    <i class="fas ${a.icon} alert-icon"></i>
+                    <div class="alert-text">
+                        <strong>${a.strong}</strong>
+                        <small>${a.text}</small>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+    
+    // Carregar ao iniciar
+    window.addEventListener('load', carregarDashboard);
+</script>
+{% endblock %}

@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}Manutenções - Locadora{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-tools"></i> Controle de Manutenções</h1>
+    <button class="btn btn-primary" onclick="abrirModalManutencao()">
+        <i class="fas fa-plus"></i> Nova Manutenção
+    </button>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="margin-bottom: 20px;">
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check"></i></div>
+        <div class="stat-info">
+            <h3 id="countConcluida">0</h3>
+            <p>Concluídas</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-clock"></i></div>
+        <div class="stat-info">
+            <h3 id="countPendente">0</h3>
+            <p>Pendentes</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-dollar-sign"></i></div>
+        <div class="stat-info">
+            <h3 id="totalCusto">R$ 0,00</h3>
+            <p>Total de Custos</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card">
+    <div class="toolbar">
+        <select class="form-control" id="filtroVeiculo" onchange="filtrarManutencoes()" style="width: 200px;">
+            <option value="todos">Todos os Veículos</option>
+        </select>
+        <select class="form-control" id="filtroTipo" onchange="filtrarManutencoes()" style="width: 150px;">
+            <option value="todos">Todos os Tipos</option>
+            <option value="Preventiva">Preventiva</option>
+            <option value="Corretiva">Corretiva</option>
+            <option value="Óleo">Óleo</option>
+            <option value="Pneus">Pneus</option>
+            <option value="Freios">Freios</option>
+            <option value="Filtros">Filtros</option>
+            <option value="Revisão">Revisão</option>
+        </select>
+        <select class="form-control" id="filtroStatusManut" onchange="filtrarManutencoes()" style="width: 150px;">
+            <option value="todos">Todos Status</option>
+            <option value="concluida">Concluída</option>
+            <option value="pendente">Pendente</option>
+            <option value="andamento">Em Andamento</option>
+        </select>
+    </div>
+</div>
+
+<!-- Tabela de Manutenções -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Veículo</th>
+                    <th>Tipo</th>
+                    <th>Descrição</th>
+                    <th>Km</th>
+                    <th>Custo</th>
+                    <th>Oficina</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaManutencoes">
+                <tr><td colspan="9" style="text-align:center">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let manutencoes = [];
+    let veiculos = [];
+    let fornecedores = [];
+    
+    // Carregar dados
+    async function carregarDados() {
+        try {
+            const [respManut, respVeic, respFornec] = await Promise.all([
+                fetch('/api/manutencoes'),
+                fetch('/api/veiculos'),
+                fetch('/api/fornecedores')
+            ]);
+            manutencoes = await respManut.json();
+            veiculos = await respVeic.json();
+            fornecedores = await respFornec.json();
+            
+            // Preencher filtro de veículos
+            const selectVeic = document.getElementById('filtroVeiculo');
+            veiculos.forEach(v => {
+                selectVeic.innerHTML += `<option value="${v.id}">${v.placa} - ${v.marca} ${v.modelo}</option>`;
+            });
+            
+            atualizarEstatisticas();
+            renderizarManutencoes(manutencoes);
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+        }
+    }
+    
+    // Função para carregar fornecedores (refresh)
+    async function recarregarFornecedores() {
+        try {
+            const respFornec = await fetch('/api/fornecedores');
+            fornecedores = await respFornec.json();
+        } catch (error) {
+            console.error('Erro ao carregar fornecedores:', error);
+        }
+    }
+    
+    function atualizarEstatisticas() {
+        const concluidas = manutencoes.filter(m => m.status === 'concluida').length;
+        const pendentes = manutencoes.filter(m => m.status !== 'concluida').length;
+        const custoTotal = manutencoes.reduce((sum, m) => sum + (parseFloat(m.custo) || 0), 0);
+        
+        document.getElementById('countConcluida').textContent = concluidas;
+        document.getElementById('countPendente').textContent = pendentes;
+        document.getElementById('totalCusto').textContent = formatCurrency(custoTotal);
+    }
+    
+    function getStatusBadge(status) {
+        const badges = {
+            'concluida': 'badge-success',
+            'pendente': 'badge-warning',
+            'andamento': 'badge-info'
+        };
+        const labels = {
+            'concluida': 'Concluída',
+            'pendente': 'Pendente',
+            'andamento': 'Em Andamento'
+        };
+        return `<span class="badge ${badges[status] || 'badge-info'}">${labels[status] || status}</span>`;
+    }
+    
+    function renderizarManutencoes(lista) {
+        const tbody = document.getElementById('tabelaManutencoes');
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhuma manutenção encontrada</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = lista.map(m => `
+            <tr>
+                <td>${formatDate(m.data_manutencao)}</td>
+                <td>${m.placa || '-'} - ${m.marca || ''} ${m.modelo || ''}</td>
+                <td>${m.tipo}</td>
+                <td>${m.descricao || '-'}</td>
+                <td>${m.km_manutencao ? m.km_manutencao.toLocaleString() + ' km' : '-'}</td>
+                <td>${formatCurrency(m.custo)}</td>
+                <td>${m.oficina || '-'}</td>
+                <td>${getStatusBadge(m.status)}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="editarManutencao(${m.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="excluirManutencao(${m.id})" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function filtrarManutencoes() {
+        const veiculo = document.getElementById('filtroVeiculo').value;
+        const tipo = document.getElementById('filtroTipo').value;
+        const status = document.getElementById('filtroStatusManut').value;
+        
+        const filtradas = manutencoes.filter(m => {
+            const matchVeiculo = veiculo === 'todos' || m.veiculo_id == veiculo;
+            const matchTipo = tipo === 'todos' || m.tipo === tipo;
+            const matchStatus = status === 'todos' || m.status === status;
+            return matchVeiculo && matchTipo && matchStatus;
+        });
+        
+        renderizarManutencoes(filtradas);
+    }
+    
+    function abrirModalManutencao(manutencao = null) {
+        const isEdit = manutencao !== null;
+        
+        // Options de veículos
+        let optionsVeiculos = '<option value="">Selecione o veículo</option>';
+        veiculos.forEach(v => {
+            const selected = manutencao && manutencao.veiculo_id === v.id ? 'selected' : '';
+            optionsVeiculos += `<option value="${v.id}" ${selected}>${v.placa} - ${v.marca} ${v.modelo}</option>`;
+        });
+        
+        const content = `
+            <form id="formManutencao" onsubmit="salvarManutencao(event, ${manutencao ? manutencao.id : 'null'})">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Veículo *</label>
+                        <select class="form-control" name="veiculo_id" required>
+                            ${optionsVeiculos}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo *</label>
+                        <select class="form-control" name="tipo" required>
+                            <option value="">Selecione</option>
+                            <option value="Preventiva" ${manutencao && manutencao.tipo === 'Preventiva' ? 'selected' : ''}>Preventiva</option>
+                            <option value="Corretiva" ${manutencao && manutencao.tipo === 'Corretiva' ? 'selected' : ''}>Corretiva</option>
+                            <option value="Óleo" ${manutencao && manutencao.tipo === 'Óleo' ? 'selected' : ''}>Óleo</option>
+                            <option value="Pneus" ${manutencao && manutencao.tipo === 'Pneus' ? 'selected' : ''}>Pneus</option>
+                            <option value="Freios" ${manutencao && manutencao.tipo === 'Freios' ? 'selected' : ''}>Freios</option>
+                            <option value="Filtros" ${manutencao && manutencao.tipo === 'Filtros' ? 'selected' : ''}>Filtros</option>
+                            <option value="Revisão" ${manutencao && manutencao.tipo === 'Revisão' ? 'selected' : ''}>Revisão</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Descrição</label>
+                    <input type="text" class="form-control" name="descricao" value="${manutencao ? manutencao.descricao : ''}">
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Data da Manutenção</label>
+                        <input type="date" class="form-control" name="data_manutencao" value="${manutencao ? manutencao.data_manutencao : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Km da Manutenção</label>
+                        <input type="number" class="form-control" name="km_manutencao" value="${manutencao ? manutencao.km_manutencao : ''}" min="0">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Custo (R$)</label>
+                        <input type="number" class="form-control" name="custo" value="${manutencao ? manutencao.custo : ''}" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Fornecedor</label>
+                        <div style="display: flex; gap: 5px;">
+                            <select class="form-control" name="fornecedor_id" id="selectFornecedorManut" style="flex: 1;">
+                                <option value="">Selecione o fornecedor</option>
+                                ${fornecedores.map(f => `<option value="${f.id}" ${manutencao && manutencao.oficina === f.nome ? 'selected' : ''}>${f.nome}</option>`).join('')}
+                            </select>
+                            <button type="button" class="btn btn-primary" onclick="abrirModalNovoFornecedor()" title="Cadastrar novo fornecedor" style="padding: 10px;">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" name="oficina" id="oficinaInput" value="${manutencao ? manutencao.oficina : ''}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select class="form-control" name="status">
+                        <option value="concluida" ${manutencao && manutencao.status === 'concluida' ? 'selected' : ''}>Concluída</option>
+                        <option value="pendente" ${manutencao && manutencao.status === 'pendente' ? 'selected' : ''}>Pendente</option>
+                        <option value="andamento" ${manutencao && manutencao.status === 'andamento' ? 'selected' : ''}>Em Andamento</option>
+                    </select>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Próxima Manutenção (Km)</label>
+                        <input type="number" class="form-control" name="proxima_manutencao_km" value="${manutencao ? manutencao.proxima_manutencao_km : ''}" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Próxima Manutenção (Data)</label>
+                        <input type="date" class="form-control" name="proxima_manutencao_data" value="${manutencao ? manutencao.proxima_manutencao_data : ''}">
+                    </div>
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="fecharModal()" style="background: #6b7280; color: white; margin-right: 10px;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">${isEdit ? 'Atualizar' : 'Cadastrar'}</button>
+                </div>
+            </form>
+        `;
+        abrirModal(isEdit ? 'Editar Manutenção' : 'Nova Manutenção', content);
+    }
+    
+    async function salvarManutencao(e, id) {
+        e.preventDefault();
+        const form = document.getElementById('formManutencao');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        
+        // Converter valores
+        if (data.veiculo_id) data.veiculo_id = parseInt(data.veiculo_id);
+        if (data.km_manutencao) data.km_manutencao = parseInt(data.km_manutencao);
+        if (data.custo) data.custo = parseFloat(data.custo);
+        if (data.proxima_manutencao_km) data.proxima_manutencao_km = parseInt(data.proxima_manutencao_km);
+        
+        try {
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/manutencoes/${id}` : '/api/manutencoes';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                fecharModal();
+                carregarDados();
+            } else {
+                alert('Erro ao salvar manutenção');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao salvar manutenção');
+        }
+    }
+    
+    async function editarManutencao(id) {
+        const manutencao = manutencoes.find(m => m.id === id);
+        if (manutencao) {
+            abrirModalManutencao(manutencao);
+        }
+    }
+    
+    async function excluirManutencao(id) {
+        if (confirm('Tem certeza que deseja excluir esta manutenção?')) {
+            try {
+                await fetch(`/api/manutencoes/${id}`, { method: 'DELETE' });
+                carregarDados();
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao excluir manutenção');
+            }
+        }
+    }
+    
+    // Funções para cadastrar fornecedor na manutenção
+    function abrirModalNovoFornecedor() {
+        const content = `
+            <form id="formFornecedorManut" onsubmit="salvarFornecedorManut(event)">
+                <div class="form-group">
+                    <label>Nome/Razão Social *</label>
+                    <input type="text" class="form-control" name="nome" required>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>CNPJ</label>
+                        <input type="text" class="form-control" name="cnpj">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <input type="text" class="form-control" name="telefone">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" class="form-control" name="email">
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Fornecedor</label>
+                    <select class="form-control" name="tipo_id" id="tipoFornecedorManut">
+                        <option value="">Selecione o tipo</option>
+                    </select>
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="fecharModal()" style="background: #6b7280; color: white; margin-right: 10px;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Cadastrar</button>
+                </div>
+            </form>
+        `;
+        abrirModal('Novo Fornecedor', content);
+        
+        // Carregar tipos de fornecedor
+        fetch('/api/tipos-fornecedor')
+            .then(res => res.json())
+            .then(tipos => {
+                const select = document.getElementById('tipoFornecedorManut');
+                tipos.forEach(t => {
+                    select.innerHTML += `<option value="${t.id}">${t.nome}</option>`;
+                });
+            });
+    }
+    
+    async function salvarFornecedorManut(e) {
+        e.preventDefault();
+        const form = document.getElementById('formFornecedorManut');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        
+        if (data.tipo_id) data.tipo_id = parseInt(data.tipo_id);
+        
+        try {
+            const response = await fetch('/api/fornecedores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                // Recarregar fornecedores
+                await recarregarFornecedores();
+                fecharModal();
+                
+                // Atualizar select no modal de manutenção
+                const selectFornec = document.getElementById('selectFornecedorManut');
+                if (selectFornec) {
+                    const fornecedorNovo = fornecedores[fornecedores.length - 1];
+                    selectFornec.innerHTML = '<option value="">Selecione o fornecedor</option>' + 
+                        fornecedores.map(f => `<option value="${f.id}">${f.nome}</option>`).join('');
+                    selectFornec.value = fornecedorNovo.id;
+                    
+                    // Atualizar input hidden
+                    const oficinaInput = document.getElementById('oficinaInput');
+                    if (oficinaInput) oficinaInput.value = fornecedorNovo.nome;
+                }
+                
+                alert('Fornecedor cadastrado com sucesso!');
+            } else {
+                alert('Erro ao cadastrar fornecedor');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao cadastrar fornecedor');
+        }
+    }
+    
+    window.addEventListener('load', carregarDados);
+</script>
+{% endblock %}

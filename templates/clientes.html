@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Clientes - Locadora{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-users"></i> Clientes</h1>
+    <button class="btn btn-primary" onclick="abrirModalCliente()">
+        <i class="fas fa-plus"></i> Novo Cliente
+    </button>
+</div>
+
+<!-- Filtros -->
+<div class="card">
+    <div class="toolbar">
+        <input type="text" class="form-control search" placeholder="Buscar cliente por nome ou CPF..." id="buscaCliente" onkeyup="filtrarClientes()">
+        <select class="form-control" id="filtroStatus" onchange="filtrarClientes()" style="width: 150px;">
+            <option value="todos">Todos</option>
+            <option value="ativo">Ativos</option>
+            <option value="bloqueado">Bloqueados</option>
+        </select>
+    </div>
+</div>
+
+<!-- Tabela de Clientes -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>CPF</th>
+                    <th>CNH</th>
+                    <th>Telefone</th>
+                    <th>Email</th>
+                    <th>Cidade</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaClientes">
+                <tr><td colspan="8" style="text-align:center">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let clientes = [];
+    
+    // Carregar clientes
+    async function carregarClientes() {
+        try {
+            const response = await fetch('/api/clientes');
+            clientes = await response.json();
+            renderizarClientes(clientes);
+        } catch (error) {
+            console.error('Erro ao carregar clientes:', error);
+        }
+    }
+    
+    function renderizarClientes(lista) {
+        const tbody = document.getElementById('tabelaClientes');
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Nenhum cliente encontrado</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = lista.map(c => `
+            <tr>
+                <td><strong>${c.nome}</strong></td>
+                <td>${c.cpf || '-'}</td>
+                <td>${c.cnh || '-'}</td>
+                <td>${c.telefone || '-'}</td>
+                <td>${c.email || '-'}</td>
+                <td>${c.cidade || '-'}</td>
+                <td>
+                    <span class="badge ${c.status === 'ativo' ? 'badge-success' : 'badge-danger'}">
+                        ${c.status === 'ativo' ? 'Ativo' : 'Bloqueado'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="editarCliente(${c.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="excluirCliente(${c.id})" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function filtrarClientes() {
+        const busca = document.getElementById('buscaCliente').value.toLowerCase();
+        const status = document.getElementById('filtroStatus').value;
+        
+        const filtrados = clientes.filter(c => {
+            const matchBusca = c.nome.toLowerCase().includes(busca) || 
+                              (c.cpf && c.cpf.includes(busca));
+            const matchStatus = status === 'todos' || c.status === status;
+            return matchBusca && matchStatus;
+        });
+        
+        renderizarClientes(filtrados);
+    }
+    
+    function abrirModalCliente(cliente = null) {
+        const isEdit = cliente !== null;
+        const content = `
+            <form id="formCliente" onsubmit="salvarCliente(event, ${cliente ? cliente.id : 'null'})">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Nome Completo *</label>
+                        <input type="text" class="form-control" name="nome" value="${cliente ? cliente.nome : ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>CPF</label>
+                        <input type="text" class="form-control" name="cpf" value="${cliente ? cliente.cpf : ''}" placeholder="000.000.000-00">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>CNH</label>
+                        <input type="text" class="form-control" name="cnh" value="${cliente ? cliente.cnh : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <input type="text" class="form-control" name="telefone" value="${cliente ? cliente.telefone : ''}" placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" class="form-control" name="email" value="${cliente ? cliente.email : ''}">
+                </div>
+                <div class="form-group">
+                    <label>Endereço</label>
+                    <input type="text" class="form-control" name="endereco" value="${cliente ? cliente.endereco : ''}">
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Cidade</label>
+                        <input type="text" class="form-control" name="cidade" value="${cliente ? cliente.cidade : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select class="form-control" name="estado">
+                            <option value="">Selecione</option>
+                            <option value="AC" ${cliente && cliente.estado === 'AC' ? 'selected' : ''}>AC</option>
+                            <option value="AL" ${cliente && cliente.estado === 'AL' ? 'selected' : ''}>AL</option>
+                            <option value="AP" ${cliente && cliente.estado === 'AP' ? 'selected' : ''}>AP</option>
+                            <option value="AM" ${cliente && cliente.estado === 'AM' ? 'selected' : ''}>AM</option>
+                            <option value="BA" ${cliente && cliente.estado === 'BA' ? 'selected' : ''}>BA</option>
+                            <option value="CE" ${cliente && cliente.estado === 'CE' ? 'selected' : ''}>CE</option>
+                            <option value="DF" ${cliente && cliente.estado === 'DF' ? 'selected' : ''}>DF</option>
+                            <option value="ES" ${cliente && cliente.estado === 'ES' ? 'selected' : ''}>ES</option>
+                            <option value="GO" ${cliente && cliente.estado === 'GO' ? 'selected' : ''}>GO</option>
+                            <option value="MA" ${cliente && cliente.estado === 'MA' ? 'selected' : ''}>MA</option>
+                            <option value="MT" ${cliente && cliente.estado === 'MT' ? 'selected' : ''}>MT</option>
+                            <option value="MS" ${cliente && cliente.estado === 'MS' ? 'selected' : ''}>MS</option>
+                            <option value="MG" ${cliente && cliente.estado === 'MG' ? 'selected' : ''}>MG</option>
+                            <option value="PA" ${cliente && cliente.estado === 'PA' ? 'selected' : ''}>PA</option>
+                            <option value="PB" ${cliente && cliente.estado === 'PB' ? 'selected' : ''}>PB</option>
+                            <option value="PR" ${cliente && cliente.estado === 'PR' ? 'selected' : ''}>PR</option>
+                            <option value="PE" ${cliente && cliente.estado === 'PE' ? 'selected' : ''}>PE</option>
+                            <option value="PI" ${cliente && cliente.estado === 'PI' ? 'selected' : ''}>PI</option>
+                            <option value="RJ" ${cliente && cliente.estado === 'RJ' ? 'selected' : ''}>RJ</option>
+                            <option value="RN" ${cliente && cliente.estado === 'RN' ? 'selected' : ''}>RN</option>
+                            <option value="RS" ${cliente && cliente.estado === 'RS' ? 'selected' : ''}>RS</option>
+                            <option value="RO" ${cliente && cliente.estado === 'RO' ? 'selected' : ''}>RO</option>
+                            <option value="RR" ${cliente && cliente.estado === 'RR' ? 'selected' : ''}>RR</option>
+                            <option value="SC" ${cliente && cliente.estado === 'SC' ? 'selected' : ''}>SC</option>
+                            <option value="SP" ${cliente && cliente.estado === 'SP' ? 'selected' : ''}>SP</option>
+                            <option value="SE" ${cliente && cliente.estado === 'SE' ? 'selected' : ''}>SE</option>
+                            <option value="TO" ${cliente && cliente.estado === 'TO' ? 'selected' : ''}>TO</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select class="form-control" name="status">
+                        <option value="ativo" ${cliente && cliente.status === 'ativo' ? 'selected' : ''}>Ativo</option>
+                        <option value="bloqueado" ${cliente && cliente.status === 'bloqueado' ? 'selected' : ''}>Bloqueado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Observações</label>
+                    <textarea class="form-control" name="observacoes" rows="3">${cliente ? cliente.observacoes : ''}</textarea>
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="fecharModal()" style="background: #6b7280; color: white; margin-right: 10px;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">${isEdit ? 'Atualizar' : 'Cadastrar'}</button>
+                </div>
+            </form>
+        `;
+        abrirModal(isEdit ? 'Editar Cliente' : 'Novo Cliente', content);
+    }
+    
+    async function salvarCliente(e, id) {
+        e.preventDefault();
+        const form = document.getElementById('formCliente');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        
+        try {
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/clientes/${id}` : '/api/clientes';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                fecharModal();
+                carregarClientes();
+            } else {
+                alert('Erro ao salvar cliente');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao salvar cliente');
+        }
+    }
+    
+    async function editarCliente(id) {
+        const cliente = clientes.find(c => c.id === id);
+        if (cliente) {
+            abrirModalCliente(cliente);
+        }
+    }
+    
+    async function excluirCliente(id) {
+        if (confirm('Tem certeza que deseja excluir este cliente?')) {
+            try {
+                await fetch(`/api/clientes/${id}`, { method: 'DELETE' });
+                carregarClientes();
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao excluir cliente');
+            }
+        }
+    }
+    
+    window.addEventListener('load', carregarClientes);
+</script>
+{% endblock %}
