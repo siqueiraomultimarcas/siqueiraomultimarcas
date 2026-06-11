@@ -307,7 +307,36 @@
         }
     }
     
+    // Alertas de próxima revisão por KM
+    async function carregarAlertasRevisao() {
+        try {
+            const resp = await fetch('/api/alertas-manutencao');
+            const alertas = await resp.json();
+            if (alertas.length === 0) return;
+
+            const divAlertas = document.getElementById('alertas');
+            const alertasRevisao = alertas.map(a => ({
+                type: a.km_restante <= 200 ? 'danger' : 'warning',
+                icon: 'fa-wrench',
+                strong: a.placa + ' — Revisão ' + (a.tipo || ''),
+                text: 'Faltam ' + parseInt(a.km_restante).toLocaleString() + ' km para próxima manutenção (km atual: ' + parseInt(a.km_atual).toLocaleString() + ')',
+                url: '/manutencoes'
+            }));
+
+            const existingContent = divAlertas.innerHTML.includes('fa-check-circle') ? '' : divAlertas.innerHTML;
+            divAlertas.innerHTML = existingContent + alertasRevisao.map(a =>
+                '<div class="alert-item ' + a.type + '" style="cursor:pointer" onclick="window.location.href=\'' + a.url + '\'">' +
+                    '<i class="fas ' + a.icon + ' alert-icon"></i>' +
+                    '<div class="alert-text"><strong>' + a.strong + '</strong><small>' + a.text + '</small></div>' +
+                '</div>'
+            ).join('');
+        } catch {}
+    }
+
     // Carregar ao iniciar
-    window.addEventListener('load', carregarDashboard);
+    window.addEventListener('load', async () => {
+        await carregarDashboard();
+        await carregarAlertasRevisao();
+    });
 </script>
 {% endblock %}

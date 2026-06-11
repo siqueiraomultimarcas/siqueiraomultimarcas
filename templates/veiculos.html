@@ -202,7 +202,7 @@
         }
         
         tbody.innerHTML = lista.map(v => {
-            const fotoHtml = v.foto ? '<img src="/static/uploads/veiculos/' + v.foto + '" class="foto-thumbnail">' : '';
+            const fotoHtml = v.foto ? '<img src="' + v.foto + '" class="foto-thumbnail">' : '';
             return '<tr>' +
                 '<td><strong>' + v.placa.toUpperCase() + '</strong></td>' +
                 '<td><div style="display:flex;align-items:center;gap:10px;">' + fotoHtml + '<span>' + v.marca + ' ' + v.modelo + '</span></div></td>' +
@@ -241,7 +241,7 @@
         
         let fotoHtml = '';
         if (temFoto) {
-            fotoHtml = '<img id="preview-img" src="/static/uploads/veiculos/' + veiculo.foto + '" class="foto-preview">';
+            fotoHtml = '<img id="preview-img" src="' + veiculo.foto + '" class="foto-preview">';
         } else {
             fotoHtml = '<div id="preview-placeholder" style="width:100%;height:150px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;border-radius:8px;border:2px dashed #d1d5db;"><i class="fas fa-car" style="font-size:3rem;color:#9ca3af;"></i></div><img id="preview-img" style="display:none;" class="foto-preview">';
         }
@@ -336,7 +336,7 @@
             });
             
             if (!response.ok) {
-                alert('Erro ao salvar veículo');
+                showToast('Erro ao salvar veículo', 'error');
                 return;
             }
             
@@ -356,11 +356,11 @@
                     
                     const fotoResult = await fotoResponse.json();
                     if (!fotoResponse.ok) {
-                        alert('Erro ao fazer upload da foto: ' + (fotoResult.error || 'Erro desconhecido'));
+                        showToast('Erro ao fazer upload da foto: ' + (fotoResult.error || 'Erro desconhecido'), 'error');
                         return;
                     }
                 } catch (fotoError) {
-                    alert('Erro ao fazer upload da foto: ' + fotoError.message);
+                    showToast('Erro ao fazer upload da foto: ' + fotoError.message, 'error');
                     return;
                 }
             }
@@ -370,7 +370,7 @@
             
         } catch (error) {
             console.error('Erro:', error);
-            alert('Erro ao salvar veículo');
+            showToast('Erro ao salvar veículo', 'error');
         }
     }
     
@@ -422,7 +422,7 @@
                 carregarVeiculos();
             } catch (error) {
                 console.error('Erro:', error);
-                alert('Erro ao excluir veículo');
+                showToast('Erro ao excluir veículo', 'error');
             }
         }
     }

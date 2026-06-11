@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários - Siqueirão{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-user-cog"></i> Gestão de Usuários</h1>
+    <button class="btn btn-primary" onclick="abrirModalUsuario()">
+        <i class="fas fa-plus"></i> Novo Usuário
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Login (CPF/Email)</th>
+                    <th>Nível</th>
+                    <th>Status</th>
+                    <th>Cadastrado em</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaUsuarios">
+                <tr><td colspan="6" style="text-align:center">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="background:#fef3c7;border:1px solid #f59e0b;">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <i class="fas fa-shield-alt" style="font-size:1.5rem;color:#f59e0b;"></i>
+        <div>
+            <strong>Sobre os níveis de acesso</strong><br>
+            <span style="font-size:0.85rem;color:#92400e;">
+                <strong>Admin</strong> — acesso total: gerencia usuários, veículos, clientes, locações, relatórios e todas as configurações.<br>
+                <strong>Operador</strong> — acesso operacional: registra locações, manutenções, abastecimentos e multas. Não gerencia usuários.
+            </span>
+        </div>
+    </div>
+</div>
+
+<script>
+    let usuarios = [];
+
+    async function carregarUsuarios() {
+        try {
+            const resp = await fetch('/api/usuarios');
+            if (!resp.ok) {
+                showToast('Acesso negado', 'error');
+                return;
+            }
+            usuarios = await resp.json();
+            renderizarUsuarios();
+        } catch (error) {
+            showToast('Erro ao carregar usuários', 'error');
+        }
+    }
+
+    function renderizarUsuarios() {
+        const tbody = document.getElementById('tabelaUsuarios');
+        if (usuarios.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum usuário encontrado</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = usuarios.map(u => {
+            const nivelBadge = u.nivel === 'admin'
+                ? '<span class="badge" style="background:#dbeafe;color:#1e40af;"><i class="fas fa-crown"></i> Admin</span>'
+                : '<span class="badge" style="background:#f3f4f6;color:#374151;"><i class="fas fa-user"></i> Operador</span>';
+
+            const statusBadge = u.ativo
+                ? '<span class="badge badge-success">Ativo</span>'
+                : '<span class="badge badge-danger">Inativo</span>';
+
+            const dataCad = u.data_cadastro ? new Date(u.data_cadastro).toLocaleDateString('pt-BR') : '-';
+
+            const ownUser = u.id == {{ current_user.id }};
+
+            return '<tr>' +
+                '<td><strong>' + u.nome + '</strong>' + (ownUser ? ' <span style="font-size:0.75rem;color:#6b7280;">(você)</span>' : '') + '</td>' +
+                '<td style="font-family:monospace;">' + u.email + '</td>' +
+                '<td>' + nivelBadge + '</td>' +
+                '<td>' + statusBadge + '</td>' +
+                '<td>' + dataCad + '</td>' +
+                '<td style="white-space:nowrap">' +
+                    '<button class="btn btn-sm btn-primary" onclick="editarUsuario(' + u.id + ')" title="Editar"><i class="fas fa-edit"></i></button>' +
+                    (!ownUser ? ' <button class="btn btn-sm ' + (u.ativo ? 'btn-warning' : 'btn-success') + '" onclick="toggleUsuario(' + u.id + ', ' + u.ativo + ')" title="' + (u.ativo ? 'Desativar' : 'Ativar') + '">' +
+                        '<i class="fas ' + (u.ativo ? 'fa-ban' : 'fa-check') + '"></i></button>' : '') +
+                '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function abrirModalUsuario(usuario = null) {
+        const isEdit = usuario !== null;
+
+        const content = '<form id="formUsuario">' +
+            '<div class="form-group"><label>Nome Completo *</label><input type="text" class="form-control" name="nome" value="' + (isEdit ? usuario.nome : '') + '" required placeholder="Ex: João da Silva"></div>' +
+            '<div class="form-group"><label>Login (CPF / E-mail) *</label><input type="text" class="form-control" name="email" value="' + (isEdit ? usuario.email : '') + '" required placeholder="Ex: 06681567916 ou email@dominio.com" autocomplete="off"></div>' +
+            '<div class="form-group"><label>Senha ' + (isEdit ? '(deixe em branco para não alterar)' : '*') + '</label>' +
+                '<div style="position:relative">' +
+                    '<input type="password" class="form-control" name="senha" id="inputSenha" ' + (isEdit ? '' : 'required') + ' placeholder="' + (isEdit ? 'Nova senha (opcional)' : 'Mínimo 4 caracteres') + '" autocomplete="new-password" style="padding-right:40px;">' +
+                    '<button type="button" onclick="toggleSenha()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#6b7280;"><i class="fas fa-eye" id="iconSenha"></i></button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="form-group"><label>Nível de Acesso</label>' +
+                '<select class="form-control" name="nivel">' +
+                    '<option value="operador" ' + (isEdit && usuario.nivel === 'operador' ? 'selected' : '') + '>Operador</option>' +
+                    '<option value="admin" ' + (isEdit && usuario.nivel === 'admin' ? 'selected' : '') + '>Admin</option>' +
+                '</select>' +
+            '</div>' +
+            (isEdit ?
+            '<div class="form-group"><label>Status</label>' +
+                '<select class="form-control" name="ativo">' +
+                    '<option value="true" ' + (usuario.ativo ? 'selected' : '') + '>Ativo</option>' +
+                    '<option value="false" ' + (!usuario.ativo ? 'selected' : '') + '>Inativo</option>' +
+                '</select>' +
+            '</div>' : '') +
+            '<div style="text-align:right;margin-top:20px;">' +
+                '<button type="button" class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;margin-right:10px;">Cancelar</button>' +
+                '<button type="button" class="btn btn-primary" onclick="salvarUsuario(' + (isEdit ? usuario.id : 'null') + ')">' + (isEdit ? 'Atualizar' : 'Criar Usuário') + '</button>' +
+            '</div>' +
+        '</form>';
+
+        abrirModal(isEdit ? 'Editar Usuário' : 'Novo Usuário', content);
+    }
+
+    function toggleSenha() {
+        const input = document.getElementById('inputSenha');
+        const icon = document.getElementById('iconSenha');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'fas fa-eye-slash';
+        } else {
+            input.type = 'password';
+            icon.className = 'fas fa-eye';
+        }
+    }
+
+    async function salvarUsuario(id) {
+        const form = document.getElementById('formUsuario');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+
+        if (!data.nome || !data.email) {
+            showToast('Preencha nome e login', 'warning');
+            return;
+        }
+
+        if (!id && !data.senha) {
+            showToast('Informe uma senha para o novo usuário', 'warning');
+            return;
+        }
+
+        if (data.ativo !== undefined) {
+            data.ativo = data.ativo === 'true';
+        }
+
+        if (!data.senha) delete data.senha;
+
+        try {
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? '/api/usuarios/' + id : '/api/usuarios';
+            const resp = await fetch(url, {
+                method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+            });
+            const result = await resp.json();
+            if (resp.ok) {
+                fecharModal();
+                showToast(id ? 'Usuário atualizado!' : 'Usuário criado com sucesso!', 'success');
+                carregarUsuarios();
+            } else {
+                showToast(result.error || 'Erro ao salvar', 'error');
+            }
+        } catch (error) {
+            showToast('Erro ao salvar usuário', 'error');
+        }
+    }
+
+    function editarUsuario(id) {
+        const usuario = usuarios.find(u => u.id === id);
+        if (usuario) abrirModalUsuario(usuario);
+    }
+
+    async function toggleUsuario(id, ativoAtual) {
+        const acao = ativoAtual ? 'desativar' : 'ativar';
+        if (!confirm('Deseja ' + acao + ' este usuário?')) return;
+
+        const usuario = usuarios.find(u => u.id === id);
+        if (!usuario) return;
+
+        try {
+            const resp = await fetch('/api/usuarios/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nome: usuario.nome,
+                    email: usuario.email,
+                    nivel: usuario.nivel,
+                    ativo: !ativoAtual
+                })
+            });
+            if (resp.ok) {
+                showToast('Usuário ' + (ativoAtual ? 'desativado' : 'ativado') + ' com sucesso!', 'success');
+                carregarUsuarios();
+            } else {
+                showToast('Erro ao atualizar usuário', 'error');
+            }
+        } catch (error) {
+            showToast('Erro ao atualizar usuário', 'error');
+        }
+    }
+
+    window.addEventListener('load', carregarUsuarios);
+</script>
+{% endblock %}

@@ -79,7 +79,10 @@
                         ${c.status === 'ativo' ? 'Ativo' : 'Bloqueado'}
                     </span>
                 </td>
-                <td>
+                <td style="white-space:nowrap">
+                    <button class="btn btn-sm" onclick="verHistorico(${c.id}, '${c.nome.replace(/'/g,"\\'")}'')" title="Histórico de Locações" style="background:#6b7280;color:white">
+                        <i class="fas fa-history"></i>
+                    </button>
                     <button class="btn btn-sm btn-primary" onclick="editarCliente(${c.id})" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -214,35 +217,82 @@
             
             if (response.ok) {
                 fecharModal();
+                showToast(id ? 'Cliente atualizado!' : 'Cliente cadastrado!', 'success');
                 carregarClientes();
             } else {
-                alert('Erro ao salvar cliente');
+                const err = await response.json();
+                showToast(err.error || 'Erro ao salvar cliente', 'error');
             }
         } catch (error) {
-            console.error('Erro:', error);
-            alert('Erro ao salvar cliente');
+            showToast('Erro ao salvar cliente', 'error');
         }
     }
-    
+
     async function editarCliente(id) {
         const cliente = clientes.find(c => c.id === id);
-        if (cliente) {
-            abrirModalCliente(cliente);
-        }
+        if (cliente) abrirModalCliente(cliente);
     }
-    
+
     async function excluirCliente(id) {
-        if (confirm('Tem certeza que deseja excluir este cliente?')) {
-            try {
-                await fetch(`/api/clientes/${id}`, { method: 'DELETE' });
+        if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+        try {
+            const resp = await fetch('/api/clientes/' + id, { method: 'DELETE' });
+            if (resp.ok) {
+                showToast('Cliente excluído', 'success');
                 carregarClientes();
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('Erro ao excluir cliente');
+            } else {
+                showToast('Erro ao excluir cliente', 'error');
             }
+        } catch (error) {
+            showToast('Erro ao excluir cliente', 'error');
         }
     }
-    
+
+    async function verHistorico(id, nome) {
+        try {
+            const resp = await fetch('/api/clientes/' + id + '/locacoes');
+            const locacoes = await resp.json();
+
+            let conteudo;
+            if (locacoes.length === 0) {
+                conteudo = '<div class="empty-state"><i class="fas fa-key"></i><p>Nenhuma locação registrada para este cliente</p></div>';
+            } else {
+                const total = locacoes.reduce((s, l) => s + (parseFloat(l.total) || 0), 0);
+                const ativas = locacoes.filter(l => l.status === 'ativa').length;
+
+                conteudo = '<div style="display:flex;gap:20px;margin-bottom:16px;">' +
+                    '<div style="flex:1;background:#f0fdf4;border-radius:8px;padding:12px;text-align:center;">' +
+                        '<div style="font-size:1.4rem;font-weight:700;color:#065f46;">' + locacoes.length + '</div>' +
+                        '<div style="font-size:0.8rem;color:#374151;">Total de Locações</div>' +
+                    '</div>' +
+                    '<div style="flex:1;background:#dbeafe;border-radius:8px;padding:12px;text-align:center;">' +
+                        '<div style="font-size:1.4rem;font-weight:700;color:#1e40af;">' + ativas + '</div>' +
+                        '<div style="font-size:0.8rem;color:#374151;">Ativas</div>' +
+                    '</div>' +
+                    '<div style="flex:1;background:#fef3c7;border-radius:8px;padding:12px;text-align:center;">' +
+                        '<div style="font-size:1.1rem;font-weight:700;color:#92400e;">' + formatCurrency(total) + '</div>' +
+                        '<div style="font-size:0.8rem;color:#374151;">Total Gasto</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="table-container"><table><thead><tr>' +
+                    '<th>Data Saída</th><th>Data Retorno</th><th>Veículo</th><th>Total</th><th>Status</th>' +
+                '</tr></thead><tbody>' +
+                locacoes.map(l => '<tr>' +
+                    '<td>' + formatDate(l.data_inicio) + '</td>' +
+                    '<td>' + formatDate(l.data_fim) + '</td>' +
+                    '<td>' + (l.placa || '-') + ' ' + (l.marca || '') + ' ' + (l.modelo || '') + '</td>' +
+                    '<td><strong>' + formatCurrency(l.total) + '</strong></td>' +
+                    '<td>' + (l.status === 'ativa' ? '<span class="badge badge-warning">Ativa</span>' : '<span class="badge badge-success">Finalizada</span>') + '</td>' +
+                '</tr>').join('') +
+                '</tbody></table></div>';
+            }
+
+            abrirModal('Histórico de Locações — ' + nome, conteudo);
+        } catch (error) {
+            showToast('Erro ao carregar histórico', 'error');
+        }
+    }
+
     window.addEventListener('load', carregarClientes);
 </script>
 {% endblock %}

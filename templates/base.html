@@ -32,11 +32,14 @@
             width: 260px;
             background: linear-gradient(135deg, var(--dark), #374151);
             color: white;
-            padding: 20px 0;
+            padding: 20px 0 0 0;
             position: fixed;
             height: 100vh;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
+        .nav-menu { flex: 1; }
         .logo-area {
             padding: 20px 25px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
@@ -201,9 +204,53 @@
             border-radius: 12px;
             padding: 25px;
             width: 90%;
-            max-width: 500px;
+            max-width: 700px;
             max-height: 90vh;
             overflow-y: auto;
+        }
+
+        /* Toast notifications */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .toast {
+            padding: 14px 20px;
+            border-radius: 10px;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 280px;
+            max-width: 400px;
+            pointer-events: all;
+            animation: slideIn 0.3s ease;
+            transition: opacity 0.3s ease;
+        }
+        .toast.success { background: #10b981; }
+        .toast.error   { background: #ef4444; }
+        .toast.warning { background: #f59e0b; }
+        .toast.info    { background: #2563eb; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to   { transform: translateX(0);    opacity: 1; }
+        }
+
+        /* Print styles */
+        @media print {
+            .sidebar, .page-header .btn, .toolbar, .modal,
+            #toast-container, nav { display: none !important; }
+            .main-content { margin-left: 0 !important; padding: 0 !important; }
+            .card { box-shadow: none !important; border: 1px solid #ddd !important; }
         }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-header h3 { font-size: 1.2rem; }
@@ -234,7 +281,7 @@
     <div class="app-container">
         <nav class="sidebar">
             <div class="logo-area">
-                <img src="/logo_nova.png" alt="Locadora" style="width: 100%; max-width: 200px; height: auto; margin-bottom: 10px;">
+                <img src="/static/logo_nova.png" alt="Siqueirão" style="width: 100%; max-width: 200px; height: auto; margin-bottom: 10px;">
                 <span style="display: block; margin-top: 5px; font-size: 0.8rem; color: #9ca3af;">Sistema de Gestão</span>
             </div>
             <ul class="nav-menu">
@@ -283,7 +330,29 @@
                         <i class="fas fa-chart-bar"></i> <span>Relatórios</span>
                     </a>
                 </li>
+                {% if current_user.nivel == 'admin' %}
+                <li class="nav-item">
+                    <a href="/usuarios" class="nav-link {% if request.path == '/usuarios' %}active{% endif %}">
+                        <i class="fas fa-user-cog"></i> <span>Usuários</span>
+                    </a>
+                </li>
+                {% endif %}
             </ul>
+
+            <div style="position:absolute; bottom:0; left:0; right:0; padding:16px 20px; border-top:1px solid rgba(255,255,255,0.1);">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                    <div style="width:34px; height:34px; border-radius:50%; background:#2563eb; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:700; color:white; flex-shrink:0;">
+                        {{ current_user.nome[0].upper() }}
+                    </div>
+                    <div style="overflow:hidden;">
+                        <div style="font-size:0.85rem; color:white; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ current_user.nome }}</div>
+                        <div style="font-size:0.72rem; color:#9ca3af;">{{ current_user.nivel }}</div>
+                    </div>
+                </div>
+                <a href="/logout" style="display:flex; align-items:center; gap:8px; color:#9ca3af; text-decoration:none; font-size:0.85rem; padding:8px 10px; border-radius:8px; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#9ca3af'">
+                    <i class="fas fa-sign-out-alt"></i> <span>Sair</span>
+                </a>
+            </div>
         </nav>
         
         <main class="main-content">
@@ -291,6 +360,9 @@
         </main>
     </div>
     
+    <!-- Toast container -->
+    <div id="toast-container"></div>
+
     <!-- Modal Template -->
     <div class="modal" id="modalTemplate">
         <div class="modal-content">
@@ -303,6 +375,17 @@
     </div>
     
     <script>
+        // ====== TOAST (substitui alert) ======
+        function showToast(msg, type = 'success', duration = 4000) {
+            const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = 'toast ' + type;
+            el.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + '"></i><span>' + msg + '</span>';
+            container.appendChild(el);
+            setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, duration);
+        }
+
         // Funções utilitárias
         function formatCurrency(value) {
             return 'R$ ' + parseFloat(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });

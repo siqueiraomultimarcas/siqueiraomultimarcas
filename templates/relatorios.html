@@ -1,528 +1,1064 @@
 {% extends "base.html" %}
 
+
+
 {% block title %}Relatórios - Locadora{% endblock %}
 
+
+
 {% block content %}
+
 <div class="page-header">
+
     <h1><i class="fas fa-chart-bar"></i> Relatórios</h1>
+
+    <button class="btn" onclick="window.print()" style="background:#6b7280;color:white">
+
+        <i class="fas fa-print"></i> Imprimir
+
+    </button>
+
 </div>
+
+
 
 <!-- Abas de Relatórios -->
+
 <div class="tabs-container" style="margin-bottom: 20px;">
+
     <button class="tab-btn active" onclick="switchTab('lucratividade')" id="tab-lucratividade">
+
         <i class="fas fa-chart-line"></i> Lucratividade
+
     </button>
+
     <button class="tab-btn" onclick="switchTab('fornecedor')" id="tab-fornecedor">
+
         <i class="fas fa-truck"></i> Por Fornecedor
+
     </button>
+
 </div>
+
+
 
 <style>
+
     .tabs-container { display: flex; gap: 10px; border-bottom: 2px solid var(--gray-light); padding-bottom: 10px; }
+
     .tab-btn {
+
         padding: 12px 24px;
+
         background: none;
+
         border: none;
+
         font-size: 1rem;
+
         font-weight: 500;
+
         color: var(--gray);
+
         cursor: pointer;
+
         border-radius: 8px 8px 0 0;
+
         transition: all 0.3s;
+
     }
+
     .tab-btn:hover { background: var(--light); color: var(--primary); }
+
     .tab-btn.active { background: var(--primary); color: white; }
+
     .tab-content { display: none; }
+
     .tab-content.active { display: block; }
+
 </style>
 
+
+
 <!-- Aba: Relatório de Lucratividade -->
+
 <div class="tab-content active" id="content-lucratividade">
+
     <div class="card">
+
         <div class="card-header">
+
             <h3 class="card-title"><i class="fas fa-filter"></i> Filtros do Relatório</h3>
+
         </div>
+
         <div class="grid-2">
+
             <div class="form-group">
+
                 <label>Selecione os Veículos (múltipla escolha)</label>
+
                 <select class="form-control" id="filtroVeiculos" multiple style="height: 150px;">
+
                 </select>
+
                 <small style="color: var(--gray);">Segure Ctrl/Cmd para selecionar múltiplos</small>
+
             </div>
+
             <div class="form-group">
+
                 <label>Período</label>
+
                 <div class="grid-2">
+
                     <div>
+
                         <label style="font-size: 0.85rem;">Data Início</label>
+
                         <input type="date" class="form-control" id="dataInicio">
+
                     </div>
+
                     <div>
+
                         <label style="font-size: 0.85rem;">Data Fim</label>
+
                         <input type="date" class="form-control" id="dataFim">
+
                     </div>
+
                 </div>
+
             </div>
+
         </div>
+
         <div class="form-group">
+
             <label>Incluir nos Custos:</label>
+
             <div style="display: flex; gap: 20px; margin-top: 10px;">
+
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+
                     <input type="checkbox" id="incluirManutencao" checked> 
+
                     <i class="fas fa-tools"></i> Manutenções
+
                 </label>
+
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+
                     <input type="checkbox" id="incluirAbastecimento" checked> 
+
                     <i class="fas fa-gas-pump"></i> Abastecimentos
+
                 </label>
+
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+
                     <input type="checkbox" id="incluirMultas" checked> 
+
                     <i class="fas fa-file-invoice-dollar"></i> Multas
+
                 </label>
+
             </div>
+
         </div>
+
         <div style="margin-top: 20px;">
+
             <button class="btn btn-primary" onclick="gerarRelatorio()">
+
                 <i class="fas fa-search"></i> Gerar Relatório
+
             </button>
+
         </div>
+
     </div>
+
+
 
     <div id="resultados" style="display: none;">
+
         <div class="stats-grid">
+
             <div class="stat-card">
+
                 <div class="stat-icon green"><i class="fas fa-dollar-sign"></i></div>
+
                 <div class="stat-info">
+
                     <h3 id="totalReceita">R$ 0,00</h3>
+
                     <p>Total de Receitas</p>
+
                 </div>
+
             </div>
+
             <div class="stat-card">
+
                 <div class="stat-icon red"><i class="fas fa-minus-circle"></i></div>
+
                 <div class="stat-info">
+
                     <h3 id="totalCustos">R$ 0,00</h3>
+
                     <p>Total de Custos</p>
+
                 </div>
+
             </div>
+
             <div class="stat-card">
+
                 <div class="stat-icon blue"><i class="fas fa-chart-line"></i></div>
+
                 <div class="stat-info">
+
                     <h3 id="totalLucro">R$ 0,00</h3>
+
                     <p>Lucro Total</p>
+
                 </div>
+
             </div>
+
             <div class="stat-card">
+
                 <div class="stat-icon purple"><i class="fas fa-percentage"></i></div>
+
                 <div class="stat-info">
+
                     <h3 id="margemMedia">0%</h3>
+
                     <p>Margem (%)</p>
+
                 </div>
+
             </div>
+
         </div>
 
+
+
         <div class="card">
+
             <div class="card-header">
+
                 <h3 class="card-title"><i class="fas fa-chart-line"></i> Lucratividade por Mês</h3>
+
             </div>
+
             <div class="chart-box">
+
                 <canvas id="chartLucratividade"></canvas>
+
             </div>
+
         </div>
 
+
+
         <div class="card">
+
             <div class="card-header">
+
                 <h3 class="card-title"><i class="fas fa-car"></i> Detalhamento por Veículo</h3>
+
             </div>
+
             <div class="table-container">
+
                 <table>
+
                     <thead>
+
                         <tr>
+
                             <th>Veículo</th>
+
                             <th>Receitas</th>
+
                             <th>Custo Manutenção</th>
+
                             <th>Custo Abastecimento</th>
+
                             <th>Custo Multas</th>
+
                             <th>Total Custos</th>
+
                             <th>Lucro</th>
+
                             <th>Margem</th>
+
                         </tr>
+
                     </thead>
+
                     <tbody id="tabelaResultados">
+
                     </tbody>
+
                 </table>
+
             </div>
+
         </div>
+
     </div>
 
+
+
     <script>
+
         let veiculos = [];
+
         let chartLucratividade = null;
+
         
+
         async function carregarVeiculos() {
+
             try {
+
                 const response = await fetch('/api/veiculos');
+
                 veiculos = await response.json();
+
                 
+
                 const select = document.getElementById('filtroVeiculos');
+
                 veiculos.forEach(v => {
+
                     const option = document.createElement('option');
+
                     option.value = v.id;
+
                     option.textContent = `${v.placa} - ${v.marca} ${v.modelo}`;
+
                     select.appendChild(option);
+
                 });
+
                 
+
                 const hoje = new Date();
+
                 const inicio = new Date();
+
                 inicio.setDate(hoje.getDate() - 30);
+
                 
+
                 document.getElementById('dataFim').value = hoje.toISOString().split('T')[0];
+
                 document.getElementById('dataInicio').value = inicio.toISOString().split('T')[0];
+
                 
+
             } catch (error) {
+
                 console.error('Erro ao carregar veículos:', error);
+
             }
+
         }
+
         
+
         async function gerarRelatorio() {
+
             const veiculosSelecionados = Array.from(document.getElementById('filtroVeiculos').selectedOptions).map(o => parseInt(o.value));
+
             const dataInicio = document.getElementById('dataInicio').value;
+
             const dataFim = document.getElementById('dataFim').value;
+
             
+
             if (veiculosSelecionados.length === 0) {
-                alert('Selecione pelo menos um veículo');
+
+                showToast('', 'error');
+
                 return;
+
             }
+
             
+
             if (!dataInicio || !dataFim) {
-                alert('Selecione o período');
+
+                showToast('', 'error');
+
                 return;
+
             }
+
             
+
             try {
+
                 const response = await fetch('/api/relatorio-lucratividade', {
+
                     method: 'POST',
+
                     headers: { 'Content-Type': 'application/json' },
+
                     body: JSON.stringify({
+
                         veiculos: veiculosSelecionados,
+
                         data_inicio: dataInicio,
+
                         data_fim: dataFim,
+
                         incluir_manutencao: document.getElementById('incluirManutencao').checked,
+
                         incluir_abastecimento: document.getElementById('incluirAbastecimento').checked,
+
                         incluir_multas: document.getElementById('incluirMultas').checked
+
                     })
+
                 });
+
                 
+
                 const data = await response.json();
+
                 
+
                 if (data.error) {
-                    alert('Erro: ' + data.error);
+
+                    showToast('Erro: ' + data.error, 'error');
+
                     return;
+
                 }
+
                 
+
                 if (!data.resultados || data.resultados.length === 0) {
-                    alert('Nenhum dado encontrado');
+
+                    showToast('', 'error');
+
                     return;
+
                 }
+
                 
+
                 exibirResultados(data);
+
                 
+
             } catch (error) {
+
                 console.error('Erro ao gerar relatório:', error);
+
             }
+
         }
+
         
+
         function exibirResultados(data) {
+
             document.getElementById('resultados').style.display = 'block';
+
             
+
             let totalReceita = data.resultados.reduce((sum, r) => sum + r.receita, 0);
+
             let totalCustos = data.resultados.reduce((sum, r) => sum + r.total_custos, 0);
+
             const totalLucro = totalReceita - totalCustos;
+
             const margemPercentual = totalReceita > 0 ? (totalLucro / totalReceita) * 100 : 0;
+
             
+
             document.getElementById('totalReceita').textContent = formatCurrency(totalReceita);
+
             document.getElementById('totalCustos').textContent = formatCurrency(totalCustos);
+
             document.getElementById('totalLucro').textContent = formatCurrency(totalLucro);
+
             document.getElementById('margemMedia').textContent = margemPercentual.toFixed(1) + '%';
+
             
+
             const tbody = document.getElementById('tabelaResultados');
+
             tbody.innerHTML = data.resultados.map(r => `
+
                 <tr>
+
                     <td><strong>${r.veiculo.placa}</strong> - ${r.veiculo.marca} ${r.veiculo.modelo}</td>
+
                     <td style="color: var(--success); font-weight: 600;">${formatCurrency(r.receita)}</td>
+
                     <td>${formatCurrency(r.custo_manutencao)}</td>
+
                     <td>${formatCurrency(r.custo_abastecimento)}</td>
+
                     <td>${formatCurrency(r.custo_multas)}</td>
+
                     <td style="color: var(--danger); font-weight: 600;">${formatCurrency(r.total_custos)}</td>
+
                     <td style="color: ${r.lucro >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight: 700;">${formatCurrency(r.lucro)}</td>
+
                     <td><span class="badge ${r.margem >= 0 ? 'badge-success' : 'badge-danger'}">${r.margem.toFixed(1)}%</span></td>
+
                 </tr>
+
             `).join('');
+
             
+
             // Renderizar gráfico de lucratividade por mês
+
             if (data.dados_mensais && data.dados_mensais.length > 0) {
+
                 renderizarGrafico(data.dados_mensais);
+
             }
+
         }
+
         
+
         function renderizarGrafico(dadosMensais) {
+
             const ctx = document.getElementById('chartLucratividade').getContext('2d');
+
             
+
             if (chartLucratividade) {
+
                 chartLucratividade.destroy();
+
             }
+
             
+
             const meses = dadosMensais.map(d => {
+
                 const [ano, mes] = d.mes.split('-');
+
                 const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
                 return mesesNomes[parseInt(mes) - 1] + '/' + ano.slice(2);
+
             });
+
             
+
             chartLucratividade = new Chart(ctx, {
+
                 type: 'bar',
+
                 data: {
+
                     labels: meses,
+
                     datasets: [
+
                         { label: 'Receitas', data: dadosMensais.map(d => d.receita), backgroundColor: '#10b981', borderRadius: 4 },
+
                         { label: 'Custos', data: dadosMensais.map(d => d.custos), backgroundColor: '#ef4444', borderRadius: 4 },
+
                         { label: 'Lucro', data: dadosMensais.map(d => d.lucro), type: 'line', borderColor: '#2563eb', backgroundColor: '#2563eb', borderWidth: 2, tension: 0.3, fill: false }
+
                     ]
+
                 },
+
                 options: {
+
                     responsive: true,
+
                     maintainAspectRatio: false,
+
                     plugins: { legend: { position: 'bottom' } },
+
                     scales: { y: { beginAtZero: true, ticks: { callback: function(value) { return formatCurrency(value); } } } }
+
                 }
+
             });
+
         }
+
+
 
         window.addEventListener('load', carregarVeiculos);
+
     </script>
+
 </div>
+
+
 
 <!-- Aba: Relatório por Fornecedor -->
+
 <div class="tab-content" id="content-fornecedor">
+
     <div class="card">
+
         <div class="card-header">
+
             <h3 class="card-title"><i class="fas fa-filter"></i> Filtros do Relatório</h3>
+
         </div>
+
         <div class="grid-2">
+
             <div class="form-group">
+
                 <label>Selecione o Fornecedor</label>
+
                 <select class="form-control" id="filtroFornecedor">
+
                     <option value="">-- Todos os Fornecedores --</option>
+
                 </select>
+
             </div>
+
             <div class="form-group">
+
                 <label>Período</label>
+
                 <div class="grid-2">
+
                     <div>
+
                         <label style="font-size: 0.85rem;">Data Início</label>
+
                         <input type="date" class="form-control" id="dataInicioFornecedor">
+
                     </div>
+
                     <div>
+
                         <label style="font-size: 0.85rem;">Data Fim</label>
+
                         <input type="date" class="form-control" id="dataFimFornecedor">
+
                     </div>
+
                 </div>
+
             </div>
+
         </div>
+
         <div style="margin-top: 20px;">
+
             <button class="btn btn-primary" onclick="gerarRelatorioFornecedor()">
+
                 <i class="fas fa-search"></i> Gerar Relatório
+
             </button>
+
         </div>
+
     </div>
+
+
 
     <div id="resultadosFornecedor" style="display: none;">
+
         <div class="stats-grid">
+
             <div class="stat-card">
+
                 <div class="stat-icon blue"><i class="fas fa-truck"></i></div>
+
                 <div class="stat-info">
+
                     <h3 id="totalFornecedores">0</h3>
+
                     <p>Fornecedores</p>
+
                 </div>
+
             </div>
+
             <div class="stat-card">
+
                 <div class="stat-icon green"><i class="fas fa-dollar-sign"></i></div>
+
                 <div class="stat-info">
+
                     <h3 id="totalGastoFornecedor">R$ 0,00</h3>
+
                     <p>Total de Gastos</p>
+
                 </div>
+
             </div>
+
             <div class="stat-card">
+
                 <div class="stat-icon orange"><i class="fas fa-wrench"></i></div>
+
                 <div class="stat-info">
+
                     <h3 id="totalManutencoes">0</h3>
+
                     <p>Total de Serviços</p>
+
                 </div>
+
             </div>
+
         </div>
 
+
+
         <div class="card">
+
             <div class="card-header">
+
                 <h3 class="card-title"><i class="fas fa-chart-bar"></i> Gastos por Fornecedor</h3>
+
             </div>
+
             <div class="chart-box">
+
                 <canvas id="chartFornecedores"></canvas>
+
             </div>
+
         </div>
 
+
+
         <div class="card">
+
             <div class="card-header">
+
                 <h3 class="card-title"><i class="fas fa-list"></i> Detalhamento</h3>
+
             </div>
+
             <div class="table-container">
+
                 <table>
+
                     <thead>
+
                         <tr>
+
                             <th>Fornecedor</th>
+
                             <th>Tipo</th>
+
                             <th>Nº Serviços</th>
+
                             <th>Total Gasto</th>
+
                         </tr>
+
                     </thead>
+
                     <tbody id="tabelaFornecedores">
+
                     </tbody>
+
                 </table>
+
             </div>
+
         </div>
+
     </div>
 
+
+
     <script>
+
         let chartFornecedores = null;
 
+
+
         async function carregarFornecedores() {
+
             try {
+
                 const response = await fetch('/api/fornecedores');
+
                 const fornecedores = await response.json();
+
                 
+
                 const select = document.getElementById('filtroFornecedor');
+
                 fornecedores.forEach(f => {
+
                     const option = document.createElement('option');
+
                     option.value = f.id;
+
                     option.textContent = f.nome + (f.tipo_nome ? ` (${f.tipo_nome})` : '');
+
                     select.appendChild(option);
+
                 });
+
                 
+
                 const hoje = new Date();
+
                 const inicio = new Date();
+
                 inicio.setDate(hoje.getDate() - 90);
+
                 
+
                 document.getElementById('dataFimFornecedor').value = hoje.toISOString().split('T')[0];
+
                 document.getElementById('dataInicioFornecedor').value = inicio.toISOString().split('T')[0];
+
                 
+
             } catch (error) {
+
                 console.error('Erro ao carregar fornecedores:', error);
+
             }
+
         }
+
+
 
         async function gerarRelatorioFornecedor() {
+
             const fornecedorId = document.getElementById('filtroFornecedor').value;
+
             const dataInicio = document.getElementById('dataInicioFornecedor').value;
+
             const dataFim = document.getElementById('dataFimFornecedor').value;
+
             
+
             if (!dataInicio || !dataFim) {
-                alert('Selecione o período');
+
+                showToast('', 'error');
+
                 return;
+
             }
+
             
+
             try {
+
                 const response = await fetch('/api/relatorio-fornecedor', {
+
                     method: 'POST',
+
                     headers: { 'Content-Type': 'application/json' },
+
                     body: JSON.stringify({
+
                         fornecedor_id: fornecedorId || null,
+
                         data_inicio: dataInicio,
+
                         data_fim: dataFim
+
                     })
+
                 });
+
                 
+
                 const data = await response.json();
+
                 
+
                 if (data.error) {
-                    alert('Erro: ' + data.error);
+
+                    showToast('Erro: ' + data.error, 'error');
+
                     return;
+
                 }
+
                 
+
                 if (!data.resultados || data.resultados.length === 0) {
-                    alert('Nenhum dado encontrado');
+
+                    showToast('', 'error');
+
                     return;
+
                 }
+
                 
+
                 exibirResultadosFornecedor(data);
+
                 
+
             } catch (error) {
+
                 console.error('Erro ao gerar relatório:', error);
+
             }
+
         }
+
+
 
         function exibirResultadosFornecedor(data) {
+
             document.getElementById('resultadosFornecedor').style.display = 'block';
+
             
+
             document.getElementById('totalFornecedores').textContent = data.resultados.length;
+
             
+
             const totalGasto = data.resultados.reduce((sum, f) => sum + f.total_gasto, 0);
+
             document.getElementById('totalGastoFornecedor').textContent = formatCurrency(totalGasto);
+
             
+
             const totalServicos = data.resultados.reduce((sum, f) => sum + f.qtd_servicos, 0);
+
             document.getElementById('totalManutencoes').textContent = totalServicos;
+
             
+
             const tbody = document.getElementById('tabelaFornecedores');
+
             tbody.innerHTML = data.resultados.map(f => `
+
                 <tr>
+
                     <td><strong>${f.nome}</strong></td>
+
                     <td>${f.tipo_nome || '-'}</td>
+
                     <td>${f.qtd_servicos}</td>
+
                     <td style="color: var(--danger); font-weight: 600;">${formatCurrency(f.total_gasto)}</td>
+
                 </tr>
+
             `).join('');
+
             
+
             renderizarGraficoFornecedor(data.resultados);
+
         }
+
+
 
         function renderizarGraficoFornecedor(resultados) {
+
             const ctx = document.getElementById('chartFornecedores').getContext('2d');
+
             
+
             if (chartFornecedores) {
+
                 chartFornecedores.destroy();
+
             }
+
             
+
             chartFornecedores = new Chart(ctx, {
+
                 type: 'bar',
+
                 data: {
+
                     labels: resultados.map(r => r.nome),
+
                     datasets: [{
+
                         label: 'Total Gasto (R$)',
+
                         data: resultados.map(r => r.total_gasto),
+
                         backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+
                         borderRadius: 6
+
                     }]
+
                 },
+
                 options: {
+
                     responsive: true,
+
                     maintainAspectRatio: false,
+
                     plugins: { legend: { position: 'bottom' } },
+
                     scales: {
+
                         y: { beginAtZero: true }
+
                     }
+
                 }
+
             });
+
         }
+
+
 
         function switchTab(tabName) {
+
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
             document.getElementById('tab-' + tabName).classList.add('active');
+
             
+
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
             document.getElementById('content-' + tabName).classList.add('active');
+
             
+
             if (tabName === 'fornecedor') {
+
                 carregarFornecedores();
+
             } else if (tabName === 'lucratividade') {
+
                 carregarVeiculos();
+
             }
+
         }
+
     </script>
+
 </div>
 
+
+
 {% endblock %}
+
+
+
