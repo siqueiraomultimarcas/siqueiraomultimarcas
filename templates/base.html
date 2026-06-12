@@ -435,6 +435,61 @@
         .toast.warning { background: linear-gradient(135deg, #d97706, #f59e0b); }
         .toast.info    { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
 
+        /* ── KPI Cards (padrão clean global) ─────────────────── */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .kpi-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0,0,0,0.04);
+            border-top: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .kpi-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); }
+        .kpi-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .kpi-value {
+            font-size: 1.65rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .kpi-sub { font-size: 0.72rem; color: #94a3b8; }
+        .kpi-icon-bg {
+            position: absolute;
+            right: 16px; bottom: 12px;
+            font-size: 2.6rem;
+            opacity: 0.18;
+            pointer-events: none;
+        }
+        .kpi-card.blue   { border-top-color: #2563eb; }
+        .kpi-card.blue   .kpi-icon-bg { color: #2563eb; }
+        .kpi-card.green  { border-top-color: #10b981; }
+        .kpi-card.green  .kpi-icon-bg { color: #10b981; }
+        .kpi-card.orange { border-top-color: #f59e0b; }
+        .kpi-card.orange .kpi-icon-bg { color: #f59e0b; }
+        .kpi-card.purple { border-top-color: #8b5cf6; }
+        .kpi-card.purple .kpi-icon-bg { color: #8b5cf6; }
+        .kpi-card.red    { border-top-color: #ef4444; }
+        .kpi-card.red    .kpi-icon-bg { color: #ef4444; }
+        .kpi-card.teal   { border-top-color: #14b8a6; }
+        .kpi-card.teal   .kpi-icon-bg { color: #14b8a6; }
+
         /* ── Grid layouts ─────────────────────────────────────── */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
