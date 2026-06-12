@@ -354,7 +354,7 @@
 
     async function _confirmaExcluir(id) {
         try {
-            const resp = await fetch(/api/fornecedores/${id}, { method: 'DELETE' });
+            const resp = await fetch(`/api/fornecedores/${id}`, { method: 'DELETE' });
             if (resp.ok) {
                 showToast('Fornecedor excluído', 'success');
             } else {
@@ -365,7 +365,8 @@
             console.error('Erro:', error);
             showToast('Erro ao excluir fornecedor. Tente novamente.', 'error');
         }
-    
+    }
+
     // Funções para Tipos de Fornecedor
     function abrirModalTipo(tipo = null) {
         const content = `
@@ -419,7 +420,7 @@
 
     async function _confirmaExcluirTipo(id) {
         try {
-            const resp = await fetch(/api/tipos-fornecedor/${id}, { method: 'DELETE' });
+            const resp = await fetch(`/api/tipos-fornecedor/${id}`, { method: 'DELETE' });
             if (resp.ok) {
                 showToast('Tipo excluído', 'success');
             } else {
@@ -430,7 +431,8 @@
             console.error('Erro:', error);
             showToast('Erro ao excluir tipo. Tente novamente.', 'error');
         }
-    
+    }
+
     window.addEventListener('load', carregarDados);
 </script>
 {% endblock %}
