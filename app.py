@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, Response
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -7,10 +7,14 @@ import psycopg2.errorcodes
 import cloudinary
 import cloudinary.uploader
 import os
+import base64
+import re
+import io
 from datetime import datetime
 from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
+import pdfplumber
 
 load_dotenv()
 
@@ -169,6 +173,13 @@ def init_db():
     # Migração: adiciona colunas novas se a tabela já existir sem elas
     for col, tipo in [('checklist','TEXT'), ('fotos_saida','TEXT'), ('fotos_retorno','TEXT'), ('data_devolucao_real','DATE')]:
         cur.execute(f"ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS {col} {tipo}")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS renavam TEXT")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS chassi TEXT")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS ano_fabricacao INTEGER")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS potencia TEXT")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS versao TEXT")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS crlv_url TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS numero_auto TEXT")
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS abastecimentos (
@@ -544,11 +555,16 @@ def add_veiculo():
         conn = get_conn()
         cur = conn.cursor()
         cur.execute('''
-            INSERT INTO veiculos (placa, marca, modelo, ano, cor, categoria, diaria, km_atual, status, combustivel, observacoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-        ''', (data['placa'], data['marca'], data['modelo'], data.get('ano'), data.get('cor'),
-              data.get('categoria'), data.get('diaria'), data.get('km_atual', 0),
-              data.get('status', 'disponivel'), data.get('combustivel'), data.get('observacoes')))
+            INSERT INTO veiculos (placa, marca, modelo, ano, cor, categoria, diaria, km_atual, status, combustivel, observacoes, renavam, chassi, ano_fabricacao, potencia, versao)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+        ''', (data.get('placa'), data.get('marca'), data.get('modelo'),
+              data.get('ano') or None, data.get('cor') or None,
+              data.get('categoria') or None, data.get('diaria') or None,
+              data.get('km_atual') or 0, data.get('status', 'disponivel'),
+              data.get('combustivel') or None, data.get('observacoes') or None,
+              data.get('renavam') or None, data.get('chassi') or None,
+              data.get('ano_fabricacao') or None,
+              data.get('potencia') or None, data.get('versao') or None))
         veiculo_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
@@ -567,17 +583,32 @@ def add_veiculo():
 def update_veiculo(id):
     data = request.json
     conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        UPDATE veiculos SET placa=%s, marca=%s, modelo=%s, ano=%s, cor=%s, categoria=%s,
-        diaria=%s, km_atual=%s, status=%s, combustivel=%s, observacoes=%s WHERE id=%s
-    ''', (data['placa'], data['marca'], data['modelo'], data.get('ano'), data.get('cor'),
-          data.get('categoria'), data.get('diaria'), data.get('km_atual'),
-          data.get('status'), data.get('combustivel'), data.get('observacoes'), id))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({'success': True})
+    try:
+        cur = conn.cursor()
+        cur.execute('''
+            UPDATE veiculos SET placa=%s, marca=%s, modelo=%s, ano=%s, cor=%s, categoria=%s,
+            diaria=%s, km_atual=%s, status=%s, combustivel=%s, observacoes=%s, renavam=%s,
+            chassi=%s, ano_fabricacao=%s, potencia=%s, versao=%s WHERE id=%s
+        ''', (data.get('placa'), data.get('marca'), data.get('modelo'),
+              data.get('ano') or None, data.get('cor'), data.get('categoria'),
+              data.get('diaria') or None, data.get('km_atual') or 0,
+              data.get('status', 'disponivel'), data.get('combustivel'),
+              data.get('observacoes'), data.get('renavam') or None,
+              data.get('chassi') or None,
+              data.get('ano_fabricacao') or None,
+              data.get('potencia') or None, data.get('versao') or None, id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'success': True})
+    except psycopg2.IntegrityError:
+        conn.rollback()
+        conn.close()
+        return jsonify({'error': 'Placa já cadastrada por outro veículo!'}), 400
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/veiculos/<int:id>', methods=['DELETE'])
@@ -590,6 +621,289 @@ def delete_veiculo(id):
     cur.close()
     conn.close()
     return jsonify({'success': True})
+
+@app.route('/api/veiculos/<int:id>/crlv', methods=['POST'])
+@login_required
+def upload_crlv_veiculo(id):
+    try:
+        if 'crlv' not in request.files:
+            return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+        file = request.files['crlv']
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Arquivo deve ser PDF'}), 400
+        public_id = f'siqueirao/crlv_{id}_{int(datetime.now().timestamp())}'
+        result = cloudinary.uploader.upload(
+            file, public_id=public_id, resource_type='raw', overwrite=True
+        )
+        crlv_url = result['secure_url']
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute('UPDATE veiculos SET crlv_url = %s WHERE id = %s', (crlv_url, id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'success': True, 'crlv_url': crlv_url})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/veiculos/<int:id>/crlv/download')
+@login_required
+def download_crlv_veiculo(id):
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute('SELECT crlv_url, placa FROM veiculos WHERE id = %s', (id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not row or not row[0]:
+            return jsonify({'error': 'CRLV não encontrado'}), 404
+        crlv_url, placa = row[0], row[1]
+        import requests as req_http
+        r = req_http.get(crlv_url, timeout=30)
+        return Response(
+            r.content,
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename="CRLV_{placa}.pdf"',
+                'Content-Type': 'application/pdf',
+            }
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/veiculos/<int:id>/crlv', methods=['DELETE'])
+@login_required
+def delete_crlv_veiculo(id):
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute('UPDATE veiculos SET crlv_url = NULL WHERE id = %s', (id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ==================== IMPORTAR CRLV ====================
+
+@app.route('/api/importar-crlv', methods=['POST'])
+@login_required
+def importar_crlv():
+    if 'crlv' not in request.files:
+        return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+    arquivo = request.files['crlv']
+    if not arquivo.filename.lower().endswith('.pdf'):
+        return jsonify({'error': 'Arquivo deve ser PDF'}), 400
+    try:
+        pdf_bytes = arquivo.read()
+        texto = ''
+        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages:
+                t = page.extract_text()
+                if t:
+                    texto += t + '\n'
+
+        dados = _parse_crlv(texto)
+        if not dados:
+            return jsonify({'error': 'Não foi possível extrair dados do CRLV. Verifique se o PDF é válido.'}), 422
+        return jsonify({'success': True, 'dados': dados, 'texto_bruto': texto[:2000]})
+    except Exception as e:
+        return jsonify({'error': f'Erro ao processar PDF: {str(e)}'}), 500
+
+
+def _parse_crlv(texto):
+    dados = {}
+
+    linhas = [re.sub(r'[ \t]+', ' ', l).strip() for l in texto.split('\n')]
+    linhas = [l for l in linhas if l]
+
+    def proxima_valor(pattern):
+        for i, l in enumerate(linhas):
+            if re.search(pattern, l, re.IGNORECASE):
+                if i + 1 < len(linhas):
+                    return linhas[i + 1]
+        return None
+
+    def idx_label(pattern):
+        for i, l in enumerate(linhas):
+            if re.search(pattern, l, re.IGNORECASE):
+                return i
+        return None
+
+    # ---------- RENAVAM ----------
+    m = re.search(r'\b(\d{11})\b', texto)
+    if m:
+        dados['renavam'] = m.group(1)
+
+    # ---------- PLACA ----------
+    m = re.search(r'\b([A-Z]{3}\d[A-Z]\d{2})\b', texto)   # Mercosul
+    if not m:
+        m = re.search(r'\b([A-Z]{3}\d{4})\b', texto)       # antigo
+    if m:
+        dados['placa'] = m.group(1)
+
+    # ---------- CHASSI ----------
+    m = re.search(r'\b([A-HJ-NPR-Z0-9]{17})\b', texto)
+    if m:
+        dados['chassi'] = m.group(1)
+
+    # ---------- ANOS ----------
+    # 1ª tentativa: linha seguinte ao label com "XXXX/XXXX" ou "XXXX XXXX"
+    i_ano = idx_label(r'ANO\s+(DE\s+)?FABRIC|ANO\s+FAB')
+    if i_ano is not None:
+        for l in linhas[i_ano + 1: i_ano + 4]:
+            # Aceita barra ou espaço como separador entre os dois anos
+            m = re.search(r'(19\d{2}|20[012]\d)\s*[/\s]\s*(19\d{2}|20[012]\d)', l)
+            if m:
+                dados['ano_fabricacao'] = int(m.group(1))
+                dados['ano'] = int(m.group(2))
+                break
+            # Um único ano na linha
+            m = re.search(r'\b(19\d{2}|20[012]\d)\b', l)
+            if m:
+                dados['ano_fabricacao'] = int(m.group(1))
+                break
+    # 2ª tentativa: padrão "XXXX/XXXX" em qualquer linha do texto
+    if 'ano_fabricacao' not in dados:
+        for l in linhas:
+            m = re.search(r'\b(19\d{2}|20[012]\d)\s*/\s*(19\d{2}|20[012]\d)\b', l)
+            if m:
+                dados['ano_fabricacao'] = int(m.group(1))
+                dados['ano'] = int(m.group(2))
+                break
+    # 3ª tentativa: se achou só fab, busca modelo separado
+    if 'ano_fabricacao' in dados and 'ano' not in dados:
+        val_mod = proxima_valor(r'ANO\s+MODELO|ANO\s+MOD')
+        if val_mod:
+            m = re.search(r'\b(19\d{2}|20[012]\d)\b', val_mod)
+            if m:
+                dados['ano'] = int(m.group(1))
+
+    # ---------- MARCA / MODELO / VERSÃO ----------
+    MARCAS_ABREV = {'VW', 'GM', 'BMW', 'KIA', 'JAC', 'BYD', 'GWM', 'MG', 'GAC', 'JMC'}
+    val_mmv = proxima_valor(r'MARCA\s*/?\s*MODELO')
+    if val_mmv and '/' in val_mmv:
+        idx = val_mmv.index('/')
+        marca_raw = val_mmv[:idx].strip().upper()
+        dados['marca'] = marca_raw if marca_raw in MARCAS_ABREV else marca_raw.title()
+        resto = val_mmv[idx + 1:].strip().split()
+
+        # VERSÃO: primeiro token que é estritamente um número de versão (ex: "1.0", "1.6i")
+        versao_token = next(
+            (t for t in resto if re.match(r'^\d+[.,]\d+\w{0,2}$', t)),
+            None
+        )
+        if versao_token:
+            vi = resto.index(versao_token)
+            dados['modelo'] = ' '.join(resto[:vi]).title() if vi > 0 else (resto[0].title() if len(resto) > 1 else '')
+            dados['versao'] = versao_token
+        else:
+            dados['modelo'] = ' '.join(resto).title()
+
+    # ---------- COR PREDOMINANTE ----------
+    # O layout de colunas do CRLV faz o pdfplumber pular a cor e pegar outro texto.
+    # Estratégia: procura nome de cor brasileiro em até 8 linhas após o label.
+    CORES = ['PRETA','PRET','BRANCA','BRANCO','VERMELHA','VERMELHO','PRATA',
+             'CINZA','AZUL','VERDE','AMARELA','AMARELO','MARROM','BEGE',
+             'LARANJA','ROXA','ROXO','DOURADA','DOURADO','CHAMPANHE','GRAFITE',
+             'VINHO','BORDO','BORDÔ','CREME','ROSA','BRONZE','PRETO']
+    i_cor = idx_label(r'COR\s+PREDOMINANTE')
+    cor_encontrada = None
+    if i_cor is not None:
+        for l in linhas[i_cor + 1: i_cor + 9]:
+            for c in CORES:
+                if re.search(r'\b' + c + r'\b', l, re.IGNORECASE):
+                    cor_encontrada = 'Preta' if c.upper() in ('PRET', 'PRETO') else c.title()
+                    break
+            if cor_encontrada:
+                break
+    if cor_encontrada:
+        dados['cor'] = cor_encontrada
+
+    # ---------- COMBUSTÍVEL ----------
+    # Mesma estratégia: busca pelo nome do combustível em até 8 linhas após o label.
+    MAPA_COMB = {
+        'GASOLINA':'Gasolina','ALCOOL':'Álcool','ÁLCOOL':'Álcool',
+        'ETANOL':'Álcool','FLEX':'Flex','DIESEL':'Diesel',
+        'GNV':'GNV','ELETRICO':'Elétrico','ELÉTRICO':'Elétrico',
+        'HIBRIDO':'Híbrido','HÍBRIDO':'Híbrido',
+    }
+    i_comb = idx_label(r'COMBUST[IÍ]VEL')
+    if i_comb is not None:
+        for l in linhas[i_comb + 1: i_comb + 8]:
+            # FLEX: GASOLINA e ÁLCOOL/ETANOL na mesma linha ("ÁLCOOL/GASOLINA", "GASOLINA E ÁLCOOL")
+            has_gas = bool(re.search(r'\bGASOLINA\b', l, re.IGNORECASE))
+            has_alc = bool(re.search(r'\b[AÁ]LCOOL\b|\bETANOL\b', l, re.IGNORECASE))
+            if has_gas and has_alc:
+                dados['combustivel'] = 'Flex'
+                break
+            # Combustível único
+            m = re.search(
+                r'\b(GASOLINA|[AÁ]LCOOL|ETANOL|FLEX|DIESEL|GNV|EL[EÉ]TRICO|H[IÍ]BRIDO)\b',
+                l, re.IGNORECASE
+            )
+            if m:
+                dados['combustivel'] = MAPA_COMB.get(m.group(1).upper(), m.group(1).title())
+                break
+
+    # ---------- POTÊNCIA ----------
+    m = re.search(r'(\d+\s*[Cc][Vv][/\s]\d+)', texto)
+    if m:
+        dados['potencia'] = m.group(1).strip()
+
+    # ---------- ESPÉCIE / TIPO → CATEGORIA ----------
+    # TIPO tem precedência (mais específico). Busca por palavra-chave em todo o texto
+    # para não depender da posição exata do label (que varia por estado/formato do CRLV).
+    TIPOS_CAT = [
+        (r'\bPASSEIO\b',    'Econômico'),
+        (r'\bMISTO\b',      'SUV'),
+        (r'\bCARGA\b',      'Utilitário'),
+        (r'\bCORRIDA\b',    'Executivo'),
+    ]
+    ESPECIES_CAT = [
+        (r'\bCAMINHONETA\b',  'SUV'),
+        (r'\bCAMINHONETE\b',  'Utilitário'),
+        (r'\bUTILIT[AÁ]RIO\b','Utilitário'),
+        (r'\bMICROONIBUS\b',  'Utilitário'),
+        (r'\bONIBUS\b',       'Utilitário'),
+        (r'\bAUT[OÔ]M[OÓ]VEL\b', 'Econômico'),
+        (r'\bAUTOMOVEL\b',    'Econômico'),
+    ]
+
+    # 1ª tentativa: próximas 6 linhas após o label ESPÉCIE
+    i_esp = idx_label(r'ESP[EÉ]CIE')
+    if i_esp is not None:
+        trecho = ' '.join(linhas[i_esp + 1: i_esp + 6]).upper()
+        for pat, cat in TIPOS_CAT:
+            if re.search(pat, trecho):
+                dados['categoria'] = cat
+                break
+        if 'categoria' not in dados:
+            for pat, cat in ESPECIES_CAT:
+                if re.search(pat, trecho):
+                    dados['categoria'] = cat
+                    break
+
+    # 2ª tentativa: varredura em todo o texto (ESPÉCIE costuma ser termo único no CRLV)
+    if 'categoria' not in dados:
+        texto_up = texto.upper()
+        for pat, cat in TIPOS_CAT:
+            if re.search(pat, texto_up):
+                dados['categoria'] = cat
+                break
+        if 'categoria' not in dados:
+            for pat, cat in ESPECIES_CAT:
+                if re.search(pat, texto_up):
+                    dados['categoria'] = cat
+                    break
+
+    return dados
+
 
 # ==================== API MANUTENÇÕES ====================
 
@@ -902,11 +1216,12 @@ def add_multa():
     conn = get_conn()
     cur = conn.cursor()
     cur.execute('''
-        INSERT INTO multas (veiculo_id, motorista_id, data_infracao, descricao, valor, local_infracao, pontos, status, observacoes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO multas (veiculo_id, motorista_id, data_infracao, descricao, valor, local_infracao, pontos, status, observacoes, numero_auto)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ''', (data.get('veiculo_id'), data.get('motorista_id'), data.get('data_infracao'),
           data.get('descricao'), data.get('valor'), data.get('local_infracao'),
-          data.get('pontos'), data.get('status', 'pendente'), data.get('observacoes')))
+          data.get('pontos'), data.get('status', 'pendente'), data.get('observacoes'),
+          data.get('numero_auto')))
     conn.commit()
     cur.close()
     conn.close()
@@ -921,10 +1236,11 @@ def update_multa(id):
     cur = conn.cursor()
     cur.execute('''
         UPDATE multas SET veiculo_id=%s, motorista_id=%s, data_infracao=%s, descricao=%s,
-        valor=%s, local_infracao=%s, pontos=%s, status=%s, observacoes=%s WHERE id=%s
+        valor=%s, local_infracao=%s, pontos=%s, status=%s, observacoes=%s, numero_auto=%s WHERE id=%s
     ''', (data.get('veiculo_id'), data.get('motorista_id'), data.get('data_infracao'),
           data.get('descricao'), data.get('valor'), data.get('local_infracao'),
-          data.get('pontos'), data.get('status'), data.get('observacoes'), id))
+          data.get('pontos'), data.get('status'), data.get('observacoes'),
+          data.get('numero_auto'), id))
     conn.commit()
     cur.close()
     conn.close()
@@ -948,25 +1264,55 @@ def delete_multa(id):
 def buscar_multas_online():
     data = request.json
     placa = data.get('placa', '').upper().replace('-', '').replace(' ', '')
+    renavam = data.get('renavam', '').strip()
     if not placa:
         return jsonify({'error': 'Placa não informada'}), 400
 
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        url = 'https://www.detran.sp.gov.br/wps/portal/portaldetran/cidadao/servicos/multas/consultainfracoes'
-        response = requests.get(url, headers=headers, timeout=10)
-        encontrado = placa in response.text.upper() if response.status_code == 200 else False
+    consumer_key = os.environ.get('SERPRO_CONSUMER_KEY', '')
+    consumer_secret = os.environ.get('SERPRO_CONSUMER_SECRET', '')
+
+    if not consumer_key or not consumer_secret:
         return jsonify({
-            'placa': placa,
-            'resultados': [{
-                'fonte': 'Detran SP',
-                'encontrado': encontrado,
-                'mensagem': 'Veículo encontrado.' if encontrado else 'Consulte diretamente o portal do Detran do seu estado.'
-            }],
-            'success': True
-        })
+            'success': False,
+            'error': 'Credenciais SERPRO não configuradas. Adicione SERPRO_CONSUMER_KEY e SERPRO_CONSUMER_SECRET no .env'
+        }), 503
+
+    try:
+        # 1. Obter token JWT do SERPRO
+        credenciais_b64 = base64.b64encode(f"{consumer_key}:{consumer_secret}".encode()).decode()
+        auth_resp = requests.post(
+            'https://autenticacao.sapi.serpro.gov.br/authenticate',
+            headers={
+                'Authorization': f'Basic {credenciais_b64}',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            data={'grant_type': 'client_credentials'},
+            timeout=15
+        )
+        if auth_resp.status_code != 200:
+            return jsonify({'success': False, 'error': f'Falha na autenticação SERPRO ({auth_resp.status_code})'}), 502
+
+        token = auth_resp.json().get('access_token')
+        headers_api = {'Authorization': f'Bearer {token}', 'Accept': 'application/json'}
+
+        # 2. Consultar infrações pela placa (SENATRAN via SERPRO)
+        url = f'https://apigateway.serpro.gov.br/consulta-veiculos/1/veiculos/{placa}/infracoes'
+        resp = requests.get(url, headers=headers_api, timeout=15)
+
+        if resp.status_code == 200:
+            infracoes = resp.json() if resp.text else []
+            if not isinstance(infracoes, list):
+                infracoes = infracoes.get('infracoes', [infracoes])
+            return jsonify({'success': True, 'placa': placa, 'infracoes': infracoes, 'total': len(infracoes)})
+        elif resp.status_code == 404:
+            return jsonify({'success': True, 'placa': placa, 'infracoes': [], 'total': 0, 'mensagem': 'Nenhuma infração encontrada para esta placa.'})
+        else:
+            return jsonify({'success': False, 'error': f'SERPRO retornou status {resp.status_code}: {resp.text[:200]}'}), 502
+
+    except requests.Timeout:
+        return jsonify({'success': False, 'error': 'Tempo de conexão com SERPRO excedido. Tente novamente.'}), 504
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # ==================== API FORNECEDORES ====================
 
@@ -1178,6 +1524,7 @@ def get_custos_veiculos():
         FROM veiculos v
         LEFT JOIN manutencoes m ON v.id = m.veiculo_id AND m.status = 'concluida'
         GROUP BY v.id, v.placa, v.marca, v.modelo, v.ano, v.km_atual
+        HAVING COALESCE(SUM(m.custo), 0) > 0
         ORDER BY v.placa
     ''')
     rows = cur.fetchall()

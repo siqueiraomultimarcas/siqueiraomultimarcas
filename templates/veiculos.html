@@ -1,84 +1,60 @@
 {% extends "base.html" %}
-
-{% block title %}Veículos - Locadora{% endblock %}
-
+{% block title %}Veículos — Siqueirão Multimarcas{% endblock %}
 {% block content %}
+
+<!-- ================================================
+     CABEÇALHO DA PÁGINA
+================================================= -->
 <div class="page-header">
     <h1><i class="fas fa-car"></i> Frota de Veículos</h1>
-    <button class="btn btn-primary" onclick="abrirModalVeiculo()">
-        <i class="fas fa-plus"></i> Novo Veículo
-    </button>
+    <div style="display:flex;gap:10px;align-items:center;">
+        <button class="btn btn-crlv" onclick="abrirModalCRLV()">
+            <i class="fas fa-file-import"></i> Importar CRLV
+        </button>
+        <button class="btn btn-primary" onclick="abrirModalVeiculo()">
+            <i class="fas fa-plus"></i> Novo Veículo
+        </button>
+    </div>
 </div>
 
-<!-- Stats por Status -->
-<div class="stats-grid" style="margin-bottom: 20px;">
+<!-- ================================================
+     CONTADORES DE STATUS
+================================================= -->
+<div class="stats-grid" style="margin-bottom:20px;">
     <div class="stat-card">
         <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
-        <div class="stat-info">
-            <h3 id="countDisponivel">0</h3>
-            <p>Disponíveis</p>
-        </div>
+        <div class="stat-info"><h3 id="countDisponivel">0</h3><p>Disponíveis</p></div>
     </div>
     <div class="stat-card">
         <div class="stat-icon orange"><i class="fas fa-key"></i></div>
-        <div class="stat-info">
-            <h3 id="countLocado">0</h3>
-            <p>Locados</p>
-        </div>
+        <div class="stat-info"><h3 id="countLocado">0</h3><p>Locados</p></div>
     </div>
     <div class="stat-card">
         <div class="stat-icon red"><i class="fas fa-tools"></i></div>
-        <div class="stat-info">
-            <h3 id="countManutencao">0</h3>
-            <p>Em Manutenção</p>
-        </div>
+        <div class="stat-info"><h3 id="countManutencao">0</h3><p>Em Manutenção</p></div>
     </div>
     <div class="stat-card">
         <div class="stat-icon purple"><i class="fas fa-ban"></i></div>
-        <div class="stat-info">
-            <h3 id="countIndisponivel">0</h3>
-            <p>Indisponíveis</p>
-        </div>
+        <div class="stat-info"><h3 id="countIndisponivel">0</h3><p>Indisponíveis</p></div>
     </div>
 </div>
 
-<!-- Análise de Custos de Manutenção -->
-<div class="card" style="margin-bottom: 20px;">
-    <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-chart-line"></i> Custo de Manutenção por Km Rodado</h3>
-    </div>
-    <div class="table-container">
-        <table id="tabelaCustos">
-            <thead>
-                <tr>
-                    <th>Posição</th>
-                    <th>Placa</th>
-                    <th>Veículo</th>
-                    <th>Km Atual</th>
-                    <th>Custo Total</th>
-                    <th>Custo/Km</th>
-                    <th>Alerta</th>
-                </tr>
-            </thead>
-            <tbody id="tabelaCustosBody">
-                <tr><td colspan="7" style="text-align:center">Carregando...</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
 
-<!-- Filtros -->
+<!-- ================================================
+     FILTROS
+================================================= -->
 <div class="card">
     <div class="toolbar">
-        <input type="text" class="form-control search" placeholder="Buscar veículo por placa, marca ou modelo..." id="buscaVeiculo" onkeyup="filtrarVeiculos()">
-        <select class="form-control" id="filtroStatus" onchange="filtrarVeiculos()" style="width: 150px;">
+        <input type="text" class="form-control search" id="buscaVeiculo"
+               placeholder="Buscar por placa, marca, modelo ou RENAVAM..." onkeyup="filtrarVeiculos()">
+        <select class="form-control" id="filtroStatus" onchange="filtrarVeiculos()" style="width:160px;">
             <option value="todos">Todos Status</option>
             <option value="disponivel">Disponível</option>
             <option value="locado">Locado</option>
             <option value="manutencao">Manutenção</option>
             <option value="indisponivel">Indisponível</option>
         </select>
-        <select class="form-control" id="filtroCategoria" onchange="filtrarVeiculos()" style="width: 150px;">
+        <select class="form-control" id="filtroCategoria" onchange="filtrarVeiculos()" style="width:170px;">
             <option value="todos">Todas Categorias</option>
             <option value="Econômico">Econômico</option>
             <option value="Intermediário">Intermediário</option>
@@ -89,16 +65,20 @@
     </div>
 </div>
 
-<!-- Tabela de Veículos -->
+<!-- ================================================
+     TABELA DE VEÍCULOS
+================================================= -->
 <div class="card">
     <div class="table-container">
         <table>
             <thead>
                 <tr>
+                    <th>Foto</th>
                     <th>Placa</th>
-                    <th>Marca/Modelo</th>
+                    <th>Marca / Modelo</th>
                     <th>Ano</th>
                     <th>Cor</th>
+                    <th>Combustível</th>
                     <th>Categoria</th>
                     <th>Diária</th>
                     <th>Km</th>
@@ -107,326 +87,722 @@
                 </tr>
             </thead>
             <tbody id="tabelaVeiculos">
-                <tr><td colspan="9" style="text-align:center">Carregando...</td></tr>
+                <tr><td colspan="11" style="text-align:center">Carregando...</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
+<!-- ================================================
+     VISUALIZADOR PDF (CRLV do veículo)
+================================================= -->
+<div id="modalPDFViewer" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+     background:rgba(0,0,0,0.75);z-index:10000;align-items:center;justify-content:center;"
+     onclick="if(event.target===this) fecharModalPDF()">
+    <div style="background:#1e293b;border-radius:14px;width:94vw;height:93vh;
+                display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.5);">
+        <!-- Header do viewer -->
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-file-alt" style="color:#60a5fa;font-size:1.1rem;"></i>
+                <span style="color:#f1f5f9;font-size:0.95rem;font-weight:600;">CRLV — Certificado de Registro do Veículo</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <a id="pdfDownloadBtn" href="#" class="btn btn-sm"
+                   style="background:#16a34a;color:#fff;text-decoration:none;">
+                    <i class="fas fa-download"></i> Baixar PDF
+                </a>
+                <button onclick="fecharModalPDF()"
+                        style="background:none;border:none;color:#9ca3af;font-size:1.6rem;
+                               cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
+            </div>
+        </div>
+        <!-- Iframe do viewer -->
+        <iframe id="iframePDF" src="" frameborder="0"
+                style="flex:1;border:none;background:#374151;width:100%;"></iframe>
+    </div>
+</div>
+
+<!-- ================================================
+     MODAL IMPORTAR CRLV
+================================================= -->
+<div id="modalCRLV" class="crlv-overlay" style="display:none;" onclick="fecharModalCRLVOverlay(event)">
+    <div class="crlv-box">
+        <!-- Header -->
+        <div class="crlv-head">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div class="crlv-head-icon"><i class="fas fa-file-pdf"></i></div>
+                <div>
+                    <div class="crlv-head-title">Importar CRLV</div>
+                    <div class="crlv-head-sub">Extração automática dos dados do veículo</div>
+                </div>
+            </div>
+            <button class="crlv-close" onclick="fecharModalCRLV()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Step 1: upload -->
+        <div id="crlvStep1" class="crlv-body">
+            <div id="dropZone" class="drop-zone"
+                 ondragover="event.preventDefault();this.classList.add('drag-over')"
+                 ondragleave="this.classList.remove('drag-over')"
+                 ondrop="onDrop(event)">
+                <div class="drop-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <p class="drop-title">Arraste o PDF do CRLV aqui</p>
+                <p class="drop-sub">ou clique para selecionar o arquivo</p>
+                <button class="btn btn-primary" style="margin-top:14px;"
+                        onclick="document.getElementById('inputCRLV').click()">
+                    <i class="fas fa-folder-open"></i> Selecionar PDF
+                </button>
+                <input type="file" id="inputCRLV" accept=".pdf" style="display:none"
+                       onchange="processarCRLV(this.files[0])">
+                <p class="drop-note"><i class="fas fa-shield-alt"></i> Apenas PDF · Processamento local seguro</p>
+            </div>
+        </div>
+
+        <!-- Step 2: processando -->
+        <div id="crlvStep2" class="crlv-body" style="display:none;">
+            <div class="crlv-processing">
+                <div class="crlv-spinner"></div>
+                <p class="crlv-proc-title">Extraindo dados do CRLV…</p>
+                <p class="crlv-proc-sub">Lendo campos do documento</p>
+            </div>
+        </div>
+
+        <!-- Step 3: preview dos dados -->
+        <div id="crlvStep3" class="crlv-body" style="display:none;">
+            <div class="crlv-success-bar">
+                <i class="fas fa-check-circle"></i> Dados extraídos com sucesso — revise antes de usar
+            </div>
+            <div class="crlv-preview-grid" id="crlvPreviewGrid"></div>
+            <div class="crlv-footer">
+                <button class="btn" style="background:#6b7280;color:#fff;" onclick="voltarStep1()">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </button>
+                <button class="btn btn-primary" onclick="usarDadosCRLV()">
+                    <i class="fas fa-check"></i> Usar dados &amp; abrir cadastro
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================
+     ESTILOS
+================================================= -->
 <style>
-    .alerta-custo { background: #fee2e2 !important; }
-    .badge-alerta { background: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-    .badge-ok { background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-    .custo-alto { color: #ef4444; font-weight: 700; }
-    .custo-medio { color: #f59e0b; font-weight: 600; }
-    .custo-baixo { color: #10b981; font-weight: 600; }
-    .foto-preview { max-width: 100%; max-height: 150px; object-fit: contain; border-radius: 8px; display: block; margin: 0 auto; }
-    .foto-thumbnail { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+/* ----- botão CRLV ----- */
+.btn-crlv {
+    background: linear-gradient(135deg,#0d9488,#0891b2);
+    color: #fff; border: none; border-radius: 8px;
+    padding: 10px 18px; font-size: 0.86rem; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    transition: opacity .15s, transform .1s;
+}
+.btn-crlv:hover { opacity: .9; transform: translateY(-1px); }
+
+/* ----- tabela ----- */
+.foto-preview   { max-width:100%;max-height:150px;object-fit:contain;border-radius:8px;display:block;margin:0 auto; }
+.foto-thumbnail { width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb; }
+.foto-placeholder { width:48px;height:48px;border-radius:6px;background:#f3f4f6;border:1px solid #e5e7eb;
+    display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:1.1rem; }
+
+/* ----- overlay do modal CRLV ----- */
+.crlv-overlay {
+    position:fixed;inset:0;background:rgba(0,0,0,.6);
+    display:flex;align-items:center;justify-content:center;
+    z-index:9000;padding:20px;backdrop-filter:blur(4px);
+}
+.crlv-box {
+    background:#fff;border-radius:16px;
+    width:100%;max-width:640px;
+    box-shadow:0 24px 60px rgba(0,0,0,.3);
+    overflow:hidden;
+}
+.crlv-head {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:20px 24px;
+    background:linear-gradient(135deg,#0d9488 0%,#0891b2 100%);
+}
+.crlv-head-icon {
+    width:40px;height:40px;border-radius:10px;
+    background:rgba(255,255,255,.2);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.1rem;color:#fff;
+}
+.crlv-head-title { font-size:1rem;font-weight:700;color:#fff; }
+.crlv-head-sub   { font-size:.74rem;color:rgba(255,255,255,.75);margin-top:1px; }
+.crlv-close {
+    width:34px;height:34px;border-radius:8px;border:none;cursor:pointer;
+    background:rgba(255,255,255,.15);color:#fff;font-size:.9rem;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .15s;
+}
+.crlv-close:hover { background:rgba(255,255,255,.25); }
+
+.crlv-body { padding:28px 24px; }
+
+/* drop zone */
+.drop-zone {
+    border:2px dashed #d1d5db;border-radius:12px;
+    padding:44px 24px;text-align:center;
+    background:#fafafa;transition:border-color .2s,background .2s;cursor:pointer;
+}
+.drop-zone.drag-over { border-color:#0d9488;background:#f0fdfa; }
+.drop-icon { font-size:3rem;color:#d1d5db;margin-bottom:14px; }
+.drop-title { font-size:1rem;font-weight:600;color:#111827;margin-bottom:6px; }
+.drop-sub   { font-size:.82rem;color:#6b7280; }
+.drop-note  { margin-top:16px;font-size:.72rem;color:#9ca3af;display:flex;align-items:center;justify-content:center;gap:5px; }
+
+/* processando */
+.crlv-processing { text-align:center;padding:20px 0; }
+.crlv-spinner {
+    width:52px;height:52px;border-radius:50%;
+    border:4px solid #e5e7eb;border-top-color:#0d9488;
+    animation:spin .8s linear infinite;margin:0 auto 20px;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.crlv-proc-title { font-size:1rem;font-weight:600;color:#111827;margin-bottom:6px; }
+.crlv-proc-sub   { font-size:.82rem;color:#6b7280; }
+
+/* preview */
+.crlv-success-bar {
+    display:flex;align-items:center;gap:8px;
+    background:#f0fdf4;border:1px solid #bbf7d0;
+    border-radius:8px;padding:10px 14px;
+    font-size:.83rem;font-weight:600;color:#15803d;
+    margin-bottom:18px;
+}
+.crlv-preview-grid {
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;
+}
+.crlv-field {
+    background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;
+}
+.crlv-field-label {
+    font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:#9ca3af;margin-bottom:3px;
+}
+.crlv-field-value {
+    font-size:.9rem;font-weight:600;color:#111827;font-family:monospace;
+}
+.crlv-field-value.empty { color:#d1d5db;font-style:italic;font-family:sans-serif; }
+
+.crlv-footer {
+    display:flex;justify-content:flex-end;gap:10px;
+    border-top:1px solid #f3f4f6;padding-top:18px;
+}
+
+/* form grid 3 colunas */
+.grid-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px; }
+
 </style>
 
+<!-- ================================================
+     JAVASCRIPT
+================================================= -->
 <script>
-    let veiculos = [];
-    let custosVeiculos = [];
-    
-    async function carregarVeiculos() {
-        try {
-            const response = await fetch('/api/veiculos');
-            veiculos = await response.json();
-            atualizarContadores();
-            renderizarVeiculos(veiculos);
-            await carregarCustos();
-        } catch (error) {
-            console.error('Erro ao carregar veículos:', error);
-        }
+let veiculos = [];
+let dadosCRLV = {};
+
+/* ---------- CARREGAR DADOS ---------- */
+async function carregarVeiculos() {
+    try {
+        veiculos = await fetch('/api/veiculos').then(r => r.json());
+        atualizarContadores();
+        renderizarVeiculos(veiculos);
+    } catch (e) {
+        showToast('Erro ao carregar dados da frota', 'error');
     }
-    
-    async function carregarCustos() {
-        try {
-            const response = await fetch('/api/custos-veiculos');
-            custosVeiculos = await response.json();
-            renderizarCustos();
-        } catch (error) {
-            console.error('Erro ao carregar custos:', error);
-        }
+}
+
+function atualizarContadores() {
+    const c = { disponivel:0, locado:0, manutencao:0, indisponivel:0 };
+    veiculos.forEach(v => { if (c[v.status] !== undefined) c[v.status]++; });
+    document.getElementById('countDisponivel').textContent  = c.disponivel;
+    document.getElementById('countLocado').textContent      = c.locado;
+    document.getElementById('countManutencao').textContent  = c.manutencao;
+    document.getElementById('countIndisponivel').textContent= c.indisponivel;
+}
+
+
+function getStatusBadge(s) {
+    const b = { disponivel:'badge-success', locado:'badge-warning', manutencao:'badge-danger', indisponivel:'badge-info' };
+    const l = { disponivel:'Disponível', locado:'Locado', manutencao:'Manutenção', indisponivel:'Indisponível' };
+    return `<span class="badge ${b[s] || 'badge-info'}">${l[s] || s}</span>`;
+}
+
+function renderizarVeiculos(lista) {
+    const tbody = document.getElementById('tabelaVeiculos');
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center">Nenhum veículo encontrado</td></tr>';
+        return;
     }
-    
-    function renderizarCustos() {
-        const tbody = document.getElementById('tabelaCustosBody');
-        if (custosVeiculos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum dado disponível</td></tr>';
+    tbody.innerHTML = lista.map(v => {
+        const foto = v.foto
+            ? `<img src="${v.foto}" class="foto-thumbnail" alt="${v.placa}">`
+            : `<div class="foto-placeholder"><i class="fas fa-car"></i></div>`;
+        return `<tr>
+            <td>${foto}</td>
+            <td><strong>${v.placa.toUpperCase()}</strong></td>
+            <td>${v.marca} ${v.modelo}</td>
+            <td>${v.ano || '-'}</td>
+            <td>${v.cor || '-'}</td>
+            <td>${v.combustivel || '-'}</td>
+            <td>${v.categoria || '-'}</td>
+            <td>${formatCurrency(v.diaria)}</td>
+            <td>${(v.km_atual || 0).toLocaleString()} km</td>
+            <td>${getStatusBadge(v.status)}</td>
+            <td>
+                <button class="btn btn-sm" style="${v.crlv_url ? 'background:#16a34a;color:#fff;' : 'background:#e5e7eb;color:#374151;'}"
+                        onclick="abrirCRLV(${v.id}, '${v.crlv_url || ''}')"
+                        title="${v.crlv_url ? 'Ver CRLV' : 'Enviar CRLV'}">
+                    <i class="fas fa-file-alt"></i>
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="editarVeiculo(${v.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="confirmarExcluir(${v.id}, '${v.placa}')" title="Excluir"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function filtrarVeiculos() {
+    const busca    = document.getElementById('buscaVeiculo').value.toLowerCase();
+    const status   = document.getElementById('filtroStatus').value;
+    const categoria= document.getElementById('filtroCategoria').value;
+    const filtrados = veiculos.filter(v =>
+        (v.placa.toLowerCase().includes(busca) ||
+         v.marca.toLowerCase().includes(busca) ||
+         v.modelo.toLowerCase().includes(busca) ||
+         (v.renavam || '').includes(busca)) &&
+        (status === 'todos'    || v.status === status) &&
+        (categoria === 'todos' || v.categoria === categoria)
+    );
+    renderizarVeiculos(filtrados);
+}
+
+/* ---------- MODAL VEÍCULO ---------- */
+function _optSel(val, optVal) { return val && val === optVal ? 'selected' : ''; }
+
+function abrirModalVeiculo(veiculo = null, dadosPre = null) {
+    const v = veiculo;
+    const d = dadosPre || {};
+    const isEdit = v !== null;
+
+    // Foto preview
+    const temFoto = v && v.foto;
+    let fotoHtml;
+    if (temFoto) {
+        fotoHtml = `<img id="preview-img" src="${v.foto}" class="foto-preview">`;
+    } else {
+        fotoHtml = `<div id="preview-placeholder" style="width:100%;height:120px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;border-radius:8px;border:2px dashed #d1d5db;">
+            <i class="fas fa-car" style="font-size:2.5rem;color:#9ca3af;"></i></div>
+            <img id="preview-img" style="display:none;" class="foto-preview">`;
+    }
+
+    const content = `<form id="formVeiculo">
+        <!-- Foto -->
+        <div class="form-group" style="margin-bottom:16px;">
+            <label>Foto do Veículo</label>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <div>${fotoHtml}</div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="file" id="input-foto" accept="image/*" onchange="previewFoto(this)" style="display:none;">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('input-foto').click()">
+                        <i class="fas fa-upload"></i> Escolher Foto
+                    </button>
+                    ${temFoto ? `<button type="button" class="btn btn-sm btn-danger" onclick="removerFoto(${v.id})"><i class="fas fa-trash"></i> Remover</button>` : ''}
+                </div>
+                <small style="color:#6b7280;">JPG, PNG, GIF — máx. 16 MB</small>
+            </div>
+        </div>
+
+        <!-- Identificação -->
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Placa *</label>
+                <input type="text" class="form-control" name="placa"
+                       value="${v ? v.placa : d.placa || ''}"
+                       required style="text-transform:uppercase;font-weight:700;letter-spacing:.1em;">
+            </div>
+            <div class="form-group">
+                <label>RENAVAM</label>
+                <input type="text" class="form-control" name="renavam"
+                       value="${v ? (v.renavam||'') : d.renavam || ''}"
+                       maxlength="11" style="font-family:monospace;">
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Marca *</label>
+                <input type="text" class="form-control" name="marca"
+                       value="${v ? v.marca : d.marca || ''}" required>
+            </div>
+            <div class="form-group">
+                <label>Modelo *</label>
+                <input type="text" class="form-control" name="modelo"
+                       value="${v ? v.modelo : d.modelo || ''}" required>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Versão</label>
+                <input type="text" class="form-control" name="versao"
+                       value="${v ? (v.versao||'') : d.versao || ''}">
+            </div>
+            <div class="form-group">
+                <label>Chassi (VIN)</label>
+                <input type="text" class="form-control" name="chassi"
+                       value="${v ? (v.chassi||'') : d.chassi || ''}"
+                       maxlength="17" style="font-family:monospace;text-transform:uppercase;">
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div class="form-group">
+                <label>Ano Fabricação</label>
+                <input type="number" class="form-control" name="ano_fabricacao"
+                       value="${v ? (v.ano_fabricacao||'') : d.ano_fabricacao || ''}"
+                       min="1950" max="2030">
+            </div>
+            <div class="form-group">
+                <label>Ano Modelo</label>
+                <input type="number" class="form-control" name="ano"
+                       value="${v ? (v.ano||'') : d.ano || ''}"
+                       min="1950" max="2030">
+            </div>
+            <div class="form-group">
+                <label>Cor</label>
+                <input type="text" class="form-control" name="cor"
+                       value="${v ? (v.cor||'') : d.cor || ''}">
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div class="form-group">
+                <label>Combustível</label>
+                <select class="form-control" name="combustivel">
+                    <option value="">Selecione</option>
+                    ${['Gasolina','Álcool','Flex','Diesel','GNV','Elétrico','Híbrido'].map(c =>
+                        `<option value="${c}" ${_optSel((v ? v.combustivel : d.combustivel), c)}>${c}</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Potência</label>
+                <input type="text" class="form-control" name="potencia"
+                       value="${v ? (v.potencia||'') : d.potencia || ''}"
+                       placeholder="ex: 76CV/999">
+            </div>
+            <div class="form-group">
+                <label>Categoria</label>
+                <select class="form-control" name="categoria">
+                    <option value="">Selecione</option>
+                    ${['Econômico','Intermediário','Executivo','Utilitário','SUV'].map(c =>
+                        `<option value="${c}" ${_optSel((v ? v.categoria : d.categoria), c)}>${c}</option>`
+                    ).join('')}
+                </select>
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div class="form-group">
+                <label>Valor Diária (R$)</label>
+                <input type="number" class="form-control" name="diaria"
+                       value="${v ? v.diaria : ''}" step="0.01" min="0">
+            </div>
+            <div class="form-group">
+                <label>Km Atual</label>
+                <input type="number" class="form-control" name="km_atual"
+                       value="${v ? v.km_atual : '0'}" min="0">
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select class="form-control" name="status">
+                    ${[['disponivel','Disponível'],['locado','Locado'],['manutencao','Em Manutenção'],['indisponivel','Indisponível']].map(([val,lbl]) =>
+                        `<option value="${val}" ${_optSel((v ? v.status : 'disponivel'), val)}>${lbl}</option>`
+                    ).join('')}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Observações</label>
+            <textarea class="form-control" name="observacoes" rows="2">${v ? (v.observacoes||'') : ''}</textarea>
+        </div>
+
+        <div style="text-align:right;margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
+            <button type="button" class="btn" style="background:#6b7280;color:#fff;" onclick="fecharModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="salvarVeiculo(${isEdit ? v.id : 'null'})">
+                <i class="fas fa-${isEdit ? 'save' : 'plus'}"></i> ${isEdit ? 'Atualizar' : 'Cadastrar'}
+            </button>
+        </div>
+    </form>`;
+
+    abrirModal(isEdit ? `Editar Veículo — ${v.placa.toUpperCase()}` : 'Novo Veículo', content);
+}
+
+/* ---------- SALVAR VEÍCULO ---------- */
+async function salvarVeiculo(id) {
+    const form = document.getElementById('formVeiculo');
+    const fd   = new FormData(form);
+    const data = Object.fromEntries(fd);
+
+    if (data.diaria)        data.diaria        = parseFloat(data.diaria) || 0;
+    if (data.ano)           data.ano           = parseInt(data.ano)      || null;
+    if (data.ano_fabricacao)data.ano_fabricacao= parseInt(data.ano_fabricacao) || null;
+    if (data.km_atual)      data.km_atual      = parseInt(data.km_atual) || 0;
+
+    const inputFoto = document.getElementById('input-foto');
+    const novaFoto  = inputFoto?.files?.[0];
+
+    try {
+        const resp = await fetch(id ? `/api/veiculos/${id}` : '/api/veiculos', {
+            method : id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body   : JSON.stringify(data)
+        });
+        const result = await resp.json();
+        if (!resp.ok) {
+            showToast(result.error || 'Erro ao salvar veículo', 'error');
             return;
         }
-        
-        const custos = custosVeiculos.map(v => v.custo_por_km);
-        const media = custos.reduce((a, b) => a + b, 0) / custos.length;
-        const limiteAlto = media * 1.5;
-        
-        tbody.innerHTML = custosVeiculos.map((v, index) => {
-            const alerta = v.custo_por_km >= limiteAlto;
-            const custoClass = v.custo_por_km >= limiteAlto ? 'custo-alto' : (v.custo_por_km > media ? 'custo-medio' : 'custo-baixo');
-            
-            return '<tr class="' + (alerta ? 'alerta-custo' : '') + '">' +
-                '<td>' + (index + 1) + '</td>' +
-                '<td><strong>' + v.placa.toUpperCase() + '</strong></td>' +
-                '<td>' + v.marca + ' ' + v.modelo + ' ' + (v.ano || '') + '</td>' +
-                '<td>' + v.km_atual.toLocaleString() + ' km</td>' +
-                '<td>' + formatCurrency(v.custo_total) + '</td>' +
-                '<td class="' + custoClass + '">' + v.custo_por_km.toFixed(4) + ' R$/km</td>' +
-                '<td>' + (alerta ? '<span class="badge-alerta">ALTO CUSTO</span>' : '<span class="badge-ok">OK</span>') + '</td>' +
-            '</tr>';
-        }).join('');
+        const veiculoId = id || result.id;
+
+        if (novaFoto) {
+            const fotoFD = new FormData();
+            fotoFD.append('foto', novaFoto);
+            const fr = await fetch(`/api/veiculos/${veiculoId}/foto`, { method:'POST', body:fotoFD });
+            if (!fr.ok) { showToast('Dados salvos, mas erro no upload da foto', 'warning'); }
+        }
+
+        fecharModal();
+        carregarVeiculos();
+        showToast(id ? 'Veículo atualizado com sucesso!' : 'Veículo cadastrado com sucesso!', 'success');
+    } catch (e) {
+        showToast('Erro ao salvar veículo: ' + e.message, 'error');
     }
-    
-    function atualizarContadores() {
-        const count = { disponivel: 0, locado: 0, manutencao: 0, indisponivel: 0 };
-        veiculos.forEach(v => {
-            if (count[v.status] !== undefined) count[v.status]++;
-        });
-        document.getElementById('countDisponivel').textContent = count.disponivel;
-        document.getElementById('countLocado').textContent = count.locado;
-        document.getElementById('countManutencao').textContent = count.manutencao;
-        document.getElementById('countIndisponivel').textContent = count.indisponivel;
+}
+
+function previewFoto(input) {
+    if (input.files?.[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const ph = document.getElementById('preview-placeholder');
+            const img = document.getElementById('preview-img');
+            if (ph)  ph.style.display  = 'none';
+            if (img) { img.src = e.target.result; img.style.display = 'block'; }
+        };
+        reader.readAsDataURL(input.files[0]);
     }
-    
-    function getStatusBadge(status) {
-        const badges = { 'disponivel': 'badge-success', 'locado': 'badge-warning', 'manutencao': 'badge-danger', 'indisponivel': 'badge-info' };
-        const labels = { 'disponivel': 'Disponível', 'locado': 'Locado', 'manutencao': 'Manutenção', 'indisponivel': 'Indisponível' };
-        return '<span class="badge ' + (badges[status] || 'badge-info') + '">' + (labels[status] || status) + '</span>';
+}
+
+async function removerFoto(id) {
+    const content = `<p style="margin-bottom:20px;">Deseja remover a foto deste veículo?</p>
+        <div style="text-align:right;display:flex;gap:10px;justify-content:flex-end;">
+            <button class="btn" style="background:#6b7280;color:#fff;" onclick="fecharModal()">Cancelar</button>
+            <button class="btn btn-danger" onclick="_confirmaRemoverFoto(${id})">
+                <i class="fas fa-trash"></i> Remover
+            </button>
+        </div>`;
+    abrirModal('Remover Foto', content);
+}
+
+async function _confirmaRemoverFoto(id) {
+    try {
+        const r = await fetch(`/api/veiculos/${id}/foto`, { method:'DELETE' });
+        fecharModal();
+        if (r.ok) {
+            const v = veiculos.find(x => x.id === id);
+            if (v) { v.foto = null; abrirModalVeiculo(v); }
+            showToast('Foto removida', 'success');
+        }
+    } catch(e) { showToast('Erro ao remover foto', 'error'); }
+}
+
+function editarVeiculo(id) {
+    const v = veiculos.find(x => x.id === id);
+    if (v) abrirModalVeiculo(v);
+}
+
+function confirmarExcluir(id, placa) {
+    const content = `<p style="margin-bottom:20px;">Confirma a exclusão do veículo <strong>${placa.toUpperCase()}</strong>? Esta ação não pode ser desfeita.</p>
+        <div style="text-align:right;display:flex;gap:10px;justify-content:flex-end;">
+            <button class="btn" style="background:#6b7280;color:#fff;" onclick="fecharModal()">Cancelar</button>
+            <button class="btn btn-danger" onclick="_confirmaExcluir(${id})">
+                <i class="fas fa-trash"></i> Excluir
+            </button>
+        </div>`;
+    abrirModal('Excluir Veículo', content);
+}
+
+async function _confirmaExcluir(id) {
+    try {
+        await fetch(`/api/veiculos/${id}`, { method:'DELETE' });
+        fecharModal();
+        carregarVeiculos();
+        showToast('Veículo excluído', 'success');
+    } catch(e) {
+        showToast('Erro ao excluir veículo', 'error');
     }
-    
-    function renderizarVeiculos(lista) {
-        const tbody = document.getElementById('tabelaVeiculos');
-        if (lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum veículo encontrado</td></tr>';
+}
+
+/* ---------- MODAL CRLV ---------- */
+function abrirModalCRLV() {
+    dadosCRLV = {};
+    document.getElementById('modalCRLV').style.display = 'flex';
+    mostrarStep(1);
+    const inp = document.getElementById('inputCRLV');
+    if (inp) inp.value = '';
+}
+
+function fecharModalCRLV() {
+    document.getElementById('modalCRLV').style.display = 'none';
+}
+
+function fecharModalCRLVOverlay(e) {
+    if (e.target === document.getElementById('modalCRLV')) fecharModalCRLV();
+}
+
+function mostrarStep(n) {
+    [1,2,3].forEach(i => {
+        document.getElementById(`crlvStep${i}`).style.display = i === n ? '' : 'none';
+    });
+}
+
+function voltarStep1() { mostrarStep(1); }
+
+function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+        processarCRLV(file);
+    } else {
+        showToast('Por favor, envie um arquivo PDF', 'warning');
+    }
+}
+
+async function processarCRLV(file) {
+    if (!file) return;
+    mostrarStep(2);
+
+    const fd = new FormData();
+    fd.append('crlv', file);
+
+    try {
+        const resp = await fetch('/api/importar-crlv', { method:'POST', body:fd });
+        const json = await resp.json();
+
+        if (!resp.ok || !json.success) {
+            showToast(json.error || 'Não foi possível extrair os dados do CRLV', 'error');
+            mostrarStep(1);
             return;
         }
-        
-        tbody.innerHTML = lista.map(v => {
-            const fotoHtml = v.foto ? '<img src="' + v.foto + '" class="foto-thumbnail">' : '';
-            return '<tr>' +
-                '<td><strong>' + v.placa.toUpperCase() + '</strong></td>' +
-                '<td><div style="display:flex;align-items:center;gap:10px;">' + fotoHtml + '<span>' + v.marca + ' ' + v.modelo + '</span></div></td>' +
-                '<td>' + (v.ano || '-') + '</td>' +
-                '<td>' + (v.cor || '-') + '</td>' +
-                '<td>' + (v.categoria || '-') + '</td>' +
-                '<td>' + formatCurrency(v.diaria) + '</td>' +
-                '<td>' + (v.km_atual ? v.km_atual.toLocaleString() : 0) + ' km</td>' +
-                '<td>' + getStatusBadge(v.status) + '</td>' +
-                '<td>' +
-                    '<button class="btn btn-sm btn-primary" onclick="editarVeiculo(' + v.id + ')" title="Editar"><i class="fas fa-edit"></i></button> ' +
-                    '<button class="btn btn-sm btn-danger" onclick="excluirVeiculo(' + v.id + ')" title="Excluir"><i class="fas fa-trash"></i></button>' +
-                '</td>' +
-            '</tr>';
-        }).join('');
+
+        dadosCRLV = json.dados || {};
+        renderizarPreview(dadosCRLV);
+        mostrarStep(3);
+    } catch(e) {
+        showToast('Erro ao processar o arquivo: ' + e.message, 'error');
+        mostrarStep(1);
     }
-    
-    function filtrarVeiculos() {
-        const busca = document.getElementById('buscaVeiculo').value.toLowerCase();
-        const status = document.getElementById('filtroStatus').value;
-        const categoria = document.getElementById('filtroCategoria').value;
-        
-        const filtrados = veiculos.filter(v => {
-            const matchBusca = v.placa.toLowerCase().includes(busca) || v.marca.toLowerCase().includes(busca) || v.modelo.toLowerCase().includes(busca);
-            const matchStatus = status === 'todos' || v.status === status;
-            const matchCategoria = categoria === 'todos' || v.categoria === categoria;
-            return matchBusca && matchStatus && matchCategoria;
+}
+
+const CRLV_LABELS = {
+    placa      : 'Placa',
+    renavam    : 'RENAVAM',
+    chassi     : 'Chassi (VIN)',
+    marca      : 'Marca',
+    modelo     : 'Modelo',
+    versao     : 'Versão',
+    ano_fabricacao: 'Ano Fabricação',
+    ano        : 'Ano Modelo',
+    cor        : 'Cor',
+    combustivel: 'Combustível',
+    potencia   : 'Potência',
+    categoria  : 'Categoria',
+};
+
+function renderizarPreview(dados) {
+    const grid = document.getElementById('crlvPreviewGrid');
+    grid.innerHTML = Object.entries(CRLV_LABELS).map(([k, lbl]) => {
+        const val = dados[k];
+        return `<div class="crlv-field">
+            <div class="crlv-field-label">${lbl}</div>
+            <div class="crlv-field-value ${val ? '' : 'empty'}">${val || 'Não encontrado'}</div>
+        </div>`;
+    }).join('');
+}
+
+function usarDadosCRLV() {
+    fecharModalCRLV();
+    abrirModalVeiculo(null, dadosCRLV);
+    requestAnimationFrame(() => {
+        ['categoria', 'combustivel'].forEach(campo => {
+            const val = dadosCRLV[campo];
+            if (!val) return;
+            const el = document.querySelector(`#formVeiculo [name="${campo}"]`);
+            if (el) el.value = val;
         });
-        
-        renderizarVeiculos(filtrados);
+    });
+}
+
+/* ---------- CRLV POR VEÍCULO ---------- */
+function fecharModalPDF() {
+    document.getElementById('modalPDFViewer').style.display = 'none';
+    document.getElementById('iframePDF').src = '';
+}
+
+function abrirCRLV(id, url) {
+    if (url) {
+        const overlay = document.getElementById('modalPDFViewer');
+        overlay.style.display = 'flex';
+        document.getElementById('iframePDF').src =
+            `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+        document.getElementById('pdfDownloadBtn').href = `/api/veiculos/${id}/crlv/download`;
+        return;
+    } else {
+        const content = `
+            <p style="margin-bottom:16px;color:#6b7280;">Nenhum CRLV cadastrado para este veículo. Envie o PDF do documento.</p>
+            <div class="form-group">
+                <label>Arquivo PDF do CRLV</label>
+                <input type="file" id="inputCRLVVeiculo" accept=".pdf" class="form-control">
+            </div>
+            <div style="text-align:right;margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn" style="background:#6b7280;color:#fff;" onclick="fecharModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="_enviarCRLV(${id})">
+                    <i class="fas fa-upload"></i> Enviar CRLV
+                </button>
+            </div>`;
+        abrirModal('Enviar CRLV — Documento do Veículo', content);
     }
-    
-    function abrirModalVeiculo(veiculo = null) {
-        const isEdit = veiculo !== null;
-        const temFoto = veiculo && veiculo.foto;
-        
-        let fotoHtml = '';
-        if (temFoto) {
-            fotoHtml = '<img id="preview-img" src="' + veiculo.foto + '" class="foto-preview">';
-        } else {
-            fotoHtml = '<div id="preview-placeholder" style="width:100%;height:150px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;border-radius:8px;border:2px dashed #d1d5db;"><i class="fas fa-car" style="font-size:3rem;color:#9ca3af;"></i></div><img id="preview-img" style="display:none;" class="foto-preview">';
-        }
-        
-        const content = '<form id="formVeiculo">' +
-            '<div class="form-group" style="margin-bottom:20px;">' +
-                '<label>Foto do Veículo</label>' +
-                '<div style="display:flex;flex-direction:column;gap:10px;">' +
-                    '<div>' + fotoHtml + '</div>' +
-                    '<div style="display:flex;gap:10px;align-items:center;">' +
-                        '<input type="file" id="input-foto" accept="image/*" onchange="previewFoto(this)" style="display:none;">' +
-                        '<button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById(\'input-foto\').click()">' +
-                            '<i class="fas fa-upload"></i> Escolher Foto' +
-                        '</button>' +
-                        (temFoto ? '<button type="button" class="btn btn-sm btn-danger" onclick="removerFoto(' + veiculo.id + ')"><i class="fas fa-trash"></i> Remover</button>' : '') +
-                    '</div>' +
-                    '<small style="color:#6b7280;">Formatos: JPG, PNG, GIF (máx 16MB)</small>' +
-                '</div>' +
-            '</div>' +
-            '<div class="grid-2">' +
-                '<div class="form-group"><label>Placa *</label><input type="text" class="form-control" name="placa" value="' + (veiculo ? veiculo.placa : '') + '" required style="text-transform:uppercase;"></div>' +
-                '<div class="form-group"><label>Marca *</label><input type="text" class="form-control" name="marca" value="' + (veiculo ? veiculo.marca : '') + '" required></div>' +
-            '</div>' +
-            '<div class="grid-2">' +
-                '<div class="form-group"><label>Modelo *</label><input type="text" class="form-control" name="modelo" value="' + (veiculo ? veiculo.modelo : '') + '" required></div>' +
-                '<div class="form-group"><label>Ano</label><input type="number" class="form-control" name="ano" value="' + (veiculo ? veiculo.ano : '') + '" min="1900" max="2100"></div>' +
-            '</div>' +
-            '<div class="grid-2">' +
-                '<div class="form-group"><label>Cor</label><input type="text" class="form-control" name="cor" value="' + (veiculo ? veiculo.cor : '') + '"></div>' +
-                '<div class="form-group"><label>Categoria</label>' +
-                    '<select class="form-control" name="categoria">' +
-                        '<option value="">Selecione</option>' +
-                        '<option value="Econômico" ' + (veiculo && veiculo.categoria === 'Econômico' ? 'selected' : '') + '>Econômico</option>' +
-                        '<option value="Intermediário" ' + (veiculo && veiculo.categoria === 'Intermediário' ? 'selected' : '') + '>Intermediário</option>' +
-                        '<option value="Executivo" ' + (veiculo && veiculo.categoria === 'Executivo' ? 'selected' : '') + '>Executivo</option>' +
-                        '<option value="Utilitário" ' + (veiculo && veiculo.categoria === 'Utilitário' ? 'selected' : '') + '>Utilitário</option>' +
-                        '<option value="SUV" ' + (veiculo && veiculo.categoria === 'SUV' ? 'selected' : '') + '>SUV</option>' +
-                    '</select></div>' +
-            '</div>' +
-            '<div class="grid-2">' +
-                '<div class="form-group"><label>Valor Diária (R$)</label><input type="number" class="form-control" name="diaria" value="' + (veiculo ? veiculo.diaria : '') + '" step="0.01"></div>' +
-                '<div class="form-group"><label>Km Atual</label><input type="number" class="form-control" name="km_atual" value="' + (veiculo ? veiculo.km_atual : '0') + '"></div>' +
-            '</div>' +
-            '<div class="grid-2">' +
-                '<div class="form-group"><label>Status</label>' +
-                    '<select class="form-control" name="status">' +
-                        '<option value="disponivel" ' + (veiculo && veiculo.status === 'disponivel' ? 'selected' : '') + '>Disponível</option>' +
-                        '<option value="locado" ' + (veiculo && veiculo.status === 'locado' ? 'selected' : '') + '>Locado</option>' +
-                        '<option value="manutencao" ' + (veiculo && veiculo.status === 'manutencao' ? 'selected' : '') + '>Em Manutenção</option>' +
-                        '<option value="indisponivel" ' + (veiculo && veiculo.status === 'indisponivel' ? 'selected' : '') + '>Indisponível</option>' +
-                    '</select></div>' +
-                '<div class="form-group"><label>Combustível</label>' +
-                    '<select class="form-control" name="combustivel">' +
-                        '<option value="">Selecione</option>' +
-                        '<option value="Gasolina" ' + (veiculo && veiculo.combustivel === 'Gasolina' ? 'selected' : '') + '>Gasolina</option>' +
-                        '<option value="Álcool" ' + (veiculo && veiculo.combustivel === 'Álcool' ? 'selected' : '') + '>Álcool</option>' +
-                        '<option value="Flex" ' + (veiculo && veiculo.combustivel === 'Flex' ? 'selected' : '') + '>Flex</option>' +
-                        '<option value="Diesel" ' + (veiculo && veiculo.combustivel === 'Diesel' ? 'selected' : '') + '>Diesel</option>' +
-                    '</select></div>' +
-            '</div>' +
-            '<div class="form-group"><label>Observações</label><textarea class="form-control" name="observacoes" rows="3">' + (veiculo ? veiculo.observacoes : '') + '</textarea></div>' +
-            '<div style="text-align:right;margin-top:20px;">' +
-                '<button type="button" class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;margin-right:10px;">Cancelar</button>' +
-                '<button type="button" class="btn btn-primary" onclick="salvarVeiculo(' + (isEdit ? veiculo.id : 'null') + ')">' + (isEdit ? 'Atualizar' : 'Cadastrar') + '</button>' +
-            '</div>' +
-        '</form>';
-        
-        abrirModal(isEdit ? 'Editar Veículo' : 'Novo Veículo', content);
+}
+
+async function _enviarCRLV(id) {
+    const input = document.getElementById('inputCRLVVeiculo');
+    if (!input?.files?.[0]) {
+        showToast('Selecione um arquivo PDF', 'warning');
+        return;
     }
-    
-    async function salvarVeiculo(id) {
-        const form = document.getElementById('formVeiculo');
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData);
-        
-        if (data.diaria) data.diaria = parseFloat(data.diaria);
-        if (data.ano) data.ano = parseInt(data.ano);
-        if (data.km_atual) data.km_atual = parseInt(data.km_atual);
-        
-        const inputFoto = document.getElementById('input-foto');
-        const novaFoto = inputFoto && inputFoto.files && inputFoto.files[0];
-        
-        try {
-            // 1. Primeiro salva/atualiza os dados do veículo
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? '/api/veiculos/' + id : '/api/veiculos';
-            
-            const response = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            
-            if (!response.ok) {
-                showToast('Erro ao salvar veículo', 'error');
-                return;
-            }
-            
-            const result = await response.json();
-            const veiculoId = id || result.id;
-            
-            // 2. Se tem nova foto, faz upload
-            if (novaFoto) {
-                const fotoData = new FormData();
-                fotoData.append('foto', inputFoto.files[0]);
-                
-                try {
-                    const fotoResponse = await fetch('/api/veiculos/' + veiculoId + '/foto', {
-                        method: 'POST',
-                        body: fotoData
-                    });
-                    
-                    const fotoResult = await fotoResponse.json();
-                    if (!fotoResponse.ok) {
-                        showToast('Erro ao fazer upload da foto: ' + (fotoResult.error || 'Erro desconhecido'), 'error');
-                        return;
-                    }
-                } catch (fotoError) {
-                    showToast('Erro ao fazer upload da foto: ' + fotoError.message, 'error');
-                    return;
-                }
-            }
-            
-            fecharModal();
-            carregarVeiculos();
-            
-        } catch (error) {
-            console.error('Erro:', error);
-            showToast('Erro ao salvar veículo', 'error');
-        }
+    const fd = new FormData();
+    fd.append('crlv', input.files[0]);
+    try {
+        const r = await fetch(`/api/veiculos/${id}/crlv`, { method: 'POST', body: fd });
+        const json = await r.json();
+        if (!r.ok) { showToast(json.error || 'Erro ao enviar CRLV', 'error'); return; }
+        fecharModal();
+        showToast('CRLV enviado com sucesso!', 'success');
+        const v = veiculos.find(x => x.id === id);
+        if (v) { v.crlv_url = json.crlv_url; filtrarVeiculos(); }
+    } catch(e) {
+        showToast('Erro ao enviar: ' + e.message, 'error');
     }
-    
-    function previewFoto(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const placeholder = document.getElementById('preview-placeholder');
-                const img = document.getElementById('preview-img');
-                if (placeholder) placeholder.style.display = 'none';
-                if (img) {
-                    img.src = e.target.result;
-                    img.style.display = 'block';
-                }
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-    
-    async function removerFoto(id) {
-        if (confirm('Tem certeza que deseja remover a foto?')) {
-            try {
-                const response = await fetch('/api/veiculos/' + id + '/foto', { method: 'DELETE' });
-                if (response.ok) {
-                    // Recarrega o modal sem a foto
-                    const veiculo = veiculos.find(v => v.id === id);
-                    if (veiculo) {
-                        veiculo.foto = null;
-                        abrirModalVeiculo(veiculo);
-                    }
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-            }
-        }
-    }
-    
-    async function editarVeiculo(id) {
-        const veiculo = veiculos.find(v => v.id === id);
-        if (veiculo) {
-            abrirModalVeiculo(veiculo);
-        }
-    }
-    
-    async function excluirVeiculo(id) {
-        if (confirm('Tem certeza que deseja excluir este veículo?')) {
-            try {
-                await fetch('/api/veiculos/' + id, { method: 'DELETE' });
-                carregarVeiculos();
-            } catch (error) {
-                console.error('Erro:', error);
-                showToast('Erro ao excluir veículo', 'error');
-            }
-        }
-    }
-    
-    window.addEventListener('load', carregarVeiculos);
+}
+
+/* ---------- INICIALIZAR ---------- */
+window.addEventListener('load', carregarVeiculos);
 </script>
 {% endblock %}
