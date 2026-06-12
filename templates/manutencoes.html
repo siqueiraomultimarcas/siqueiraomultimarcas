@@ -4,7 +4,10 @@
 
 {% block content %}
 <div class="page-header">
-    <h1><i class="fas fa-tools"></i> Controle de Manutenções</h1>
+    <div>
+        <h1><i class="fas fa-tools"></i> Controle de Manutenções</h1>
+        <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Controle de manutenções preventivas e corretivas</p>
+    </div>
     <button class="btn btn-primary" onclick="abrirModalManutencao()">
         <i class="fas fa-plus"></i> Nova Manutenção
     </button>
@@ -29,33 +32,32 @@
     </div>
 </div>
 
-<!-- Filtros -->
+<!-- Manutenções -->
 <div class="card">
-    <div class="toolbar">
-        <select class="form-control" id="filtroVeiculo" onchange="filtrarManutencoes()" style="width: 200px;">
-            <option value="todos">Todos os Veículos</option>
-        </select>
-        <select class="form-control" id="filtroTipo" onchange="filtrarManutencoes()" style="width: 150px;">
-            <option value="todos">Todos os Tipos</option>
-            <option value="Preventiva">Preventiva</option>
-            <option value="Corretiva">Corretiva</option>
-            <option value="Óleo">Óleo</option>
-            <option value="Pneus">Pneus</option>
-            <option value="Freios">Freios</option>
-            <option value="Filtros">Filtros</option>
-            <option value="Revisão">Revisão</option>
-        </select>
-        <select class="form-control" id="filtroStatusManut" onchange="filtrarManutencoes()" style="width: 150px;">
-            <option value="todos">Todos Status</option>
-            <option value="concluida">Concluída</option>
-            <option value="pendente">Pendente</option>
-            <option value="andamento">Em Andamento</option>
-        </select>
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-tools"></i> Manutenções <span id="countManutBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select class="form-control" id="filtroVeiculo" onchange="filtrarManutencoes()" style="width: 200px;">
+                <option value="todos">Todos os Veículos</option>
+            </select>
+            <select class="form-control" id="filtroTipo" onchange="filtrarManutencoes()" style="width: 150px;">
+                <option value="todos">Todos os Tipos</option>
+                <option value="Preventiva">Preventiva</option>
+                <option value="Corretiva">Corretiva</option>
+                <option value="Óleo">Óleo</option>
+                <option value="Pneus">Pneus</option>
+                <option value="Freios">Freios</option>
+                <option value="Filtros">Filtros</option>
+                <option value="Revisão">Revisão</option>
+            </select>
+            <select class="form-control" id="filtroStatusManut" onchange="filtrarManutencoes()" style="width: 150px;">
+                <option value="todos">Todos Status</option>
+                <option value="concluida">Concluída</option>
+                <option value="pendente">Pendente</option>
+                <option value="andamento">Em Andamento</option>
+            </select>
+        </div>
     </div>
-</div>
-
-<!-- Tabela de Manutenções -->
-<div class="card">
     <div class="table-container">
         <table>
             <thead>
@@ -144,8 +146,9 @@
     
     function renderizarManutencoes(lista) {
         const tbody = document.getElementById('tabelaManutencoes');
+        document.getElementById('countManutBadge').textContent = lista.length;
         if (lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhuma manutenção encontrada</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px 0;"><i class="fas fa-tools" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>Nenhuma manutenção encontrada</td></tr>';
             return;
         }
         

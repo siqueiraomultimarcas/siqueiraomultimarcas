@@ -4,7 +4,10 @@
 
 {% block content %}
 <div class="page-header">
-    <h1><i class="fas fa-users"></i> Clientes</h1>
+    <div>
+        <h1><i class="fas fa-users"></i> Clientes</h1>
+        <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Cadastro e gestão de clientes da locadora</p>
+    </div>
     <button class="btn btn-primary" onclick="abrirModalCliente()">
         <i class="fas fa-plus"></i> Novo Cliente
     </button>
@@ -29,20 +32,19 @@
     </div>
 </div>
 
-<!-- Filtros -->
+<!-- Clientes -->
 <div class="card">
-    <div class="toolbar">
-        <input type="text" class="form-control search" placeholder="Buscar cliente por nome ou CPF..." id="buscaCliente" onkeyup="filtrarClientes()">
-        <select class="form-control" id="filtroStatus" onchange="filtrarClientes()" style="width: 150px;">
-            <option value="todos">Todos</option>
-            <option value="ativo">Ativos</option>
-            <option value="bloqueado">Bloqueados</option>
-        </select>
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-users"></i> Clientes <span id="countClientesBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" class="form-control search" placeholder="Buscar cliente por nome ou CPF..." id="buscaCliente" onkeyup="filtrarClientes()">
+            <select class="form-control" id="filtroStatus" onchange="filtrarClientes()" style="width: 150px;">
+                <option value="todos">Todos</option>
+                <option value="ativo">Ativos</option>
+                <option value="bloqueado">Bloqueados</option>
+            </select>
+        </div>
     </div>
-</div>
-
-<!-- Tabela de Clientes -->
-<div class="card">
     <div class="table-container">
         <table>
             <thead>
@@ -84,8 +86,9 @@
     
     function renderizarClientes(lista) {
         const tbody = document.getElementById('tabelaClientes');
+        document.getElementById('countClientesBadge').textContent = lista.length;
         if (lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Nenhum cliente encontrado</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px 0;"><i class="fas fa-users" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>Nenhum cliente encontrado</td></tr>';
             return;
         }
         

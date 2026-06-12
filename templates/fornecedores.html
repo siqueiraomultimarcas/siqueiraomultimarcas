@@ -1,10 +1,13 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}Fornecedores - Locadora{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1><i class="fas fa-truck"></i> Cadastro de Fornecedores</h1>
+    <div>
+        <h1><i class="fas fa-truck"></i> Fornecedores</h1>
+        <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Gestão de fornecedores e parceiros de serviço</p>
+    </div>
     <button class="btn btn-primary" onclick="abrirModalFornecedor()">
         <i class="fas fa-plus"></i> Novo Fornecedor
     </button>
@@ -29,64 +32,56 @@
     </div>
 </div>
 
-<!-- Tipos de Fornecedor -->
-<div class="card" style="margin-bottom: 20px;">
+<!-- Tipos de Fornecedor — chips -->
+<div class="card" style="margin-bottom:20px;">
     <div class="card-header">
         <h3 class="card-title"><i class="fas fa-tags"></i> Tipos de Fornecedor</h3>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalTipo()">
+        <button class="btn btn-secondary btn-sm" onclick="abrirModalTipo()">
             <i class="fas fa-plus"></i> Novo Tipo
         </button>
     </div>
+    <div id="tiposChips" style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 8px;">
+        <span style="color:#94a3b8;font-size:0.83rem;">Carregando...</span>
+    </div>
+</div>
+
+<!-- Fornecedores: filtros + tabela merged into one card -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-list"></i> Fornecedores
+            <span id="countFornecBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span>
+        </h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" class="form-control search" placeholder="Buscar nome, CNPJ ou CPF..." id="buscaFornecedor" onkeyup="filtrarFornecedores()" style="width:220px;">
+            <select class="form-control" id="filtroTipo" onchange="filtrarFornecedores()" style="width:160px;">
+                <option value="todos">Todos os Tipos</option>
+            </select>
+            <select class="form-control" id="filtroStatusFornec" onchange="filtrarFornecedores()" style="width:130px;">
+                <option value="todos">Todos Status</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+            </select>
+        </div>
+    </div>
     <div class="table-container">
         <table>
             <thead>
                 <tr>
+                    <th>Fornecedor</th>
+                    <th>Documento</th>
                     <th>Tipo</th>
-                    <th>Descrição</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="tabelaTipos">
-                <tr><td colspan="3" style="text-align:center">Carregando...</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Filtros -->
-<div class="card">
-    <div class="toolbar">
-        <input type="text" class="form-control search" placeholder="Buscar fornecedor por nome, CNPJ ou CPF..." id="buscaFornecedor" onkeyup="filtrarFornecedores()">
-        <select class="form-control" id="filtroTipo" onchange="filtrarFornecedores()" style="width: 200px;">
-            <option value="todos">Todos os Tipos</option>
-        </select>
-        <select class="form-control" id="filtroStatusFornec" onchange="filtrarFornecedores()" style="width: 150px;">
-            <option value="todos">Todos Status</option>
-            <option value="ativo">Ativo</option>
-            <option value="inativo">Inativo</option>
-        </select>
-    </div>
-</div>
-
-<!-- Tabela de Fornecedores -->
-<div class="card">
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>CNPJ/CPF</th>
-                    <th>Tipo</th>
-                    <th>Telefone</th>
-                    <th>Email</th>
+                    <th>Contato</th>
                     <th>Cidade</th>
                     <th>Responsável</th>
                     <th>Status</th>
-                    <th>Ações</th>
+                    <th style="text-align:center">Ações</th>
                 </tr>
             </thead>
             <tbody id="tabelaFornecedores">
-                <tr><td colspan="9" style="text-align:center">Carregando...</td></tr>
+                <tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">
+                    <i class="fas fa-spinner fa-spin"></i> Carregando...
+                </td></tr>
             </tbody>
         </table>
     </div>
@@ -95,7 +90,7 @@
 <script>
     let fornecedores = [];
     let tiposFornecedor = [];
-    
+
     // Carregar dados
     async function carregarDados() {
         try {
@@ -105,13 +100,15 @@
             ]);
             fornecedores = await respFornec.json();
             tiposFornecedor = await respTipos.json();
-            
+
             // Preencher filtro de tipos
             const selectTipo = document.getElementById('filtroTipo');
+            // Reset options except the first
+            selectTipo.innerHTML = '<option value="todos">Todos os Tipos</option>';
             tiposFornecedor.forEach(t => {
                 selectTipo.innerHTML += `<option value="${t.id}">${t.nome}</option>`;
             });
-            
+
             atualizarEstatisticas();
             renderizarTipos();
             renderizarFornecedores(fornecedores);
@@ -119,57 +116,84 @@
             console.error('Erro ao carregar dados:', error);
         }
     }
-    
+
     function atualizarEstatisticas() {
         document.getElementById('totalFornecedores').textContent = fornecedores.length;
         document.getElementById('fornecedoresAtivos').textContent = fornecedores.filter(f => f.status === 'ativo').length;
         document.getElementById('totalTipos').textContent = tiposFornecedor.length;
+        document.getElementById('countFornecBadge').textContent = fornecedores.length;
     }
-    
+
     function renderizarTipos() {
-        const tbody = document.getElementById('tabelaTipos');
-        if (tiposFornecedor.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center">Nenhum tipo cadastrado</td></tr>';
+        const container = document.getElementById('tiposChips');
+        if (!tiposFornecedor.length) {
+            container.innerHTML = '<span style="color:#94a3b8;font-size:0.83rem;">Nenhum tipo cadastrado. Clique em "Novo Tipo" para começar.</span>';
             return;
         }
-        
-        tbody.innerHTML = tiposFornecedor.map(t => `
-            <tr>
-                <td><strong>${t.nome}</strong></td>
-                <td>${t.descricao || '-'}</td>
-                <td>
-                    <button class="btn btn-sm btn-danger" onclick="excluirTipo(${t.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
+        const cores = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899'];
+        container.innerHTML = tiposFornecedor.map((t, i) => {
+            const cor = cores[i % cores.length];
+            return `<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 10px;
+                         background:${cor}18;border:1px solid ${cor}40;border-radius:20px;
+                         font-size:0.8rem;font-weight:500;color:${cor};">
+                <span style="width:7px;height:7px;border-radius:50%;background:${cor};flex-shrink:0;"></span>
+                ${t.nome}
+                ${t.descricao ? `<span style="color:#94a3b8;font-size:0.72rem;">· ${t.descricao}</span>` : ''}
+                <button onclick="excluirTipo(${t.id})" style="border:none;background:none;cursor:pointer;
+                    color:${cor};opacity:0.6;padding:0;line-height:1;font-size:0.75rem;" title="Excluir tipo">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>`;
+        }).join('');
     }
-    
+
     function getStatusBadge(status) {
-        return status === 'ativo' 
+        return status === 'ativo'
             ? '<span class="badge badge-success">Ativo</span>'
             : '<span class="badge badge-danger">Inativo</span>';
     }
-    
+
     function renderizarFornecedores(lista) {
+        document.getElementById('countFornecBadge').textContent = lista.length;
         const tbody = document.getElementById('tabelaFornecedores');
         if (lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum fornecedor encontrado</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px 20px;">
+                <i class="fas fa-truck" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
+                <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhum fornecedor encontrado</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou cadastre um novo fornecedor</div>
+            </td></tr>`;
             return;
         }
-        
-        tbody.innerHTML = lista.map(f => `
-            <tr>
-                <td><strong>${f.nome}</strong></td>
-                <td>${f.cnpj || f.cpf || '-'}</td>
-                <td>${f.tipo_nome || '-'}</td>
-                <td>${f.telefone || '-'}</td>
-                <td>${f.email || '-'}</td>
-                <td>${f.cidade || '-'}</td>
-                <td>${f.responsavel || '-'}</td>
-                <td>${getStatusBadge(f.status)}</td>
+        const cores = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4'];
+        tbody.innerHTML = lista.map((f, i) => {
+            const initials = f.nome.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+            const cor = cores[f.id % cores.length];
+            const tipoCorIdx = tiposFornecedor.findIndex(t => t.id === f.tipo_id);
+            const tipoCor = tipoCorIdx >= 0 ? cores[tipoCorIdx % cores.length] : '#64748b';
+            return `<tr>
                 <td>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:34px;height:34px;border-radius:9px;background:${cor}20;color:${cor};
+                                    display:flex;align-items:center;justify-content:center;font-size:0.72rem;
+                                    font-weight:700;flex-shrink:0;">${initials}</div>
+                        <div>
+                            <div style="font-weight:600;color:#1e293b;">${f.nome}</div>
+                            ${f.responsavel ? `<div style="font-size:0.72rem;color:#94a3b8;">${f.responsavel}</div>` : ''}
+                        </div>
+                    </div>
+                </td>
+                <td style="font-size:0.82rem;color:#64748b;font-family:monospace;">${f.cnpj || f.cpf || '—'}</td>
+                <td>${f.tipo_nome ? `<span style="background:${tipoCor}18;color:${tipoCor};border:1px solid ${tipoCor}30;
+                    padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;">${f.tipo_nome}</span>` : '—'}</td>
+                <td>
+                    ${f.telefone ? `<div style="font-size:0.82rem;"><i class="fas fa-phone" style="color:#94a3b8;width:14px;"></i> ${f.telefone}</div>` : ''}
+                    ${f.email ? `<div style="font-size:0.78rem;color:#64748b;"><i class="fas fa-envelope" style="color:#94a3b8;width:14px;"></i> ${f.email}</div>` : ''}
+                    ${!f.telefone && !f.email ? '—' : ''}
+                </td>
+                <td style="font-size:0.82rem;">${f.cidade ? `${f.cidade}${f.estado ? `/${f.estado}` : ''}` : '—'}</td>
+                <td style="font-size:0.82rem;">${f.responsavel || '—'}</td>
+                <td>${getStatusBadge(f.status)}</td>
+                <td style="text-align:center;white-space:nowrap;">
                     <button class="btn btn-sm btn-primary" onclick="editarFornecedor(${f.id})" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -177,37 +201,37 @@
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
     }
-    
+
     function filtrarFornecedores() {
         const busca = document.getElementById('buscaFornecedor').value.toLowerCase();
         const tipo = document.getElementById('filtroTipo').value;
         const status = document.getElementById('filtroStatusFornec').value;
-        
+
         const filtrados = fornecedores.filter(f => {
-            const matchBusca = f.nome.toLowerCase().includes(busca) || 
+            const matchBusca = f.nome.toLowerCase().includes(busca) ||
                               (f.cnpj && f.cnpj.includes(busca)) ||
                               (f.cpf && f.cpf.includes(busca));
             const matchTipo = tipo === 'todos' || f.tipo_id == tipo;
             const matchStatus = status === 'todos' || f.status === status;
             return matchBusca && matchTipo && matchStatus;
         });
-        
+
         renderizarFornecedores(filtrados);
     }
-    
+
     function abrirModalFornecedor(fornecedor = null) {
         const isEdit = fornecedor !== null;
-        
+
         // Options de tipos
         let optionsTipos = '<option value="">Selecione o tipo</option>';
         tiposFornecedor.forEach(t => {
             const selected = fornecedor && fornecedor.tipo_id === t.id ? 'selected' : '';
             optionsTipos += `<option value="${t.id}" ${selected}>${t.nome}</option>`;
         });
-        
+
         const content = `
             <form id="formFornecedor" onsubmit="salvarFornecedor(event, ${fornecedor ? fornecedor.id : 'null'})">
                 <div class="form-group">
@@ -308,26 +332,26 @@
         `;
         abrirModal(isEdit ? 'Editar Fornecedor' : 'Novo Fornecedor', content);
     }
-    
+
     async function salvarFornecedor(e, id) {
         e.preventDefault();
         const form = document.getElementById('formFornecedor');
         const formData = new FormData(form);
         const data = Object.fromEntries(formData);
-        
+
         // Converter valores
         if (data.tipo_id) data.tipo_id = parseInt(data.tipo_id);
-        
+
         try {
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/fornecedores/${id}` : '/api/fornecedores';
-            
+
             const response = await fetch(url, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-            
+
             if (response.ok) {
                 fecharModal();
                 showToast('Fornecedor salvo com sucesso!', 'success');
@@ -340,14 +364,14 @@
             showToast('Erro ao salvar fornecedor. Tente novamente.', 'error');
         }
     }
-    
+
     async function editarFornecedor(id) {
         const fornecedor = fornecedores.find(f => f.id === id);
         if (fornecedor) {
             abrirModalFornecedor(fornecedor);
         }
     }
-    
+
     async function excluirFornecedor(id) {
         confirmarAcao('Excluir Fornecedor', 'Deseja excluir este fornecedor?', () => _confirmaExcluir(id));
     }
@@ -387,20 +411,20 @@
         `;
         abrirModal('Novo Tipo de Fornecedor', content);
     }
-    
+
     async function salvarTipo(e) {
         e.preventDefault();
         const form = document.getElementById('formTipo');
         const formData = new FormData(form);
         const data = Object.fromEntries(formData);
-        
+
         try {
             const response = await fetch('/api/tipos-fornecedor', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-            
+
             if (response.ok) {
                 fecharModal();
                 showToast('Tipo de fornecedor salvo com sucesso!', 'success');
@@ -413,7 +437,7 @@
             showToast('Erro ao salvar tipo de fornecedor. Tente novamente.', 'error');
         }
     }
-    
+
     async function excluirTipo(id) {
         confirmarAcao('Excluir Tipo', 'Deseja excluir este tipo? Fornecedores associados ficarão sem tipo.', () => _confirmaExcluirTipo(id));
     }

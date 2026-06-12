@@ -6,7 +6,10 @@
      CABEÇALHO DA PÁGINA
 ================================================= -->
 <div class="page-header">
-    <h1><i class="fas fa-car"></i> Frota de Veículos</h1>
+    <div>
+        <h1><i class="fas fa-car"></i> Frota de Veículos</h1>
+        <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Gestão e controle da frota de veículos</p>
+    </div>
     <div style="display:flex;gap:10px;align-items:center;">
         <button class="btn btn-crlv" onclick="abrirModalCRLV()">
             <i class="fas fa-file-import"></i> Importar CRLV
@@ -45,34 +48,31 @@
 
 
 <!-- ================================================
-     FILTROS
+     TABELA DE VEÍCULOS (com filtros no card-header)
 ================================================= -->
 <div class="card">
-    <div class="toolbar">
-        <input type="text" class="form-control search" id="buscaVeiculo"
-               placeholder="Buscar por placa, marca, modelo ou RENAVAM..." onkeyup="filtrarVeiculos()">
-        <select class="form-control" id="filtroStatus" onchange="filtrarVeiculos()" style="width:160px;">
-            <option value="todos">Todos Status</option>
-            <option value="disponivel">Disponível</option>
-            <option value="locado">Locado</option>
-            <option value="manutencao">Manutenção</option>
-            <option value="indisponivel">Indisponível</option>
-        </select>
-        <select class="form-control" id="filtroCategoria" onchange="filtrarVeiculos()" style="width:170px;">
-            <option value="todos">Todas Categorias</option>
-            <option value="Econômico">Econômico</option>
-            <option value="Intermediário">Intermediário</option>
-            <option value="Executivo">Executivo</option>
-            <option value="Utilitário">Utilitário</option>
-            <option value="SUV">SUV</option>
-        </select>
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-car"></i> Frota <span id="countFrotaBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" class="form-control search" id="buscaVeiculo"
+                   placeholder="Buscar por placa, marca, modelo ou RENAVAM..." onkeyup="filtrarVeiculos()">
+            <select class="form-control" id="filtroStatus" onchange="filtrarVeiculos()" style="width:160px;">
+                <option value="todos">Todos Status</option>
+                <option value="disponivel">Disponível</option>
+                <option value="locado">Locado</option>
+                <option value="manutencao">Manutenção</option>
+                <option value="indisponivel">Indisponível</option>
+            </select>
+            <select class="form-control" id="filtroCategoria" onchange="filtrarVeiculos()" style="width:170px;">
+                <option value="todos">Todas Categorias</option>
+                <option value="Econômico">Econômico</option>
+                <option value="Intermediário">Intermediário</option>
+                <option value="Executivo">Executivo</option>
+                <option value="Utilitário">Utilitário</option>
+                <option value="SUV">SUV</option>
+            </select>
+        </div>
     </div>
-</div>
-
-<!-- ================================================
-     TABELA DE VEÍCULOS
-================================================= -->
-<div class="card">
     <div class="table-container">
         <table>
             <thead>
@@ -337,9 +337,14 @@ function getStatusBadge(s) {
 }
 
 function renderizarVeiculos(lista) {
+    document.getElementById('countFrotaBadge').textContent = lista.length;
     const tbody = document.getElementById('tabelaVeiculos');
     if (!lista.length) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center">Nenhum veículo encontrado</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:48px 20px;">
+    <i class="fas fa-car" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
+    <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhum veículo encontrado</div>
+    <div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou cadastre um novo veículo</div>
+</td></tr>`;
         return;
     }
     tbody.innerHTML = lista.map(v => {

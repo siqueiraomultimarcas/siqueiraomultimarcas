@@ -4,7 +4,10 @@
 
 {% block content %}
 <div class="page-header">
-    <h1><i class="fas fa-key"></i> Controle de Locações</h1>
+    <div>
+        <h1><i class="fas fa-key"></i> Controle de Locações</h1>
+        <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Controle de locações ativas e histórico</p>
+    </div>
     <button class="btn btn-primary" onclick="abrirModalLocacao()">
         <i class="fas fa-plus"></i> Nova Locação
     </button>
@@ -29,25 +32,24 @@
     </div>
 </div>
 
-<!-- Filtros -->
+<!-- Tabela de Locações (com filtros no card-header) -->
 <div class="card">
-    <div class="toolbar">
-        <select class="form-control" id="filtroVeiculoLoc" onchange="filtrarLocacoes()" style="width: 200px;">
-            <option value="todos">Todos os Veículos</option>
-        </select>
-        <select class="form-control" id="filtroClienteLoc" onchange="filtrarLocacoes()" style="width: 200px;">
-            <option value="todos">Todos os Clientes</option>
-        </select>
-        <select class="form-control" id="filtroStatusLoc" onchange="filtrarLocacoes()" style="width: 150px;">
-            <option value="todos">Todos Status</option>
-            <option value="ativa">Ativa</option>
-            <option value="finalizada">Finalizada</option>
-        </select>
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-key"></i> Locações <span id="countLocBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select class="form-control" id="filtroVeiculoLoc" onchange="filtrarLocacoes()" style="width: 200px;">
+                <option value="todos">Todos os Veículos</option>
+            </select>
+            <select class="form-control" id="filtroClienteLoc" onchange="filtrarLocacoes()" style="width: 200px;">
+                <option value="todos">Todos os Clientes</option>
+            </select>
+            <select class="form-control" id="filtroStatusLoc" onchange="filtrarLocacoes()" style="width: 150px;">
+                <option value="todos">Todos Status</option>
+                <option value="ativa">Ativa</option>
+                <option value="finalizada">Finalizada</option>
+            </select>
+        </div>
     </div>
-</div>
-
-<!-- Tabela de Locações -->
-<div class="card">
     <div class="table-container">
         <table>
             <thead>
@@ -153,9 +155,14 @@
     function verFoto(url) { window.open(url, '_blank'); }
 
     function renderizarLocacoes(lista) {
+        document.getElementById('countLocBadge').textContent = lista.length;
         const tbody = document.getElementById('tabelaLocacoes');
         if (lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center">Nenhuma locação encontrada</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:48px 20px;">
+    <i class="fas fa-key" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
+    <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhuma locação encontrada</div>
+    <div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou registre uma nova locação</div>
+</td></tr>`;
             return;
         }
         tbody.innerHTML = lista.map(l => '<tr>' +

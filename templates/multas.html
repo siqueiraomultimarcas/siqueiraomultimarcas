@@ -4,7 +4,10 @@
 
 {% block content %}
 <div class="page-header">
-    <h1><i class="fas fa-file-invoice-dollar"></i> Controle de Multas</h1>
+    <div>
+        <h1><i class="fas fa-file-invoice-dollar"></i> Controle de Multas</h1>
+        <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Registro e acompanhamento de infrações de trânsito</p>
+    </div>
     <div>
         <button class="btn btn-primary" onclick="abrirModalMulta()">
             <i class="fas fa-plus"></i> Nova Multa
@@ -39,25 +42,24 @@
     </div>
 </div>
 
-<!-- Filtros -->
+<!-- Tabela de Multas (com filtros no card-header) -->
 <div class="card">
-    <div class="toolbar">
-        <select class="form-control" id="filtroVeiculoMulta" onchange="filtrarMultas()" style="width: 220px;">
-            <option value="todos">Todos os Veículos</option>
-        </select>
-        <select class="form-control" id="filtroMotoristaMulta" onchange="filtrarMultas()" style="width: 200px;">
-            <option value="todos">Todos os Motoristas</option>
-        </select>
-        <select class="form-control" id="filtroStatusMulta" onchange="filtrarMultas()" style="width: 150px;">
-            <option value="todos">Todos Status</option>
-            <option value="pendente">Pendente</option>
-            <option value="pago">Pago</option>
-        </select>
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> Multas <span id="countMultasBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select class="form-control" id="filtroVeiculoMulta" onchange="filtrarMultas()" style="width: 220px;">
+                <option value="todos">Todos os Veículos</option>
+            </select>
+            <select class="form-control" id="filtroMotoristaMulta" onchange="filtrarMultas()" style="width: 200px;">
+                <option value="todos">Todos os Motoristas</option>
+            </select>
+            <select class="form-control" id="filtroStatusMulta" onchange="filtrarMultas()" style="width: 150px;">
+                <option value="todos">Todos Status</option>
+                <option value="pendente">Pendente</option>
+                <option value="pago">Pago</option>
+            </select>
+        </div>
     </div>
-</div>
-
-<!-- Tabela de Multas -->
-<div class="card">
     <div class="table-container">
         <table>
             <thead>
@@ -133,9 +135,14 @@
     }
 
     function renderizarMultas(lista) {
+        document.getElementById('countMultasBadge').textContent = lista.length;
         const tbody = document.getElementById('tabelaMultas');
         if (lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#6b7280;padding:30px"><i class="fas fa-check-circle" style="font-size:24px;margin-bottom:8px;display:block;color:#10b981"></i>Nenhuma multa encontrada</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px 20px;">
+    <i class="fas fa-file-invoice-dollar" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
+    <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhuma multa encontrada</div>
+    <div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou registre uma nova multa</div>
+</td></tr>`;
             return;
         }
 

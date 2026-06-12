@@ -47,6 +47,9 @@
 </div>
 
 <div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-user-cog"></i> Usuários do Sistema <span id="countUsuariosBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+    </div>
     <div class="table-container">
         <table>
             <thead>
@@ -81,6 +84,7 @@
             document.getElementById('totalAdmins').textContent = usuarios.filter(u => u.nivel === 'admin').length;
             document.getElementById('totalOperadores').textContent = usuarios.filter(u => u.nivel === 'operador').length;
             document.getElementById('totalInativos').textContent = usuarios.filter(u => !u.ativo).length;
+            document.getElementById('countUsuariosBadge').textContent = usuarios.length;
             renderizarUsuarios();
         } catch (error) {
             showToast('Erro ao carregar usuários', 'error');
@@ -90,7 +94,7 @@
     function renderizarUsuarios() {
         const tbody = document.getElementById('tabelaUsuarios');
         if (usuarios.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum usuário encontrado</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px 0;"><i class="fas fa-user-cog" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>Nenhum usuário encontrado</td></tr>';
             return;
         }
 
