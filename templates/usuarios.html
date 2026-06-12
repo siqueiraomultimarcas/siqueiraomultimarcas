@@ -10,6 +10,58 @@
     </button>
 </div>
 
+<div class="card" style="background:#fef3c7;border:1px solid #f59e0b;">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <i class="fas fa-shield-alt" style="font-size:1.5rem;color:#f59e0b;"></i>
+        <div>
+            <strong>Sobre os níveis de acesso</strong><br>
+            <span style="font-size:0.85rem;color:#92400e;">
+                <strong>Admin</strong> — acesso total: gerencia usuários, veículos, clientes, locações, relatórios e todas as configurações.<br>
+                <strong>Operador</strong> — acesso operacional: registra locações, manutenções, abastecimentos e multas. Não gerencia usuários.
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#dbeafe;color:#1e40af;">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-info">
+            <span class="stat-value" id="totalUsuarios">0</span>
+            <span class="stat-label">Total de Usuários</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#ede9fe;color:#6d28d9;">
+            <i class="fas fa-crown"></i>
+        </div>
+        <div class="stat-info">
+            <span class="stat-value" id="totalAdmins">0</span>
+            <span class="stat-label">Administradores</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#dcfce7;color:#15803d;">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="stat-info">
+            <span class="stat-value" id="totalOperadores">0</span>
+            <span class="stat-label">Operadores</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fee2e2;color:#dc2626;">
+            <i class="fas fa-ban"></i>
+        </div>
+        <div class="stat-info">
+            <span class="stat-value" id="totalInativos">0</span>
+            <span class="stat-label">Inativos</span>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="table-container">
         <table>
@@ -30,19 +82,6 @@
     </div>
 </div>
 
-<div class="card" style="background:#fef3c7;border:1px solid #f59e0b;">
-    <div style="display:flex;align-items:center;gap:12px;">
-        <i class="fas fa-shield-alt" style="font-size:1.5rem;color:#f59e0b;"></i>
-        <div>
-            <strong>Sobre os níveis de acesso</strong><br>
-            <span style="font-size:0.85rem;color:#92400e;">
-                <strong>Admin</strong> — acesso total: gerencia usuários, veículos, clientes, locações, relatórios e todas as configurações.<br>
-                <strong>Operador</strong> — acesso operacional: registra locações, manutenções, abastecimentos e multas. Não gerencia usuários.
-            </span>
-        </div>
-    </div>
-</div>
-
 <script>
     let usuarios = [];
 
@@ -54,6 +93,10 @@
                 return;
             }
             usuarios = await resp.json();
+            document.getElementById('totalUsuarios').textContent = usuarios.length;
+            document.getElementById('totalAdmins').textContent = usuarios.filter(u => u.nivel === 'admin').length;
+            document.getElementById('totalOperadores').textContent = usuarios.filter(u => u.nivel === 'operador').length;
+            document.getElementById('totalInativos').textContent = usuarios.filter(u => !u.ativo).length;
             renderizarUsuarios();
         } catch (error) {
             showToast('Erro ao carregar usuários', 'error');
@@ -69,8 +112,8 @@
 
         tbody.innerHTML = usuarios.map(u => {
             const nivelBadge = u.nivel === 'admin'
-                ? '<span class="badge" style="background:#dbeafe;color:#1e40af;"><i class="fas fa-crown"></i> Admin</span>'
-                : '<span class="badge" style="background:#f3f4f6;color:#374151;"><i class="fas fa-user"></i> Operador</span>';
+                ? '<span class="badge badge-info"><i class="fas fa-crown"></i> Admin</span>'
+                : '<span class="badge badge-gray"><i class="fas fa-user"></i> Operador</span>';
 
             const statusBadge = u.ativo
                 ? '<span class="badge badge-success">Ativo</span>'
@@ -121,8 +164,8 @@
                 '</select>' +
             '</div>' : '') +
             '<div style="text-align:right;margin-top:20px;">' +
-                '<button type="button" class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;margin-right:10px;">Cancelar</button>' +
-                '<button type="button" class="btn btn-primary" onclick="salvarUsuario(' + (isEdit ? usuario.id : 'null') + ')">' + (isEdit ? 'Atualizar' : 'Criar Usuário') + '</button>' +
+                '<button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>' +
+                ' <button type="button" class="btn btn-primary" onclick="salvarUsuario(' + (isEdit ? usuario.id : 'null') + ')">' + (isEdit ? 'Atualizar' : 'Criar Usuário') + '</button>' +
             '</div>' +
         '</form>';
 
@@ -186,33 +229,33 @@
         if (usuario) abrirModalUsuario(usuario);
     }
 
-    async function toggleUsuario(id, ativoAtual) {
-        const acao = ativoAtual ? 'desativar' : 'ativar';
-        if (!confirm('Deseja ' + acao + ' este usuário?')) return;
-
+    function _confirmaToggle(id, ativoAtual) {
         const usuario = usuarios.find(u => u.id === id);
         if (!usuario) return;
 
-        try {
-            const resp = await fetch('/api/usuarios/' + id, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    nome: usuario.nome,
-                    email: usuario.email,
-                    nivel: usuario.nivel,
-                    ativo: !ativoAtual
-                })
-            });
+        fetch('/api/usuarios/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome: usuario.nome,
+                email: usuario.email,
+                nivel: usuario.nivel,
+                ativo: !ativoAtual
+            })
+        }).then(resp => {
             if (resp.ok) {
                 showToast('Usuário ' + (ativoAtual ? 'desativado' : 'ativado') + ' com sucesso!', 'success');
                 carregarUsuarios();
             } else {
                 showToast('Erro ao atualizar usuário', 'error');
             }
-        } catch (error) {
+        }).catch(() => {
             showToast('Erro ao atualizar usuário', 'error');
-        }
+        });
+    }
+
+    function toggleUsuario(id, ativo) {
+        confirmarAcao('Alterar Status', 'Deseja alterar o status deste usuário?', () => _confirmaToggle(id, ativo));
     }
 
     window.addEventListener('load', carregarUsuarios);

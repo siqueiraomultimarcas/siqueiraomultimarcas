@@ -3,197 +3,360 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Locadora de Veículos{% endblock %}</title>
+    <title>{% block title %}Siqueirão Multimarcas{% endblock %}</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/inputmask.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --dark: #1f2937;
-            --light: #f3f4f6;
-            --white: #ffffff;
-            --gray: #6b7280;
-            --gray-light: #e5e7eb;
+            --primary:        #2563eb;
+            --primary-dark:   #1d4ed8;
+            --primary-light:  #3b82f6;
+            --success:        #10b981;
+            --warning:        #f59e0b;
+            --danger:         #ef4444;
+            --dark:           #1f2937;
+            --light:          #f1f5f9;
+            --white:          #ffffff;
+            --gray:           #6b7280;
+            --gray-light:     #e5e7eb;
+            --sidebar-bg:     #0f172a;
+            --card-shadow:    0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+            --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.06);
         }
+
         body { font-family: 'Poppins', sans-serif; background: var(--light); color: var(--dark); }
-        
-        /* Layout */
+
+        /* ── Layout ───────────────────────────────────────────── */
         .app-container { display: flex; min-height: 100vh; }
-        
-        /* Sidebar */
+
+        /* ── Sidebar ──────────────────────────────────────────── */
         .sidebar {
             width: 260px;
-            background: linear-gradient(135deg, var(--dark), #374151);
+            background: var(--sidebar-bg);
             color: white;
-            padding: 20px 0 0 0;
             position: fixed;
             height: 100vh;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
+            border-right: 1px solid rgba(255,255,255,0.06);
+            z-index: 100;
         }
-        .nav-menu { flex: 1; }
         .logo-area {
-            padding: 20px 25px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            margin-bottom: 20px;
+            padding: 22px 20px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
         }
-        .logo-area h2 { font-size: 1.4rem; color: var(--primary); }
-        .logo-area span { font-size: 0.8rem; color: #9ca3af; }
-        
-        .nav-menu { list-style: none; }
-        .nav-item { margin: 5px 0; }
+        .logo-area img { width: 100%; max-width: 190px; height: auto; }
+        .logo-area .system-label {
+            display: block;
+            margin-top: 8px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #475569;
+        }
+
+        .nav-menu { flex: 1; padding: 12px 10px; list-style: none; }
+        .nav-item { margin: 2px 0; }
+
+        .nav-section {
+            padding: 14px 10px 4px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #334155;
+        }
+
         .nav-link {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 14px 25px;
-            color: #d1d5db;
+            gap: 11px;
+            padding: 10px 12px;
+            color: #94a3b8;
             text-decoration: none;
-            transition: all 0.3s;
-            font-size: 0.95rem;
+            transition: all 0.15s;
+            font-size: 0.86rem;
+            font-weight: 500;
+            border-radius: 8px;
+            border-left: 3px solid transparent;
         }
-        .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
-        .nav-link.active { background: var(--primary); color: white; }
-        .nav-link i { width: 20px; text-align: center; }
-        
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            margin-left: 260px;
-            padding: 20px 30px;
+        .nav-link:hover {
+            background: rgba(255,255,255,0.06);
+            color: #e2e8f0;
         }
-        
+        .nav-link.active {
+            background: rgba(37,99,235,0.15);
+            color: #60a5fa;
+            border-left-color: #2563eb;
+            font-weight: 600;
+        }
+        .nav-link i { width: 18px; text-align: center; font-size: 0.88rem; }
+
+        /* Rodapé sidebar */
+        .sidebar-footer {
+            padding: 14px 16px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+            flex-shrink: 0;
+        }
+        .sidebar-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .sidebar-avatar {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; font-weight: 700; color: white;
+            flex-shrink: 0;
+        }
+        .sidebar-user-info { overflow: hidden; }
+        .sidebar-user-name {
+            font-size: 0.83rem; color: #e2e8f0; font-weight: 500;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .sidebar-user-role { font-size: 0.7rem; color: #475569; }
+        .sidebar-logout {
+            display: flex; align-items: center; gap: 8px;
+            color: #475569; text-decoration: none;
+            font-size: 0.82rem; padding: 8px 10px;
+            border-radius: 7px; transition: all 0.15s;
+        }
+        .sidebar-logout:hover { background: rgba(255,255,255,0.07); color: #94a3b8; }
+
+        /* ── Main Content ─────────────────────────────────────── */
+        .main-content { flex: 1; margin-left: 260px; padding: 28px 32px; }
+
         .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
+            margin-bottom: 28px;
         }
-        .page-header h1 { font-size: 1.8rem; color: var(--dark); }
-        
-        /* Cards */
+        .page-header h1 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .page-header h1 i { color: var(--primary); font-size: 1.15rem; }
+
+        /* ── Cards ────────────────────────────────────────────── */
         .card {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            padding: 20px;
+            border-radius: 14px;
+            box-shadow: var(--card-shadow);
+            padding: 20px 24px;
             margin-bottom: 20px;
+            border: 1px solid rgba(0,0,0,0.04);
         }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .card-title { font-size: 1rem; font-weight: 600; color: var(--dark); }
-        
-        /* Stats Grid */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .card-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title i { color: var(--primary); }
+
+        /* ── Stats Grid ───────────────────────────────────────── */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-bottom: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
         }
         .stat-card {
             background: white;
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0,0,0,0.04);
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 16px;
+            transition: box-shadow 0.2s, transform 0.2s;
+            cursor: default;
+        }
+        .stat-card:hover {
+            box-shadow: var(--card-shadow-hover);
+            transform: translateY(-2px);
         }
         .stat-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-            color: white;
+            width: 50px; height: 50px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: white; flex-shrink: 0;
         }
-        .stat-icon.blue { background: var(--primary); }
-        .stat-icon.green { background: var(--success); }
-        .stat-icon.orange { background: var(--warning); }
-        .stat-icon.red { background: var(--danger); }
-        .stat-icon.purple { background: #8b5cf6; }
-        
-        .stat-info h3 { font-size: 1.5rem; font-weight: 700; }
-        .stat-info p { font-size: 0.85rem; color: var(--gray); }
-        
-        /* Tables */
+        .stat-icon.blue   { background: linear-gradient(135deg, #2563eb, #60a5fa); }
+        .stat-icon.green  { background: linear-gradient(135deg, #059669, #10b981); }
+        .stat-icon.orange { background: linear-gradient(135deg, #d97706, #f59e0b); }
+        .stat-icon.red    { background: linear-gradient(135deg, #dc2626, #ef4444); }
+        .stat-icon.purple { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+        .stat-icon.teal   { background: linear-gradient(135deg, #0d9488, #14b8a6); }
+
+        .stat-info h3 {
+            font-size: 1.65rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.1;
+        }
+        .stat-info p {
+            font-size: 0.76rem;
+            color: #64748b;
+            margin-top: 3px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* ── Tables ───────────────────────────────────────────── */
         .table-container { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--gray-light); }
-        th { background: #f9fafb; font-weight: 600; font-size: 0.85rem; color: var(--gray); text-transform: uppercase; }
-        tr:hover { background: #f9fafb; }
-        
-        /* Buttons */
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.86rem;
+        }
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            border-bottom: 1px solid #e9eef4;
+            white-space: nowrap;
+        }
+        tbody tr { transition: background 0.12s; }
+        tbody tr:hover { background: #f8fafc; }
+        tbody tr:last-child td { border-bottom: none; }
+
+        /* ── Buttons ──────────────────────────────────────────── */
         .btn {
-            padding: 10px 20px;
+            padding: 9px 18px;
             border: none;
             border-radius: 8px;
             font-weight: 500;
             cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s;
+            font-size: 0.875rem;
+            transition: all 0.15s;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 7px;
+            text-decoration: none;
+            white-space: nowrap;
         }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); }
-        .btn-success { background: var(--success); color: white; }
-        .btn-danger { background: var(--danger); color: white; }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 1px 3px rgba(37,99,235,0.25);
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 4px 14px rgba(37,99,235,0.4);
+            transform: translateY(-1px);
+        }
+        .btn-success { background: var(--success); color: white; box-shadow: 0 1px 3px rgba(16,185,129,0.2); }
+        .btn-success:hover { background: #059669; box-shadow: 0 4px 14px rgba(16,185,129,0.4); transform: translateY(-1px); }
+        .btn-danger  { background: var(--danger);  color: white; box-shadow: 0 1px 3px rgba(239,68,68,0.2); }
+        .btn-danger:hover  { background: #dc2626; box-shadow: 0 4px 14px rgba(239,68,68,0.4); transform: translateY(-1px); }
         .btn-warning { background: var(--warning); color: white; }
-        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
-        
-        /* Forms */
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-weight: 500; margin-bottom: 5px; font-size: 0.9rem; }
+        .btn-warning:hover { background: #d97706; transform: translateY(-1px); }
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #374151;
+            border: 1px solid #e2e8f0;
+        }
+        .btn-secondary:hover { background: #e2e8f0; transform: translateY(-1px); }
+        .btn-info { background: #0ea5e9; color: white; }
+        .btn-info:hover { background: #0284c7; transform: translateY(-1px); }
+        .btn-sm { padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; }
+
+        /* ── Forms ────────────────────────────────────────────── */
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 0.76rem;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
         .form-control {
             width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--gray-light);
+            padding: 10px 13px;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-family: inherit;
+            color: #1f2937;
+            background: #fff;
+            transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
         }
-        .form-control:focus { outline: none; border-color: var(--primary); }
-        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #f0f7ff;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+        }
+        .form-control::placeholder { color: #94a3b8; }
         select.form-control { cursor: pointer; }
-        
-        /* Status Badges */
+
+        /* ── Badges ───────────────────────────────────────────── */
         .badge {
-            padding: 4px 10px;
+            padding: 3px 10px;
             border-radius: 20px;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 600;
+            letter-spacing: 0.02em;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
         .badge-success { background: #d1fae5; color: #065f46; }
         .badge-warning { background: #fef3c7; color: #92400e; }
-        .badge-danger { background: #fee2e2; color: #991b1b; }
-        .badge-info { background: #dbeafe; color: #1e40af; }
-        
-        /* Charts */
+        .badge-danger  { background: #fee2e2; color: #991b1b; }
+        .badge-info    { background: #dbeafe; color: #1e40af; }
+        .badge-gray    { background: #f1f5f9; color: #475569; }
+
+        /* ── Charts ───────────────────────────────────────────── */
         .charts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 20px;
         }
-        .chart-box { height: 300px; }
-        
-        /* Modal */
+        .chart-box { height: 280px; }
+
+        /* ── Modal ────────────────────────────────────────────── */
         .modal {
             display: none;
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(15,23,42,0.6);
+            backdrop-filter: blur(3px);
             z-index: 1000;
             align-items: center;
             justify-content: center;
@@ -201,249 +364,313 @@
         .modal.active { display: flex; }
         .modal-content {
             background: white;
-            border-radius: 12px;
-            padding: 25px;
+            border-radius: 16px;
+            padding: 28px;
             width: 90%;
             max-width: 700px;
             max-height: 90vh;
             overflow-y: auto;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+            animation: modalIn 0.22s cubic-bezier(0.34,1.2,0.64,1);
         }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 22px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .modal-header h3 { font-size: 1.05rem; font-weight: 700; color: #0f172a; }
+        .modal-close {
+            background: #f1f5f9;
+            border: none;
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            color: #64748b;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .modal-close:hover { background: #e2e8f0; color: #1f2937; }
 
-        /* Toast notifications */
+        /* ── Toasts ───────────────────────────────────────────── */
         #toast-container {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 20px; right: 20px;
             z-index: 9999;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             pointer-events: none;
         }
         .toast {
-            padding: 14px 20px;
-            border-radius: 10px;
+            padding: 13px 18px;
+            border-radius: 12px;
             color: white;
-            font-size: 0.9rem;
+            font-size: 0.875rem;
             font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.18);
             display: flex;
             align-items: center;
             gap: 10px;
             min-width: 280px;
             max-width: 400px;
             pointer-events: all;
-            animation: slideIn 0.3s ease;
+            animation: toastIn 0.3s cubic-bezier(0.34,1.3,0.64,1);
             transition: opacity 0.3s ease;
         }
-        .toast.success { background: #10b981; }
-        .toast.error   { background: #ef4444; }
-        .toast.warning { background: #f59e0b; }
-        .toast.info    { background: #2563eb; }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to   { transform: translateX(0);    opacity: 1; }
+        @keyframes toastIn {
+            from { transform: translateX(110%) scale(0.9); opacity: 0; }
+            to   { transform: translateX(0) scale(1); opacity: 1; }
         }
+        .toast.success { background: linear-gradient(135deg, #059669, #10b981); }
+        .toast.error   { background: linear-gradient(135deg, #dc2626, #ef4444); }
+        .toast.warning { background: linear-gradient(135deg, #d97706, #f59e0b); }
+        .toast.info    { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
 
-        /* Print styles */
+        /* ── Grid layouts ─────────────────────────────────────── */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+        /* ── Toolbar ──────────────────────────────────────────── */
+        .toolbar {
+            display: flex; gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .toolbar .search { flex: 1; min-width: 200px; }
+
+        /* ── Empty state ──────────────────────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: 52px 20px;
+            color: #94a3b8;
+        }
+        .empty-state i {
+            font-size: 2.8rem;
+            margin-bottom: 14px;
+            display: block;
+            color: #cbd5e1;
+        }
+        .empty-state p { font-size: 0.875rem; color: #94a3b8; }
+
+        /* ── Alert items (dashboard) ──────────────────────────── */
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: filter 0.15s;
+        }
+        .alert-item:hover { filter: brightness(0.96); }
+        .alert-item.warning { background: #fffbeb; border-left: 4px solid #f59e0b; }
+        .alert-item.danger  { background: #fff1f2; border-left: 4px solid #ef4444; }
+        .alert-item.info    { background: #eff6ff; border-left: 4px solid #2563eb; }
+        .alert-icon { font-size: 1.1rem; }
+        .alert-text { flex: 1; }
+        .alert-text strong { display: block; font-size: 0.85rem; margin-bottom: 2px; }
+        .alert-text small { color: #6b7280; font-size: 0.78rem; }
+
+        /* ── Print ────────────────────────────────────────────── */
         @media print {
             .sidebar, .page-header .btn, .toolbar, .modal,
             #toast-container, nav { display: none !important; }
             .main-content { margin-left: 0 !important; padding: 0 !important; }
             .card { box-shadow: none !important; border: 1px solid #ddd !important; }
         }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-header h3 { font-size: 1.2rem; }
-        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray); }
-        
-        /* Grid layouts */
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-        
-        /* Toolbar */
-        .toolbar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .toolbar .search { flex: 1; min-width: 200px; }
-        
-        /* Empty state */
-        .empty-state { text-align: center; padding: 40px; color: var(--gray); }
-        .empty-state i { font-size: 3rem; margin-bottom: 15px; color: var(--gray-light); }
-        
+
+        /* ── Responsive ───────────────────────────────────────── */
         @media (max-width: 768px) {
             .sidebar { width: 70px; }
-            .sidebar .logo-area span, .sidebar .nav-link span { display: none; }
-            .sidebar .nav-link { justify-content: center; padding: 14px; }
-            .main-content { margin-left: 70px; }
+            .sidebar .logo-area span,
+            .sidebar .nav-link span,
+            .sidebar .nav-section,
+            .sidebar-user-info,
+            .sidebar-logout span { display: none; }
+            .sidebar .nav-link { justify-content: center; padding: 12px; border-left: none !important; }
+            .sidebar .logo-area img { max-width: 40px; }
+            .main-content { margin-left: 70px; padding: 16px; }
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <div class="app-container">
-        <nav class="sidebar">
-            <div class="logo-area">
-                <img src="/static/logo_nova.png" alt="Siqueirão" style="width: 100%; max-width: 200px; height: auto; margin-bottom: 10px;">
-                <span style="display: block; margin-top: 5px; font-size: 0.8rem; color: #9ca3af;">Sistema de Gestão</span>
-            </div>
-            <ul class="nav-menu">
-                <li class="nav-item">
-                    <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
-                        <i class="fas fa-chart-line"></i> <span>Dashboard</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/clientes" class="nav-link {% if request.path == '/clientes' %}active{% endif %}">
-                        <i class="fas fa-users"></i> <span>Clientes</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/veiculos" class="nav-link {% if request.path == '/veiculos' %}active{% endif %}">
-                        <i class="fas fa-car"></i> <span>Veículos</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/locacoes" class="nav-link {% if request.path == '/locacoes' %}active{% endif %}">
-                        <i class="fas fa-key"></i> <span>Locações</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/manutencoes" class="nav-link {% if request.path == '/manutencoes' %}active{% endif %}">
-                        <i class="fas fa-tools"></i> <span>Manutenções</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/abastecimentos" class="nav-link {% if request.path == '/abastecimentos' %}active{% endif %}">
-                        <i class="fas fa-gas-pump"></i> <span>Abastecimentos</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/multas" class="nav-link {% if request.path == '/multas' %}active{% endif %}">
-                        <i class="fas fa-file-invoice-dollar"></i> <span>Multas</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/fornecedores" class="nav-link {% if request.path == '/fornecedores' %}active{% endif %}">
-                        <i class="fas fa-truck"></i> <span>Fornecedores</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/relatorios" class="nav-link {% if request.path == '/relatorios' %}active{% endif %}">
-                        <i class="fas fa-chart-bar"></i> <span>Relatórios</span>
-                    </a>
-                </li>
-                {% if current_user.nivel == 'admin' %}
-                <li class="nav-item">
-                    <a href="/usuarios" class="nav-link {% if request.path == '/usuarios' %}active{% endif %}">
-                        <i class="fas fa-user-cog"></i> <span>Usuários</span>
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
+<div class="app-container">
 
-            <div style="position:absolute; bottom:0; left:0; right:0; padding:16px 20px; border-top:1px solid rgba(255,255,255,0.1);">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                    <div style="width:34px; height:34px; border-radius:50%; background:#2563eb; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:700; color:white; flex-shrink:0;">
-                        {{ current_user.nome[0].upper() }}
-                    </div>
-                    <div style="overflow:hidden;">
-                        <div style="font-size:0.85rem; color:white; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ current_user.nome }}</div>
-                        <div style="font-size:0.72rem; color:#9ca3af;">{{ current_user.nivel }}</div>
-                    </div>
-                </div>
-                <a href="/logout" style="display:flex; align-items:center; gap:8px; color:#9ca3af; text-decoration:none; font-size:0.85rem; padding:8px 10px; border-radius:8px; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#9ca3af'">
-                    <i class="fas fa-sign-out-alt"></i> <span>Sair</span>
-                </a>
-            </div>
-        </nav>
-        
-        <main class="main-content">
-            {% block content %}{% endblock %}
-        </main>
-    </div>
-    
-    <!-- Toast container -->
-    <div id="toast-container"></div>
-
-    <!-- Modal Template -->
-    <div class="modal" id="modalTemplate">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Título</h3>
-                <button class="modal-close" onclick="fecharModal()">&times;</button>
-            </div>
-            <div id="modalBody"></div>
+    <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+    <nav class="sidebar">
+        <div class="logo-area">
+            <img src="/static/logo_nova.png" alt="Siqueirão Multimarcas">
+            <span class="system-label">Sistema de Gestão</span>
         </div>
-    </div>
-    
-    <script>
-        // ====== TOAST (substitui alert) ======
-        function showToast(msg, type = 'success', duration = 4000) {
-            const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
-            const container = document.getElementById('toast-container');
-            const el = document.createElement('div');
-            el.className = 'toast ' + type;
-            el.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + '"></i><span>' + msg + '</span>';
-            container.appendChild(el);
-            setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, duration);
-        }
 
-        // Funções utilitárias
-        function formatCurrency(value) {
-            return 'R$ ' + parseFloat(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        }
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('pt-BR');
-        }
-        
-        function abrirModal(title, content) {
-            document.getElementById('modalTitle').textContent = title;
-            document.getElementById('modalBody').innerHTML = content;
-            document.getElementById('modalTemplate').classList.add('active');
-            
-            // Aplicar máscaras após modal abrir
-            setTimeout(aplicarMascaras, 100);
-        }
-        
-        function fecharModal() {
-            document.getElementById('modalTemplate').classList.remove('active');
-        }
-        
-        // Fechar modal ao clicar fora
-        document.getElementById('modalTemplate').addEventListener('click', function(e) {
-            if (e.target === this) fecharModal();
-        });
-        
-        // Função para mostrar Loading
-        function showLoading() {
-            document.body.style.cursor = 'wait';
-        }
-        
-        function hideLoading() {
-            document.body.style.cursor = 'default';
-        }
-        
-        // Funções de máscara
-        function aplicarMascaras() {
-            // Telefone
-            Inputmask({"mask": "(99) 99999-9999"}).mask(document.querySelectorAll('input[name="telefone"], input[name="telefone"]'));
-            
-            // CPF
-            Inputmask({"mask": "999.999.999-99"}).mask(document.querySelectorAll('input[name="cpf"], input[name="cpf"]'));
-            
-            // CNPJ
-            Inputmask({"mask": "99.999.999/9999-99"}).mask(document.querySelectorAll('input[name="cnpj"], input[name="cnpj"]'));
-            
-            // Currency (moeda)
-            Inputmask({"mask": "R$ 999.990,00", "reverse": true}).mask(document.querySelectorAll('input[name="diaria"], input[name="custo"], input[name="valor"], input[name="total"], input[name="valor_litro"]'));
-        }
-        
-        // Aplicar máscaras ao carregar a página
-        document.addEventListener('DOMContentLoaded', function() {
-            aplicarMascaras();
-        });
-    </script>
-    {% block extra_js %}{% endblock %}
+        <ul class="nav-menu">
+            <li class="nav-section">Principal</li>
+            <li class="nav-item">
+                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i> <span>Dashboard</span>
+                </a>
+            </li>
+
+            <li class="nav-section">Operacional</li>
+            <li class="nav-item">
+                <a href="/clientes" class="nav-link {% if request.path == '/clientes' %}active{% endif %}">
+                    <i class="fas fa-users"></i> <span>Clientes</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/veiculos" class="nav-link {% if request.path == '/veiculos' %}active{% endif %}">
+                    <i class="fas fa-car"></i> <span>Veículos</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/locacoes" class="nav-link {% if request.path == '/locacoes' %}active{% endif %}">
+                    <i class="fas fa-key"></i> <span>Locações</span>
+                </a>
+            </li>
+
+            <li class="nav-section">Frota</li>
+            <li class="nav-item">
+                <a href="/manutencoes" class="nav-link {% if request.path == '/manutencoes' %}active{% endif %}">
+                    <i class="fas fa-tools"></i> <span>Manutenções</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/abastecimentos" class="nav-link {% if request.path == '/abastecimentos' %}active{% endif %}">
+                    <i class="fas fa-gas-pump"></i> <span>Abastecimentos</span>
+                </a>
+            </li>
+
+            <li class="nav-section">Administrativo</li>
+            <li class="nav-item">
+                <a href="/multas" class="nav-link {% if request.path == '/multas' %}active{% endif %}">
+                    <i class="fas fa-file-invoice-dollar"></i> <span>Multas</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/fornecedores" class="nav-link {% if request.path == '/fornecedores' %}active{% endif %}">
+                    <i class="fas fa-truck"></i> <span>Fornecedores</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/relatorios" class="nav-link {% if request.path == '/relatorios' %}active{% endif %}">
+                    <i class="fas fa-chart-bar"></i> <span>Relatórios</span>
+                </a>
+            </li>
+            {% if current_user.nivel == 'admin' %}
+            <li class="nav-item">
+                <a href="/usuarios" class="nav-link {% if request.path == '/usuarios' %}active{% endif %}">
+                    <i class="fas fa-user-cog"></i> <span>Usuários</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar">{{ current_user.nome[0].upper() }}</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name">{{ current_user.nome }}</div>
+                    <div class="sidebar-user-role">{{ current_user.nivel | capitalize }}</div>
+                </div>
+            </div>
+            <a href="/logout" class="sidebar-logout">
+                <i class="fas fa-sign-out-alt"></i> <span>Sair do sistema</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- ── CONTENT ─────────────────────────────────────────── -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Modal Template -->
+<div class="modal" id="modalTemplate">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Título</h3>
+            <button class="modal-close" onclick="fecharModal()">&times;</button>
+        </div>
+        <div id="modalBody"></div>
+    </div>
+</div>
+
+<script>
+    /* ── Toast ─────────────────────────────────────────────── */
+    function showToast(msg, type = 'success', duration = 4000) {
+        if (!msg) return;
+        const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+        const container = document.getElementById('toast-container');
+        const el = document.createElement('div');
+        el.className = 'toast ' + type;
+        el.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + '"></i><span>' + msg + '</span>';
+        container.appendChild(el);
+        setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, duration);
+    }
+
+    /* ── Modal ─────────────────────────────────────────────── */
+    function abrirModal(title, content) {
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalBody').innerHTML = content;
+        document.getElementById('modalTemplate').classList.add('active');
+        setTimeout(aplicarMascaras, 100);
+    }
+    function fecharModal() {
+        document.getElementById('modalTemplate').classList.remove('active');
+    }
+    document.getElementById('modalTemplate').addEventListener('click', function(e) {
+        if (e.target === this) fecharModal();
+    });
+
+    /* ── Confirmação customizada (substitui confirm()) ─────── */
+    function confirmarAcao(titulo, mensagem, callback) {
+        const content = `
+            <div style="text-align:center;padding:10px 0 20px;">
+                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#f59e0b;margin-bottom:14px;display:block;"></i>
+                <p style="font-size:0.95rem;color:#374151;line-height:1.6;">${mensagem}</p>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                <button class="btn btn-danger" onclick="fecharModal();(${callback})()">
+                    <i class="fas fa-trash"></i> Confirmar
+                </button>
+            </div>`;
+        abrirModal(titulo, content);
+    }
+
+    /* ── Utilitários ───────────────────────────────────────── */
+    function formatCurrency(value) {
+        return 'R$ ' + parseFloat(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    }
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
+    }
+
+    /* ── Máscaras ──────────────────────────────────────────── */
+    function aplicarMascaras() {
+        Inputmask({"mask": "(99) 99999-9999"}).mask(document.querySelectorAll('input[name="telefone"]'));
+        Inputmask({"mask": "999.999.999-99"}).mask(document.querySelectorAll('input[name="cpf"]'));
+        Inputmask({"mask": "99.999.999/9999-99"}).mask(document.querySelectorAll('input[name="cnpj"]'));
+    }
+    document.addEventListener('DOMContentLoaded', aplicarMascaras);
+</script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

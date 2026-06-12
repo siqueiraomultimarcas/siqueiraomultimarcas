@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Clientes - Locadora{% endblock %}
 
@@ -8,6 +8,31 @@
     <button class="btn btn-primary" onclick="abrirModalCliente()">
         <i class="fas fa-plus"></i> Novo Cliente
     </button>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="margin-bottom: 20px;">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+        <div class="stat-info">
+            <h3 id="totalClientes">0</h3>
+            <p>Total de Clientes</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check"></i></div>
+        <div class="stat-info">
+            <h3 id="clientesAtivos">0</h3>
+            <p>Ativos</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-ban"></i></div>
+        <div class="stat-info">
+            <h3 id="clientesBloqueados">0</h3>
+            <p>Bloqueados</p>
+        </div>
+    </div>
 </div>
 
 <!-- Filtros -->
@@ -53,6 +78,10 @@
         try {
             const response = await fetch('/api/clientes');
             clientes = await response.json();
+            // Atualizar estatísticas
+            document.getElementById('totalClientes').textContent = clientes.length;
+            document.getElementById('clientesAtivos').textContent = clientes.filter(c => c.status === 'ativo').length;
+            document.getElementById('clientesBloqueados').textContent = clientes.filter(c => c.status === 'bloqueado').length;
             renderizarClientes(clientes);
         } catch (error) {
             console.error('Erro ao carregar clientes:', error);
@@ -191,7 +220,7 @@
                     <textarea class="form-control" name="observacoes" rows="3">${cliente ? cliente.observacoes : ''}</textarea>
                 </div>
                 <div style="text-align: right; margin-top: 20px;">
-                    <button type="button" class="btn" onclick="fecharModal()" style="background: #6b7280; color: white; margin-right: 10px;">Cancelar</button>
+                    <button type="button" class="btn" onclick="fecharModal()" class="btn btn-secondary" style="margin-right: 10px;">Cancelar</button>
                     <button type="submit" class="btn btn-primary">${isEdit ? 'Atualizar' : 'Cadastrar'}</button>
                 </div>
             </form>
@@ -234,13 +263,24 @@
     }
 
     async function excluirCliente(id) {
-        if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+        const cliente = clientes.find(c => c.id === id);
+        const nome = cliente ? cliente.nome : 'este cliente';
+        confirmarAcao('Excluir Cliente', 'Deseja excluir o cliente <strong>' + nome + '</strong>? Esta acao nao pode ser desfeita.', () => _confirmaExcluirCliente(id));
+    }
+
+    async function _confirmaExcluirCliente(id) {
         try {
             const resp = await fetch('/api/clientes/' + id, { method: 'DELETE' });
             if (resp.ok) {
-                showToast('Cliente excluído', 'success');
+                showToast('Cliente excluido', 'success');
                 carregarClientes();
             } else {
+                showToast('Erro ao excluir cliente', 'error');
+            }
+        } catch (error) {
+            showToast('Erro ao excluir cliente', 'error');
+        }
+    } else {
                 showToast('Erro ao excluir cliente', 'error');
             }
         } catch (error) {
