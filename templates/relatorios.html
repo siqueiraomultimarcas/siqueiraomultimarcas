@@ -3,84 +3,236 @@
 
 {% block extra_css %}
 <style>
-/* ── Tab navigation ────────────────────────────────────── */
+/* ── Tab navigation ───────────────────────────────────────── */
 .rel-nav {
     display: flex;
-    gap: 4px;
-    background: #f1f5f9;
-    border-radius: 12px;
-    padding: 4px;
-    width: fit-content;
+    gap: 0;
+    border-bottom: 2px solid #e2e8f0;
     margin-bottom: 24px;
 }
 .rel-tab {
     display: flex; align-items: center; gap: 8px;
-    padding: 10px 22px;
+    padding: 12px 24px;
     border: none; background: none;
-    border-radius: 9px;
+    border-bottom: 2.5px solid transparent;
+    margin-bottom: -2px;
     font-size: 0.875rem; font-weight: 500;
     color: #64748b; cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.18s;
     font-family: inherit;
 }
 .rel-tab:hover { color: #1e293b; }
 .rel-tab.active {
-    background: white;
     color: #2563eb;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-    font-weight: 600;
+    border-bottom-color: #2563eb;
+    font-weight: 700;
 }
 .rel-tab i { font-size: 0.82rem; }
-
 .rel-content { display: none; }
 .rel-content.active { display: block; }
 
-/* ── Period shortcuts ──────────────────────────────────── */
+/* ── Param card ───────────────────────────────────────────── */
+.rel-param-card {
+    padding: 0 !important;
+    overflow: hidden;
+    border-top: 3px solid #2563eb !important;
+    margin-bottom: 20px;
+}
+.rel-param-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 60%, #f8fafc 100%);
+    border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.rel-param-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.83rem;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.28);
+    flex-shrink: 0;
+}
+.rel-param-body { padding: 20px 22px 22px; }
+
+/* ── Period shortcuts ─────────────────────────────────────── */
 .period-row {
-    display: flex; align-items: center; gap: 8px;
-    margin-bottom: 20px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 6px;
+    flex-wrap: wrap;
 }
 .period-label {
-    font-size: 0.7rem; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .06em;
+    font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em;
     color: #94a3b8;
 }
 .period-btn {
-    padding: 5px 14px;
-    border: 1px solid #e2e8f0;
+    padding: 4px 13px;
+    border: 1.5px solid #e2e8f0;
     background: white; border-radius: 20px;
-    font-size: 0.75rem; font-weight: 500;
+    font-size: 0.73rem; font-weight: 600;
     color: #64748b; cursor: pointer;
-    transition: all 0.2s; font-family: inherit;
+    transition: all 0.18s; font-family: inherit;
 }
 .period-btn:hover { border-color: #2563eb; color: #2563eb; }
 .period-btn.active { background: #2563eb; border-color: #2563eb; color: white; }
 
-/* ── Filter card layout ────────────────────────────────── */
+/* ── Filter grid ──────────────────────────────────────────── */
 .filter-grid {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr;
+    grid-template-columns: 1.5fr 1fr 1fr;
     gap: 20px;
     align-items: start;
 }
-.cost-checks { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
-.cost-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: 9px;
-    border: 1px solid #e2e8f0; background: white;
-    cursor: pointer; transition: all 0.15s;
-    font-size: 0.83rem; color: #374151;
+
+/* ── Vehicle list ─────────────────────────────────────────── */
+.veiculo-list {
+    max-height: 162px;
+    overflow-y: auto;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 6px;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
 }
-.cost-item:hover { border-color: #93c5fd; background: #eff6ff; }
-.cost-item input { accent-color: #2563eb; width: 15px; height: 15px; flex-shrink: 0; }
+.veiculo-list::-webkit-scrollbar { width: 4px; }
+.veiculo-list::-webkit-scrollbar-track { background: transparent; }
+.veiculo-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+.veiculo-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.79rem;
+    color: #374151;
+    transition: background 0.15s;
+    user-select: none;
+}
+.veiculo-item:hover { background: #eff6ff; }
+.veiculo-item input[type=checkbox] {
+    accent-color: #2563eb;
+    width: 14px; height: 14px;
+    flex-shrink: 0; cursor: pointer;
+}
+.placa-badge {
+    background: #e0e7ff;
+    color: #3730a3;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+/* ── Date range ───────────────────────────────────────────── */
+.date-field-wrap {
+    display: flex;
+    flex-direction: column;
+    background: #fafafa;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.date-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+}
+.date-field + .date-divider { height: 1px; background: #e2e8f0; }
+.date-field-label {
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    min-width: 26px;
+}
+.date-field input.form-control {
+    border: none !important;
+    background: transparent !important;
+    padding: 2px 0 !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    flex: 1;
+    box-shadow: none !important;
+}
+.date-field input.form-control:focus { outline: none !important; box-shadow: none !important; }
+
+/* ── Cost toggles ─────────────────────────────────────────── */
+.cost-checks { display: flex; flex-direction: column; gap: 6px; }
+.cost-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 9px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 0.82rem;
+    color: #374151;
+}
+.cost-item:hover { border-color: #93c5fd; background: #f0f9ff; }
+.cost-item input[type=checkbox] { display: none; }
 .cost-icon {
     width: 28px; height: 28px; border-radius: 7px;
     background: #eff6ff; color: #2563eb;
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.72rem; flex-shrink: 0;
+    font-size: 0.7rem; flex-shrink: 0;
+    transition: background 0.15s;
 }
+.cost-label { flex: 1; }
+.cost-toggle {
+    width: 34px; height: 18px;
+    border-radius: 9px;
+    background: #cbd5e1;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+.cost-toggle::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    background: white;
+    border-radius: 50%;
+    top: 2px; left: 2px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+.cost-item:has(input:checked) { border-color: #93c5fd; background: #eff6ff; }
+.cost-item:has(input:checked) .cost-icon { background: #dbeafe; }
+.cost-item:has(input:checked) .cost-toggle { background: #2563eb; }
+.cost-item:has(input:checked) .cost-toggle::after { transform: translateX(16px); }
 
-/* ── Empty state ───────────────────────────────────────── */
+/* ── Field section label ──────────────────────────────────── */
+.field-label {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.field-label i { color: #2563eb; font-size: 0.7rem; }
+
+/* ── Empty state ──────────────────────────────────────────── */
 .rel-empty {
     text-align: center; padding: 64px 20px;
     background: white; border-radius: 14px;
@@ -97,7 +249,7 @@
 .rel-empty h3 { font-size: 1.05rem; font-weight: 600; color: #475569; margin-bottom: 8px; }
 .rel-empty p { font-size: 0.83rem; color: #94a3b8; max-width: 340px; margin: 0 auto; }
 
-/* ── Results section ───────────────────────────────────── */
+/* ── Results ──────────────────────────────────────────────── */
 .results-header {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 16px;
@@ -109,43 +261,43 @@
     border: 1px solid #bfdbfe;
 }
 
-/* ── Table enhancements ────────────────────────────────── */
+/* ── Table enhancements ───────────────────────────────────── */
 .row-profit { background: rgba(16,185,129,0.04); }
 .row-loss   { background: rgba(239,68,68,0.04); }
 .row-total  { background: #f8fafc; font-weight: 700; border-top: 2px solid #e2e8f0; }
 .row-total td { color: #0f172a !important; }
-
 .margin-wrap { display: flex; align-items: center; gap: 8px; }
 .margin-bar-bg {
     flex: 1; height: 6px; background: #f1f5f9;
     border-radius: 3px; overflow: hidden; min-width: 40px;
 }
 .margin-bar-fill { height: 100%; border-radius: 3px; }
-
 .part-wrap { display: flex; align-items: center; gap: 8px; }
 .part-bar-bg {
     flex: 1; height: 6px; background: #f1f5f9;
     border-radius: 3px; overflow: hidden; min-width: 60px;
 }
 .part-bar-fill { height: 100%; border-radius: 3px; background: #2563eb; }
-
-/* ── Chart container ───────────────────────────────────── */
 .chart-wrap { height: 260px; padding: 4px 8px 16px; }
-
-/* ── Section divider ───────────────────────────────────── */
 .section-divider {
     font-size: 0.7rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: .1em;
     color: #94a3b8; margin: 28px 0 12px;
     display: flex; align-items: center; gap: 10px;
 }
-.section-divider::after {
-    content: ''; flex: 1; height: 1px; background: #e2e8f0;
+.section-divider::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+
+/* ── Fornecedor filter ────────────────────────────────────── */
+.fornec-filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: end;
 }
 
-/* ── Print ─────────────────────────────────────────────── */
+/* ── Print ────────────────────────────────────────────────── */
 @media print {
-    .rel-nav, .period-row, .filter-grid, .btn, .rel-empty { display: none !important; }
+    .rel-nav, .period-row, .rel-param-card, .btn, .rel-empty { display: none !important; }
     .rel-content { display: block !important; }
     #resultados, #resultadosFornecedor { display: block !important; }
 }
@@ -154,7 +306,7 @@
 
 {% block content %}
 
-<!-- ── Cabeçalho ───────────────────────────────────────── -->
+<!-- ── Cabeçalho ────────────────────────────────────────────── -->
 <div class="page-header">
     <div>
         <h1><i class="fas fa-chart-bar"></i> Central de Relatórios</h1>
@@ -165,7 +317,7 @@
     </button>
 </div>
 
-<!-- ── Tabs ─────────────────────────────────────────────── -->
+<!-- ── Tabs ──────────────────────────────────────────────────── -->
 <div class="rel-nav">
     <button class="rel-tab active" onclick="switchTab('lucratividade')" id="tab-lucratividade">
         <i class="fas fa-chart-line"></i> Lucratividade por Veículo
@@ -176,63 +328,94 @@
 </div>
 
 
-<!-- ════════════════════════════════════════════════════════
+<!-- ════════════════════════════════════════════════════════════
      TAB 1 — LUCRATIVIDADE
-═══════════════════════════════════════════════════════════ -->
+═════════════════════════════════════════════════════════════ -->
 <div class="rel-content active" id="content-lucratividade">
 
-    <!-- Filtros -->
-    <div class="card" style="margin-bottom:20px;">
-        <div class="card-header" style="margin-bottom:16px;">
-            <h3 class="card-title"><i class="fas fa-sliders-h"></i> Parâmetros do Relatório</h3>
-        </div>
-
-        <div class="period-row">
-            <span class="period-label">Período rápido:</span>
-            <button class="period-btn" onclick="setPeriodo(7,this)">7 dias</button>
-            <button class="period-btn" onclick="setPeriodo(30,this)">30 dias</button>
-            <button class="period-btn active" onclick="setPeriodo(90,this)">3 meses</button>
-            <button class="period-btn" onclick="setPeriodo(180,this)">6 meses</button>
-            <button class="period-btn" onclick="setPeriodoAno(this)">Este ano</button>
-        </div>
-
-        <div class="filter-grid">
-            <div class="form-group" style="margin:0;">
-                <label>Veículos <small style="color:#94a3b8;font-weight:400">(Ctrl/Cmd para múltiplos)</small></label>
-                <select class="form-control" id="filtroVeiculos" multiple style="height:134px;"></select>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:12px;">
-                <div class="form-group" style="margin:0;">
-                    <label>Data Início</label>
-                    <input type="date" class="form-control" id="dataInicio">
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label>Data Fim</label>
-                    <input type="date" class="form-control" id="dataFim">
+    <div class="card rel-param-card">
+        <!-- Header -->
+        <div class="rel-param-header">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div class="rel-param-icon"><i class="fas fa-sliders-h"></i></div>
+                <div>
+                    <div style="font-weight:700;font-size:0.93rem;color:#0f172a;">Parâmetros do Relatório</div>
+                    <div style="font-size:0.7rem;color:#94a3b8;margin-top:1px;">Configure os filtros e clique em Gerar Relatório</div>
                 </div>
             </div>
-            <div>
-                <label style="display:block;font-size:0.78rem;font-weight:600;color:#374151;margin-bottom:6px;">Incluir nos Custos</label>
-                <div class="cost-checks">
-                    <label class="cost-item">
-                        <input type="checkbox" id="incluirManutencao" checked>
-                        <span class="cost-icon"><i class="fas fa-tools"></i></span>
-                        Manutenções
-                    </label>
-                    <label class="cost-item">
-                        <input type="checkbox" id="incluirAbastecimento" checked>
-                        <span class="cost-icon"><i class="fas fa-gas-pump"></i></span>
-                        Abastecimentos
-                    </label>
-                    <label class="cost-item">
-                        <input type="checkbox" id="incluirMultas" checked>
-                        <span class="cost-icon"><i class="fas fa-file-invoice-dollar"></i></span>
-                        Multas
-                    </label>
+            <div class="period-row">
+                <span class="period-label">Período rápido:</span>
+                <button class="period-btn" onclick="setPeriodo(7,this)">7d</button>
+                <button class="period-btn" onclick="setPeriodo(30,this)">30d</button>
+                <button class="period-btn active" onclick="setPeriodo(90,this)">3m</button>
+                <button class="period-btn" onclick="setPeriodo(180,this)">6m</button>
+                <button class="period-btn" onclick="setPeriodoAno(this)">Ano</button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="rel-param-body">
+            <div class="filter-grid">
+                <!-- Vehicles -->
+                <div>
+                    <div class="field-label">
+                        <i class="fas fa-car"></i> Veículos
+                        <button type="button" id="btnTodosVeic" onclick="toggleTodosVeiculos()"
+                            style="margin-left:auto;font-size:0.68rem;color:#2563eb;background:none;border:none;cursor:pointer;font-weight:700;padding:0;">
+                            Desmarcar todos
+                        </button>
+                    </div>
+                    <div id="listaVeiculos" class="veiculo-list">
+                        <div style="text-align:center;padding:24px 0;color:#94a3b8;font-size:0.78rem;">
+                            <i class="fas fa-spinner fa-spin" style="display:block;font-size:1.2rem;margin-bottom:8px;"></i>
+                            Carregando veículos...
+                        </div>
+                    </div>
                 </div>
-                <button class="btn btn-primary" onclick="gerarRelatorio()" style="width:100%;margin-top:14px;">
-                    <i class="fas fa-bolt"></i> Gerar Relatório
-                </button>
+
+                <!-- Dates -->
+                <div>
+                    <div class="field-label"><i class="fas fa-calendar-alt"></i> Período</div>
+                    <div class="date-field-wrap">
+                        <div class="date-field">
+                            <span class="date-field-label">De</span>
+                            <input type="date" class="form-control" id="dataInicio">
+                        </div>
+                        <div class="date-divider"></div>
+                        <div class="date-field">
+                            <span class="date-field-label">Até</span>
+                            <input type="date" class="form-control" id="dataFim">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Costs + button -->
+                <div>
+                    <div class="field-label"><i class="fas fa-receipt"></i> Incluir nos Custos</div>
+                    <div class="cost-checks">
+                        <label class="cost-item">
+                            <input type="checkbox" id="incluirManutencao" checked>
+                            <span class="cost-icon"><i class="fas fa-tools"></i></span>
+                            <span class="cost-label">Manutenções</span>
+                            <span class="cost-toggle"></span>
+                        </label>
+                        <label class="cost-item">
+                            <input type="checkbox" id="incluirAbastecimento" checked>
+                            <span class="cost-icon"><i class="fas fa-gas-pump"></i></span>
+                            <span class="cost-label">Abastecimentos</span>
+                            <span class="cost-toggle"></span>
+                        </label>
+                        <label class="cost-item">
+                            <input type="checkbox" id="incluirMultas" checked>
+                            <span class="cost-icon"><i class="fas fa-file-invoice-dollar"></i></span>
+                            <span class="cost-label">Multas</span>
+                            <span class="cost-toggle"></span>
+                        </label>
+                    </div>
+                    <button class="btn btn-primary" onclick="gerarRelatorio()" style="width:100%;margin-top:12px;padding:11px;font-size:0.88rem;">
+                        <i class="fas fa-bolt"></i> Gerar Relatório
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -252,7 +435,6 @@
             <span class="results-period-badge" id="periodoLabel"></span>
         </div>
 
-        <!-- KPIs -->
         <div class="kpi-grid" style="margin-bottom:24px;">
             <div class="kpi-card green">
                 <div class="kpi-label">Total de Receitas</div>
@@ -280,7 +462,6 @@
             </div>
         </div>
 
-        <!-- Gráfico -->
         <div class="card" style="margin-bottom:20px;">
             <div class="card-header">
                 <h3 class="card-title"><i class="fas fa-chart-bar"></i> Evolução Mensal — Receitas, Custos e Lucro</h3>
@@ -290,7 +471,6 @@
             </div>
         </div>
 
-        <!-- Tabela detalhada -->
         <div class="section-divider">Detalhamento por Veículo</div>
         <div class="card">
             <div class="table-container">
@@ -316,39 +496,55 @@
 </div>
 
 
-<!-- ════════════════════════════════════════════════════════
+<!-- ════════════════════════════════════════════════════════════
      TAB 2 — POR FORNECEDOR
-═══════════════════════════════════════════════════════════ -->
+═════════════════════════════════════════════════════════════ -->
 <div class="rel-content" id="content-fornecedor">
 
-    <div class="card" style="margin-bottom:20px;">
-        <div class="card-header" style="margin-bottom:16px;">
-            <h3 class="card-title"><i class="fas fa-sliders-h"></i> Parâmetros do Relatório</h3>
-        </div>
-
-        <div class="period-row">
-            <span class="period-label">Período rápido:</span>
-            <button class="period-btn" onclick="setPeriodoF(30,this)">30 dias</button>
-            <button class="period-btn active" onclick="setPeriodoF(90,this)">3 meses</button>
-            <button class="period-btn" onclick="setPeriodoF(180,this)">6 meses</button>
-            <button class="period-btn" onclick="setPeriodoFAno(this)">Este ano</button>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:16px;align-items:end;">
-            <div class="form-group" style="margin:0;">
-                <label>Fornecedor</label>
-                <select class="form-control" id="filtroFornecedor">
-                    <option value="">— Todos os Fornecedores —</option>
-                </select>
-            </div>
-            <div class="form-group" style="margin:0;">
-                <label>Período</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <input type="date" class="form-control" id="dataInicioFornecedor">
-                    <input type="date" class="form-control" id="dataFimFornecedor">
+    <div class="card rel-param-card">
+        <!-- Header -->
+        <div class="rel-param-header">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div class="rel-param-icon"><i class="fas fa-truck"></i></div>
+                <div>
+                    <div style="font-weight:700;font-size:0.93rem;color:#0f172a;">Parâmetros do Relatório</div>
+                    <div style="font-size:0.7rem;color:#94a3b8;margin-top:1px;">Selecione o fornecedor e o período desejado</div>
                 </div>
             </div>
-            <button class="btn btn-primary" onclick="gerarRelatorioFornecedor()">
+            <div class="period-row">
+                <span class="period-label">Período rápido:</span>
+                <button class="period-btn" onclick="setPeriodoF(30,this)">30d</button>
+                <button class="period-btn active" onclick="setPeriodoF(90,this)">3m</button>
+                <button class="period-btn" onclick="setPeriodoF(180,this)">6m</button>
+                <button class="period-btn" onclick="setPeriodoFAno(this)">Ano</button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="rel-param-body">
+            <div class="fornec-filter-grid">
+                <div>
+                    <div class="field-label"><i class="fas fa-store"></i> Fornecedor</div>
+                    <select class="form-control" id="filtroFornecedor">
+                        <option value="">— Todos os Fornecedores —</option>
+                    </select>
+                </div>
+                <div>
+                    <div class="field-label"><i class="fas fa-calendar-alt"></i> Período</div>
+                    <div class="date-field-wrap">
+                        <div class="date-field">
+                            <span class="date-field-label">De</span>
+                            <input type="date" class="form-control" id="dataInicioFornecedor">
+                        </div>
+                        <div class="date-divider"></div>
+                        <div class="date-field">
+                            <span class="date-field-label">Até</span>
+                            <input type="date" class="form-control" id="dataFimFornecedor">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="gerarRelatorioFornecedor()" style="margin-top:16px;padding:11px 28px;font-size:0.88rem;">
                 <i class="fas fa-bolt"></i> Gerar Relatório
             </button>
         </div>
@@ -419,9 +615,7 @@
 
 
 <script>
-/* ──────────────────────────────────────────────────────────
-   HELPERS
-────────────────────────────────────────────────────────── */
+/* ─── HELPERS ─────────────────────────────────────────────── */
 function fmtR(v) {
     return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(v || 0);
 }
@@ -431,7 +625,7 @@ function fmtDate(d) {
     return `${dd}/${m}/${y}`;
 }
 
-/* Period shortcuts — Tab 1 */
+/* ─── Period shortcuts — Tab 1 ────────────────────────────── */
 function setPeriodo(days, btn) {
     document.querySelectorAll('#content-lucratividade .period-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
@@ -449,7 +643,7 @@ function setPeriodoAno(btn) {
     document.getElementById('dataFim').value    = `${ano}-12-31`;
 }
 
-/* Period shortcuts — Tab 2 */
+/* ─── Period shortcuts — Tab 2 ────────────────────────────── */
 function setPeriodoF(days, btn) {
     document.querySelectorAll('#content-fornecedor .period-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
@@ -467,7 +661,7 @@ function setPeriodoFAno(btn) {
     document.getElementById('dataFimFornecedor').value    = `${ano}-12-31`;
 }
 
-/* Tab switch */
+/* ─── Tab switch ──────────────────────────────────────────── */
 function switchTab(name) {
     document.querySelectorAll('.rel-tab').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.rel-content').forEach(c => c.classList.remove('active'));
@@ -477,9 +671,7 @@ function switchTab(name) {
     else carregarVeiculos();
 }
 
-/* ──────────────────────────────────────────────────────────
-   TAB 1 — LUCRATIVIDADE
-────────────────────────────────────────────────────────── */
+/* ─── TAB 1 — LUCRATIVIDADE ───────────────────────────────── */
 let veiculos = [];
 let chartLucratividade = null;
 
@@ -487,20 +679,41 @@ async function carregarVeiculos() {
     try {
         const resp = await fetch('/api/veiculos');
         veiculos = await resp.json();
-        const sel = document.getElementById('filtroVeiculos');
-        if (sel.options.length > 1) return; // já carregado
-        veiculos.forEach(v => {
-            const o = document.createElement('option');
-            o.value = v.id;
-            o.textContent = `${v.placa} — ${v.marca} ${v.modelo}`;
-            sel.appendChild(o);
-        });
+        const lista = document.getElementById('listaVeiculos');
+        if (lista.querySelectorAll('.veiculo-item').length > 0) return;
+
+        if (veiculos.length === 0) {
+            lista.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.78rem;">Nenhum veículo cadastrado</div>';
+        } else {
+            lista.innerHTML = veiculos.map(v => `
+                <label class="veiculo-item">
+                    <input type="checkbox" class="veiculo-check" value="${v.id}" checked>
+                    <span class="placa-badge">${v.placa}</span>
+                    <span>${v.marca} ${v.modelo}</span>
+                </label>
+            `).join('');
+        }
         setPeriodo(90, null);
+        atualizarBtnTodos();
     } catch(e) { console.error(e); }
 }
 
+function atualizarBtnTodos() {
+    const checks = document.querySelectorAll('.veiculo-check');
+    if (!checks.length) return;
+    const allChecked = [...checks].every(c => c.checked);
+    document.getElementById('btnTodosVeic').textContent = allChecked ? 'Desmarcar todos' : 'Selecionar todos';
+}
+
+function toggleTodosVeiculos() {
+    const checks = document.querySelectorAll('.veiculo-check');
+    const allChecked = [...checks].every(c => c.checked);
+    checks.forEach(c => c.checked = !allChecked);
+    atualizarBtnTodos();
+}
+
 async function gerarRelatorio() {
-    const ids = Array.from(document.getElementById('filtroVeiculos').selectedOptions).map(o => parseInt(o.value));
+    const ids = [...document.querySelectorAll('.veiculo-check:checked')].map(c => parseInt(c.value));
     const di  = document.getElementById('dataInicio').value;
     const df  = document.getElementById('dataFim').value;
 
@@ -540,7 +753,6 @@ function exibirResultados(data, di, df) {
     document.getElementById('totalLucro').textContent   = fmtR(totalLucro);
     document.getElementById('margemMedia').textContent  = margem.toFixed(1) + '%';
 
-    /* Tabela */
     const tbody = document.getElementById('tabelaResultados');
     tbody.innerHTML = data.resultados.map(r => {
         const lucroPos = r.lucro >= 0;
@@ -569,7 +781,6 @@ function exibirResultados(data, di, df) {
         </tr>`;
     }).join('');
 
-    /* Linha de totais */
     const margTotal = totalReceita > 0 ? (totalLucro/totalReceita)*100 : 0;
     document.getElementById('tabelaTotal').innerHTML = `
         <tr class="row-total">
@@ -581,7 +792,6 @@ function exibirResultados(data, di, df) {
             <td><span style="font-weight:700;font-size:0.85rem;color:${totalLucro>=0?'#059669':'#dc2626'};">${margTotal.toFixed(1)}%</span></td>
         </tr>`;
 
-    /* Gráfico */
     if (data.dados_mensais?.length) renderizarGrafico(data.dados_mensais);
 }
 
@@ -606,9 +816,7 @@ function renderizarGrafico(dados) {
             responsive:true, maintainAspectRatio:false,
             plugins: {
                 legend: { position:'bottom', labels:{ boxWidth:10, padding:20, font:{ size:12 } } },
-                tooltip: {
-                    callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtR(ctx.raw)}` }
-                }
+                tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtR(ctx.raw)}` } }
             },
             scales: {
                 x: { grid:{ display:false }, ticks:{ font:{ size:11 } } },
@@ -619,9 +827,7 @@ function renderizarGrafico(dados) {
 }
 
 
-/* ──────────────────────────────────────────────────────────
-   TAB 2 — FORNECEDOR
-────────────────────────────────────────────────────────── */
+/* ─── TAB 2 — FORNECEDOR ─────────────────────────────────── */
 let chartFornecedores = null;
 
 async function carregarFornecedores() {
@@ -663,7 +869,7 @@ function exibirResultadosFornecedor(data) {
     document.getElementById('emptyStateFornec').style.display    = 'none';
     document.getElementById('resultadosFornecedor').style.display = 'block';
 
-    const totalGasto   = data.resultados.reduce((s,f) => s + f.total_gasto, 0);
+    const totalGasto    = data.resultados.reduce((s,f) => s + f.total_gasto, 0);
     const totalServicos = data.resultados.reduce((s,f) => s + f.qtd_servicos, 0);
 
     document.getElementById('totalFornecedores').textContent    = data.resultados.length;
