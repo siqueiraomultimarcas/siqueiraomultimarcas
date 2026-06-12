@@ -1,1064 +1,729 @@
 {% extends "base.html" %}
+{% block title %}Relatórios — Siqueirão{% endblock %}
 
+{% block extra_css %}
+<style>
+/* ── Tab navigation ────────────────────────────────────── */
+.rel-nav {
+    display: flex;
+    gap: 4px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 4px;
+    width: fit-content;
+    margin-bottom: 24px;
+}
+.rel-tab {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 22px;
+    border: none; background: none;
+    border-radius: 9px;
+    font-size: 0.875rem; font-weight: 500;
+    color: #64748b; cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.rel-tab:hover { color: #1e293b; }
+.rel-tab.active {
+    background: white;
+    color: #2563eb;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+    font-weight: 600;
+}
+.rel-tab i { font-size: 0.82rem; }
 
+.rel-content { display: none; }
+.rel-content.active { display: block; }
 
-{% block title %}Relatórios - Locadora{% endblock %}
+/* ── Period shortcuts ──────────────────────────────────── */
+.period-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 20px; flex-wrap: wrap;
+}
+.period-label {
+    font-size: 0.7rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em;
+    color: #94a3b8;
+}
+.period-btn {
+    padding: 5px 14px;
+    border: 1px solid #e2e8f0;
+    background: white; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 500;
+    color: #64748b; cursor: pointer;
+    transition: all 0.2s; font-family: inherit;
+}
+.period-btn:hover { border-color: #2563eb; color: #2563eb; }
+.period-btn.active { background: #2563eb; border-color: #2563eb; color: white; }
 
+/* ── Filter card layout ────────────────────────────────── */
+.filter-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+.cost-checks { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.cost-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 9px;
+    border: 1px solid #e2e8f0; background: white;
+    cursor: pointer; transition: all 0.15s;
+    font-size: 0.83rem; color: #374151;
+}
+.cost-item:hover { border-color: #93c5fd; background: #eff6ff; }
+.cost-item input { accent-color: #2563eb; width: 15px; height: 15px; flex-shrink: 0; }
+.cost-icon {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: #eff6ff; color: #2563eb;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem; flex-shrink: 0;
+}
 
+/* ── Empty state ───────────────────────────────────────── */
+.rel-empty {
+    text-align: center; padding: 64px 20px;
+    background: white; border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: var(--card-shadow);
+}
+.rel-empty-icon {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: #f1f5f9;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 1.8rem; color: #94a3b8;
+}
+.rel-empty h3 { font-size: 1.05rem; font-weight: 600; color: #475569; margin-bottom: 8px; }
+.rel-empty p { font-size: 0.83rem; color: #94a3b8; max-width: 340px; margin: 0 auto; }
+
+/* ── Results section ───────────────────────────────────── */
+.results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+}
+.results-period-badge {
+    background: #eff6ff; color: #2563eb;
+    font-size: 0.72rem; font-weight: 600;
+    padding: 4px 12px; border-radius: 20px;
+    border: 1px solid #bfdbfe;
+}
+
+/* ── Table enhancements ────────────────────────────────── */
+.row-profit { background: rgba(16,185,129,0.04); }
+.row-loss   { background: rgba(239,68,68,0.04); }
+.row-total  { background: #f8fafc; font-weight: 700; border-top: 2px solid #e2e8f0; }
+.row-total td { color: #0f172a !important; }
+
+.margin-wrap { display: flex; align-items: center; gap: 8px; }
+.margin-bar-bg {
+    flex: 1; height: 6px; background: #f1f5f9;
+    border-radius: 3px; overflow: hidden; min-width: 40px;
+}
+.margin-bar-fill { height: 100%; border-radius: 3px; }
+
+.part-wrap { display: flex; align-items: center; gap: 8px; }
+.part-bar-bg {
+    flex: 1; height: 6px; background: #f1f5f9;
+    border-radius: 3px; overflow: hidden; min-width: 60px;
+}
+.part-bar-fill { height: 100%; border-radius: 3px; background: #2563eb; }
+
+/* ── Chart container ───────────────────────────────────── */
+.chart-wrap { height: 260px; padding: 4px 8px 16px; }
+
+/* ── Section divider ───────────────────────────────────── */
+.section-divider {
+    font-size: 0.7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .1em;
+    color: #94a3b8; margin: 28px 0 12px;
+    display: flex; align-items: center; gap: 10px;
+}
+.section-divider::after {
+    content: ''; flex: 1; height: 1px; background: #e2e8f0;
+}
+
+/* ── Print ─────────────────────────────────────────────── */
+@media print {
+    .rel-nav, .period-row, .filter-grid, .btn, .rel-empty { display: none !important; }
+    .rel-content { display: block !important; }
+    #resultados, #resultadosFornecedor { display: block !important; }
+}
+</style>
+{% endblock %}
 
 {% block content %}
 
+<!-- ── Cabeçalho ───────────────────────────────────────── -->
 <div class="page-header">
-
-    <h1><i class="fas fa-chart-bar"></i> Relatórios</h1>
-
-    <button class="btn" onclick="window.print()" style="background:#6b7280;color:white">
-
+    <div>
+        <h1><i class="fas fa-chart-bar"></i> Central de Relatórios</h1>
+        <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Análises detalhadas de desempenho da frota</p>
+    </div>
+    <button class="btn btn-secondary" onclick="window.print()">
         <i class="fas fa-print"></i> Imprimir
-
     </button>
+</div>
 
+<!-- ── Tabs ─────────────────────────────────────────────── -->
+<div class="rel-nav">
+    <button class="rel-tab active" onclick="switchTab('lucratividade')" id="tab-lucratividade">
+        <i class="fas fa-chart-line"></i> Lucratividade por Veículo
+    </button>
+    <button class="rel-tab" onclick="switchTab('fornecedor')" id="tab-fornecedor">
+        <i class="fas fa-truck"></i> Gastos por Fornecedor
+    </button>
 </div>
 
 
+<!-- ════════════════════════════════════════════════════════
+     TAB 1 — LUCRATIVIDADE
+═══════════════════════════════════════════════════════════ -->
+<div class="rel-content active" id="content-lucratividade">
 
-<!-- Abas de Relatórios -->
-
-<div class="tabs-container" style="margin-bottom: 20px;">
-
-    <button class="tab-btn active" onclick="switchTab('lucratividade')" id="tab-lucratividade">
-
-        <i class="fas fa-chart-line"></i> Lucratividade
-
-    </button>
-
-    <button class="tab-btn" onclick="switchTab('fornecedor')" id="tab-fornecedor">
-
-        <i class="fas fa-truck"></i> Por Fornecedor
-
-    </button>
-
-</div>
-
-
-
-<style>
-
-    .tabs-container { display: flex; gap: 10px; border-bottom: 2px solid var(--gray-light); padding-bottom: 10px; }
-
-    .tab-btn {
-
-        padding: 12px 24px;
-
-        background: none;
-
-        border: none;
-
-        font-size: 1rem;
-
-        font-weight: 500;
-
-        color: var(--gray);
-
-        cursor: pointer;
-
-        border-radius: 8px 8px 0 0;
-
-        transition: all 0.3s;
-
-    }
-
-    .tab-btn:hover { background: var(--light); color: var(--primary); }
-
-    .tab-btn.active { background: var(--primary); color: white; }
-
-    .tab-content { display: none; }
-
-    .tab-content.active { display: block; }
-
-</style>
-
-
-
-<!-- Aba: Relatório de Lucratividade -->
-
-<div class="tab-content active" id="content-lucratividade">
-
-    <div class="card">
-
-        <div class="card-header">
-
-            <h3 class="card-title"><i class="fas fa-filter"></i> Filtros do Relatório</h3>
-
+    <!-- Filtros -->
+    <div class="card" style="margin-bottom:20px;">
+        <div class="card-header" style="margin-bottom:16px;">
+            <h3 class="card-title"><i class="fas fa-sliders-h"></i> Parâmetros do Relatório</h3>
         </div>
 
-        <div class="grid-2">
+        <div class="period-row">
+            <span class="period-label">Período rápido:</span>
+            <button class="period-btn" onclick="setPeriodo(7,this)">7 dias</button>
+            <button class="period-btn" onclick="setPeriodo(30,this)">30 dias</button>
+            <button class="period-btn active" onclick="setPeriodo(90,this)">3 meses</button>
+            <button class="period-btn" onclick="setPeriodo(180,this)">6 meses</button>
+            <button class="period-btn" onclick="setPeriodoAno(this)">Este ano</button>
+        </div>
 
-            <div class="form-group">
-
-                <label>Selecione os Veículos (múltipla escolha)</label>
-
-                <select class="form-control" id="filtroVeiculos" multiple style="height: 150px;">
-
-                </select>
-
-                <small style="color: var(--gray);">Segure Ctrl/Cmd para selecionar múltiplos</small>
-
+        <div class="filter-grid">
+            <div class="form-group" style="margin:0;">
+                <label>Veículos <small style="color:#94a3b8;font-weight:400">(Ctrl/Cmd para múltiplos)</small></label>
+                <select class="form-control" id="filtroVeiculos" multiple style="height:134px;"></select>
             </div>
-
-            <div class="form-group">
-
-                <label>Período</label>
-
-                <div class="grid-2">
-
-                    <div>
-
-                        <label style="font-size: 0.85rem;">Data Início</label>
-
-                        <input type="date" class="form-control" id="dataInicio">
-
-                    </div>
-
-                    <div>
-
-                        <label style="font-size: 0.85rem;">Data Fim</label>
-
-                        <input type="date" class="form-control" id="dataFim">
-
-                    </div>
-
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <div class="form-group" style="margin:0;">
+                    <label>Data Início</label>
+                    <input type="date" class="form-control" id="dataInicio">
                 </div>
-
+                <div class="form-group" style="margin:0;">
+                    <label>Data Fim</label>
+                    <input type="date" class="form-control" id="dataFim">
+                </div>
             </div>
-
-        </div>
-
-        <div class="form-group">
-
-            <label>Incluir nos Custos:</label>
-
-            <div style="display: flex; gap: 20px; margin-top: 10px;">
-
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-
-                    <input type="checkbox" id="incluirManutencao" checked> 
-
-                    <i class="fas fa-tools"></i> Manutenções
-
-                </label>
-
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-
-                    <input type="checkbox" id="incluirAbastecimento" checked> 
-
-                    <i class="fas fa-gas-pump"></i> Abastecimentos
-
-                </label>
-
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-
-                    <input type="checkbox" id="incluirMultas" checked> 
-
-                    <i class="fas fa-file-invoice-dollar"></i> Multas
-
-                </label>
-
+            <div>
+                <label style="display:block;font-size:0.78rem;font-weight:600;color:#374151;margin-bottom:6px;">Incluir nos Custos</label>
+                <div class="cost-checks">
+                    <label class="cost-item">
+                        <input type="checkbox" id="incluirManutencao" checked>
+                        <span class="cost-icon"><i class="fas fa-tools"></i></span>
+                        Manutenções
+                    </label>
+                    <label class="cost-item">
+                        <input type="checkbox" id="incluirAbastecimento" checked>
+                        <span class="cost-icon"><i class="fas fa-gas-pump"></i></span>
+                        Abastecimentos
+                    </label>
+                    <label class="cost-item">
+                        <input type="checkbox" id="incluirMultas" checked>
+                        <span class="cost-icon"><i class="fas fa-file-invoice-dollar"></i></span>
+                        Multas
+                    </label>
+                </div>
+                <button class="btn btn-primary" onclick="gerarRelatorio()" style="width:100%;margin-top:14px;">
+                    <i class="fas fa-bolt"></i> Gerar Relatório
+                </button>
             </div>
-
         </div>
-
-        <div style="margin-top: 20px;">
-
-            <button class="btn btn-primary" onclick="gerarRelatorio()">
-
-                <i class="fas fa-search"></i> Gerar Relatório
-
-            </button>
-
-        </div>
-
     </div>
 
+    <!-- Empty state -->
+    <div id="emptyState" class="rel-empty">
+        <div class="rel-empty-icon"><i class="fas fa-chart-line"></i></div>
+        <h3>Nenhum relatório gerado</h3>
+        <p>Selecione os veículos e o período desejado, depois clique em <strong>Gerar Relatório</strong></p>
+    </div>
 
+    <!-- Resultados -->
+    <div id="resultados" style="display:none;">
 
-    <div id="resultados" style="display: none;">
-
-        <div class="stats-grid">
-
-            <div class="stat-card">
-
-                <div class="stat-icon green"><i class="fas fa-dollar-sign"></i></div>
-
-                <div class="stat-info">
-
-                    <h3 id="totalReceita">R$ 0,00</h3>
-
-                    <p>Total de Receitas</p>
-
-                </div>
-
-            </div>
-
-            <div class="stat-card">
-
-                <div class="stat-icon red"><i class="fas fa-minus-circle"></i></div>
-
-                <div class="stat-info">
-
-                    <h3 id="totalCustos">R$ 0,00</h3>
-
-                    <p>Total de Custos</p>
-
-                </div>
-
-            </div>
-
-            <div class="stat-card">
-
-                <div class="stat-icon blue"><i class="fas fa-chart-line"></i></div>
-
-                <div class="stat-info">
-
-                    <h3 id="totalLucro">R$ 0,00</h3>
-
-                    <p>Lucro Total</p>
-
-                </div>
-
-            </div>
-
-            <div class="stat-card">
-
-                <div class="stat-icon purple"><i class="fas fa-percentage"></i></div>
-
-                <div class="stat-info">
-
-                    <h3 id="margemMedia">0%</h3>
-
-                    <p>Margem (%)</p>
-
-                </div>
-
-            </div>
-
+        <div class="results-header">
+            <div class="section-divider" style="margin:0;flex:1;">Resumo do Período</div>
+            <span class="results-period-badge" id="periodoLabel"></span>
         </div>
 
-
-
-        <div class="card">
-
-            <div class="card-header">
-
-                <h3 class="card-title"><i class="fas fa-chart-line"></i> Lucratividade por Mês</h3>
-
+        <!-- KPIs -->
+        <div class="kpi-grid" style="margin-bottom:24px;">
+            <div class="kpi-card green">
+                <div class="kpi-label">Total de Receitas</div>
+                <div class="kpi-value" id="totalReceita">R$ 0</div>
+                <div class="kpi-sub">locações no período</div>
+                <i class="fas fa-dollar-sign kpi-icon-bg"></i>
             </div>
+            <div class="kpi-card red">
+                <div class="kpi-label">Total de Custos</div>
+                <div class="kpi-value" id="totalCustos">R$ 0</div>
+                <div class="kpi-sub">manut. + comb. + multas</div>
+                <i class="fas fa-minus-circle kpi-icon-bg"></i>
+            </div>
+            <div class="kpi-card blue">
+                <div class="kpi-label">Lucro Líquido</div>
+                <div class="kpi-value" id="totalLucro">R$ 0</div>
+                <div class="kpi-sub">receitas − custos</div>
+                <i class="fas fa-chart-line kpi-icon-bg"></i>
+            </div>
+            <div class="kpi-card purple">
+                <div class="kpi-label">Margem de Lucro</div>
+                <div class="kpi-value" id="margemMedia">0%</div>
+                <div class="kpi-sub">lucro / receita total</div>
+                <i class="fas fa-percentage kpi-icon-bg"></i>
+            </div>
+        </div>
 
-            <div class="chart-box">
-
+        <!-- Gráfico -->
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-bar"></i> Evolução Mensal — Receitas, Custos e Lucro</h3>
+            </div>
+            <div class="chart-wrap">
                 <canvas id="chartLucratividade"></canvas>
-
             </div>
-
         </div>
 
-
-
+        <!-- Tabela detalhada -->
+        <div class="section-divider">Detalhamento por Veículo</div>
         <div class="card">
-
-            <div class="card-header">
-
-                <h3 class="card-title"><i class="fas fa-car"></i> Detalhamento por Veículo</h3>
-
-            </div>
-
             <div class="table-container">
-
                 <table>
-
                     <thead>
-
                         <tr>
-
                             <th>Veículo</th>
-
-                            <th>Receitas</th>
-
-                            <th>Custo Manutenção</th>
-
-                            <th>Custo Abastecimento</th>
-
-                            <th>Custo Multas</th>
-
-                            <th>Total Custos</th>
-
-                            <th>Lucro</th>
-
-                            <th>Margem</th>
-
+                            <th style="text-align:right">Receita</th>
+                            <th style="text-align:right">Manutenção</th>
+                            <th style="text-align:right">Combustível</th>
+                            <th style="text-align:right">Multas</th>
+                            <th style="text-align:right">Total Custos</th>
+                            <th style="text-align:right">Lucro</th>
+                            <th style="min-width:120px">Margem %</th>
                         </tr>
-
                     </thead>
-
-                    <tbody id="tabelaResultados">
-
-                    </tbody>
-
+                    <tbody id="tabelaResultados"></tbody>
+                    <tfoot id="tabelaTotal"></tfoot>
                 </table>
-
             </div>
-
         </div>
-
     </div>
-
-
-
-    <script>
-
-        let veiculos = [];
-
-        let chartLucratividade = null;
-
-        
-
-        async function carregarVeiculos() {
-
-            try {
-
-                const response = await fetch('/api/veiculos');
-
-                veiculos = await response.json();
-
-                
-
-                const select = document.getElementById('filtroVeiculos');
-
-                veiculos.forEach(v => {
-
-                    const option = document.createElement('option');
-
-                    option.value = v.id;
-
-                    option.textContent = `${v.placa} - ${v.marca} ${v.modelo}`;
-
-                    select.appendChild(option);
-
-                });
-
-                
-
-                const hoje = new Date();
-
-                const inicio = new Date();
-
-                inicio.setDate(hoje.getDate() - 30);
-
-                
-
-                document.getElementById('dataFim').value = hoje.toISOString().split('T')[0];
-
-                document.getElementById('dataInicio').value = inicio.toISOString().split('T')[0];
-
-                
-
-            } catch (error) {
-
-                console.error('Erro ao carregar veículos:', error);
-
-            }
-
-        }
-
-        
-
-        async function gerarRelatorio() {
-
-            const veiculosSelecionados = Array.from(document.getElementById('filtroVeiculos').selectedOptions).map(o => parseInt(o.value));
-
-            const dataInicio = document.getElementById('dataInicio').value;
-
-            const dataFim = document.getElementById('dataFim').value;
-
-            
-
-            if (veiculosSelecionados.length === 0) {
-
-                showToast('', 'error');
-
-                return;
-
-            }
-
-            
-
-            if (!dataInicio || !dataFim) {
-
-                showToast('', 'error');
-
-                return;
-
-            }
-
-            
-
-            try {
-
-                const response = await fetch('/api/relatorio-lucratividade', {
-
-                    method: 'POST',
-
-                    headers: { 'Content-Type': 'application/json' },
-
-                    body: JSON.stringify({
-
-                        veiculos: veiculosSelecionados,
-
-                        data_inicio: dataInicio,
-
-                        data_fim: dataFim,
-
-                        incluir_manutencao: document.getElementById('incluirManutencao').checked,
-
-                        incluir_abastecimento: document.getElementById('incluirAbastecimento').checked,
-
-                        incluir_multas: document.getElementById('incluirMultas').checked
-
-                    })
-
-                });
-
-                
-
-                const data = await response.json();
-
-                
-
-                if (data.error) {
-
-                    showToast('Erro: ' + data.error, 'error');
-
-                    return;
-
-                }
-
-                
-
-                if (!data.resultados || data.resultados.length === 0) {
-
-                    showToast('', 'error');
-
-                    return;
-
-                }
-
-                
-
-                exibirResultados(data);
-
-                
-
-            } catch (error) {
-
-                console.error('Erro ao gerar relatório:', error);
-
-            }
-
-        }
-
-        
-
-        function exibirResultados(data) {
-
-            document.getElementById('resultados').style.display = 'block';
-
-            
-
-            let totalReceita = data.resultados.reduce((sum, r) => sum + r.receita, 0);
-
-            let totalCustos = data.resultados.reduce((sum, r) => sum + r.total_custos, 0);
-
-            const totalLucro = totalReceita - totalCustos;
-
-            const margemPercentual = totalReceita > 0 ? (totalLucro / totalReceita) * 100 : 0;
-
-            
-
-            document.getElementById('totalReceita').textContent = formatCurrency(totalReceita);
-
-            document.getElementById('totalCustos').textContent = formatCurrency(totalCustos);
-
-            document.getElementById('totalLucro').textContent = formatCurrency(totalLucro);
-
-            document.getElementById('margemMedia').textContent = margemPercentual.toFixed(1) + '%';
-
-            
-
-            const tbody = document.getElementById('tabelaResultados');
-
-            tbody.innerHTML = data.resultados.map(r => `
-
-                <tr>
-
-                    <td><strong>${r.veiculo.placa}</strong> - ${r.veiculo.marca} ${r.veiculo.modelo}</td>
-
-                    <td style="color: var(--success); font-weight: 600;">${formatCurrency(r.receita)}</td>
-
-                    <td>${formatCurrency(r.custo_manutencao)}</td>
-
-                    <td>${formatCurrency(r.custo_abastecimento)}</td>
-
-                    <td>${formatCurrency(r.custo_multas)}</td>
-
-                    <td style="color: var(--danger); font-weight: 600;">${formatCurrency(r.total_custos)}</td>
-
-                    <td style="color: ${r.lucro >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight: 700;">${formatCurrency(r.lucro)}</td>
-
-                    <td><span class="badge ${r.margem >= 0 ? 'badge-success' : 'badge-danger'}">${r.margem.toFixed(1)}%</span></td>
-
-                </tr>
-
-            `).join('');
-
-            
-
-            // Renderizar gráfico de lucratividade por mês
-
-            if (data.dados_mensais && data.dados_mensais.length > 0) {
-
-                renderizarGrafico(data.dados_mensais);
-
-            }
-
-        }
-
-        
-
-        function renderizarGrafico(dadosMensais) {
-
-            const ctx = document.getElementById('chartLucratividade').getContext('2d');
-
-            
-
-            if (chartLucratividade) {
-
-                chartLucratividade.destroy();
-
-            }
-
-            
-
-            const meses = dadosMensais.map(d => {
-
-                const [ano, mes] = d.mes.split('-');
-
-                const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-
-                return mesesNomes[parseInt(mes) - 1] + '/' + ano.slice(2);
-
-            });
-
-            
-
-            chartLucratividade = new Chart(ctx, {
-
-                type: 'bar',
-
-                data: {
-
-                    labels: meses,
-
-                    datasets: [
-
-                        { label: 'Receitas', data: dadosMensais.map(d => d.receita), backgroundColor: '#10b981', borderRadius: 4 },
-
-                        { label: 'Custos', data: dadosMensais.map(d => d.custos), backgroundColor: '#ef4444', borderRadius: 4 },
-
-                        { label: 'Lucro', data: dadosMensais.map(d => d.lucro), type: 'line', borderColor: '#2563eb', backgroundColor: '#2563eb', borderWidth: 2, tension: 0.3, fill: false }
-
-                    ]
-
-                },
-
-                options: {
-
-                    responsive: true,
-
-                    maintainAspectRatio: false,
-
-                    plugins: { legend: { position: 'bottom' } },
-
-                    scales: { y: { beginAtZero: true, ticks: { callback: function(value) { return formatCurrency(value); } } } }
-
-                }
-
-            });
-
-        }
-
-
-
-        window.addEventListener('load', carregarVeiculos);
-
-    </script>
-
 </div>
 
 
+<!-- ════════════════════════════════════════════════════════
+     TAB 2 — POR FORNECEDOR
+═══════════════════════════════════════════════════════════ -->
+<div class="rel-content" id="content-fornecedor">
 
-<!-- Aba: Relatório por Fornecedor -->
-
-<div class="tab-content" id="content-fornecedor">
-
-    <div class="card">
-
-        <div class="card-header">
-
-            <h3 class="card-title"><i class="fas fa-filter"></i> Filtros do Relatório</h3>
-
+    <div class="card" style="margin-bottom:20px;">
+        <div class="card-header" style="margin-bottom:16px;">
+            <h3 class="card-title"><i class="fas fa-sliders-h"></i> Parâmetros do Relatório</h3>
         </div>
 
-        <div class="grid-2">
+        <div class="period-row">
+            <span class="period-label">Período rápido:</span>
+            <button class="period-btn" onclick="setPeriodoF(30,this)">30 dias</button>
+            <button class="period-btn active" onclick="setPeriodoF(90,this)">3 meses</button>
+            <button class="period-btn" onclick="setPeriodoF(180,this)">6 meses</button>
+            <button class="period-btn" onclick="setPeriodoFAno(this)">Este ano</button>
+        </div>
 
-            <div class="form-group">
-
-                <label>Selecione o Fornecedor</label>
-
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:16px;align-items:end;">
+            <div class="form-group" style="margin:0;">
+                <label>Fornecedor</label>
                 <select class="form-control" id="filtroFornecedor">
-
-                    <option value="">-- Todos os Fornecedores --</option>
-
+                    <option value="">— Todos os Fornecedores —</option>
                 </select>
-
             </div>
-
-            <div class="form-group">
-
+            <div class="form-group" style="margin:0;">
                 <label>Período</label>
-
-                <div class="grid-2">
-
-                    <div>
-
-                        <label style="font-size: 0.85rem;">Data Início</label>
-
-                        <input type="date" class="form-control" id="dataInicioFornecedor">
-
-                    </div>
-
-                    <div>
-
-                        <label style="font-size: 0.85rem;">Data Fim</label>
-
-                        <input type="date" class="form-control" id="dataFimFornecedor">
-
-                    </div>
-
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <input type="date" class="form-control" id="dataInicioFornecedor">
+                    <input type="date" class="form-control" id="dataFimFornecedor">
                 </div>
-
             </div>
-
-        </div>
-
-        <div style="margin-top: 20px;">
-
             <button class="btn btn-primary" onclick="gerarRelatorioFornecedor()">
-
-                <i class="fas fa-search"></i> Gerar Relatório
-
+                <i class="fas fa-bolt"></i> Gerar Relatório
             </button>
-
         </div>
-
     </div>
 
+    <!-- Empty state -->
+    <div id="emptyStateFornec" class="rel-empty">
+        <div class="rel-empty-icon"><i class="fas fa-truck"></i></div>
+        <h3>Nenhum relatório gerado</h3>
+        <p>Selecione o fornecedor e o período, depois clique em <strong>Gerar Relatório</strong></p>
+    </div>
 
+    <!-- Resultados fornecedor -->
+    <div id="resultadosFornecedor" style="display:none;">
 
-    <div id="resultadosFornecedor" style="display: none;">
+        <div class="section-divider">Resumo do Período</div>
 
-        <div class="stats-grid">
-
-            <div class="stat-card">
-
-                <div class="stat-icon blue"><i class="fas fa-truck"></i></div>
-
-                <div class="stat-info">
-
-                    <h3 id="totalFornecedores">0</h3>
-
-                    <p>Fornecedores</p>
-
-                </div>
-
+        <div class="kpi-grid" style="margin-bottom:24px;">
+            <div class="kpi-card blue">
+                <div class="kpi-label">Fornecedores</div>
+                <div class="kpi-value" id="totalFornecedores">0</div>
+                <div class="kpi-sub">com serviços no período</div>
+                <i class="fas fa-truck kpi-icon-bg"></i>
             </div>
-
-            <div class="stat-card">
-
-                <div class="stat-icon green"><i class="fas fa-dollar-sign"></i></div>
-
-                <div class="stat-info">
-
-                    <h3 id="totalGastoFornecedor">R$ 0,00</h3>
-
-                    <p>Total de Gastos</p>
-
-                </div>
-
+            <div class="kpi-card red">
+                <div class="kpi-label">Total Gasto</div>
+                <div class="kpi-value" id="totalGastoFornecedor">R$ 0</div>
+                <div class="kpi-sub">em serviços e peças</div>
+                <i class="fas fa-dollar-sign kpi-icon-bg"></i>
             </div>
-
-            <div class="stat-card">
-
-                <div class="stat-icon orange"><i class="fas fa-wrench"></i></div>
-
-                <div class="stat-info">
-
-                    <h3 id="totalManutencoes">0</h3>
-
-                    <p>Total de Serviços</p>
-
-                </div>
-
+            <div class="kpi-card orange">
+                <div class="kpi-label">Total de Serviços</div>
+                <div class="kpi-value" id="totalManutencoes">0</div>
+                <div class="kpi-sub">ordens de serviço</div>
+                <i class="fas fa-wrench kpi-icon-bg"></i>
             </div>
-
         </div>
 
-
-
-        <div class="card">
-
+        <div class="card" style="margin-bottom:20px;">
             <div class="card-header">
-
                 <h3 class="card-title"><i class="fas fa-chart-bar"></i> Gastos por Fornecedor</h3>
-
             </div>
-
-            <div class="chart-box">
-
+            <div class="chart-wrap">
                 <canvas id="chartFornecedores"></canvas>
-
             </div>
-
         </div>
 
-
-
+        <div class="section-divider">Detalhamento por Fornecedor</div>
         <div class="card">
-
-            <div class="card-header">
-
-                <h3 class="card-title"><i class="fas fa-list"></i> Detalhamento</h3>
-
-            </div>
-
             <div class="table-container">
-
                 <table>
-
                     <thead>
-
                         <tr>
-
                             <th>Fornecedor</th>
-
                             <th>Tipo</th>
-
-                            <th>Nº Serviços</th>
-
-                            <th>Total Gasto</th>
-
+                            <th style="text-align:center">Nº Serviços</th>
+                            <th style="text-align:right">Ticket Médio</th>
+                            <th style="text-align:right">Total Gasto</th>
+                            <th style="min-width:130px">Participação</th>
                         </tr>
-
                     </thead>
-
-                    <tbody id="tabelaFornecedores">
-
-                    </tbody>
-
+                    <tbody id="tabelaFornecedores"></tbody>
                 </table>
-
             </div>
-
         </div>
-
     </div>
-
-
-
-    <script>
-
-        let chartFornecedores = null;
-
-
-
-        async function carregarFornecedores() {
-
-            try {
-
-                const response = await fetch('/api/fornecedores');
-
-                const fornecedores = await response.json();
-
-                
-
-                const select = document.getElementById('filtroFornecedor');
-
-                fornecedores.forEach(f => {
-
-                    const option = document.createElement('option');
-
-                    option.value = f.id;
-
-                    option.textContent = f.nome + (f.tipo_nome ? ` (${f.tipo_nome})` : '');
-
-                    select.appendChild(option);
-
-                });
-
-                
-
-                const hoje = new Date();
-
-                const inicio = new Date();
-
-                inicio.setDate(hoje.getDate() - 90);
-
-                
-
-                document.getElementById('dataFimFornecedor').value = hoje.toISOString().split('T')[0];
-
-                document.getElementById('dataInicioFornecedor').value = inicio.toISOString().split('T')[0];
-
-                
-
-            } catch (error) {
-
-                console.error('Erro ao carregar fornecedores:', error);
-
-            }
-
-        }
-
-
-
-        async function gerarRelatorioFornecedor() {
-
-            const fornecedorId = document.getElementById('filtroFornecedor').value;
-
-            const dataInicio = document.getElementById('dataInicioFornecedor').value;
-
-            const dataFim = document.getElementById('dataFimFornecedor').value;
-
-            
-
-            if (!dataInicio || !dataFim) {
-
-                showToast('', 'error');
-
-                return;
-
-            }
-
-            
-
-            try {
-
-                const response = await fetch('/api/relatorio-fornecedor', {
-
-                    method: 'POST',
-
-                    headers: { 'Content-Type': 'application/json' },
-
-                    body: JSON.stringify({
-
-                        fornecedor_id: fornecedorId || null,
-
-                        data_inicio: dataInicio,
-
-                        data_fim: dataFim
-
-                    })
-
-                });
-
-                
-
-                const data = await response.json();
-
-                
-
-                if (data.error) {
-
-                    showToast('Erro: ' + data.error, 'error');
-
-                    return;
-
-                }
-
-                
-
-                if (!data.resultados || data.resultados.length === 0) {
-
-                    showToast('', 'error');
-
-                    return;
-
-                }
-
-                
-
-                exibirResultadosFornecedor(data);
-
-                
-
-            } catch (error) {
-
-                console.error('Erro ao gerar relatório:', error);
-
-            }
-
-        }
-
-
-
-        function exibirResultadosFornecedor(data) {
-
-            document.getElementById('resultadosFornecedor').style.display = 'block';
-
-            
-
-            document.getElementById('totalFornecedores').textContent = data.resultados.length;
-
-            
-
-            const totalGasto = data.resultados.reduce((sum, f) => sum + f.total_gasto, 0);
-
-            document.getElementById('totalGastoFornecedor').textContent = formatCurrency(totalGasto);
-
-            
-
-            const totalServicos = data.resultados.reduce((sum, f) => sum + f.qtd_servicos, 0);
-
-            document.getElementById('totalManutencoes').textContent = totalServicos;
-
-            
-
-            const tbody = document.getElementById('tabelaFornecedores');
-
-            tbody.innerHTML = data.resultados.map(f => `
-
-                <tr>
-
-                    <td><strong>${f.nome}</strong></td>
-
-                    <td>${f.tipo_nome || '-'}</td>
-
-                    <td>${f.qtd_servicos}</td>
-
-                    <td style="color: var(--danger); font-weight: 600;">${formatCurrency(f.total_gasto)}</td>
-
-                </tr>
-
-            `).join('');
-
-            
-
-            renderizarGraficoFornecedor(data.resultados);
-
-        }
-
-
-
-        function renderizarGraficoFornecedor(resultados) {
-
-            const ctx = document.getElementById('chartFornecedores').getContext('2d');
-
-            
-
-            if (chartFornecedores) {
-
-                chartFornecedores.destroy();
-
-            }
-
-            
-
-            chartFornecedores = new Chart(ctx, {
-
-                type: 'bar',
-
-                data: {
-
-                    labels: resultados.map(r => r.nome),
-
-                    datasets: [{
-
-                        label: 'Total Gasto (R$)',
-
-                        data: resultados.map(r => r.total_gasto),
-
-                        backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
-
-                        borderRadius: 6
-
-                    }]
-
-                },
-
-                options: {
-
-                    responsive: true,
-
-                    maintainAspectRatio: false,
-
-                    plugins: { legend: { position: 'bottom' } },
-
-                    scales: {
-
-                        y: { beginAtZero: true }
-
-                    }
-
-                }
-
-            });
-
-        }
-
-
-
-        function switchTab(tabName) {
-
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-
-            document.getElementById('tab-' + tabName).classList.add('active');
-
-            
-
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-            document.getElementById('content-' + tabName).classList.add('active');
-
-            
-
-            if (tabName === 'fornecedor') {
-
-                carregarFornecedores();
-
-            } else if (tabName === 'lucratividade') {
-
-                carregarVeiculos();
-
-            }
-
-        }
-
-    </script>
-
 </div>
 
 
+<script>
+/* ──────────────────────────────────────────────────────────
+   HELPERS
+────────────────────────────────────────────────────────── */
+function fmtR(v) {
+    return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(v || 0);
+}
+function fmtDate(d) {
+    if (!d) return '-';
+    const [y,m,dd] = d.split('-');
+    return `${dd}/${m}/${y}`;
+}
+
+/* Period shortcuts — Tab 1 */
+function setPeriodo(days, btn) {
+    document.querySelectorAll('#content-lucratividade .period-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const fim = new Date();
+    const ini = new Date();
+    ini.setDate(fim.getDate() - days);
+    document.getElementById('dataInicio').value = ini.toISOString().split('T')[0];
+    document.getElementById('dataFim').value    = fim.toISOString().split('T')[0];
+}
+function setPeriodoAno(btn) {
+    document.querySelectorAll('#content-lucratividade .period-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const ano = new Date().getFullYear();
+    document.getElementById('dataInicio').value = `${ano}-01-01`;
+    document.getElementById('dataFim').value    = `${ano}-12-31`;
+}
+
+/* Period shortcuts — Tab 2 */
+function setPeriodoF(days, btn) {
+    document.querySelectorAll('#content-fornecedor .period-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const fim = new Date();
+    const ini = new Date();
+    ini.setDate(fim.getDate() - days);
+    document.getElementById('dataInicioFornecedor').value = ini.toISOString().split('T')[0];
+    document.getElementById('dataFimFornecedor').value    = fim.toISOString().split('T')[0];
+}
+function setPeriodoFAno(btn) {
+    document.querySelectorAll('#content-fornecedor .period-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const ano = new Date().getFullYear();
+    document.getElementById('dataInicioFornecedor').value = `${ano}-01-01`;
+    document.getElementById('dataFimFornecedor').value    = `${ano}-12-31`;
+}
+
+/* Tab switch */
+function switchTab(name) {
+    document.querySelectorAll('.rel-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.rel-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('content-' + name).classList.add('active');
+    if (name === 'fornecedor') carregarFornecedores();
+    else carregarVeiculos();
+}
+
+/* ──────────────────────────────────────────────────────────
+   TAB 1 — LUCRATIVIDADE
+────────────────────────────────────────────────────────── */
+let veiculos = [];
+let chartLucratividade = null;
+
+async function carregarVeiculos() {
+    try {
+        const resp = await fetch('/api/veiculos');
+        veiculos = await resp.json();
+        const sel = document.getElementById('filtroVeiculos');
+        if (sel.options.length > 1) return; // já carregado
+        veiculos.forEach(v => {
+            const o = document.createElement('option');
+            o.value = v.id;
+            o.textContent = `${v.placa} — ${v.marca} ${v.modelo}`;
+            sel.appendChild(o);
+        });
+        setPeriodo(90, null);
+    } catch(e) { console.error(e); }
+}
+
+async function gerarRelatorio() {
+    const ids = Array.from(document.getElementById('filtroVeiculos').selectedOptions).map(o => parseInt(o.value));
+    const di  = document.getElementById('dataInicio').value;
+    const df  = document.getElementById('dataFim').value;
+
+    if (!ids.length) { showToast('Selecione ao menos um veículo', 'error'); return; }
+    if (!di || !df)  { showToast('Informe o período', 'error'); return; }
+
+    try {
+        const resp = await fetch('/api/relatorio-lucratividade', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                veiculos: ids, data_inicio: di, data_fim: df,
+                incluir_manutencao:    document.getElementById('incluirManutencao').checked,
+                incluir_abastecimento: document.getElementById('incluirAbastecimento').checked,
+                incluir_multas:        document.getElementById('incluirMultas').checked
+            })
+        });
+        const data = await resp.json();
+        if (data.error) { showToast('Erro: ' + data.error, 'error'); return; }
+        if (!data.resultados?.length) { showToast('Nenhum dado encontrado para o período', 'info'); return; }
+        exibirResultados(data, di, df);
+    } catch(e) { showToast('Erro ao gerar relatório', 'error'); }
+}
+
+function exibirResultados(data, di, df) {
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('resultados').style.display  = 'block';
+    document.getElementById('periodoLabel').textContent  = `${fmtDate(di)} → ${fmtDate(df)}`;
+
+    const totalReceita = data.resultados.reduce((s,r) => s + r.receita, 0);
+    const totalCustos  = data.resultados.reduce((s,r) => s + r.total_custos, 0);
+    const totalLucro   = totalReceita - totalCustos;
+    const margem       = totalReceita > 0 ? (totalLucro / totalReceita) * 100 : 0;
+
+    document.getElementById('totalReceita').textContent = fmtR(totalReceita);
+    document.getElementById('totalCustos').textContent  = fmtR(totalCustos);
+    document.getElementById('totalLucro').textContent   = fmtR(totalLucro);
+    document.getElementById('margemMedia').textContent  = margem.toFixed(1) + '%';
+
+    /* Tabela */
+    const tbody = document.getElementById('tabelaResultados');
+    tbody.innerHTML = data.resultados.map(r => {
+        const lucroPos = r.lucro >= 0;
+        const margemPct = r.margem ?? (r.receita > 0 ? (r.lucro/r.receita)*100 : 0);
+        const barColor  = lucroPos ? '#10b981' : '#ef4444';
+        const barWidth  = Math.min(Math.abs(margemPct), 100);
+        return `<tr class="${lucroPos ? 'row-profit' : 'row-loss'}">
+            <td>
+                <div style="font-weight:600;color:#1e293b;">${r.veiculo.placa}</div>
+                <div style="font-size:0.75rem;color:#94a3b8;">${r.veiculo.marca} ${r.veiculo.modelo}</div>
+            </td>
+            <td style="text-align:right;color:#059669;font-weight:600;">${fmtR(r.receita)}</td>
+            <td style="text-align:right;color:#64748b;">${fmtR(r.custo_manutencao)}</td>
+            <td style="text-align:right;color:#64748b;">${fmtR(r.custo_abastecimento)}</td>
+            <td style="text-align:right;color:#64748b;">${fmtR(r.custo_multas)}</td>
+            <td style="text-align:right;color:#dc2626;font-weight:600;">${fmtR(r.total_custos)}</td>
+            <td style="text-align:right;font-weight:700;color:${lucroPos ? '#059669' : '#dc2626'};">${fmtR(r.lucro)}</td>
+            <td>
+                <div class="margin-wrap">
+                    <span style="font-size:0.78rem;font-weight:600;color:${lucroPos?'#059669':'#dc2626'};min-width:40px;">${margemPct.toFixed(1)}%</span>
+                    <div class="margin-bar-bg">
+                        <div class="margin-bar-fill" style="width:${barWidth}%;background:${barColor};"></div>
+                    </div>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    /* Linha de totais */
+    const margTotal = totalReceita > 0 ? (totalLucro/totalReceita)*100 : 0;
+    document.getElementById('tabelaTotal').innerHTML = `
+        <tr class="row-total">
+            <td><strong>TOTAL GERAL</strong></td>
+            <td style="text-align:right;color:#059669;">${fmtR(totalReceita)}</td>
+            <td style="text-align:right;" colspan="3"></td>
+            <td style="text-align:right;color:#dc2626;">${fmtR(totalCustos)}</td>
+            <td style="text-align:right;color:${totalLucro>=0?'#059669':'#dc2626'};">${fmtR(totalLucro)}</td>
+            <td><span style="font-weight:700;font-size:0.85rem;color:${totalLucro>=0?'#059669':'#dc2626'};">${margTotal.toFixed(1)}%</span></td>
+        </tr>`;
+
+    /* Gráfico */
+    if (data.dados_mensais?.length) renderizarGrafico(data.dados_mensais);
+}
+
+function renderizarGrafico(dados) {
+    const ctx = document.getElementById('chartLucratividade').getContext('2d');
+    if (chartLucratividade) chartLucratividade.destroy();
+    const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const labels = dados.map(d => {
+        const [a, m] = d.mes.split('-');
+        return mesesNomes[parseInt(m)-1] + '/' + a.slice(2);
+    });
+    chartLucratividade = new Chart(ctx, {
+        data: {
+            labels,
+            datasets: [
+                { type:'bar',  label:'Receitas', data: dados.map(d=>d.receita), backgroundColor:'rgba(16,185,129,0.75)', borderRadius:5, order:2 },
+                { type:'bar',  label:'Custos',   data: dados.map(d=>d.custos),  backgroundColor:'rgba(239,68,68,0.7)',   borderRadius:5, order:2 },
+                { type:'line', label:'Lucro',    data: dados.map(d=>d.lucro),   borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.08)', borderWidth:2.5, tension:0.35, fill:true, pointBackgroundColor:'#2563eb', pointRadius:4, order:1 }
+            ]
+        },
+        options: {
+            responsive:true, maintainAspectRatio:false,
+            plugins: {
+                legend: { position:'bottom', labels:{ boxWidth:10, padding:20, font:{ size:12 } } },
+                tooltip: {
+                    callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtR(ctx.raw)}` }
+                }
+            },
+            scales: {
+                x: { grid:{ display:false }, ticks:{ font:{ size:11 } } },
+                y: { beginAtZero:true, grid:{ color:'#f1f5f9' }, ticks:{ callback: v => fmtR(v), font:{ size:11 } } }
+            }
+        }
+    });
+}
+
+
+/* ──────────────────────────────────────────────────────────
+   TAB 2 — FORNECEDOR
+────────────────────────────────────────────────────────── */
+let chartFornecedores = null;
+
+async function carregarFornecedores() {
+    try {
+        const resp = await fetch('/api/fornecedores');
+        const lista = await resp.json();
+        const sel = document.getElementById('filtroFornecedor');
+        if (sel.options.length > 1) return;
+        lista.forEach(f => {
+            const o = document.createElement('option');
+            o.value = f.id;
+            o.textContent = f.nome + (f.tipo_nome ? ` (${f.tipo_nome})` : '');
+            sel.appendChild(o);
+        });
+        setPeriodoF(90, null);
+    } catch(e) { console.error(e); }
+}
+
+async function gerarRelatorioFornecedor() {
+    const fid = document.getElementById('filtroFornecedor').value;
+    const di  = document.getElementById('dataInicioFornecedor').value;
+    const df  = document.getElementById('dataFimFornecedor').value;
+    if (!di || !df) { showToast('Informe o período', 'error'); return; }
+
+    try {
+        const resp = await fetch('/api/relatorio-fornecedor', {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify({ fornecedor_id: fid || null, data_inicio: di, data_fim: df })
+        });
+        const data = await resp.json();
+        if (data.error) { showToast('Erro: ' + data.error, 'error'); return; }
+        if (!data.resultados?.length) { showToast('Nenhum dado encontrado para o período', 'info'); return; }
+        exibirResultadosFornecedor(data);
+    } catch(e) { showToast('Erro ao gerar relatório', 'error'); }
+}
+
+function exibirResultadosFornecedor(data) {
+    document.getElementById('emptyStateFornec').style.display    = 'none';
+    document.getElementById('resultadosFornecedor').style.display = 'block';
+
+    const totalGasto   = data.resultados.reduce((s,f) => s + f.total_gasto, 0);
+    const totalServicos = data.resultados.reduce((s,f) => s + f.qtd_servicos, 0);
+
+    document.getElementById('totalFornecedores').textContent    = data.resultados.length;
+    document.getElementById('totalGastoFornecedor').textContent = fmtR(totalGasto);
+    document.getElementById('totalManutencoes').textContent     = totalServicos;
+
+    const tbody = document.getElementById('tabelaFornecedores');
+    tbody.innerHTML = data.resultados.map(f => {
+        const ticket = f.qtd_servicos > 0 ? f.total_gasto / f.qtd_servicos : 0;
+        const part   = totalGasto > 0 ? (f.total_gasto / totalGasto) * 100 : 0;
+        return `<tr>
+            <td><strong>${f.nome}</strong></td>
+            <td><span class="badge badge-info" style="font-size:0.7rem;">${f.tipo_nome || 'Geral'}</span></td>
+            <td style="text-align:center;font-weight:600;">${f.qtd_servicos}</td>
+            <td style="text-align:right;color:#64748b;">${fmtR(ticket)}</td>
+            <td style="text-align:right;font-weight:700;color:#dc2626;">${fmtR(f.total_gasto)}</td>
+            <td>
+                <div class="part-wrap">
+                    <span style="font-size:0.78rem;font-weight:600;color:#2563eb;min-width:38px;">${part.toFixed(1)}%</span>
+                    <div class="part-bar-bg">
+                        <div class="part-bar-fill" style="width:${part}%;"></div>
+                    </div>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    renderizarGraficoFornecedor(data.resultados);
+}
+
+function renderizarGraficoFornecedor(resultados) {
+    const ctx = document.getElementById('chartFornecedores').getContext('2d');
+    if (chartFornecedores) chartFornecedores.destroy();
+    const cores = ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899'];
+    chartFornecedores = new Chart(ctx, {
+        type:'bar',
+        data: {
+            labels: resultados.map(r => r.nome),
+            datasets:[{
+                label:'Total Gasto (R$)',
+                data: resultados.map(r => r.total_gasto),
+                backgroundColor: resultados.map((_,i) => cores[i % cores.length]),
+                borderRadius: 6, borderSkipped: false
+            }]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{
+                legend:{ display:false },
+                tooltip:{ callbacks:{ label: ctx => ` ${fmtR(ctx.raw)}` } }
+            },
+            scales:{
+                x:{ grid:{ display:false }, ticks:{ font:{ size:11 } } },
+                y:{ beginAtZero:true, grid:{ color:'#f1f5f9' }, ticks:{ callback: v => fmtR(v), font:{ size:11 } } }
+            }
+        }
+    });
+}
+
+window.addEventListener('load', carregarVeiculos);
+</script>
 
 {% endblock %}
-
-
-
