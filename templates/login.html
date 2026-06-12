@@ -153,30 +153,26 @@
             background: linear-gradient(90deg, transparent, #2563eb 35%, #60a5fa 65%, transparent);
         }
 
-        /* Cabeçalho: logo + título lado a lado */
+        /* Logo acima do título */
         .login-header {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            margin-bottom: 36px;
+            margin-bottom: 32px;
         }
         .login-header img {
-            width: 140px;
+            width: 280px;
             height: auto;
-            flex-shrink: 0;
+            display: block;
+            margin-bottom: 24px;
         }
-        .login-header-text { flex: 1; }
 
         /* Título e subtítulo do form */
         .form-title {
-            font-size: 1.35rem;
+            font-size: 1.45rem;
             font-weight: 700;
             color: #f1f5f9;
-            margin-bottom: 4px;
-            line-height: 1.2;
+            margin-bottom: 5px;
         }
         .form-sub {
-            font-size: 0.78rem;
+            font-size: 0.82rem;
             color: #4b5563;
             margin-bottom: 0;
         }
@@ -381,13 +377,11 @@
 ============================= -->
 <div class="panel">
 
-    <!-- Logo + título lado a lado -->
+    <!-- Logo acima do título -->
     <div class="login-header">
         <img src="/static/logo_nova.png" alt="Siqueirão Multimarcas">
-        <div class="login-header-text">
-            <div class="form-title">Bem-vindo de volta</div>
-            <div class="form-sub">Acesse o sistema de gestão da locadora</div>
-        </div>
+        <div class="form-title">Bem-vindo de volta</div>
+        <div class="form-sub">Acesse o sistema de gestão da locadora</div>
     </div>
 
     {% if erro %}
