@@ -103,7 +103,7 @@
                     </span>
                 </td>
                 <td style="white-space:nowrap">
-                    <button class="btn btn-sm" onclick="verHistorico(${c.id}, '${c.nome.replace(/'/g,"\\'")}'')" title="Histórico de Locações" style="background:#6b7280;color:white">
+                    <button class="btn btn-sm" onclick="verHistorico(${c.id}, '${c.nome.replace(/'/g, "\\'")}')" title="Histórico de Locações" style="background:#6b7280;color:white">
                         <i class="fas fa-history"></i>
                     </button>
                     <button class="btn btn-sm btn-primary" onclick="editarCliente(${c.id})" title="Editar">
@@ -266,15 +266,9 @@
         try {
             const resp = await fetch('/api/clientes/' + id, { method: 'DELETE' });
             if (resp.ok) {
-                showToast('Cliente excluido', 'success');
+                showToast('Cliente excluído', 'success');
                 carregarClientes();
             } else {
-                showToast('Erro ao excluir cliente', 'error');
-            }
-        } catch (error) {
-            showToast('Erro ao excluir cliente', 'error');
-        }
-    } else {
                 showToast('Erro ao excluir cliente', 'error');
             }
         } catch (error) {
