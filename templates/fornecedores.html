@@ -25,24 +25,6 @@
         <div class="kpi-value" id="fornecedoresAtivos">0</div>
         <i class="fas fa-check-circle kpi-icon-bg"></i>
     </div>
-    <div class="kpi-card orange">
-        <div class="kpi-label">Tipos Cadastrados</div>
-        <div class="kpi-value" id="totalTipos">0</div>
-        <i class="fas fa-building kpi-icon-bg"></i>
-    </div>
-</div>
-
-<!-- Tipos de Fornecedor — chips -->
-<div class="card" style="margin-bottom:20px;">
-    <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-tags"></i> Tipos de Fornecedor</h3>
-        <button class="btn btn-secondary btn-sm" onclick="abrirModalTipo()">
-            <i class="fas fa-plus"></i> Novo Tipo
-        </button>
-    </div>
-    <div id="tiposChips" style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 8px;">
-        <span style="color:#94a3b8;font-size:0.83rem;">Carregando...</span>
-    </div>
 </div>
 
 <!-- Fornecedores: filtros + tabela merged into one card -->
@@ -110,7 +92,6 @@
             });
 
             atualizarEstatisticas();
-            renderizarTipos();
             renderizarFornecedores(fornecedores);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
@@ -120,31 +101,7 @@
     function atualizarEstatisticas() {
         document.getElementById('totalFornecedores').textContent = fornecedores.length;
         document.getElementById('fornecedoresAtivos').textContent = fornecedores.filter(f => f.status === 'ativo').length;
-        document.getElementById('totalTipos').textContent = tiposFornecedor.length;
         document.getElementById('countFornecBadge').textContent = fornecedores.length;
-    }
-
-    function renderizarTipos() {
-        const container = document.getElementById('tiposChips');
-        if (!tiposFornecedor.length) {
-            container.innerHTML = '<span style="color:#94a3b8;font-size:0.83rem;">Nenhum tipo cadastrado. Clique em "Novo Tipo" para começar.</span>';
-            return;
-        }
-        const cores = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899'];
-        container.innerHTML = tiposFornecedor.map((t, i) => {
-            const cor = cores[i % cores.length];
-            return `<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 10px;
-                         background:${cor}18;border:1px solid ${cor}40;border-radius:20px;
-                         font-size:0.8rem;font-weight:500;color:${cor};">
-                <span style="width:7px;height:7px;border-radius:50%;background:${cor};flex-shrink:0;"></span>
-                ${t.nome}
-                ${t.descricao ? `<span style="color:#94a3b8;font-size:0.72rem;">· ${t.descricao}</span>` : ''}
-                <button onclick="excluirTipo(${t.id})" style="border:none;background:none;cursor:pointer;
-                    color:${cor};opacity:0.6;padding:0;line-height:1;font-size:0.75rem;" title="Excluir tipo">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>`;
-        }).join('');
     }
 
     function getStatusBadge(status) {
@@ -338,10 +295,29 @@
                 <!-- Tipo + Responsável -->
                 <div class="grid-2">
                     <div class="form-group" style="margin:0 0 12px;">
-                        <label>Tipo de Fornecedor *</label>
-                        <select class="form-control" name="tipo_id" required>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                            <label style="margin:0;">Tipo de Fornecedor *</label>
+                            <button type="button" onclick="mostrarCriarTipo()"
+                                style="font-size:0.7rem;color:#2563eb;background:none;border:none;cursor:pointer;font-weight:700;padding:0;display:flex;align-items:center;gap:4px;">
+                                <i class="fas fa-plus"></i> Novo tipo
+                            </button>
+                        </div>
+                        <select class="form-control" name="tipo_id" id="selectTipoFornec" required>
                             ${optionsTipos}
                         </select>
+                        <div id="novoTipoInline" style="display:none;margin-top:8px;display:none;gap:6px;align-items:center;">
+                            <input type="text" id="inputNovoTipo" class="form-control"
+                                placeholder="Nome do novo tipo..." style="flex:1;"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();criarTipoRapido();}">
+                            <button type="button" onclick="criarTipoRapido()"
+                                style="padding:8px 12px;background:#10b981;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.8rem;white-space:nowrap;">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button type="button" onclick="ocultarCriarTipo()"
+                                style="padding:8px 10px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;cursor:pointer;font-size:0.8rem;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group" style="margin:0 0 12px;">
                         <label>Responsável / Sócio</label>
@@ -440,69 +416,49 @@
         }
     }
 
-    // Funções para Tipos de Fornecedor
-    function abrirModalTipo(tipo = null) {
-        const content = `
-            <form id="formTipo" onsubmit="salvarTipo(event)">
-                <div class="form-group">
-                    <label>Nome do Tipo *</label>
-                    <input type="text" class="form-control" name="nome" placeholder="Ex: Oficina, Lataria, Elétrica" required>
-                </div>
-                <div class="form-group">
-                    <label>Descrição</label>
-                    <textarea class="form-control" name="descricao" rows="2" placeholder="Descrição opcional"></textarea>
-                </div>
-                <div style="text-align: right; margin-top: 20px;">
-                    <button type="button" class="btn btn-secondary" onclick="fecharModal()" style="margin-right: 10px;">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Cadastrar</button>
-                </div>
-            </form>
-        `;
-        abrirModal('Novo Tipo de Fornecedor', content);
+    // ── Tipo inline ─────────────────────────────────────────
+
+    function mostrarCriarTipo() {
+        const div = document.getElementById('novoTipoInline');
+        div.style.display = 'flex';
+        document.getElementById('inputNovoTipo').focus();
     }
 
-    async function salvarTipo(e) {
-        e.preventDefault();
-        const form = document.getElementById('formTipo');
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData);
+    function ocultarCriarTipo() {
+        const div = document.getElementById('novoTipoInline');
+        div.style.display = 'none';
+        document.getElementById('inputNovoTipo').value = '';
+    }
+
+    async function criarTipoRapido() {
+        const nome = (document.getElementById('inputNovoTipo').value || '').trim();
+        if (!nome) { showToast('Digite o nome do tipo', 'warning'); return; }
 
         try {
-            const response = await fetch('/api/tipos-fornecedor', {
+            const resp = await fetch('/api/tipos-fornecedor', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({ nome })
+            });
+            if (!resp.ok) { showToast('Erro ao criar tipo', 'error'); return; }
+
+            const respTipos = await fetch('/api/tipos-fornecedor');
+            tiposFornecedor = await respTipos.json();
+
+            const sel = document.getElementById('selectTipoFornec');
+            sel.innerHTML = '<option value="">Selecione o tipo</option>';
+            tiposFornecedor.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nome;
+                if (t.nome === nome) opt.selected = true;
+                sel.appendChild(opt);
             });
 
-            if (response.ok) {
-                fecharModal();
-                showToast('Tipo de fornecedor salvo com sucesso!', 'success');
-                carregarDados();
-            } else {
-                showToast('Erro ao salvar tipo de fornecedor. Tente novamente.', 'error');
-            }
-        } catch (error) {
-            console.error('Erro:', error);
-            showToast('Erro ao salvar tipo de fornecedor. Tente novamente.', 'error');
-        }
-    }
-
-    async function excluirTipo(id) {
-        confirmarAcao('Excluir Tipo', 'Deseja excluir este tipo? Fornecedores associados ficarão sem tipo.', () => _confirmaExcluirTipo(id));
-    }
-
-    async function _confirmaExcluirTipo(id) {
-        try {
-            const resp = await fetch(`/api/tipos-fornecedor/${id}`, { method: 'DELETE' });
-            if (resp.ok) {
-                showToast('Tipo excluído', 'success');
-            } else {
-                showToast('Erro ao excluir tipo. Tente novamente.', 'error');
-            }
-            carregarDados();
-        } catch (error) {
-            console.error('Erro:', error);
-            showToast('Erro ao excluir tipo. Tente novamente.', 'error');
+            ocultarCriarTipo();
+            showToast(`Tipo "${nome}" criado e selecionado!`, 'success');
+        } catch (e) {
+            showToast('Erro ao criar tipo', 'error');
         }
     }
 
