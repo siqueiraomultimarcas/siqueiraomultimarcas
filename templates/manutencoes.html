@@ -8,9 +8,14 @@
         <h1><i class="fas fa-tools"></i> Controle de Manutenções</h1>
         <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Controle de manutenções preventivas e corretivas</p>
     </div>
-    <button class="btn btn-primary" onclick="abrirModalManutencao()">
-        <i class="fas fa-plus"></i> Nova Manutenção
-    </button>
+    <div style="display:flex;gap:10px;">
+        <button class="btn btn-secondary" onclick="abrirImportar()" style="display:flex;align-items:center;gap:6px;">
+            <i class="fas fa-file-import"></i> Importar Manutenção
+        </button>
+        <button class="btn btn-primary" onclick="abrirModalManutencao()">
+            <i class="fas fa-plus"></i> Nova Manutenção
+        </button>
+    </div>
 </div>
 
 <!-- Stats -->
@@ -430,5 +435,474 @@
     }
     
     window.addEventListener('load', carregarDados);
+
+    // ==================== IMPORTAR MANUTENÇÃO ====================
+    let _importDadosPDF = null;
+
+    function abrirImportar() {
+        document.getElementById('modalImportar').style.display = 'flex';
+        _setImportState('upload');
+    }
+
+    function fecharImportar() {
+        document.getElementById('modalImportar').style.display = 'none';
+        document.getElementById('pdfInput').value = '';
+        document.getElementById('pdfDropzone').classList.remove('dragover');
+        document.getElementById('pdfFileName').textContent = '';
+        document.getElementById('btnProcessarPdf').style.display = 'none';
+        _importDadosPDF = null;
+    }
+
+    function _setImportState(state) {
+        document.getElementById('importUploadState').style.display = state === 'upload' ? 'block' : 'none';
+        document.getElementById('importLoadingState').style.display = state === 'loading' ? 'flex' : 'none';
+        document.getElementById('importReviewState').style.display = state === 'review' ? 'block' : 'none';
+    }
+
+    function handleDropzoneClick() { document.getElementById('pdfInput').click(); }
+
+    function handleDragOver(e) { e.preventDefault(); document.getElementById('pdfDropzone').classList.add('dragover'); }
+    function handleDragLeave() { document.getElementById('pdfDropzone').classList.remove('dragover'); }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        document.getElementById('pdfDropzone').classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) _onFileSelected(file);
+    }
+
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (file) _onFileSelected(file);
+    }
+
+    function _onFileSelected(file) {
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+            showToast('Selecione um arquivo PDF', 'error'); return;
+        }
+        document.getElementById('pdfFileName').textContent = file.name;
+        document.getElementById('btnProcessarPdf').style.display = 'inline-flex';
+        document.getElementById('pdfInput')._file = file;
+    }
+
+    async function processarPdf() {
+        const fileInput = document.getElementById('pdfInput');
+        const file = fileInput._file || fileInput.files[0];
+        if (!file) { showToast('Selecione um PDF', 'error'); return; }
+
+        _setImportState('loading');
+
+        const formData = new FormData();
+        formData.append('pdf', file);
+
+        try {
+            const resp = await fetch('/api/importar-manutencao-pdf', { method: 'POST', body: formData });
+            const data = await resp.json();
+            if (data.error) { showToast(data.error, 'error'); _setImportState('upload'); return; }
+            _importDadosPDF = data;
+            _renderReview(data);
+            _setImportState('review');
+        } catch (err) {
+            showToast('Erro ao processar PDF', 'error');
+            _setImportState('upload');
+        }
+    }
+
+    function _fmtMoeda(v) {
+        return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function _renderReview(d) {
+        document.getElementById('rev_pedido_num').textContent = d.numero_pedido ? `Nº ${d.numero_pedido}` : 'PDF importado';
+
+        // Veículo
+        const vc = document.getElementById('rev_veiculo_card');
+        if (d.veiculo) {
+            vc.className = 'import-match-card found';
+            vc.innerHTML = `
+                <div class="match-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="match-info">
+                    <div class="match-title">Veículo encontrado</div>
+                    <div class="match-main">${d.veiculo.placa} — ${d.veiculo.marca} ${d.veiculo.modelo}</div>
+                    <div class="match-sub">Km atual: ${(d.veiculo.km_atual||0).toLocaleString()} · Importado: ${(d.km||0).toLocaleString()} km</div>
+                </div>`;
+            document.getElementById('rev_veiculo_id').value = d.veiculo.id;
+        } else {
+            vc.className = 'import-match-card not-found';
+            vc.innerHTML = `
+                <div class="match-icon"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="match-info">
+                    <div class="match-title">Veículo não encontrado</div>
+                    <div class="match-main">${d.placa || 'Placa não detectada'}</div>
+                    <div class="match-sub">
+                        Cadastre o veículo antes de importar —
+                        <a href="/veiculos" target="_blank" style="color:#fff;font-weight:700;">Ir para Veículos</a>
+                    </div>
+                </div>`;
+            document.getElementById('rev_veiculo_id').value = '';
+        }
+
+        // Fornecedor
+        const fc = document.getElementById('rev_fornecedor_card');
+        if (d.fornecedor) {
+            fc.className = 'import-match-card found';
+            fc.innerHTML = `
+                <div class="match-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="match-info">
+                    <div class="match-title">Fornecedor encontrado</div>
+                    <div class="match-main">${d.fornecedor.nome_fantasia || d.fornecedor.nome}</div>
+                    <div class="match-sub">${d.fornecedor.nome_fantasia ? d.fornecedor.nome + ' · ' : ''}${d.fornecedor.cnpj || ''}</div>
+                </div>`;
+            document.getElementById('rev_fornecedor_id').value = d.fornecedor.id;
+            document.getElementById('rev_oficina').value = d.fornecedor.nome_fantasia || d.fornecedor.nome;
+        } else {
+            fc.className = 'import-match-card warn';
+            fc.innerHTML = `
+                <div class="match-icon"><i class="fas fa-store-slash"></i></div>
+                <div class="match-info">
+                    <div class="match-title">Fornecedor não cadastrado</div>
+                    <div class="match-main">${d.fornecedor_nome_raw || 'Nome não detectado'}</div>
+                    <div class="match-sub">
+                        <a href="/fornecedores" target="_blank" style="color:#fff;font-weight:700;">Cadastrar fornecedor</a>
+                        · Você pode salvar assim mesmo
+                    </div>
+                </div>`;
+            document.getElementById('rev_fornecedor_id').value = '';
+            document.getElementById('rev_oficina').value = d.fornecedor_nome_raw || '';
+        }
+
+        // Itens
+        const tbody = document.getElementById('rev_itens_tbody');
+        if (d.itens && d.itens.length > 0) {
+            tbody.innerHTML = d.itens.map(it => `
+                <tr>
+                    <td>${it.descricao}</td>
+                    <td style="text-align:center">${it.quantidade.toLocaleString('pt-BR')}</td>
+                    <td style="text-align:center">${it.unidade}</td>
+                    <td style="text-align:right">${_fmtMoeda(it.valor_unitario)}</td>
+                    <td style="text-align:right;font-weight:600">${_fmtMoeda(it.valor_total)}</td>
+                </tr>
+            `).join('');
+            document.getElementById('rev_itens_section').style.display = 'block';
+        } else {
+            document.getElementById('rev_itens_section').style.display = 'none';
+        }
+
+        // Total
+        document.getElementById('rev_total_val').textContent = _fmtMoeda(d.total);
+
+        // Campos do formulário
+        document.getElementById('rev_custo').value = d.total || '';
+        document.getElementById('rev_data').value = d.data_manutencao || '';
+        document.getElementById('rev_km').value = d.km || '';
+        document.getElementById('rev_numero_pedido').value = d.numero_pedido || '';
+
+        // Detectar tipo automático a partir dos itens
+        const descricoes = (d.itens || []).map(i => i.descricao.toUpperCase()).join(' ');
+        let tipo = 'Preventiva';
+        if (/ÓLEO|OLEO|OIL/.test(descricoes)) tipo = 'Óleo';
+        else if (/FILTRO/.test(descricoes)) tipo = 'Filtros';
+        else if (/PNEU|BORRACHA/.test(descricoes)) tipo = 'Pneus';
+        else if (/FREIO|PASTILHA/.test(descricoes)) tipo = 'Freios';
+        document.getElementById('rev_tipo').value = tipo;
+
+        // Montar descrição com itens
+        if (d.itens && d.itens.length > 0) {
+            const desc = d.itens.map(i => `${i.descricao} (${i.quantidade}x ${_fmtMoeda(i.valor_unitario)})`).join('; ');
+            document.getElementById('rev_descricao').value = desc;
+        }
+    }
+
+    async function confirmarImportacao() {
+        const veiculoId = document.getElementById('rev_veiculo_id').value;
+        if (!veiculoId) {
+            showToast('Cadastre o veículo antes de salvar', 'error'); return;
+        }
+
+        const payload = {
+            veiculo_id: parseInt(veiculoId),
+            tipo: document.getElementById('rev_tipo').value,
+            descricao: document.getElementById('rev_descricao').value,
+            data_manutencao: document.getElementById('rev_data').value,
+            km_manutencao: parseInt(document.getElementById('rev_km').value) || null,
+            custo: parseFloat(document.getElementById('rev_custo').value) || null,
+            oficina: document.getElementById('rev_oficina').value,
+            status: document.getElementById('rev_status').value,
+            proxima_manutencao_km: parseInt(document.getElementById('rev_proxima_km').value) || null,
+            proxima_manutencao_data: document.getElementById('rev_proxima_data').value || null,
+            numero_pedido: document.getElementById('rev_numero_pedido').value || null,
+            fornecedor_id: parseInt(document.getElementById('rev_fornecedor_id').value) || null,
+            itens_json: _importDadosPDF ? JSON.stringify(_importDadosPDF.itens) : null
+        };
+
+        const btn = document.getElementById('btnConfirmarImport');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+        try {
+            const resp = await fetch('/api/manutencoes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (resp.ok) {
+                fecharImportar();
+                showToast('Manutenção importada com sucesso!', 'success');
+                carregarDados();
+            } else {
+                showToast('Erro ao salvar manutenção', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> Confirmar e Salvar';
+            }
+        } catch (err) {
+            showToast('Erro ao salvar manutenção', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Confirmar e Salvar';
+        }
+    }
 </script>
+
+<!-- ==================== MODAL IMPORTAR MANUTENÇÃO ==================== -->
+<div id="modalImportar" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:9999;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px;">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:820px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.4);overflow:hidden;">
+
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:40px;height:40px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-file-import" style="color:#fff;font-size:1.1rem;"></i>
+                </div>
+                <div>
+                    <div style="color:#fff;font-weight:700;font-size:1.05rem;">Importar Manutenção</div>
+                    <div style="color:#94a3b8;font-size:0.75rem;">Leitura automática de pedido PDF</div>
+                </div>
+            </div>
+            <button onclick="fecharImportar()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- State: Upload -->
+        <div id="importUploadState" style="padding:32px 24px;">
+            <div id="pdfDropzone" class="pdf-dropzone"
+                 onclick="handleDropzoneClick()"
+                 ondragover="handleDragOver(event)"
+                 ondragleave="handleDragLeave()"
+                 ondrop="handleDrop(event)">
+                <div style="pointer-events:none;">
+                    <i class="fas fa-file-pdf" style="font-size:3rem;color:#e53e3e;margin-bottom:16px;display:block;"></i>
+                    <div style="font-weight:700;font-size:1.05rem;color:#1e293b;margin-bottom:6px;">Arraste o PDF do pedido aqui</div>
+                    <div style="color:#64748b;font-size:0.85rem;">ou clique para selecionar o arquivo</div>
+                    <div style="margin-top:16px;display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 16px;color:#475569;font-size:0.8rem;">
+                        <i class="fas fa-lock" style="color:#94a3b8;"></i> Apenas arquivos .pdf
+                    </div>
+                </div>
+            </div>
+            <input type="file" id="pdfInput" accept=".pdf" style="display:none" onchange="handleFileSelect(event)">
+            <div id="pdfFileName" style="margin-top:12px;font-size:0.82rem;color:#475569;display:flex;align-items:center;gap:6px;min-height:20px;"></div>
+            <div style="text-align:right;margin-top:20px;">
+                <button onclick="fecharImportar()" class="btn btn-secondary" style="margin-right:10px;">Cancelar</button>
+                <button id="btnProcessarPdf" onclick="processarPdf()" class="btn btn-primary" style="display:none;align-items:center;gap:6px;">
+                    <i class="fas fa-search"></i> Processar PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- State: Loading -->
+        <div id="importLoadingState" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;gap:16px;">
+            <div style="width:56px;height:56px;border:4px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+            <div style="font-weight:600;color:#1e293b;">Analisando o PDF...</div>
+            <div style="font-size:0.82rem;color:#64748b;">Extraindo dados do pedido</div>
+        </div>
+
+        <!-- State: Review -->
+        <div id="importReviewState" style="display:none;padding:0 24px 24px;">
+            <!-- Sub-header -->
+            <div style="padding:14px 0 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-clipboard-check" style="color:#2563eb;"></i>
+                <span style="font-weight:700;color:#1e293b;" id="rev_pedido_num">Revisão</span>
+                <span style="color:#94a3b8;font-size:0.8rem;margin-left:4px;">— Confirme os dados antes de salvar</span>
+            </div>
+
+            <!-- Match cards -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0;">
+                <div id="rev_veiculo_card" class="import-match-card"></div>
+                <div id="rev_fornecedor_card" class="import-match-card"></div>
+            </div>
+
+            <!-- Items table -->
+            <div id="rev_itens_section" style="display:none;margin-bottom:18px;">
+                <div style="font-weight:700;color:#1e293b;font-size:0.85rem;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-list" style="color:#2563eb;"></i> Itens do Pedido
+                </div>
+                <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                        <thead>
+                            <tr style="background:#f8fafc;">
+                                <th style="padding:10px 12px;text-align:left;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;">Descrição</th>
+                                <th style="padding:10px 12px;text-align:center;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;width:60px;">Qtd</th>
+                                <th style="padding:10px 12px;text-align:center;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;width:50px;">Un</th>
+                                <th style="padding:10px 12px;text-align:right;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;width:90px;">Unit.</th>
+                                <th style="padding:10px 12px;text-align:right;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;width:90px;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rev_itens_tbody"></tbody>
+                    </table>
+                    <div style="padding:10px 12px;text-align:right;background:#f8fafc;border-top:2px solid #e2e8f0;font-weight:700;color:#1e293b;">
+                        Total: <span id="rev_total_val" style="color:#2563eb;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form fields -->
+            <div style="font-weight:700;color:#1e293b;font-size:0.85rem;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+                <i class="fas fa-edit" style="color:#2563eb;"></i> Dados da Manutenção
+            </div>
+            <input type="hidden" id="rev_veiculo_id">
+            <input type="hidden" id="rev_fornecedor_id">
+            <input type="hidden" id="rev_numero_pedido">
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div class="form-group" style="margin:0;">
+                    <label>Tipo *</label>
+                    <select class="form-control" id="rev_tipo">
+                        <option value="Preventiva">Preventiva</option>
+                        <option value="Corretiva">Corretiva</option>
+                        <option value="Óleo">Óleo</option>
+                        <option value="Pneus">Pneus</option>
+                        <option value="Freios">Freios</option>
+                        <option value="Filtros">Filtros</option>
+                        <option value="Revisão">Revisão</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Status</label>
+                    <select class="form-control" id="rev_status">
+                        <option value="concluida">Concluída</option>
+                        <option value="pendente">Pendente</option>
+                        <option value="andamento">Em Andamento</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div class="form-group" style="margin:0;">
+                    <label>Data do Serviço</label>
+                    <input type="date" class="form-control" id="rev_data">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Km no Serviço</label>
+                    <input type="number" class="form-control" id="rev_km" min="0">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Custo Total (R$)</label>
+                    <input type="number" class="form-control" id="rev_custo" step="0.01" min="0">
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div class="form-group" style="margin:0;">
+                    <label>Fornecedor / Oficina</label>
+                    <input type="text" class="form-control" id="rev_oficina" placeholder="Nome da oficina">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Próx. Manutenção (Km)</label>
+                    <input type="number" class="form-control" id="rev_proxima_km" min="0">
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div class="form-group" style="margin:0;">
+                    <label>Descrição dos Serviços</label>
+                    <input type="text" class="form-control" id="rev_descricao" placeholder="Resumo dos serviços">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Próx. Manutenção (Data)</label>
+                    <input type="date" class="form-control" id="rev_proxima_data">
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;border-top:1px solid #f1f5f9;margin-top:4px;">
+                <button onclick="fecharImportar()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button onclick="_setImportState('upload')" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </button>
+                <button id="btnConfirmarImport" onclick="confirmarImportacao()" class="btn btn-primary" style="display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-check"></i> Confirmar e Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.pdf-dropzone {
+    border: 2.5px dashed #cbd5e1;
+    border-radius: 14px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: #f8fafc;
+}
+.pdf-dropzone:hover, .pdf-dropzone.dragover {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+.pdf-dropzone.dragover { transform: scale(1.01); }
+
+.import-match-card {
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+.import-match-card.found {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff;
+}
+.import-match-card.warn {
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+    color: #fff;
+}
+.import-match-card.not-found {
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+    color: #fff;
+}
+.import-match-card .match-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.import-match-card .match-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    opacity: .85;
+    margin-bottom: 3px;
+}
+.import-match-card .match-main {
+    font-weight: 700;
+    font-size: 0.92rem;
+    margin-bottom: 2px;
+}
+.import-match-card .match-sub {
+    font-size: 0.74rem;
+    opacity: .85;
+}
+
+#rev_itens_tbody tr { border-bottom: 1px solid #f1f5f9; }
+#rev_itens_tbody tr:last-child { border-bottom: none; }
+#rev_itens_tbody td { padding: 9px 12px; color: #374151; }
+
+@media (max-width: 600px) {
+    #rev_veiculo_card, #rev_fornecedor_card {
+        grid-column: 1 / -1;
+    }
+}
+</style>
 {% endblock %}

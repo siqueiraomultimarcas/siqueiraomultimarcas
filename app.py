@@ -182,6 +182,8 @@ def init_db():
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS numero_auto TEXT")
     for col, tipo in [('cep','TEXT'), ('bairro','TEXT'), ('nome_fantasia','TEXT'), ('data_fundacao','DATE'), ('situacao_receita','TEXT'), ('responsavel_principal','TEXT')]:
         cur.execute(f"ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS {col} {tipo}")
+    for col, tipo in [('numero_pedido','TEXT'), ('fornecedor_id','INTEGER'), ('itens_json','TEXT')]:
+        cur.execute(f"ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS {col} {tipo}")
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS abastecimentos (
@@ -946,12 +948,14 @@ def add_manutencao():
     cur = conn.cursor()
     cur.execute('''
         INSERT INTO manutencoes (veiculo_id, tipo, descricao, data_manutencao, km_manutencao,
-        custo, oficina, proxima_manutencao_km, proxima_manutencao_data, status)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        custo, oficina, proxima_manutencao_km, proxima_manutencao_data, status,
+        numero_pedido, fornecedor_id, itens_json)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ''', (data['veiculo_id'], data['tipo'], data.get('descricao'), data.get('data_manutencao'),
           data.get('km_manutencao'), data.get('custo'), data.get('oficina'),
           data.get('proxima_manutencao_km'), data.get('proxima_manutencao_data'),
-          data.get('status', 'concluida')))
+          data.get('status', 'concluida'), data.get('numero_pedido'),
+          data.get('fornecedor_id') or None, data.get('itens_json')))
 
     if data.get('km_manutencao'):
         cur.execute('UPDATE veiculos SET km_atual = %s WHERE id = %s',
@@ -986,6 +990,141 @@ def update_manutencao(id):
     cur.close()
     conn.close()
     return jsonify({'success': True})
+
+
+@app.route('/api/importar-manutencao-pdf', methods=['POST'])
+@login_required
+def importar_manutencao_pdf():
+    if 'pdf' not in request.files:
+        return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+    pdf_file = request.files['pdf']
+    if not pdf_file.filename.lower().endswith('.pdf'):
+        return jsonify({'error': 'Arquivo deve ser PDF'}), 400
+    try:
+        pdf_bytes = io.BytesIO(pdf_file.read())
+        all_text = ''
+        with pdfplumber.open(pdf_bytes) as pdf:
+            for page in pdf.pages:
+                all_text += (page.extract_text() or '') + '\n'
+
+        result = {}
+
+        # Número do pedido
+        m = re.search(r'PEDIDO\s+N[Oº°]\s*(\d+)', all_text, re.IGNORECASE)
+        result['numero_pedido'] = m.group(1) if m else ''
+
+        # Nome do fornecedor — primeira linha antes da data
+        lines = [l.strip() for l in all_text.split('\n') if l.strip()]
+        fornec_nome_raw = ''
+        if lines:
+            fornec_nome_raw = re.sub(r'\s+\d{1,2}/\d{1,2}/\d{2,4}.*', '', lines[0]).strip()
+        result['fornecedor_nome_raw'] = fornec_nome_raw
+
+        # CNPJ do fornecedor
+        m = re.search(r'CNPJ[:\s]+([\d./-]+)', all_text, re.IGNORECASE)
+        cnpj_raw = m.group(1).strip() if m else ''
+        result['fornecedor_cnpj_raw'] = cnpj_raw
+
+        # Data do serviço
+        meses_pt = {'jan':'01','fev':'02','mar':'03','abr':'04','mai':'05','jun':'06',
+                    'jul':'07','ago':'08','set':'09','out':'10','nov':'11','dez':'12'}
+        m = re.search(r'Data[:\s]+(\d{1,2})/(\w{3})/(\d{4})', all_text, re.IGNORECASE)
+        if m:
+            d, mes_str, a = m.group(1), m.group(2).lower(), m.group(3)
+            result['data_manutencao'] = f'{a}-{meses_pt.get(mes_str,"01")}-{int(d):02d}'
+        else:
+            result['data_manutencao'] = ''
+
+        # Placa
+        m = re.search(r'Placa[:\s|]+([A-Z]{3}[\d][A-Z\d][\d]{2})', all_text, re.IGNORECASE)
+        result['placa'] = m.group(1).upper() if m else ''
+
+        # KM
+        m = re.search(r'\bKm[:\s|]+([\d.,]+)', all_text, re.IGNORECASE)
+        if m:
+            try:
+                result['km'] = int(m.group(1).replace('.', '').replace(',', ''))
+            except Exception:
+                result['km'] = None
+        else:
+            result['km'] = None
+
+        # Total líquido
+        m = re.search(r'Total\s+L[íi]quido\s+R\$\s*([\d.,]+)', all_text, re.IGNORECASE)
+        try:
+            result['total'] = float(m.group(1).replace('.', '').replace(',', '.')) if m else 0.0
+        except Exception:
+            result['total'] = 0.0
+
+        # Itens do pedido
+        itens = []
+        m_ini = re.search(r'ITENS DO PEDIDO', all_text, re.IGNORECASE)
+        m_fim = re.search(r'Totalizadores', all_text, re.IGNORECASE)
+        if m_ini and m_fim:
+            bloco = all_text[m_ini.end():m_fim.start()]
+            item_re = re.compile(
+                r'^\s*(\d{1,3})\s+(\d+)\s+(.+?)\s+([\d]+[,][\d]+)\s+(pc|un|pç|kg|lt|lts?|m|ml|fl)\s+[\d,]+\s+([\d]+[,][\d]+)\s+([\d]+[,][\d]+)',
+                re.MULTILINE | re.IGNORECASE
+            )
+            for mi in item_re.finditer(bloco):
+                try:
+                    itens.append({
+                        'codigo': mi.group(2),
+                        'descricao': mi.group(3).strip(),
+                        'quantidade': float(mi.group(4).replace(',', '.')),
+                        'unidade': mi.group(5),
+                        'valor_unitario': float(mi.group(6).replace(',', '.')),
+                        'valor_total': float(mi.group(7).replace(',', '.'))
+                    })
+                except Exception:
+                    pass
+        result['itens'] = itens
+
+        # Cruzamento de veículo
+        conn = get_conn()
+        cur = conn.cursor()
+        veiculo_match = None
+        if result.get('placa'):
+            cur.execute(
+                'SELECT id, placa, marca, modelo, ano_fabricacao, km_atual FROM veiculos WHERE UPPER(placa) = %s',
+                (result['placa'].upper(),)
+            )
+            row = cur.fetchone()
+            if row:
+                veiculo_match = {'id': row[0], 'placa': row[1], 'marca': row[2],
+                                 'modelo': row[3], 'ano': row[4], 'km_atual': row[5]}
+        result['veiculo'] = veiculo_match
+
+        # Cruzamento de fornecedor — por CNPJ primeiro, depois por nome
+        fornecedor_match = None
+        cnpj_clean = re.sub(r'\D', '', cnpj_raw)
+        if cnpj_clean:
+            cur.execute(
+                "SELECT id, nome, nome_fantasia, cnpj FROM fornecedores "
+                "WHERE REGEXP_REPLACE(COALESCE(cnpj,''),'[^0-9]','','g') = %s LIMIT 1",
+                (cnpj_clean,)
+            )
+            row = cur.fetchone()
+            if row:
+                fornecedor_match = {'id': row[0], 'nome': row[1], 'nome_fantasia': row[2], 'cnpj': row[3]}
+        if not fornecedor_match and fornec_nome_raw:
+            q = fornec_nome_raw.upper()[:25]
+            cur.execute(
+                "SELECT id, nome, nome_fantasia, cnpj FROM fornecedores "
+                "WHERE UPPER(nome) LIKE %s OR UPPER(COALESCE(nome_fantasia,'')) LIKE %s LIMIT 1",
+                (f'%{q}%', f'%{q}%')
+            )
+            row = cur.fetchone()
+            if row:
+                fornecedor_match = {'id': row[0], 'nome': row[1], 'nome_fantasia': row[2], 'cnpj': row[3]}
+        result['fornecedor'] = fornecedor_match
+
+        cur.close()
+        conn.close()
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': f'Erro ao processar PDF: {str(e)}'}), 500
 
 
 @app.route('/api/manutencoes/<int:id>', methods=['DELETE'])
