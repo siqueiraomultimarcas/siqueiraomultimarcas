@@ -234,42 +234,66 @@
 
         const content = `
             <form id="formFornecedor" onsubmit="salvarFornecedor(event, ${fornecedor ? fornecedor.id : 'null'})">
-                <div class="form-group">
-                    <label>Nome/Razão Social *</label>
-                    <input type="text" class="form-control" name="nome" value="${fornecedor ? fornecedor.nome : ''}" required>
-                </div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>CNPJ</label>
-                        <input type="text" class="form-control" name="cnpj" value="${fornecedor ? fornecedor.cnpj : ''}" placeholder="00.000.000/0001-00">
+
+                ${!isEdit ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+                    <i class="fas fa-magic" style="color:#2563eb;font-size:1rem;"></i>
+                    <div style="font-size:0.8rem;color:#1e40af;">
+                        <strong>Preenchimento automático:</strong> Digite o CNPJ e clique em <strong>Consultar</strong> para preencher os dados automaticamente.
                     </div>
-                    <div class="form-group">
+                </div>` : ''}
+
+                <div class="grid-2">
+                    <div class="form-group" style="margin:0;">
+                        <label>CNPJ</label>
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" class="form-control" name="cnpj" id="inputCnpj"
+                                value="${fornecedor ? fornecedor.cnpj : ''}"
+                                placeholder="00.000.000/0001-00"
+                                oninput="formatarCnpj(this)"
+                                style="flex:1;">
+                            ${!isEdit ? `<button type="button" id="btnConsultarCnpj" onclick="consultarCnpj()"
+                                style="white-space:nowrap;padding:0 14px;background:#2563eb;color:white;border:none;
+                                       border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600;
+                                       display:flex;align-items:center;gap:6px;transition:background 0.15s;"
+                                onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+                                <i class="fas fa-search" id="iconConsultar"></i> Consultar
+                            </button>` : ''}
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin:0;">
                         <label>CPF</label>
                         <input type="text" class="form-control" name="cpf" value="${fornecedor ? fornecedor.cpf : ''}" placeholder="000.000.000-00">
                     </div>
                 </div>
+
+                <div id="cnpjStatusMsg" style="display:none;margin:6px 0 12px;font-size:0.78rem;border-radius:8px;padding:8px 12px;"></div>
+
+                <div class="form-group">
+                    <label>Nome/Razão Social *</label>
+                    <input type="text" class="form-control" name="nome" id="inputNome" value="${fornecedor ? fornecedor.nome : ''}" required>
+                </div>
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Telefone</label>
-                        <input type="text" class="form-control" name="telefone" value="${fornecedor ? fornecedor.telefone : ''}" placeholder="(00) 00000-0000">
+                        <input type="text" class="form-control" name="telefone" id="inputTelefone" value="${fornecedor ? fornecedor.telefone : ''}" placeholder="(00) 00000-0000">
                     </div>
                     <div class="form-group">
                         <label>Email</label>
-                        <input type="email" class="form-control" name="email" value="${fornecedor ? fornecedor.email : ''}">
+                        <input type="email" class="form-control" name="email" id="inputEmail" value="${fornecedor ? fornecedor.email : ''}">
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Endereço</label>
-                    <input type="text" class="form-control" name="endereco" value="${fornecedor ? fornecedor.endereco : ''}">
+                    <input type="text" class="form-control" name="endereco" id="inputEndereco" value="${fornecedor ? fornecedor.endereco : ''}">
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Cidade</label>
-                        <input type="text" class="form-control" name="cidade" value="${fornecedor ? fornecedor.cidade : ''}">
+                        <input type="text" class="form-control" name="cidade" id="inputCidade" value="${fornecedor ? fornecedor.cidade : ''}">
                     </div>
                     <div class="form-group">
                         <label>Estado</label>
-                        <select class="form-control" name="estado">
+                        <select class="form-control" name="estado" id="selectEstado">
                             <option value="">Selecione</option>
                             <option value="AC" ${fornecedor && fornecedor.estado === 'AC' ? 'selected' : ''}>AC</option>
                             <option value="AL" ${fornecedor && fornecedor.estado === 'AL' ? 'selected' : ''}>AL</option>
@@ -454,6 +478,79 @@
         } catch (error) {
             console.error('Erro:', error);
             showToast('Erro ao excluir tipo. Tente novamente.', 'error');
+        }
+    }
+
+    // ── Consulta CNPJ ────────────────────────────────────────
+
+    function formatarCnpj(input) {
+        let v = input.value.replace(/\D/g, '').slice(0, 14);
+        if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
+        else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4');
+        else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3');
+        else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,3})/, '$1.$2');
+        input.value = v;
+    }
+
+    async function consultarCnpj() {
+        const cnpjInput = document.getElementById('inputCnpj');
+        const btn = document.getElementById('btnConsultarCnpj');
+        const icon = document.getElementById('iconConsultar');
+        const msg = document.getElementById('cnpjStatusMsg');
+
+        const cnpj = (cnpjInput.value || '').replace(/\D/g, '');
+        if (cnpj.length !== 14) {
+            msg.style.display = 'block';
+            msg.style.background = '#fef3c7';
+            msg.style.border = '1px solid #f59e0b';
+            msg.style.color = '#92400e';
+            msg.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Digite um CNPJ completo (14 dígitos) antes de consultar.';
+            return;
+        }
+
+        btn.disabled = true;
+        icon.className = 'fas fa-spinner fa-spin';
+        msg.style.display = 'block';
+        msg.style.background = '#f1f5f9';
+        msg.style.border = '1px solid #e2e8f0';
+        msg.style.color = '#64748b';
+        msg.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Consultando Receita Federal...';
+
+        try {
+            const resp = await fetch(`/api/consulta-cnpj/${cnpj}`);
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                msg.style.background = '#fef2f2';
+                msg.style.border = '1px solid #fecaca';
+                msg.style.color = '#dc2626';
+                msg.innerHTML = `<i class="fas fa-times-circle"></i> ${data.error || 'CNPJ não encontrado.'}`;
+                return;
+            }
+
+            // Preencher campos
+            if (data.nome) document.getElementById('inputNome').value = data.nome;
+            if (data.telefone) document.getElementById('inputTelefone').value = data.telefone;
+            if (data.email) document.getElementById('inputEmail').value = data.email;
+            if (data.endereco) document.getElementById('inputEndereco').value = data.endereco;
+            if (data.cidade) document.getElementById('inputCidade').value = data.cidade;
+            if (data.estado) document.getElementById('selectEstado').value = data.estado;
+            if (data.cnpj_formatado) cnpjInput.value = data.cnpj_formatado;
+
+            const preenchidos = [data.nome, data.telefone, data.email, data.endereco, data.cidade].filter(Boolean).length;
+            msg.style.background = '#f0fdf4';
+            msg.style.border = '1px solid #86efac';
+            msg.style.color = '#15803d';
+            msg.innerHTML = `<i class="fas fa-check-circle"></i> Dados importados com sucesso! ${preenchidos} campo(s) preenchido(s) automaticamente. Revise e ajuste se necessário.`;
+
+        } catch (e) {
+            msg.style.background = '#fef2f2';
+            msg.style.border = '1px solid #fecaca';
+            msg.style.color = '#dc2626';
+            msg.innerHTML = '<i class="fas fa-times-circle"></i> Erro de conexão ao consultar CNPJ.';
+        } finally {
+            btn.disabled = false;
+            icon.className = 'fas fa-search';
         }
     }
 

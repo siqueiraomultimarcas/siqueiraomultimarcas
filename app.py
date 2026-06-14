@@ -1420,6 +1420,52 @@ def delete_tipo_fornecedor(id):
     conn.close()
     return jsonify({'success': True})
 
+# ==================== API CONSULTA CNPJ ====================
+
+@app.route('/api/consulta-cnpj/<cnpj>')
+@login_required
+def consulta_cnpj(cnpj):
+    import re
+    cnpj_clean = re.sub(r'\D', '', cnpj)
+    if len(cnpj_clean) != 14:
+        return jsonify({'error': 'CNPJ inválido'}), 400
+    try:
+        resp = requests.get(
+            f'https://brasilapi.com.br/api/cnpj/v1/{cnpj_clean}',
+            timeout=10,
+            headers={'Accept': 'application/json'}
+        )
+        if resp.status_code == 200:
+            d = resp.json()
+            telefone = d.get('ddd_telefone_1', '')
+            if telefone:
+                telefone = re.sub(r'\D', '', telefone)
+                if len(telefone) == 10:
+                    telefone = f'({telefone[:2]}) {telefone[2:6]}-{telefone[6:]}'
+                elif len(telefone) == 11:
+                    telefone = f'({telefone[:2]}) {telefone[2:7]}-{telefone[7:]}'
+            endereco_parts = [
+                d.get('logradouro', ''),
+                d.get('numero', ''),
+                d.get('complemento', '')
+            ]
+            endereco = ', '.join(p for p in endereco_parts if p and p.strip())
+            return jsonify({
+                'nome': d.get('razao_social') or d.get('nome_fantasia') or '',
+                'fantasia': d.get('nome_fantasia') or '',
+                'email': (d.get('email') or '').lower(),
+                'telefone': telefone,
+                'endereco': endereco,
+                'cidade': d.get('municipio') or '',
+                'estado': d.get('uf') or '',
+                'cnpj_formatado': f'{cnpj_clean[:2]}.{cnpj_clean[2:5]}.{cnpj_clean[5:8]}/{cnpj_clean[8:12]}-{cnpj_clean[12:]}'
+            })
+        return jsonify({'error': 'CNPJ não encontrado na Receita Federal'}), 404
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Tempo esgotado na consulta'}), 504
+    except Exception as e:
+        return jsonify({'error': 'Erro ao consultar CNPJ'}), 500
+
 # ==================== API DASHBOARD ====================
 
 @app.route('/api/dashboard')
