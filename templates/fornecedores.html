@@ -232,124 +232,149 @@
             optionsTipos += `<option value="${t.id}" ${selected}>${t.nome}</option>`;
         });
 
+        const estadoOpts = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+            .map(uf => `<option value="${uf}" ${fornecedor && fornecedor.estado === uf ? 'selected' : ''}>${uf}</option>`).join('');
+
+        const v = f => fornecedor ? (fornecedor[f] || '') : '';
+        const sel = (f, val) => fornecedor && fornecedor[f] === val ? 'selected' : '';
+
         const content = `
             <form id="formFornecedor" onsubmit="salvarFornecedor(event, ${fornecedor ? fornecedor.id : 'null'})">
 
-                ${!isEdit ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
-                    <i class="fas fa-magic" style="color:#2563eb;font-size:1rem;"></i>
-                    <div style="font-size:0.8rem;color:#1e40af;">
-                        <strong>Preenchimento automático:</strong> Digite o CNPJ e clique em <strong>Consultar</strong> para preencher os dados automaticamente.
-                    </div>
+                ${!isEdit ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:11px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+                    <i class="fas fa-magic" style="color:#2563eb;"></i>
+                    <span style="font-size:0.79rem;color:#1e40af;"><strong>Preenchimento automático via CNPJ:</strong> Digite o CNPJ e clique em <strong>Consultar</strong>.</span>
                 </div>` : ''}
 
+                <!-- CNPJ + CPF -->
                 <div class="grid-2">
-                    <div class="form-group" style="margin:0;">
+                    <div class="form-group" style="margin:0 0 12px;">
                         <label>CNPJ</label>
                         <div style="display:flex;gap:6px;">
                             <input type="text" class="form-control" name="cnpj" id="inputCnpj"
-                                value="${fornecedor ? fornecedor.cnpj : ''}"
-                                placeholder="00.000.000/0001-00"
-                                oninput="formatarCnpj(this)"
-                                style="flex:1;">
+                                value="${v('cnpj')}" placeholder="00.000.000/0001-00"
+                                oninput="formatarCnpj(this)" style="flex:1;">
                             ${!isEdit ? `<button type="button" id="btnConsultarCnpj" onclick="consultarCnpj()"
                                 style="white-space:nowrap;padding:0 14px;background:#2563eb;color:white;border:none;
-                                       border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600;
-                                       display:flex;align-items:center;gap:6px;transition:background 0.15s;"
-                                onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+                                       border-radius:8px;cursor:pointer;font-size:0.79rem;font-weight:700;
+                                       display:flex;align-items:center;gap:6px;">
                                 <i class="fas fa-search" id="iconConsultar"></i> Consultar
                             </button>` : ''}
                         </div>
                     </div>
-                    <div class="form-group" style="margin:0;">
+                    <div class="form-group" style="margin:0 0 12px;">
                         <label>CPF</label>
-                        <input type="text" class="form-control" name="cpf" value="${fornecedor ? fornecedor.cpf : ''}" placeholder="000.000.000-00">
+                        <input type="text" class="form-control" name="cpf" value="${v('cpf')}" placeholder="000.000.000-00">
                     </div>
                 </div>
 
-                <div id="cnpjStatusMsg" style="display:none;margin:6px 0 12px;font-size:0.78rem;border-radius:8px;padding:8px 12px;"></div>
+                <!-- Status da consulta -->
+                <div id="cnpjStatusMsg" style="display:none;margin:-4px 0 12px;font-size:0.78rem;border-radius:8px;padding:8px 12px;"></div>
 
-                <div class="form-group">
-                    <label>Nome/Razão Social *</label>
-                    <input type="text" class="form-control" name="nome" id="inputNome" value="${fornecedor ? fornecedor.nome : ''}" required>
+                <!-- Card Receita Federal (aparece após consulta) -->
+                <div id="receitaCard" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+                    <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:8px;">
+                        <i class="fas fa-landmark"></i> Dados da Receita Federal
+                    </div>
+                    <div id="receitaInfos" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
                 </div>
+
+                <!-- Razão Social + Nome Fantasia -->
                 <div class="grid-2">
-                    <div class="form-group">
+                    <div class="form-group" style="margin:0 0 12px;">
+                        <label>Nome/Razão Social *</label>
+                        <input type="text" class="form-control" name="nome" id="inputNome" value="${v('nome')}" required>
+                    </div>
+                    <div class="form-group" style="margin:0 0 12px;">
+                        <label>Nome Fantasia</label>
+                        <input type="text" class="form-control" name="nome_fantasia" id="inputFantasia" value="${v('nome_fantasia')}" placeholder="Nome comercial">
+                    </div>
+                </div>
+
+                <!-- Telefone + Email -->
+                <div class="grid-2">
+                    <div class="form-group" style="margin:0 0 12px;">
                         <label>Telefone</label>
-                        <input type="text" class="form-control" name="telefone" id="inputTelefone" value="${fornecedor ? fornecedor.telefone : ''}" placeholder="(00) 00000-0000">
+                        <input type="text" class="form-control" name="telefone" id="inputTelefone" value="${v('telefone')}" placeholder="(00) 00000-0000">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="margin:0 0 12px;">
                         <label>Email</label>
-                        <input type="email" class="form-control" name="email" id="inputEmail" value="${fornecedor ? fornecedor.email : ''}">
+                        <input type="email" class="form-control" name="email" id="inputEmail" value="${v('email')}">
                     </div>
                 </div>
-                <div class="form-group">
+
+                <!-- Endereço -->
+                <div class="form-group" style="margin:0 0 12px;">
                     <label>Endereço</label>
-                    <input type="text" class="form-control" name="endereco" id="inputEndereco" value="${fornecedor ? fornecedor.endereco : ''}">
+                    <input type="text" class="form-control" name="endereco" id="inputEndereco" value="${v('endereco')}" placeholder="Rua, número, complemento">
                 </div>
+
+                <!-- Bairro + CEP -->
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>Cidade</label>
-                        <input type="text" class="form-control" name="cidade" id="inputCidade" value="${fornecedor ? fornecedor.cidade : ''}">
+                    <div class="form-group" style="margin:0 0 12px;">
+                        <label>Bairro</label>
+                        <input type="text" class="form-control" name="bairro" id="inputBairro" value="${v('bairro')}">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="margin:0 0 12px;">
+                        <label>CEP</label>
+                        <input type="text" class="form-control" name="cep" id="inputCep" value="${v('cep')}" placeholder="00000-000">
+                    </div>
+                </div>
+
+                <!-- Cidade + Estado -->
+                <div class="grid-2">
+                    <div class="form-group" style="margin:0 0 12px;">
+                        <label>Cidade</label>
+                        <input type="text" class="form-control" name="cidade" id="inputCidade" value="${v('cidade')}">
+                    </div>
+                    <div class="form-group" style="margin:0 0 12px;">
                         <label>Estado</label>
                         <select class="form-control" name="estado" id="selectEstado">
-                            <option value="">Selecione</option>
-                            <option value="AC" ${fornecedor && fornecedor.estado === 'AC' ? 'selected' : ''}>AC</option>
-                            <option value="AL" ${fornecedor && fornecedor.estado === 'AL' ? 'selected' : ''}>AL</option>
-                            <option value="AP" ${fornecedor && fornecedor.estado === 'AP' ? 'selected' : ''}>AP</option>
-                            <option value="AM" ${fornecedor && fornecedor.estado === 'AM' ? 'selected' : ''}>AM</option>
-                            <option value="BA" ${fornecedor && fornecedor.estado === 'BA' ? 'selected' : ''}>BA</option>
-                            <option value="CE" ${fornecedor && fornecedor.estado === 'CE' ? 'selected' : ''}>CE</option>
-                            <option value="DF" ${fornecedor && fornecedor.estado === 'DF' ? 'selected' : ''}>DF</option>
-                            <option value="ES" ${fornecedor && fornecedor.estado === 'ES' ? 'selected' : ''}>ES</option>
-                            <option value="GO" ${fornecedor && fornecedor.estado === 'GO' ? 'selected' : ''}>GO</option>
-                            <option value="MA" ${fornecedor && fornecedor.estado === 'MA' ? 'selected' : ''}>MA</option>
-                            <option value="MT" ${fornecedor && fornecedor.estado === 'MT' ? 'selected' : ''}>MT</option>
-                            <option value="MS" ${fornecedor && fornecedor.estado === 'MS' ? 'selected' : ''}>MS</option>
-                            <option value="MG" ${fornecedor && fornecedor.estado === 'MG' ? 'selected' : ''}>MG</option>
-                            <option value="PA" ${fornecedor && fornecedor.estado === 'PA' ? 'selected' : ''}>PA</option>
-                            <option value="PB" ${fornecedor && fornecedor.estado === 'PB' ? 'selected' : ''}>PB</option>
-                            <option value="PR" ${fornecedor && fornecedor.estado === 'PR' ? 'selected' : ''}>PR</option>
-                            <option value="PE" ${fornecedor && fornecedor.estado === 'PE' ? 'selected' : ''}>PE</option>
-                            <option value="PI" ${fornecedor && fornecedor.estado === 'PI' ? 'selected' : ''}>PI</option>
-                            <option value="RJ" ${fornecedor && fornecedor.estado === 'RJ' ? 'selected' : ''}>RJ</option>
-                            <option value="RN" ${fornecedor && fornecedor.estado === 'RN' ? 'selected' : ''}>RN</option>
-                            <option value="RS" ${fornecedor && fornecedor.estado === 'RS' ? 'selected' : ''}>RS</option>
-                            <option value="RO" ${fornecedor && fornecedor.estado === 'RO' ? 'selected' : ''}>RO</option>
-                            <option value="RR" ${fornecedor && fornecedor.estado === 'RR' ? 'selected' : ''}>RR</option>
-                            <option value="SC" ${fornecedor && fornecedor.estado === 'SC' ? 'selected' : ''}>SC</option>
-                            <option value="SP" ${fornecedor && fornecedor.estado === 'SP' ? 'selected' : ''}>SP</option>
-                            <option value="SE" ${fornecedor && fornecedor.estado === 'SE' ? 'selected' : ''}>SE</option>
-                            <option value="TO" ${fornecedor && fornecedor.estado === 'TO' ? 'selected' : ''}>TO</option>
+                            <option value="">Selecione</option>${estadoOpts}
                         </select>
                     </div>
                 </div>
+
+                <!-- Tipo + Responsável -->
                 <div class="grid-2">
-                    <div class="form-group">
+                    <div class="form-group" style="margin:0 0 12px;">
                         <label>Tipo de Fornecedor *</label>
                         <select class="form-control" name="tipo_id" required>
                             ${optionsTipos}
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>Responsável</label>
-                        <input type="text" class="form-control" name="responsavel" value="${fornecedor ? fornecedor.responsavel : ''}">
+                    <div class="form-group" style="margin:0 0 12px;">
+                        <label>Responsável / Sócio</label>
+                        <input type="text" class="form-control" name="responsavel" id="inputResponsavel" value="${v('responsavel')}">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Status</label>
-                    <select class="form-control" name="status">
-                        <option value="ativo" ${fornecedor && fornecedor.status === 'ativo' ? 'selected' : ''}>Ativo</option>
-                        <option value="inativo" ${fornecedor && fornecedor.status === 'inativo' ? 'selected' : ''}>Inativo</option>
-                    </select>
+
+                <!-- Data Fundação + Status -->
+                <div class="grid-2">
+                    <div class="form-group" style="margin:0 0 12px;">
+                        <label>Data de Fundação</label>
+                        <input type="date" class="form-control" name="data_fundacao" id="inputFundacao" value="${v('data_fundacao') ? v('data_fundacao').split('T')[0] : ''}">
+                    </div>
+                    <div class="form-group" style="margin:0 0 12px;">
+                        <label>Status</label>
+                        <select class="form-control" name="status">
+                            <option value="ativo" ${sel('status','ativo') || (!fornecedor ? 'selected' : '')}>Ativo</option>
+                            <option value="inativo" ${sel('status','inativo')}>Inativo</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
+
+                <!-- Situação Receita (hidden field) -->
+                <input type="hidden" name="situacao_receita" id="inputSituacaoReceita" value="${v('situacao_receita')}">
+
+                <!-- Observações -->
+                <div class="form-group" style="margin:0 0 16px;">
                     <label>Observações</label>
-                    <textarea class="form-control" name="observacoes" rows="3">${fornecedor ? fornecedor.observacoes : ''}</textarea>
+                    <textarea class="form-control" name="observacoes" rows="2">${v('observacoes')}</textarea>
                 </div>
-                <div style="text-align: right; margin-top: 20px;">
-                    <button type="button" class="btn btn-secondary" onclick="fecharModal()" style="margin-right: 10px;">Cancelar</button>
+
+                <div style="text-align:right;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()" style="margin-right:10px;">Cancelar</button>
                     <button type="submit" class="btn btn-primary">${isEdit ? 'Atualizar' : 'Cadastrar'}</button>
                 </div>
             </form>
@@ -494,64 +519,82 @@
 
     async function consultarCnpj() {
         const cnpjInput = document.getElementById('inputCnpj');
-        const btn = document.getElementById('btnConsultarCnpj');
-        const icon = document.getElementById('iconConsultar');
-        const msg = document.getElementById('cnpjStatusMsg');
+        const btn       = document.getElementById('btnConsultarCnpj');
+        const icon      = document.getElementById('iconConsultar');
+        const msg       = document.getElementById('cnpjStatusMsg');
 
         const cnpj = (cnpjInput.value || '').replace(/\D/g, '');
         if (cnpj.length !== 14) {
-            msg.style.display = 'block';
-            msg.style.background = '#fef3c7';
-            msg.style.border = '1px solid #f59e0b';
-            msg.style.color = '#92400e';
-            msg.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Digite um CNPJ completo (14 dígitos) antes de consultar.';
+            _cnpjMsg(msg, 'warn', '<i class="fas fa-exclamation-triangle"></i> Digite um CNPJ completo (14 dígitos) antes de consultar.');
             return;
         }
 
         btn.disabled = true;
         icon.className = 'fas fa-spinner fa-spin';
-        msg.style.display = 'block';
-        msg.style.background = '#f1f5f9';
-        msg.style.border = '1px solid #e2e8f0';
-        msg.style.color = '#64748b';
-        msg.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Consultando Receita Federal...';
+        _cnpjMsg(msg, 'info', '<i class="fas fa-circle-notch fa-spin"></i> Consultando Receita Federal...');
 
         try {
             const resp = await fetch(`/api/consulta-cnpj/${cnpj}`);
-            const data = await resp.json();
+            const d = await resp.json();
 
             if (!resp.ok) {
-                msg.style.background = '#fef2f2';
-                msg.style.border = '1px solid #fecaca';
-                msg.style.color = '#dc2626';
-                msg.innerHTML = `<i class="fas fa-times-circle"></i> ${data.error || 'CNPJ não encontrado.'}`;
+                _cnpjMsg(msg, 'error', `<i class="fas fa-times-circle"></i> ${d.error || 'CNPJ não encontrado.'}`);
                 return;
             }
 
             // Preencher campos
-            if (data.nome) document.getElementById('inputNome').value = data.nome;
-            if (data.telefone) document.getElementById('inputTelefone').value = data.telefone;
-            if (data.email) document.getElementById('inputEmail').value = data.email;
-            if (data.endereco) document.getElementById('inputEndereco').value = data.endereco;
-            if (data.cidade) document.getElementById('inputCidade').value = data.cidade;
-            if (data.estado) document.getElementById('selectEstado').value = data.estado;
-            if (data.cnpj_formatado) cnpjInput.value = data.cnpj_formatado;
+            const set = (id, val) => { if (val && document.getElementById(id)) document.getElementById(id).value = val; };
+            set('inputNome',           d.nome);
+            set('inputFantasia',       d.nome_fantasia);
+            set('inputTelefone',       d.telefone);
+            set('inputEmail',          d.email);
+            set('inputEndereco',       d.endereco);
+            set('inputBairro',         d.bairro);
+            set('inputCep',            d.cep);
+            set('inputCidade',         d.cidade);
+            set('inputResponsavel',    d.responsavel_principal);
+            set('inputSituacaoReceita',d.situacao_receita);
+            if (d.data_fundacao) set('inputFundacao', d.data_fundacao);
+            if (d.estado) document.getElementById('selectEstado').value = d.estado;
+            if (d.cnpj_formatado) cnpjInput.value = d.cnpj_formatado;
 
-            const preenchidos = [data.nome, data.telefone, data.email, data.endereco, data.cidade].filter(Boolean).length;
-            msg.style.background = '#f0fdf4';
-            msg.style.border = '1px solid #86efac';
-            msg.style.color = '#15803d';
-            msg.innerHTML = `<i class="fas fa-check-circle"></i> Dados importados com sucesso! ${preenchidos} campo(s) preenchido(s) automaticamente. Revise e ajuste se necessário.`;
+            // Card Receita Federal
+            const situacaoOk = (d.situacao_receita || '').toUpperCase() === 'ATIVA';
+            const chips = [
+                d.situacao_receita ? `<span style="background:${situacaoOk?'#dcfce7':'#fee2e2'};color:${situacaoOk?'#15803d':'#dc2626'};border:1px solid ${situacaoOk?'#86efac':'#fca5a5'};padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+                    <i class="fas fa-${situacaoOk?'check':'times'}-circle"></i> ${d.situacao_receita}</span>` : '',
+                d.porte ? `<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;">Porte: ${d.porte}</span>` : '',
+                d.simples ? `<span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;"><i class="fas fa-star"></i> Simples Nacional</span>` : '',
+                d.data_fundacao ? `<span style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;"><i class="fas fa-calendar"></i> Fundação: ${d.data_fundacao.split('-').reverse().join('/')}</span>` : '',
+                d.atividade ? `<span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 10px;border-radius:20px;font-size:0.71rem;"><i class="fas fa-briefcase"></i> ${d.atividade.length > 50 ? d.atividade.slice(0,50)+'…' : d.atividade}</span>` : '',
+            ].filter(Boolean);
+
+            if (chips.length) {
+                document.getElementById('receitaCard').style.display = 'block';
+                document.getElementById('receitaInfos').innerHTML = chips.join('');
+            }
+
+            const preenchidos = [d.nome, d.telefone, d.email, d.endereco, d.cidade].filter(Boolean).length;
+            _cnpjMsg(msg, 'success', `<i class="fas fa-check-circle"></i> ${preenchidos} campo(s) preenchido(s) automaticamente. Revise e ajuste se necessário.`);
 
         } catch (e) {
-            msg.style.background = '#fef2f2';
-            msg.style.border = '1px solid #fecaca';
-            msg.style.color = '#dc2626';
-            msg.innerHTML = '<i class="fas fa-times-circle"></i> Erro de conexão ao consultar CNPJ.';
+            _cnpjMsg(msg, 'error', '<i class="fas fa-times-circle"></i> Erro de conexão ao consultar CNPJ.');
         } finally {
             btn.disabled = false;
             icon.className = 'fas fa-search';
         }
+    }
+
+    function _cnpjMsg(el, tipo, html) {
+        const estilos = {
+            warn:    ['#fef3c7','#f59e0b','#92400e'],
+            info:    ['#f1f5f9','#e2e8f0','#64748b'],
+            success: ['#f0fdf4','#86efac','#15803d'],
+            error:   ['#fef2f2','#fecaca','#dc2626'],
+        };
+        const [bg, border, color] = estilos[tipo] || estilos.info;
+        el.style.cssText = `display:block;margin:-4px 0 12px;font-size:0.78rem;border-radius:8px;padding:8px 12px;background:${bg};border:1px solid ${border};color:${color};`;
+        el.innerHTML = html;
     }
 
     window.addEventListener('load', carregarDados);

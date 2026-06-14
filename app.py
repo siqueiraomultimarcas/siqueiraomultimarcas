@@ -180,6 +180,8 @@ def init_db():
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS versao TEXT")
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS crlv_url TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS numero_auto TEXT")
+    for col, tipo in [('cep','TEXT'), ('bairro','TEXT'), ('nome_fantasia','TEXT'), ('data_fundacao','DATE'), ('situacao_receita','TEXT'), ('responsavel_principal','TEXT')]:
+        cur.execute(f"ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS {col} {tipo}")
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS abastecimentos (
@@ -1340,12 +1342,14 @@ def add_fornecedor():
     conn = get_conn()
     cur = conn.cursor()
     cur.execute('''
-        INSERT INTO fornecedores (nome, cnpj, cpf, telefone, email, endereco, cidade, estado, tipo_id, responsavel, status, observacoes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO fornecedores (nome, cnpj, cpf, telefone, email, endereco, bairro, cep, cidade, estado,
+            tipo_id, responsavel, nome_fantasia, data_fundacao, situacao_receita, status, observacoes)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ''', (data['nome'], data.get('cnpj'), data.get('cpf'), data.get('telefone'),
-          data.get('email'), data.get('endereco'), data.get('cidade'),
-          data.get('estado'), data.get('tipo_id'), data.get('responsavel'),
-          data.get('status', 'ativo'), data.get('observacoes')))
+          data.get('email'), data.get('endereco'), data.get('bairro'), data.get('cep'),
+          data.get('cidade'), data.get('estado'), data.get('tipo_id'), data.get('responsavel'),
+          data.get('nome_fantasia'), data.get('data_fundacao') or None,
+          data.get('situacao_receita'), data.get('status', 'ativo'), data.get('observacoes')))
     conn.commit()
     cur.close()
     conn.close()
@@ -1359,12 +1363,14 @@ def update_fornecedor(id):
     conn = get_conn()
     cur = conn.cursor()
     cur.execute('''
-        UPDATE fornecedores SET nome=%s, cnpj=%s, cpf=%s, telefone=%s, email=%s, endereco=%s,
-        cidade=%s, estado=%s, tipo_id=%s, responsavel=%s, status=%s, observacoes=%s WHERE id=%s
+        UPDATE fornecedores SET nome=%s, cnpj=%s, cpf=%s, telefone=%s, email=%s,
+        endereco=%s, bairro=%s, cep=%s, cidade=%s, estado=%s, tipo_id=%s, responsavel=%s,
+        nome_fantasia=%s, data_fundacao=%s, situacao_receita=%s, status=%s, observacoes=%s WHERE id=%s
     ''', (data['nome'], data.get('cnpj'), data.get('cpf'), data.get('telefone'),
-          data.get('email'), data.get('endereco'), data.get('cidade'),
-          data.get('estado'), data.get('tipo_id'), data.get('responsavel'),
-          data.get('status'), data.get('observacoes'), id))
+          data.get('email'), data.get('endereco'), data.get('bairro'), data.get('cep'),
+          data.get('cidade'), data.get('estado'), data.get('tipo_id'), data.get('responsavel'),
+          data.get('nome_fantasia'), data.get('data_fundacao') or None,
+          data.get('situacao_receita'), data.get('status'), data.get('observacoes'), id))
     conn.commit()
     cur.close()
     conn.close()
@@ -1437,28 +1443,56 @@ def consulta_cnpj(cnpj):
         )
         if resp.status_code == 200:
             d = resp.json()
-            telefone = d.get('ddd_telefone_1', '')
-            if telefone:
-                telefone = re.sub(r'\D', '', telefone)
-                if len(telefone) == 10:
-                    telefone = f'({telefone[:2]}) {telefone[2:6]}-{telefone[6:]}'
-                elif len(telefone) == 11:
-                    telefone = f'({telefone[:2]}) {telefone[2:7]}-{telefone[7:]}'
+
+            def fmt_fone(raw):
+                n = re.sub(r'\D', '', raw or '')
+                if len(n) == 10: return f'({n[:2]}) {n[2:6]}-{n[6:]}'
+                if len(n) == 11: return f'({n[:2]}) {n[2:7]}-{n[7:]}'
+                return n
+
+            def fmt_cep(raw):
+                n = re.sub(r'\D', '', raw or '')
+                return f'{n[:5]}-{n[5:]}' if len(n) == 8 else n
+
             endereco_parts = [
                 d.get('logradouro', ''),
                 d.get('numero', ''),
                 d.get('complemento', '')
             ]
             endereco = ', '.join(p for p in endereco_parts if p and p.strip())
+
+            data_fundacao = None
+            if d.get('data_inicio_atividade'):
+                try:
+                    data_fundacao = str(d['data_inicio_atividade'])[:10]
+                except Exception:
+                    pass
+
+            socio_principal = ''
+            qsa = d.get('qsa') or []
+            if qsa:
+                socio_principal = qsa[0].get('nome_socio', '') or qsa[0].get('nome_representante_legal', '')
+
+            situacao = d.get('descricao_situacao_cadastral', '')
+
             return jsonify({
-                'nome': d.get('razao_social') or d.get('nome_fantasia') or '',
-                'fantasia': d.get('nome_fantasia') or '',
+                'nome': d.get('razao_social') or '',
+                'nome_fantasia': d.get('nome_fantasia') or '',
                 'email': (d.get('email') or '').lower(),
-                'telefone': telefone,
+                'telefone': fmt_fone(d.get('ddd_telefone_1', '')),
+                'telefone2': fmt_fone(d.get('ddd_telefone_2', '')),
                 'endereco': endereco,
+                'bairro': d.get('bairro') or '',
                 'cidade': d.get('municipio') or '',
                 'estado': d.get('uf') or '',
-                'cnpj_formatado': f'{cnpj_clean[:2]}.{cnpj_clean[2:5]}.{cnpj_clean[5:8]}/{cnpj_clean[8:12]}-{cnpj_clean[12:]}'
+                'cep': fmt_cep(d.get('cep', '')),
+                'data_fundacao': data_fundacao,
+                'responsavel_principal': socio_principal,
+                'situacao_receita': situacao,
+                'cnpj_formatado': f'{cnpj_clean[:2]}.{cnpj_clean[2:5]}.{cnpj_clean[5:8]}/{cnpj_clean[8:12]}-{cnpj_clean[12:]}',
+                'atividade': d.get('cnae_fiscal_descricao') or '',
+                'porte': d.get('descricao_porte') or '',
+                'simples': d.get('opcao_pelo_simples', False),
             })
         return jsonify({'error': 'CNPJ não encontrado na Receita Federal'}), 404
     except requests.exceptions.Timeout:
