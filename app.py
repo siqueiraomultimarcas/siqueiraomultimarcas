@@ -1921,6 +1921,11 @@ def delete_usuario(id):
     return jsonify({'success': True})
 
 
-if __name__ == '__main__':
+# Roda migrations no cold start do Vercel (e também localmente via __main__)
+try:
     init_db()
+except Exception as _e:
+    print(f'[init_db] {_e}')
+
+if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
