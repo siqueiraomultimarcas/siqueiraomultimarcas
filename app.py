@@ -1004,11 +1004,14 @@ def update_manutencao(id):
     cur.execute('''
         UPDATE manutencoes SET veiculo_id=%s, tipo=%s, descricao=%s, data_manutencao=%s,
         km_manutencao=%s, custo=%s, oficina=%s, proxima_manutencao_km=%s,
-        proxima_manutencao_data=%s, status=%s WHERE id=%s
+        proxima_manutencao_data=%s, status=%s, fornecedor_id=%s, numero_pedido=%s, itens_json=%s
+        WHERE id=%s
     ''', (data.get('veiculo_id'), data.get('tipo'), data.get('descricao'),
-          data.get('data_manutencao'), data.get('km_manutencao'), data.get('custo'),
+          data.get('data_manutencao') or None, data.get('km_manutencao'), data.get('custo'),
           data.get('oficina'), data.get('proxima_manutencao_km'),
-          data.get('proxima_manutencao_data'), data.get('status'), id))
+          data.get('proxima_manutencao_data') or None, data.get('status'),
+          data.get('fornecedor_id') or None, data.get('numero_pedido') or None,
+          data.get('itens_json') or None, id))
 
     if data.get('km_manutencao'):
         cur.execute('UPDATE veiculos SET km_atual = %s WHERE id = %s',
