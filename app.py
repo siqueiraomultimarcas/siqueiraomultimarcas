@@ -1097,156 +1097,145 @@ def importar_manutencao_pdf():
         else:
             result['km'] = None
 
-        # ─── ITENS — tenta tabela pdfplumber primeiro (mais confiável) ───
+        # ─── ITENS ───────────────────────────────────────────────────────────────────────────
         def _monetario(s):
-            """Converte string '1.234,56' ou '1234,56' para float."""
             s = (s or '').strip().replace('.', '').replace(',', '.')
             try:
                 return float(s)
             except Exception:
                 return None
 
-        def _extrair_itens_tabela(table):
-            """Extrai itens usando detecção de colunas pelo cabeçalho (mais confiável)."""
-            itens_t = []
-            # Localiza linha de cabeçalho com "DESCRI"
-            header_idx = 0
-            for i, row in enumerate(table[:5]):
-                cells = [str(c or '').upper().strip() for c in (row or [])]
-                if any('DESCRI' in c for c in cells):
-                    header_idx = i
-                    break
-            header = [str(c or '').upper().strip() for c in table[header_idx]]
-
-            def _col(keywords):
-                for i, h in enumerate(header):
-                    if any(kw in h for kw in keywords):
-                        return i
-                return -1
-
-            idx_desc  = _col(['DESCRI'])
-            idx_total = _col(['TOTAL'])
-            idx_unit_price = _col(['UNIT'])   # "Unit.R$"
-            idx_qty   = _col(['QUANT', 'QTD', 'QT.'])
-            idx_un    = _col([' UN', 'UN.', 'UNID'])  # "Un" (short)
-            # fallback: primeira coluna "UN" se nenhum match
-            if idx_un < 0:
-                idx_un = _col(['UN'])
-
-            if idx_desc < 0 or idx_total < 0:
-                return []
-
-            for row in table[header_idx + 1:]:
-                if not row or not row[0]:
-                    continue
-                row_str = [str(c or '').strip() for c in row]
-                # Primeira célula: nº sequência ("1") ou "1 125" (item+código juntos)
-                if not re.match(r'^\d{1,3}(\s+\S.*)?$', row_str[0]):
-                    continue
-                try:
-                    desc = row_str[idx_desc] if idx_desc < len(row_str) else ''
-                    if not desc or re.match(r'^[\d.,]+$', desc):
-                        continue
-
-                    total = _monetario(row_str[idx_total] if idx_total < len(row_str) else '') or 0.0
-                    if total <= 0:
-                        continue
-
-                    unit_price = total
-                    if idx_unit_price >= 0 and idx_unit_price < len(row_str):
-                        unit_price = _monetario(row_str[idx_unit_price]) or total
-
-                    qty = 1.0
-                    if idx_qty >= 0 and idx_qty < len(row_str):
-                        qty = _monetario(row_str[idx_qty]) or 1.0
-
-                    unit = ''
-                    if idx_un >= 0 and idx_un < len(row_str):
-                        u = row_str[idx_un]
-                        if u and not re.match(r'^[\d.,]+$', u) and len(u) <= 8:
-                            unit = u
-
-                    # Código: segunda célula se for apenas dígitos
-                    codigo = row_str[1] if len(row_str) > 1 and re.match(r'^\d+$', row_str[1]) else ''
-
-                    itens_t.append({
-                        'codigo': codigo,
-                        'descricao': desc,
-                        'quantidade': qty,
-                        'unidade': unit,
-                        'valor_unitario': unit_price,
-                        'valor_total': total
-                    })
-                except Exception:
-                    pass
-            return itens_t
+        # Localiza bloco de itens no texto
+        m_ini_it = re.search(r'ITENS\s+DO\s+PEDIDO|ITENS\s+DO\s+OR|ITENS\s+DA\s+OS', all_text, re.IGNORECASE)
+        m_fim_it = re.search(r'Totalizadores|TOTAL\s+GERAL|Total\s+da\s+OS|Subtotal', all_text, re.IGNORECASE)
+        bloco_itens = all_text[m_ini_it.end():m_fim_it.start()] if (m_ini_it and m_fim_it) else all_text
 
         itens = []
-        for table in all_tables:
-            if not table or len(table) < 2:
-                continue
-            t_itens = _extrair_itens_tabela(table)
-            if t_itens:
-                itens = t_itens
-                break
 
-        # Fallback A: regex texto entre "ITENS DO PEDIDO" e "Totalizadores"
-        # Aceita qualquer palavra como unidade e desconto opcional
+        # Estrategia 1 (PRIMARIA): regex especifico para distribuidoras brasileiras
+        # Formato: <seq> <cod_num> <desc> <qtd>,XX <unidade_letras> <desc%>,XX <unit>,XX <total>,XX
+        re_br = re.compile(
+            r'^\s*(\d{1,3})\s+(\d+)\s+'
+            r'(.+?)\s+'
+            r'(\d+,\d{2})\s+'
+            r'([A-Za-z\u00e7\u00c7\u00e3\u00c3\u00e1\u00e9\u00ed\u00f3\u00fa\u00e2\u00ea\u00f4\u00e0\u00f5]{1,6})\s+'
+            r'\d+,\d{2}\s+'
+            r'(\d+,\d{2})\s+'
+            r'(\d+,\d{2})',
+            re.MULTILINE | re.IGNORECASE
+        )
+        for mi in re_br.finditer(bloco_itens):
+            try:
+                total_v = float(mi.group(7).replace(',', '.'))
+                if total_v <= 0:
+                    continue
+                itens.append({
+                    'codigo': mi.group(2),
+                    'descricao': mi.group(3).strip(),
+                    'quantidade': float(mi.group(4).replace(',', '.')),
+                    'unidade': mi.group(5),
+                    'valor_unitario': float(mi.group(6).replace(',', '.')),
+                    'valor_total': total_v
+                })
+            except Exception:
+                pass
+
+        # Estrategia 2: sem exigir desc% explicito
         if not itens:
-            m_ini = re.search(r'ITENS DO PEDIDO', all_text, re.IGNORECASE)
-            m_fim = re.search(r'Totalizadores|TOTAL GERAL|Total da OS', all_text, re.IGNORECASE)
-            bloco_itens = all_text[m_ini.end():m_fim.start()] if (m_ini and m_fim) else all_text
-            item_re = re.compile(
-                r'^\s*(\d{1,3})\s+(\S+)\s+(.+?)\s+([\d]+[,][\d]+)\s+(\S{1,10})\s+(?:[\d.,]+\s+)?([\d]+[,][\d]+)\s+([\d]+[,][\d]+)',
+            re_gen = re.compile(
+                r'^\s*(\d{1,3})\s+(\d+)\s+'
+                r'(.+?)\s+'
+                r'(\d+,\d{2})\s+'
+                r'([A-Za-z\u00e7\u00c7\u00e3\u00c3\u00e1\u00e9\u00ed\u00f3\u00fa]{1,6})\s+'
+                r'(?:\d+,\d{2}\s+)?'
+                r'(\d+,\d{2})\s+'
+                r'(\d+,\d{2})',
                 re.MULTILINE | re.IGNORECASE
             )
-            for mi in item_re.finditer(bloco_itens):
+            for mi in re_gen.finditer(bloco_itens):
                 try:
+                    total_v = float(mi.group(7).replace(',', '.'))
+                    if total_v <= 0:
+                        continue
                     itens.append({
                         'codigo': mi.group(2),
                         'descricao': mi.group(3).strip(),
                         'quantidade': float(mi.group(4).replace(',', '.')),
                         'unidade': mi.group(5),
                         'valor_unitario': float(mi.group(6).replace(',', '.')),
-                        'valor_total': float(mi.group(7).replace(',', '.'))
+                        'valor_total': total_v
                     })
                 except Exception:
                     pass
 
-        # Fallback B: linhas com dois valores monetários (formato simples)
+        # Estrategia 3: tabela pdfplumber (fallback)
         if not itens:
-            m_ini2 = re.search(r'ITENS|SERVIÇOS|OS\s+ITEM', all_text, re.IGNORECASE)
-            m_fim2 = re.search(r'Total|Subtotal|TOTAL', all_text, re.IGNORECASE)
-            bloco2 = all_text[m_ini2.end():m_fim2.start()] if (m_ini2 and m_fim2) else all_text
-            simple_re = re.compile(
-                r'^(.{5,60}?)\s+([\d]+[,][\d]{2})\s+([\d]+[,][\d]{2})\s*$',
-                re.MULTILINE
-            )
-            for mi in simple_re.finditer(bloco2):
-                try:
-                    desc = mi.group(1).strip()
-                    if re.match(r'^[\d\s/.-]+$', desc):
+            for table in all_tables:
+                if not table or len(table) < 2:
+                    continue
+                h_idx = 0
+                for i, row in enumerate(table[:5]):
+                    if row and any('DESCRI' in str(c or '').upper() for c in row):
+                        h_idx = i
+                        break
+                header = [str(c or '').upper().strip() for c in table[h_idx]]
+                def _ci(keywords, exact=False):
+                    for i, h in enumerate(header):
+                        if exact:
+                            if h in [k.upper() for k in keywords]:
+                                return i
+                        else:
+                            if any(k.upper() in h for k in keywords):
+                                return i
+                    return -1
+                idx_d = _ci(['DESCRI'])
+                idx_t = _ci(['TOTAL R', 'TOTAL'])
+                idx_u = _ci(['UNIT'])
+                idx_q = _ci(['QUANT', 'QTD'])
+                idx_n = _ci(['UN'], exact=True)
+                if idx_d < 0 or idx_t < 0:
+                    continue
+                for row in table[h_idx + 1:]:
+                    if not row or not row[0]:
                         continue
-                    itens.append({
-                        'codigo': '',
-                        'descricao': desc,
-                        'quantidade': 1.0,
-                        'unidade': '',
-                        'valor_unitario': float(mi.group(2).replace(',', '.')),
-                        'valor_total': float(mi.group(3).replace(',', '.'))
-                    })
-                except Exception:
-                    pass
+                    rs = [str(c or '').strip() for c in row]
+                    if not re.match(r'^\d{1,3}(\s+\S.*)?$', rs[0]):
+                        continue
+                    try:
+                        desc = rs[idx_d] if idx_d < len(rs) else ''
+                        if not desc or re.match(r'^[\d.,]+$', desc):
+                            continue
+                        total_v = _monetario(rs[idx_t] if idx_t < len(rs) else '') or 0.0
+                        if total_v <= 0:
+                            continue
+                        u_price = _monetario(rs[idx_u] if idx_u >= 0 and idx_u < len(rs) else '') or total_v
+                        qty = _monetario(rs[idx_q] if idx_q >= 0 and idx_q < len(rs) else '') or 1.0
+                        un = rs[idx_n] if idx_n >= 0 and idx_n < len(rs) and not re.match(r'^[\d.,]+$', rs[idx_n]) else ''
+                        cod = rs[1] if len(rs) > 1 and re.match(r'^\d+$', rs[1]) else ''
+                        itens.append({'codigo': cod, 'descricao': desc, 'quantidade': qty,
+                                      'unidade': un, 'valor_unitario': u_price, 'valor_total': total_v})
+                    except Exception:
+                        pass
+                if itens:
+                    break
+
+        # Remove duplicatas mantendo ordem
+        vistos = set()
+        itens_ok = []
+        for it in itens:
+            chave = (it['descricao'].lower().strip(), round(it['valor_total'], 2))
+            if chave not in vistos and it['valor_total'] > 0:
+                vistos.add(chave)
+                itens_ok.append(it)
+        itens = itens_ok
 
         result['itens'] = itens
-        # Debug: primeiras linhas do bloco de itens extraído (para diagnóstico)
-        m_ini2 = re.search(r'ITENS DO PEDIDO', all_text, re.IGNORECASE)
-        m_fim2 = re.search(r'Totalizadores', all_text, re.IGNORECASE)
-        if m_ini2 and m_fim2:
-            bloco_debug = all_text[m_ini2.end():m_fim2.start()].strip()
-            result['_debug_bloco_itens'] = bloco_debug[:400]
+        result['_debug_bloco_itens'] = bloco_itens[:500] if bloco_itens else ''
         result['_debug_n_tabelas'] = len(all_tables)
-        result['_debug_text_inicio'] = all_text[:200]
+        result['_debug_text_inicio'] = all_text[:300]
+        result['_debug_table_headers'] = [
+            [str(c or '') for c in (t[0] if t else [])] for t in all_tables[:3]
+        ]
 
         # Total: soma dos itens (confiável) — evita bug do regex capturar nº de itens
         if itens:
