@@ -982,12 +982,12 @@ def add_manutencao():
     ''', (_int_or_none(data.get('veiculo_id')),
           data.get('tipo'),
           data.get('descricao') or None,
-          data.get('data_manutencao') or None,
+          _normalize_date(data.get('data_manutencao')),
           _int_or_none(data.get('km_manutencao')),
           _float_or_none(data.get('custo')),
           data.get('oficina') or None,
           _int_or_none(data.get('proxima_manutencao_km')),
-          data.get('proxima_manutencao_data') or None,
+          _normalize_date(data.get('proxima_manutencao_data')),
           data.get('status') or 'concluida',
           data.get('numero_pedido') or None,
           _int_or_none(data.get('fornecedor_id')),
@@ -1002,6 +1002,18 @@ def add_manutencao():
     cur.close()
     conn.close()
     return jsonify({'success': True})
+
+
+def _normalize_date(v):
+    if not v or str(v).strip() == '':
+        return None
+    s = str(v).strip()
+    if re.match(r'^\d{4}-\d{2}-\d{2}$', s):
+        return s
+    m = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})$', s)
+    if m:
+        return f'{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}'
+    return None
 
 
 def _int_or_none(v):
@@ -1035,12 +1047,12 @@ def update_manutencao(id):
     ''', (_int_or_none(data.get('veiculo_id')),
           data.get('tipo'),
           data.get('descricao') or None,
-          data.get('data_manutencao') or None,
+          _normalize_date(data.get('data_manutencao')),
           _int_or_none(data.get('km_manutencao')),
           _float_or_none(data.get('custo')),
           data.get('oficina') or None,
           _int_or_none(data.get('proxima_manutencao_km')),
-          data.get('proxima_manutencao_data') or None,
+          _normalize_date(data.get('proxima_manutencao_data')),
           data.get('status'),
           _int_or_none(data.get('fornecedor_id')),
           data.get('numero_pedido') or None,

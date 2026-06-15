@@ -94,6 +94,28 @@
     let fornecedores = [];
     let _itensFormManut = [];
 
+    // ─── Helpers de data (formato brasileiro) ────────────────────────────────
+    function _isoToBR(iso) {
+        if (!iso) return '';
+        const p = iso.split('-');
+        return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+    }
+    function _brToISO(br) {
+        if (!br) return '';
+        const p = br.replace(/[^\d]/g, '');
+        if (p.length === 8) return `${p.slice(4)}-${p.slice(2,4)}-${p.slice(0,2)}`;
+        const parts = br.split('/');
+        if (parts.length === 3 && parts[2].length === 4)
+            return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        return br; // já é ISO ou inválido
+    }
+    function _maskDate(el) {
+        let v = el.value.replace(/\D/g,'');
+        if (v.length >= 3) v = v.slice(0,2)+'/'+v.slice(2);
+        if (v.length >= 6) v = v.slice(0,5)+'/'+v.slice(5,9);
+        el.value = v;
+    }
+
     // ─── Helpers de itens do formulário ───────────────────────────────────────
     function adicionarItemManut() {
         _itensFormManut.push({ descricao: '', quantidade: 1, unidade: 'un', valor_unitario: 0, valor_total: 0 });
@@ -406,6 +428,7 @@
 
         const content = `
             <form id="formManutencao" onsubmit="salvarManutencao(event, ${manutencao ? manutencao.id : 'null'})">
+                <input type="hidden" name="numero_pedido" value="${manutencao ? (manutencao.numero_pedido||'') : ''}">
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Veículo *</label>
@@ -428,11 +451,29 @@
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Data da Manutenção</label>
-                        <input type="date" class="form-control" name="data_manutencao" value="${manutencao ? (manutencao.data_manutencao||'') : ''}">
+                        <input type="text" class="form-control" name="data_manutencao"
+                            value="${manutencao && manutencao.data_manutencao ? _isoToBR(manutencao.data_manutencao) : ''}"
+                            placeholder="dd/mm/aaaa" maxlength="10"
+                            oninput="_maskDate(this)">
                     </div>
                     <div class="form-group">
                         <label>Km da Manutenção</label>
                         <input type="number" class="form-control" name="km_manutencao" value="${manutencao ? (manutencao.km_manutencao||'') : ''}" min="0">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Pedido / NF</label>
+                        <input type="text" class="form-control" name="numero_pedido_vis"
+                            value="${manutencao ? (manutencao.numero_pedido||'') : ''}"
+                            placeholder="Nº do pedido ou nota fiscal"
+                            oninput="document.querySelector('#formManutencao [name=numero_pedido]').value=this.value">
+                    </div>
+                    <div class="form-group">
+                        <label>Custo Total (R$)</label>
+                        <input type="number" class="form-control" name="custo" id="custoManutInput"
+                            value="${manutencao ? (manutencao.custo||'') : ''}" step="0.01" min="0"
+                            placeholder="Preenchido automaticamente pelos itens">
                     </div>
                 </div>
 
@@ -466,26 +507,18 @@
                     </div>
                 </div>
 
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>Custo Total (R$)</label>
-                        <input type="number" class="form-control" name="custo" id="custoManutInput"
-                            value="${manutencao ? (manutencao.custo||'') : ''}" step="0.01" min="0"
-                            placeholder="Preenchido automaticamente pelos itens">
+                <div class="form-group">
+                    <label>Fornecedor</label>
+                    <div style="display:flex;gap:5px;">
+                        <select class="form-control" name="fornecedor_id" id="selectFornecedorManut" style="flex:1;">
+                            <option value="">Selecione o fornecedor</option>
+                            ${fornecedores.map(f => `<option value="${f.id}" ${manutencao && manutencao.fornecedor_id===f.id?'selected':''}>${f.nome}</option>`).join('')}
+                        </select>
+                        <button type="button" class="btn btn-primary" onclick="abrirModalNovoFornecedor()" style="padding:10px;" title="Novo fornecedor">
+                            <i class="fas fa-plus"></i>
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label>Fornecedor</label>
-                        <div style="display:flex;gap:5px;">
-                            <select class="form-control" name="fornecedor_id" id="selectFornecedorManut" style="flex:1;">
-                                <option value="">Selecione o fornecedor</option>
-                                ${fornecedores.map(f => `<option value="${f.id}" ${manutencao && manutencao.oficina===f.nome?'selected':''}>${f.nome}</option>`).join('')}
-                            </select>
-                            <button type="button" class="btn btn-primary" onclick="abrirModalNovoFornecedor()" style="padding:10px;" title="Novo fornecedor">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                        <input type="hidden" name="oficina" id="oficinaInput" value="${manutencao ? (manutencao.oficina||'') : ''}">
-                    </div>
+                    <input type="hidden" name="oficina" id="oficinaInput" value="${manutencao ? (manutencao.oficina||'') : ''}">
                 </div>
                 <div class="form-group">
                     <label>Observação / Descrição Geral</label>
@@ -506,7 +539,9 @@
                     </div>
                     <div class="form-group">
                         <label>Próxima Manutenção (Data)</label>
-                        <input type="date" class="form-control" name="proxima_manutencao_data" value="${manutencao ? (manutencao.proxima_manutencao_data||'') : ''}">
+                        <input type="text" class="form-control" name="proxima_manutencao_data"
+                            value="${manutencao && manutencao.proxima_manutencao_data ? _isoToBR(manutencao.proxima_manutencao_data) : ''}"
+                            placeholder="dd/mm/aaaa" maxlength="10" oninput="_maskDate(this)">
                     </div>
                 </div>
                 <div style="text-align:right;margin-top:20px;">
@@ -525,6 +560,13 @@
         const form = document.getElementById('formManutencao');
         const formData = new FormData(form);
         const data = Object.fromEntries(formData);
+
+        // Campo auxiliar visível do pedido — não enviar para backend
+        delete data.numero_pedido_vis;
+
+        // Converter datas de dd/mm/aaaa → yyyy-mm-dd
+        if (data.data_manutencao) data.data_manutencao = _brToISO(data.data_manutencao) || null;
+        if (data.proxima_manutencao_data) data.proxima_manutencao_data = _brToISO(data.proxima_manutencao_data) || null;
 
         // Converter valores numéricos
         if (data.veiculo_id) data.veiculo_id = parseInt(data.veiculo_id);
