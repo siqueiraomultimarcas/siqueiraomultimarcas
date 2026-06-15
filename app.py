@@ -2290,16 +2290,20 @@ def delete_usuario(id):
     return jsonify({'success': True})
 
 
-# ==================== PROXY FIPE (BrasilAPI) ====================
+# ==================== PROXY FIPE (Parallelum) ====================
+# BrasilAPI FIPE está fora do ar (403 no upstream); usando fipe.parallelum.com.br
 
-_BRASILAPI = 'https://brasilapi.com.br/api/fipe'
+_PARALLELUM = 'https://fipe.parallelum.com.br/api/v2'
+_FIPE_TIPO  = {'carros': 'cars', 'motos': 'motorcycles', 'caminhoes': 'trucks'}
 
 @app.route('/api/fipe/marcas/<tipo>')
 @login_required
 def fipe_marcas(tipo):
     try:
-        r = requests.get(f'{_BRASILAPI}/marcas/v1/{tipo}', timeout=10)
-        return jsonify(r.json()), r.status_code
+        t = _FIPE_TIPO.get(tipo, 'cars')
+        r = requests.get(f'{_PARALLELUM}/{t}/brands', timeout=10)
+        data = r.json()
+        return jsonify([{'valor': str(m['code']), 'nome': m['name']} for m in data])
     except Exception as e:
         return jsonify({'error': str(e)}), 503
 
@@ -2307,8 +2311,10 @@ def fipe_marcas(tipo):
 @login_required
 def fipe_modelos(marca):
     try:
-        r = requests.get(f'{_BRASILAPI}/veiculos/v1/{marca}', timeout=10)
-        return jsonify(r.json()), r.status_code
+        t = _FIPE_TIPO.get(request.args.get('tipo', 'carros'), 'cars')
+        r = requests.get(f'{_PARALLELUM}/{t}/brands/{marca}/models', timeout=10)
+        data = r.json()
+        return jsonify([{'valor': str(m['code']), 'modelo': m['name']} for m in data])
     except Exception as e:
         return jsonify({'error': str(e)}), 503
 
@@ -2316,8 +2322,10 @@ def fipe_modelos(marca):
 @login_required
 def fipe_anos(marca, modelo):
     try:
-        r = requests.get(f'{_BRASILAPI}/anos/v1/{marca}/{modelo}', timeout=10)
-        return jsonify(r.json()), r.status_code
+        t = _FIPE_TIPO.get(request.args.get('tipo', 'carros'), 'cars')
+        r = requests.get(f'{_PARALLELUM}/{t}/brands/{marca}/models/{modelo}/years', timeout=10)
+        data = r.json()
+        return jsonify([{'valor': str(a['code']), 'nome': a['name']} for a in data])
     except Exception as e:
         return jsonify({'error': str(e)}), 503
 
@@ -2325,8 +2333,15 @@ def fipe_anos(marca, modelo):
 @login_required
 def fipe_preco(marca, modelo, ano):
     try:
-        r = requests.get(f'{_BRASILAPI}/preco/v1/{marca}/{modelo}/{ano}', timeout=10)
-        return jsonify(r.json()), r.status_code
+        t = _FIPE_TIPO.get(request.args.get('tipo', 'carros'), 'cars')
+        r = requests.get(f'{_PARALLELUM}/{t}/brands/{marca}/models/{modelo}/years/{ano}', timeout=10)
+        d = r.json()
+        return jsonify({
+            'valor':        d.get('price', ''),
+            'codigoFipe':   d.get('codeFipe', ''),
+            'mesReferencia':d.get('referenceMonth', ''),
+            'modelo':       d.get('model', ''),
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 503
 

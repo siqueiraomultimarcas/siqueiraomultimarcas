@@ -942,7 +942,8 @@ async function fipeCarregarModelos(autoModelo='') {
     document.getElementById('fipeAno').disabled  = true;
     document.getElementById('fipeResultado').innerHTML = '';
     try {
-        const modelos = await (await fetch(`${_FIPE}/modelos/${marca}`)).json();
+        const tipo = document.getElementById('fipeTipo').value;
+        const modelos = await (await fetch(`${_FIPE}/modelos/${marca}?tipo=${tipo}`)).json();
         sel.innerHTML = '<option value="">Selecione o modelo</option>' +
             modelos.map(m => `<option value="${m.valor}">${m.modelo}</option>`).join('');
         sel.disabled = false;
@@ -977,7 +978,8 @@ async function fipeCarregarAnos() {
     sel.innerHTML = '<option>Carregando...</option>';
     document.getElementById('fipeResultado').innerHTML = '';
     try {
-        const anos = await (await fetch(`${_FIPE}/anos/${marca}/${modelo}`)).json();
+        const tipo = document.getElementById('fipeTipo').value;
+        const anos = await (await fetch(`${_FIPE}/anos/${marca}/${modelo}?tipo=${tipo}`)).json();
         sel.innerHTML = '<option value="">Selecione o ano</option>' +
             anos.map(a => `<option value="${a.valor}">${a.nome}</option>`).join('');
         sel.disabled = false;
@@ -996,7 +998,8 @@ async function fipeBuscarPreco() {
     res.innerHTML = '<span style="color:#94a3b8;font-size:0.8rem;"><i class="fas fa-spinner fa-spin"></i> Consultando...</span>';
 
     try {
-        const d = await (await fetch(`${_FIPE}/preco/${marca}/${modelo}/${ano}`)).json();
+        const tipo = document.getElementById('fipeTipo').value;
+        const d = await (await fetch(`${_FIPE}/preco/${marca}/${modelo}/${ano}?tipo=${tipo}`)).json();
         if (d.erro || !d.valor) throw new Error('sem dado');
 
         const valorNum = parseFloat(d.valor.replace('R$','').trim().replace(/\./g,'').replace(',','.'));
