@@ -92,6 +92,86 @@
     let manutencoes = [];
     let veiculos = [];
     let fornecedores = [];
+    let _itensFormManut = [];
+
+    // ─── Helpers de itens do formulário ───────────────────────────────────────
+    function adicionarItemManut() {
+        _itensFormManut.push({ descricao: '', quantidade: 1, unidade: 'un', valor_unitario: 0, valor_total: 0 });
+        _renderItensManut();
+    }
+    function removerItemManut(idx) {
+        _itensFormManut.splice(idx, 1);
+        _renderItensManut();
+    }
+    function _updateItemManut(idx, field, value) {
+        const item = _itensFormManut[idx];
+        if (!item) return;
+        if (field === 'descricao' || field === 'unidade') {
+            item[field] = value;
+        } else {
+            item[field] = parseFloat(value) || 0;
+            item.valor_total = parseFloat(((item.quantidade || 0) * (item.valor_unitario || 0)).toFixed(2));
+        }
+        _syncCustoFromItens();
+        // Atualiza só o total da linha e o rodapé, sem re-renderizar (evita perda de foco)
+        const totalCell = document.getElementById('itemTotal_' + idx);
+        if (totalCell) totalCell.textContent = formatCurrency(item.valor_total);
+        _updateTotalManut();
+    }
+    function _syncCustoFromItens() {
+        if (_itensFormManut.length === 0) return;
+        const total = _itensFormManut.reduce((s, it) => s + (it.valor_total || 0), 0);
+        const custoInput = document.querySelector('#formManutencao [name="custo"]');
+        if (custoInput) custoInput.value = total.toFixed(2);
+    }
+    function _updateTotalManut() {
+        const total = _itensFormManut.reduce((s, it) => s + (it.valor_total || 0), 0);
+        const el = document.getElementById('itensManutTotalVal');
+        if (el) el.textContent = formatCurrency(total);
+        const footer = document.getElementById('itensManutFooter');
+        if (footer) footer.style.display = _itensFormManut.length > 0 ? 'flex' : 'none';
+    }
+    function _renderItensManut() {
+        const tbody = document.getElementById('itensManutBody');
+        if (!tbody) return;
+        if (_itensFormManut.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:18px;color:#94a3b8;font-size:0.8rem;"><i class="fas fa-plus-circle" style="margin-right:5px;"></i>Nenhum item. Clique em "+ Item" para adicionar.</td></tr>`;
+        } else {
+            tbody.innerHTML = _itensFormManut.map((it, idx) => `
+                <tr style="border-top:1px solid #f1f5f9;">
+                    <td style="padding:5px 6px;">
+                        <input type="text" value="${(it.descricao||'').replace(/"/g,'&quot;')}"
+                            oninput="_itensFormManut[${idx}].descricao=this.value"
+                            style="width:100%;border:1px solid #e2e8f0;border-radius:5px;padding:5px 7px;font-size:0.8rem;outline:none;"
+                            placeholder="Descrição do item">
+                    </td>
+                    <td style="padding:5px 4px;">
+                        <input type="number" value="${it.quantidade||1}" min="0.01" step="0.01"
+                            onchange="_updateItemManut(${idx},'quantidade',this.value)"
+                            style="width:62px;border:1px solid #e2e8f0;border-radius:5px;padding:5px 4px;font-size:0.8rem;text-align:center;outline:none;">
+                    </td>
+                    <td style="padding:5px 4px;">
+                        <input type="text" value="${it.unidade||''}"
+                            oninput="_itensFormManut[${idx}].unidade=this.value"
+                            style="width:44px;border:1px solid #e2e8f0;border-radius:5px;padding:5px 4px;font-size:0.8rem;text-align:center;outline:none;"
+                            placeholder="un">
+                    </td>
+                    <td style="padding:5px 4px;">
+                        <input type="number" value="${it.valor_unitario||0}" min="0" step="0.01"
+                            onchange="_updateItemManut(${idx},'valor_unitario',this.value)"
+                            style="width:88px;border:1px solid #e2e8f0;border-radius:5px;padding:5px 4px;font-size:0.8rem;text-align:right;outline:none;">
+                    </td>
+                    <td id="itemTotal_${idx}" style="padding:5px 8px;text-align:right;font-weight:700;color:#059669;font-size:0.82rem;white-space:nowrap;">
+                        ${formatCurrency(it.valor_total)}
+                    </td>
+                    <td style="padding:5px 4px;text-align:center;">
+                        <button type="button" onclick="removerItemManut(${idx})"
+                            style="background:#fee2e2;color:#dc2626;border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:1rem;line-height:1;" title="Remover">×</button>
+                    </td>
+                </tr>`).join('');
+        }
+        _updateTotalManut();
+    }
     
     // Carregar dados
     async function carregarDados() {
@@ -314,95 +394,130 @@
     
     function abrirModalManutencao(manutencao = null) {
         const isEdit = manutencao !== null;
-        
-        // Options de veículos
+
+        // Inicializa itens do formulário
+        _itensFormManut = isEdit ? (_parseItens(manutencao)) : [];
+
         let optionsVeiculos = '<option value="">Selecione o veículo</option>';
         veiculos.forEach(v => {
             const selected = manutencao && manutencao.veiculo_id === v.id ? 'selected' : '';
             optionsVeiculos += `<option value="${v.id}" ${selected}>${v.placa} - ${v.marca} ${v.modelo}</option>`;
         });
-        
+
         const content = `
             <form id="formManutencao" onsubmit="salvarManutencao(event, ${manutencao ? manutencao.id : 'null'})">
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Veículo *</label>
-                        <select class="form-control" name="veiculo_id" required>
-                            ${optionsVeiculos}
-                        </select>
+                        <select class="form-control" name="veiculo_id" required>${optionsVeiculos}</select>
                     </div>
                     <div class="form-group">
                         <label>Tipo *</label>
                         <select class="form-control" name="tipo" required>
                             <option value="">Selecione</option>
-                            <option value="Preventiva" ${manutencao && manutencao.tipo === 'Preventiva' ? 'selected' : ''}>Preventiva</option>
-                            <option value="Corretiva" ${manutencao && manutencao.tipo === 'Corretiva' ? 'selected' : ''}>Corretiva</option>
-                            <option value="Óleo" ${manutencao && manutencao.tipo === 'Óleo' ? 'selected' : ''}>Óleo</option>
-                            <option value="Pneus" ${manutencao && manutencao.tipo === 'Pneus' ? 'selected' : ''}>Pneus</option>
-                            <option value="Freios" ${manutencao && manutencao.tipo === 'Freios' ? 'selected' : ''}>Freios</option>
-                            <option value="Filtros" ${manutencao && manutencao.tipo === 'Filtros' ? 'selected' : ''}>Filtros</option>
-                            <option value="Revisão" ${manutencao && manutencao.tipo === 'Revisão' ? 'selected' : ''}>Revisão</option>
+                            <option value="Preventiva" ${manutencao && manutencao.tipo==='Preventiva'?'selected':''}>Preventiva</option>
+                            <option value="Corretiva" ${manutencao && manutencao.tipo==='Corretiva'?'selected':''}>Corretiva</option>
+                            <option value="Óleo" ${manutencao && manutencao.tipo==='Óleo'?'selected':''}>Óleo</option>
+                            <option value="Pneus" ${manutencao && manutencao.tipo==='Pneus'?'selected':''}>Pneus</option>
+                            <option value="Freios" ${manutencao && manutencao.tipo==='Freios'?'selected':''}>Freios</option>
+                            <option value="Filtros" ${manutencao && manutencao.tipo==='Filtros'?'selected':''}>Filtros</option>
+                            <option value="Revisão" ${manutencao && manutencao.tipo==='Revisão'?'selected':''}>Revisão</option>
                         </select>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Descrição</label>
-                    <input type="text" class="form-control" name="descricao" value="${manutencao ? manutencao.descricao : ''}">
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Data da Manutenção</label>
-                        <input type="date" class="form-control" name="data_manutencao" value="${manutencao ? manutencao.data_manutencao : ''}">
+                        <input type="date" class="form-control" name="data_manutencao" value="${manutencao ? (manutencao.data_manutencao||'') : ''}">
                     </div>
                     <div class="form-group">
                         <label>Km da Manutenção</label>
-                        <input type="number" class="form-control" name="km_manutencao" value="${manutencao ? manutencao.km_manutencao : ''}" min="0">
+                        <input type="number" class="form-control" name="km_manutencao" value="${manutencao ? (manutencao.km_manutencao||'') : ''}" min="0">
                     </div>
                 </div>
+
+                <!-- ── Itens da manutenção ── -->
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                        <span>Itens da Manutenção</span>
+                        <button type="button" onclick="adicionarItemManut()"
+                            style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+                            <i class="fas fa-plus"></i> Item
+                        </button>
+                    </label>
+                    <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                        <table style="width:100%;border-collapse:collapse;">
+                            <thead>
+                                <tr style="background:#f8fafc;">
+                                    <th style="padding:8px 8px;text-align:left;font-size:0.72rem;font-weight:600;color:#475569;text-transform:uppercase;">Descrição</th>
+                                    <th style="padding:8px 4px;text-align:center;font-size:0.72rem;font-weight:600;color:#475569;text-transform:uppercase;width:62px;">Qtd</th>
+                                    <th style="padding:8px 4px;text-align:center;font-size:0.72rem;font-weight:600;color:#475569;text-transform:uppercase;width:44px;">Un</th>
+                                    <th style="padding:8px 4px;text-align:right;font-size:0.72rem;font-weight:600;color:#475569;text-transform:uppercase;width:88px;">Unit. R$</th>
+                                    <th style="padding:8px 6px;text-align:right;font-size:0.72rem;font-weight:600;color:#475569;text-transform:uppercase;width:90px;">Total</th>
+                                    <th style="width:30px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itensManutBody"></tbody>
+                        </table>
+                        <div id="itensManutFooter" style="display:none;justify-content:flex-end;align-items:center;gap:8px;padding:8px 12px;background:#f0fdf4;border-top:2px solid #bbf7d0;">
+                            <span style="font-size:0.8rem;color:#374151;font-weight:600;">Total dos Itens:</span>
+                            <span id="itensManutTotalVal" style="font-weight:800;color:#059669;font-size:1rem;">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="grid-2">
                     <div class="form-group">
-                        <label>Custo (R$)</label>
-                        <input type="number" class="form-control" name="custo" value="${manutencao ? manutencao.custo : ''}" step="0.01" min="0">
+                        <label>Custo Total (R$)</label>
+                        <input type="number" class="form-control" name="custo" id="custoManutInput"
+                            value="${manutencao ? (manutencao.custo||'') : ''}" step="0.01" min="0"
+                            placeholder="Preenchido automaticamente pelos itens">
                     </div>
                     <div class="form-group">
                         <label>Fornecedor</label>
-                        <div style="display: flex; gap: 5px;">
-                            <select class="form-control" name="fornecedor_id" id="selectFornecedorManut" style="flex: 1;">
+                        <div style="display:flex;gap:5px;">
+                            <select class="form-control" name="fornecedor_id" id="selectFornecedorManut" style="flex:1;">
                                 <option value="">Selecione o fornecedor</option>
-                                ${fornecedores.map(f => `<option value="${f.id}" ${manutencao && manutencao.oficina === f.nome ? 'selected' : ''}>${f.nome}</option>`).join('')}
+                                ${fornecedores.map(f => `<option value="${f.id}" ${manutencao && manutencao.oficina===f.nome?'selected':''}>${f.nome}</option>`).join('')}
                             </select>
-                            <button type="button" class="btn btn-primary" onclick="abrirModalNovoFornecedor()" title="Cadastrar novo fornecedor" style="padding: 10px;">
+                            <button type="button" class="btn btn-primary" onclick="abrirModalNovoFornecedor()" style="padding:10px;" title="Novo fornecedor">
                                 <i class="fas fa-plus"></i>
                             </button>
                         </div>
-                        <input type="hidden" name="oficina" id="oficinaInput" value="${manutencao ? manutencao.oficina : ''}">
+                        <input type="hidden" name="oficina" id="oficinaInput" value="${manutencao ? (manutencao.oficina||'') : ''}">
                     </div>
+                </div>
+                <div class="form-group">
+                    <label>Observação / Descrição Geral</label>
+                    <input type="text" class="form-control" name="descricao" value="${manutencao ? (manutencao.descricao||'') : ''}" placeholder="Observações adicionais">
                 </div>
                 <div class="form-group">
                     <label>Status</label>
                     <select class="form-control" name="status">
-                        <option value="concluida" ${manutencao && manutencao.status === 'concluida' ? 'selected' : ''}>Concluída</option>
-                        <option value="pendente" ${manutencao && manutencao.status === 'pendente' ? 'selected' : ''}>Pendente</option>
-                        <option value="andamento" ${manutencao && manutencao.status === 'andamento' ? 'selected' : ''}>Em Andamento</option>
+                        <option value="concluida" ${manutencao && manutencao.status==='concluida'?'selected':''}>Concluída</option>
+                        <option value="pendente" ${manutencao && manutencao.status==='pendente'?'selected':''}>Pendente</option>
+                        <option value="andamento" ${manutencao && manutencao.status==='andamento'?'selected':''}>Em Andamento</option>
                     </select>
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Próxima Manutenção (Km)</label>
-                        <input type="number" class="form-control" name="proxima_manutencao_km" value="${manutencao ? manutencao.proxima_manutencao_km : ''}" min="0">
+                        <input type="number" class="form-control" name="proxima_manutencao_km" value="${manutencao ? (manutencao.proxima_manutencao_km||'') : ''}" min="0">
                     </div>
                     <div class="form-group">
                         <label>Próxima Manutenção (Data)</label>
-                        <input type="date" class="form-control" name="proxima_manutencao_data" value="${manutencao ? manutencao.proxima_manutencao_data : ''}">
+                        <input type="date" class="form-control" name="proxima_manutencao_data" value="${manutencao ? (manutencao.proxima_manutencao_data||'') : ''}">
                     </div>
                 </div>
-                <div style="text-align: right; margin-top: 20px;">
-                    <button type="button" class="btn btn-secondary" onclick="fecharModal()" style="margin-right: 10px;">Cancelar</button>
+                <div style="text-align:right;margin-top:20px;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()" style="margin-right:10px;">Cancelar</button>
                     <button type="submit" class="btn btn-primary">${isEdit ? 'Atualizar' : 'Cadastrar'}</button>
                 </div>
             </form>
         `;
         abrirModal(isEdit ? 'Editar Manutenção' : 'Nova Manutenção', content);
+        // Renderiza itens após modal aparecer no DOM
+        setTimeout(_renderItensManut, 10);
     }
     
     async function salvarManutencao(e, id) {
@@ -410,17 +525,26 @@
         const form = document.getElementById('formManutencao');
         const formData = new FormData(form);
         const data = Object.fromEntries(formData);
-        
-        // Converter valores
+
+        // Converter valores numéricos
         if (data.veiculo_id) data.veiculo_id = parseInt(data.veiculo_id);
         if (data.km_manutencao) data.km_manutencao = parseInt(data.km_manutencao);
         if (data.custo) data.custo = parseFloat(data.custo);
         if (data.proxima_manutencao_km) data.proxima_manutencao_km = parseInt(data.proxima_manutencao_km);
-        
+
+        // Incluir itens (filtra linhas sem descrição)
+        const itensValidos = _itensFormManut.filter(it => (it.descricao || '').trim());
+        if (itensValidos.length > 0) {
+            data.itens_json = JSON.stringify(itensValidos);
+            if (!data.custo) {
+                data.custo = parseFloat(itensValidos.reduce((s, it) => s + (it.valor_total || 0), 0).toFixed(2));
+            }
+        }
+
         try {
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/manutencoes/${id}` : '/api/manutencoes';
-            
+
             const response = await fetch(url, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },

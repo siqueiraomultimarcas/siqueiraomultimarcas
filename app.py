@@ -1107,53 +1107,70 @@ def importar_manutencao_pdf():
                 return None
 
         def _extrair_itens_tabela(table):
-            """Extrai itens de uma tabela pdfplumber de forma flexível."""
+            """Extrai itens usando detecção de colunas pelo cabeçalho (mais confiável)."""
             itens_t = []
-            # Encontra a primeira linha de dados (pula cabeçalho)
-            start = 0
-            for i, row in enumerate(table[:4]):
+            # Localiza linha de cabeçalho com "DESCRI"
+            header_idx = 0
+            for i, row in enumerate(table[:5]):
                 cells = [str(c or '').upper().strip() for c in (row or [])]
                 if any('DESCRI' in c for c in cells):
-                    start = i + 1
+                    header_idx = i
                     break
-            for row in table[start:]:
+            header = [str(c or '').upper().strip() for c in table[header_idx]]
+
+            def _col(keywords):
+                for i, h in enumerate(header):
+                    if any(kw in h for kw in keywords):
+                        return i
+                return -1
+
+            idx_desc  = _col(['DESCRI'])
+            idx_total = _col(['TOTAL'])
+            idx_unit_price = _col(['UNIT'])   # "Unit.R$"
+            idx_qty   = _col(['QUANT', 'QTD', 'QT.'])
+            idx_un    = _col([' UN', 'UN.', 'UNID'])  # "Un" (short)
+            # fallback: primeira coluna "UN" se nenhum match
+            if idx_un < 0:
+                idx_un = _col(['UN'])
+
+            if idx_desc < 0 or idx_total < 0:
+                return []
+
+            for row in table[header_idx + 1:]:
                 if not row or not row[0]:
                     continue
                 row_str = [str(c or '').strip() for c in row]
-                if not re.match(r'^\d{1,3}$', row_str[0]):
+                # Primeira célula: nº sequência ("1") ou "1 125" (item+código juntos)
+                if not re.match(r'^\d{1,3}(\s+\S.*)?$', row_str[0]):
                     continue
-                # Coleta todos os valores monetários da linha
-                monetary = [(i, _monetario(c)) for i, c in enumerate(row_str)
-                            if re.match(r'^[\d.]*\d,\d{2}$', c.strip())]
-                if len(monetary) < 1:
-                    continue
-                total = monetary[-1][1]
-                unit_price = monetary[-2][1] if len(monetary) >= 2 else total
-                # Descrição = célula de texto mais longa
-                desc = max(
-                    (c for c in row_str[1:] if c and not re.match(r'^[\d.,]+$', c)),
-                    key=len, default=''
-                )
-                if not desc:
-                    continue
-                # Quantidade = primeiro número com vírgula antes da descrição
-                qty = 1.0
-                for c in row_str[1:]:
-                    if re.match(r'^\d+[,\.]\d+$', c):
-                        try:
-                            qty = float(c.replace(',', '.'))
-                            break
-                        except Exception:
-                            pass
-                # Unidade = palavra curta (≤ 6 chars) sem dígitos
-                unit = ''
-                for c in row_str[1:]:
-                    if re.match(r'^[A-Za-zÀ-ú]{1,6}$', c):
-                        unit = c
-                        break
                 try:
+                    desc = row_str[idx_desc] if idx_desc < len(row_str) else ''
+                    if not desc or re.match(r'^[\d.,]+$', desc):
+                        continue
+
+                    total = _monetario(row_str[idx_total] if idx_total < len(row_str) else '') or 0.0
+                    if total <= 0:
+                        continue
+
+                    unit_price = total
+                    if idx_unit_price >= 0 and idx_unit_price < len(row_str):
+                        unit_price = _monetario(row_str[idx_unit_price]) or total
+
+                    qty = 1.0
+                    if idx_qty >= 0 and idx_qty < len(row_str):
+                        qty = _monetario(row_str[idx_qty]) or 1.0
+
+                    unit = ''
+                    if idx_un >= 0 and idx_un < len(row_str):
+                        u = row_str[idx_un]
+                        if u and not re.match(r'^[\d.,]+$', u) and len(u) <= 8:
+                            unit = u
+
+                    # Código: segunda célula se for apenas dígitos
+                    codigo = row_str[1] if len(row_str) > 1 and re.match(r'^\d+$', row_str[1]) else ''
+
                     itens_t.append({
-                        'codigo': row_str[1] if not re.match(r'^[\d.]*\d,\d{2}$', row_str[1]) and row_str[1] != desc else '',
+                        'codigo': codigo,
                         'descricao': desc,
                         'quantidade': qty,
                         'unidade': unit,
