@@ -8,7 +8,10 @@
         <h1><i class="fas fa-tools"></i> Controle de Manutenções</h1>
         <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Controle de manutenções preventivas e corretivas</p>
     </div>
-    <div style="display:flex;gap:10px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="abrirHistorico()" style="display:flex;align-items:center;gap:6px;">
+            <i class="fas fa-search"></i> Histórico por Placa
+        </button>
         <button class="btn btn-secondary" onclick="abrirImportar()" style="display:flex;align-items:center;gap:6px;">
             <i class="fas fa-file-import"></i> Importar Manutenção
         </button>
@@ -192,7 +195,7 @@
                     <td style="white-space:nowrap;">${formatDate(m.data_manutencao)}</td>
                     <td>
                         ${pedidoBadge}
-                        <span style="font-weight:600;color:#1e293b;">${m.placa || '-'}</span>
+                        <span style="font-weight:600;color:#2563eb;cursor:pointer;text-decoration:underline;" onclick="buscarHistorico('${m.placa}')" title="Ver histórico do veículo">${m.placa || '-'}</span>
                         <span style="color:#64748b;font-size:0.8rem;"> ${m.marca || ''} ${m.modelo || ''}</span>
                     </td>
                     <td>${m.tipo}</td>
@@ -551,6 +554,158 @@
     
     window.addEventListener('load', carregarDados);
 
+    // ==================== HISTÓRICO POR PLACA ====================
+
+    function abrirHistorico(placaInicial) {
+        document.getElementById('modalHistorico').style.display = 'flex';
+        document.getElementById('histResultado').style.display = 'none';
+        document.getElementById('histEmpty').style.display = 'none';
+        document.getElementById('histLoading').style.display = 'none';
+        const input = document.getElementById('histPlacaInput');
+        // Preencher datalist com veículos cadastrados
+        const dl = document.getElementById('histPlacaList');
+        dl.innerHTML = veiculos.map(v => `<option value="${v.placa}">${v.placa} — ${v.marca} ${v.modelo}</option>`).join('');
+        if (placaInicial) {
+            input.value = placaInicial;
+            executarBuscaHistorico(placaInicial);
+        } else {
+            input.value = '';
+            input.focus();
+        }
+    }
+
+    function fecharHistorico() {
+        document.getElementById('modalHistorico').style.display = 'none';
+    }
+
+    function buscarHistorico(placa) {
+        abrirHistorico(placa);
+    }
+
+    async function executarBuscaHistorico(placa) {
+        if (!placa) return;
+        document.getElementById('histResultado').style.display = 'none';
+        document.getElementById('histEmpty').style.display = 'none';
+        document.getElementById('histLoading').style.display = 'flex';
+
+        try {
+            const resp = await fetch(`/api/historico-veiculo/${encodeURIComponent(placa.toUpperCase())}`);
+            if (!resp.ok) {
+                document.getElementById('histLoading').style.display = 'none';
+                document.getElementById('histEmpty').style.display = 'block';
+                return;
+            }
+            const data = await resp.json();
+            document.getElementById('histLoading').style.display = 'none';
+            _renderHistorico(data);
+        } catch(e) {
+            document.getElementById('histLoading').style.display = 'none';
+            document.getElementById('histEmpty').style.display = 'block';
+        }
+    }
+
+    function _renderHistorico(data) {
+        const v = data.veiculo;
+        const lista = data.manutencoes || [];
+
+        // KPIs
+        const totalGeral = lista.reduce((s, m) => s + (parseFloat(m.custo) || 0), 0);
+        const ultimoKm = lista.reduce((max, m) => Math.max(max, m.km_manutencao || 0), 0);
+        document.getElementById('histKpiManut').textContent = lista.length;
+        document.getElementById('histKpiTotal').textContent = formatCurrency(totalGeral);
+        document.getElementById('histKpiKm').textContent = (ultimoKm || v.km_atual || 0).toLocaleString() + ' km';
+
+        // Header do veículo
+        const statusColors = {disponivel:'#059669',alugado:'#2563eb',manutencao:'#d97706',inativo:'#dc2626'};
+        const statusLabels = {disponivel:'Disponível',alugado:'Locado',manutencao:'Manutenção',inativo:'Inativo'};
+        const st = v.status || 'disponivel';
+        document.getElementById('histVeicInfo').innerHTML = `
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                <div>
+                    <span style="font-size:1.4rem;font-weight:800;color:#fff;letter-spacing:.05em;">${v.placa}</span>
+                    <span style="margin-left:10px;background:${statusColors[st]||'#64748b'};color:#fff;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;">${statusLabels[st]||st}</span>
+                </div>
+                <div style="color:#94a3b8;font-size:0.85rem;">
+                    ${v.marca||''} ${v.modelo||''} &nbsp;·&nbsp; ${v.ano_fabricacao||v.ano||''} &nbsp;·&nbsp;
+                    <strong style="color:#60a5fa;">Km atual: ${(v.km_atual||0).toLocaleString()}</strong>
+                    ${v.cor ? `&nbsp;·&nbsp; ${v.cor}` : ''}
+                    ${v.combustivel ? `&nbsp;·&nbsp; ${v.combustivel}` : ''}
+                </div>
+            </div>`;
+
+        // Lista de manutenções
+        if (lista.length === 0) {
+            document.getElementById('histLista').innerHTML = `
+                <div style="text-align:center;padding:48px;color:#94a3b8;">
+                    <i class="fas fa-tools" style="font-size:2.5rem;display:block;margin-bottom:12px;"></i>
+                    Nenhuma manutenção registrada para este veículo.
+                </div>`;
+        } else {
+            document.getElementById('histLista').innerHTML = lista.map(m => {
+                const itens = _parseItens(m);
+                const temItens = itens.length > 0;
+                const itensHtml = temItens
+                    ? `<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+                            <thead><tr style="color:#94a3b8;">
+                                <th style="text-align:left;padding:4px 8px;font-weight:600;">Descrição</th>
+                                <th style="text-align:center;padding:4px 8px;font-weight:600;width:60px;">Qtd</th>
+                                <th style="text-align:center;padding:4px 8px;font-weight:600;width:40px;">Un</th>
+                                <th style="text-align:right;padding:4px 8px;font-weight:600;width:90px;">Unitário</th>
+                                <th style="text-align:right;padding:4px 8px;font-weight:600;width:90px;">Total</th>
+                            </tr></thead>
+                            <tbody>
+                                ${itens.map((it,idx) => `
+                                <tr style="border-top:1px solid rgba(255,255,255,0.06);${idx%2===0?'':'background:rgba(255,255,255,0.03);'}">
+                                    <td style="padding:7px 8px;color:#e2e8f0;">${it.descricao}${it.codigo?` <span style="color:#64748b;font-size:0.7rem;">${it.codigo}</span>`:''}</td>
+                                    <td style="padding:7px 8px;text-align:center;color:#94a3b8;">${(it.quantidade||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+                                    <td style="padding:7px 8px;text-align:center;color:#64748b;font-size:0.72rem;">${it.unidade||''}</td>
+                                    <td style="padding:7px 8px;text-align:right;color:#94a3b8;">${formatCurrency(it.valor_unitario)}</td>
+                                    <td style="padding:7px 8px;text-align:right;font-weight:700;color:#34d399;">${formatCurrency(it.valor_total)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                            <tfoot><tr style="border-top:1px solid rgba(255,255,255,0.15);">
+                                <td colspan="4" style="padding:8px 8px;color:#94a3b8;font-weight:600;">Total</td>
+                                <td style="padding:8px 8px;text-align:right;font-weight:800;color:#34d399;font-size:0.95rem;">${formatCurrency(m.custo)}</td>
+                            </tr></tfoot>
+                        </table>
+                    </div>`
+                    : (m.descricao ? `<div style="margin-top:8px;font-size:0.82rem;color:#94a3b8;">${m.descricao}</div>` : '');
+
+                const badgeStatus = {concluida:'#059669',pendente:'#d97706',andamento:'#2563eb'};
+                const labelStatus = {concluida:'Concluída',pendente:'Pendente',andamento:'Em Andamento'};
+                const st2 = m.status || 'concluida';
+
+                return `
+                <div class="hist-card">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                        <div style="flex:1;">
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+                                ${m.numero_pedido ? `<span style="background:#1e3a5f;color:#60a5fa;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:12px;border:1px solid #2563eb40;">Pedido Nº ${m.numero_pedido}</span>` : ''}
+                                <span style="background:${badgeStatus[st2]||'#64748b'}22;color:${badgeStatus[st2]||'#94a3b8'};font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:12px;">${labelStatus[st2]||st2}</span>
+                                <span style="background:#1e293b;color:#94a3b8;font-size:0.7rem;font-weight:600;padding:3px 10px;border-radius:12px;">${m.tipo}</span>
+                            </div>
+                            <div style="font-weight:700;color:#f1f5f9;font-size:0.95rem;">${m.oficina || 'Sem fornecedor'}</div>
+                        </div>
+                        <div style="text-align:right;flex-shrink:0;">
+                            <div style="font-size:0.75rem;color:#64748b;">${formatDate(m.data_manutencao)}</div>
+                            <div style="font-weight:800;color:#34d399;font-size:1.05rem;">${formatCurrency(m.custo)}</div>
+                            ${m.km_manutencao ? `<div style="font-size:0.72rem;color:#64748b;">${m.km_manutencao.toLocaleString()} km</div>` : ''}
+                        </div>
+                    </div>
+                    ${itensHtml}
+                    <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
+                        <button class="btn btn-sm" style="background:rgba(255,255,255,0.08);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);font-size:0.75rem;" onclick="fecharHistorico();editarManutencao(${m.id})">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        document.getElementById('histResultado').style.display = 'block';
+    }
+
     // ==================== IMPORTAR MANUTENÇÃO ====================
     let _importDadosPDF = null;
 
@@ -776,6 +931,85 @@
         }
     }
 </script>
+
+<!-- ==================== MODAL HISTÓRICO DO VEÍCULO ==================== -->
+<div id="modalHistorico" style="display:none;position:fixed;inset:0;background:rgba(10,14,26,0.85);z-index:9998;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 16px;">
+    <div style="background:#0f172a;border-radius:16px;width:100%;max-width:960px;box-shadow:0 30px 60px rgba(0,0,0,0.6);overflow:hidden;border:1px solid #1e293b;">
+
+        <!-- Header -->
+        <div style="background:#0a0f1e;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e293b;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:38px;height:38px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-history" style="color:#fff;"></i>
+                </div>
+                <div>
+                    <div style="color:#f1f5f9;font-weight:700;font-size:1rem;">Histórico do Veículo</div>
+                    <div style="color:#475569;font-size:0.73rem;">Todos os serviços e manutenções registrados</div>
+                </div>
+            </div>
+            <button onclick="fecharHistorico()" style="background:#1e293b;border:none;color:#94a3b8;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:.15s;" onmouseover="this.style.background='#334155'" onmouseout="this.style.background='#1e293b'">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Search bar -->
+        <div style="padding:16px 24px;background:#0d1526;border-bottom:1px solid #1e293b;display:flex;gap:10px;align-items:center;">
+            <div style="position:relative;flex:1;">
+                <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#475569;font-size:0.85rem;pointer-events:none;"></i>
+                <input type="text" id="histPlacaInput" list="histPlacaList" placeholder="Digite a placa (ex: MLZ0G37)..."
+                    style="width:100%;padding:10px 12px 10px 36px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#f1f5f9;font-size:0.9rem;font-weight:600;letter-spacing:.05em;outline:none;box-sizing:border-box;"
+                    oninput="this.value=this.value.toUpperCase()"
+                    onkeydown="if(event.key==='Enter') executarBuscaHistorico(this.value)">
+                <datalist id="histPlacaList"></datalist>
+            </div>
+            <button onclick="executarBuscaHistorico(document.getElementById('histPlacaInput').value)"
+                style="padding:10px 20px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.85rem;display:flex;align-items:center;gap:6px;">
+                <i class="fas fa-search"></i> Buscar
+            </button>
+        </div>
+
+        <!-- Vehicle info bar (populated by JS) -->
+        <div id="histResultado" style="display:none;">
+            <div id="histVeicInfo" style="padding:14px 24px;background:linear-gradient(135deg,#0f172a,#162032);border-bottom:1px solid #1e293b;"></div>
+
+            <!-- KPIs -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid #1e293b;">
+                <div style="padding:14px 24px;border-right:1px solid #1e293b;text-align:center;">
+                    <div style="font-size:0.62rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Manutenções</div>
+                    <div id="histKpiManut" style="font-size:1.6rem;font-weight:800;color:#60a5fa;">0</div>
+                </div>
+                <div style="padding:14px 24px;border-right:1px solid #1e293b;text-align:center;">
+                    <div style="font-size:0.62rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Valor Total Gasto</div>
+                    <div id="histKpiTotal" style="font-size:1.4rem;font-weight:800;color:#34d399;">R$ 0,00</div>
+                </div>
+                <div style="padding:14px 24px;text-align:center;">
+                    <div style="font-size:0.62rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Último Km Registrado</div>
+                    <div id="histKpiKm" style="font-size:1.4rem;font-weight:800;color:#fb923c;">0 km</div>
+                </div>
+            </div>
+
+            <!-- Records list -->
+            <div id="histLista" style="padding:16px 24px;max-height:520px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;"></div>
+        </div>
+
+        <!-- Loading -->
+        <div id="histLoading" style="display:none;padding:64px;flex-direction:column;align-items:center;gap:16px;">
+            <div style="width:48px;height:48px;border:3px solid #1e293b;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite;"></div>
+            <div style="color:#94a3b8;font-size:0.85rem;">Buscando histórico...</div>
+        </div>
+
+        <!-- Empty state -->
+        <div id="histEmpty" style="display:none;padding:64px;text-align:center;">
+            <i class="fas fa-car-crash" style="font-size:3rem;color:#334155;display:block;margin-bottom:16px;"></i>
+            <div style="color:#94a3b8;font-size:0.95rem;font-weight:600;">Veículo não encontrado</div>
+            <div style="color:#475569;font-size:0.8rem;margin-top:6px;">Verifique a placa ou cadastre o veículo primeiro</div>
+        </div>
+
+        <div style="padding:14px 24px;border-top:1px solid #1e293b;text-align:right;background:#0a0f1e;">
+            <button onclick="fecharHistorico()" style="padding:8px 18px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:8px;cursor:pointer;font-size:0.82rem;">Fechar</button>
+        </div>
+    </div>
+</div>
 
 <!-- ==================== MODAL IMPORTAR MANUTENÇÃO ==================== -->
 <div id="modalImportar" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:9999;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px;">

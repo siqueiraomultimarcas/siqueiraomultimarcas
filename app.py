@@ -911,6 +911,33 @@ def _parse_crlv(texto):
 
 # ==================== API MANUTENÇÕES ====================
 
+@app.route('/api/historico-veiculo/<placa>', methods=['GET'])
+@login_required
+def historico_veiculo(placa):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        'SELECT id, placa, marca, modelo, ano, ano_fabricacao, km_atual, status, cor, combustivel, categoria '
+        'FROM veiculos WHERE UPPER(placa) = %s',
+        (placa.upper(),)
+    )
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Veículo não encontrado'}), 404
+    veiculo = row_to_dict(cur, row)
+
+    cur.execute(
+        'SELECT m.*, v.placa, v.marca, v.modelo '
+        'FROM manutencoes m LEFT JOIN veiculos v ON m.veiculo_id = v.id '
+        'WHERE m.veiculo_id = %s ORDER BY m.data_manutencao DESC, m.id DESC',
+        (veiculo['id'],)
+    )
+    manutencoes_list = rows_to_dict(cur)
+    cur.close(); conn.close()
+    return jsonify({'veiculo': veiculo, 'manutencoes': manutencoes_list})
+
+
 @app.route('/api/manutencoes', methods=['GET'])
 @login_required
 def get_manutencoes():
@@ -1029,20 +1056,26 @@ def importar_manutencao_pdf():
         cnpj_raw = m.group(1).strip() if m else ''
         result['fornecedor_cnpj_raw'] = cnpj_raw
 
-        # Data do serviço — múltiplos formatos
+        # Data do serviço — múltiplos formatos, busca agressiva
         meses_pt = {'jan':'01','fev':'02','mar':'03','abr':'04','mai':'05','jun':'06',
                     'jul':'07','ago':'08','set':'09','out':'10','nov':'11','dez':'12'}
         data_parsed = ''
-        # Formato: Data: 09/jun/2026
-        m = re.search(r'(?<!\w)Data[:\s]+(\d{1,2})/([a-zA-Z]{3})/(\d{4})', all_text, re.IGNORECASE)
-        if m and m.group(2).lower() in meses_pt:
+        # 1) Com prefixo "Data:" — formato mês por extenso
+        m = re.search(r'Data[:\s]+(\d{1,2})/(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/(\d{4})', all_text, re.IGNORECASE)
+        if m:
             data_parsed = f'{m.group(3)}-{meses_pt[m.group(2).lower()]}-{int(m.group(1)):02d}'
-        # Formato numérico: Data: 09/06/2026
+        # 2) Qualquer "dd/mmm/yyyy" no texto (sem exigir "Data:")
         if not data_parsed:
-            m = re.search(r'(?<!\w)Data[:\s]+(\d{2})/(\d{2})/(\d{4})', all_text, re.IGNORECASE)
+            m = re.search(r'(\d{1,2})/(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/(\d{4})', all_text, re.IGNORECASE)
+            if m:
+                data_parsed = f'{m.group(3)}-{meses_pt[m.group(2).lower()]}-{int(m.group(1)):02d}'
+        # 3) Formato numérico: dd/mm/yyyy
+        if not data_parsed:
+            m = re.search(r'Data[:\s]+(\d{2})/(\d{2})/(\d{4})', all_text, re.IGNORECASE)
             if m:
                 data_parsed = f'{m.group(3)}-{m.group(2)}-{m.group(1)}'
         result['data_manutencao'] = data_parsed
+        result['_debug_data_raw'] = re.findall(r'\d{1,2}/\w{2,3}/\d{4}', all_text)[:3]
 
         # Placa — padrão Mercosul e antigo
         m = re.search(r'Placa[:\s|]+([A-Z]{3}[\d][A-Z\d][\d]{2})', all_text, re.IGNORECASE)
@@ -1112,6 +1145,14 @@ def importar_manutencao_pdf():
                         pass
 
         result['itens'] = itens
+        # Debug: primeiras linhas do bloco de itens extraído (para diagnóstico)
+        m_ini2 = re.search(r'ITENS DO PEDIDO', all_text, re.IGNORECASE)
+        m_fim2 = re.search(r'Totalizadores', all_text, re.IGNORECASE)
+        if m_ini2 and m_fim2:
+            bloco_debug = all_text[m_ini2.end():m_fim2.start()].strip()
+            result['_debug_bloco_itens'] = bloco_debug[:400]
+        result['_debug_n_tabelas'] = len(all_tables)
+        result['_debug_text_inicio'] = all_text[:200]
 
         # Total: soma dos itens (confiável) — evita bug do regex capturar nº de itens
         if itens:
