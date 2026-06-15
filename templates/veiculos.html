@@ -88,11 +88,12 @@
                     <th>FIPE</th>
                     <th>Km</th>
                     <th>Status</th>
-                    <th>Ações</th>
+                    <th style="text-align:center;">CRLV</th>
+                    <th style="text-align:center;">Ações</th>
                 </tr>
             </thead>
             <tbody id="tabelaVeiculos">
-                <tr><td colspan="11" style="text-align:center">Carregando...</td></tr>
+                <tr><td colspan="13" style="text-align:center">Carregando...</td></tr>
             </tbody>
         </table>
     </div>
@@ -341,7 +342,7 @@ function renderizarVeiculos(lista) {
     document.getElementById('countFrotaBadge').textContent = lista.length;
     const tbody = document.getElementById('tabelaVeiculos');
     if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:48px 20px;">
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:48px 20px;">
     <i class="fas fa-car" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
     <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhum veículo encontrado</div>
     <div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou cadastre um novo veículo</div>
@@ -364,12 +365,19 @@ function renderizarVeiculos(lista) {
             <td>${v.valor_fipe ? `<span style="color:#059669;font-weight:700;font-size:0.82rem;">${formatCurrency(v.valor_fipe)}</span>${v.referencia_fipe ? `<br><span style="font-size:0.65rem;color:#94a3b8;">${v.referencia_fipe}</span>` : ''}` : '<span style="color:#cbd5e1;font-size:0.78rem;">—</span>'}</td>
             <td>${(v.km_atual || 0).toLocaleString()} km</td>
             <td>${getStatusBadge(v.status)}</td>
-            <td>
-                <button class="btn btn-sm" style="${v.crlv_url ? 'background:#16a34a;color:#fff;' : 'background:#e5e7eb;color:#374151;'}"
-                        onclick="abrirCRLV(${v.id}, '${v.crlv_url || ''}')"
-                        title="${v.crlv_url ? 'Ver CRLV' : 'Enviar CRLV'}">
-                    <i class="fas fa-file-alt"></i>
-                </button>
+            <td style="text-align:center;">
+                ${v.crlv_url
+                    ? `<button class="btn btn-sm" style="background:#16a34a;color:#fff;gap:5px;"
+                            onclick="abrirCRLV(${v.id}, '${v.crlv_url}')" title="Visualizar CRLV">
+                            <i class="fas fa-file-alt"></i> <span style="font-size:0.72rem;">Ver</span>
+                       </button>`
+                    : `<button class="btn btn-sm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;gap:5px;"
+                            onclick="abrirCRLV(${v.id}, '')" title="Enviar CRLV">
+                            <i class="fas fa-upload"></i> <span style="font-size:0.72rem;">Enviar</span>
+                       </button>`
+                }
+            </td>
+            <td style="text-align:center;">
                 <button class="btn btn-sm btn-primary" onclick="editarVeiculo(${v.id})" title="Editar"><i class="fas fa-edit"></i></button>
                 <button class="btn btn-sm btn-danger" onclick="confirmarExcluir(${v.id}, '${v.placa}')" title="Excluir"><i class="fas fa-trash"></i></button>
             </td>
