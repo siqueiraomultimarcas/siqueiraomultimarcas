@@ -448,14 +448,36 @@
     }
     
     function excluirManutencao(id) {
-        confirmarAcao('Excluir Manutenção', 'Deseja excluir esta manutenção? Esta ação não pode ser desfeita.', () => _confirmaExcluirManutencao(id));
+        const content = `
+            <div style="text-align:center;padding:10px 0 20px;">
+                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#f59e0b;margin-bottom:14px;display:block;"></i>
+                <p style="font-size:0.95rem;color:#374151;line-height:1.6;">Deseja excluir esta manutenção?<br>Esta ação não pode ser desfeita.</p>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                <button class="btn btn-danger" id="btnConfirmaExcluir${id}">
+                    <i class="fas fa-trash"></i> Confirmar
+                </button>
+            </div>`;
+        abrirModal('Excluir Manutenção', content);
+        setTimeout(() => {
+            const btn = document.getElementById('btnConfirmaExcluir' + id);
+            if (btn) btn.addEventListener('click', function() {
+                fecharModal();
+                _confirmaExcluirManutencao(id);
+            });
+        }, 50);
     }
 
     async function _confirmaExcluirManutencao(id) {
         try {
-            await fetch(`/api/manutencoes/${id}`, { method: 'DELETE' });
-            showToast('Manutenção excluída', 'success');
-            carregarDados();
+            const resp = await fetch(`/api/manutencoes/${id}`, { method: 'DELETE' });
+            if (resp.ok) {
+                showToast('Manutenção excluída com sucesso', 'success');
+                carregarDados();
+            } else {
+                showToast('Erro ao excluir manutenção', 'error');
+            }
         } catch (error) {
             console.error('Erro:', error);
             showToast('Erro ao excluir manutenção', 'error');
@@ -1271,6 +1293,25 @@
 .btn-itens:hover {
     background: #dcfce7;
     color: #047857;
+}
+
+/* Cards do histórico por placa */
+.hist-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 16px 18px;
+    transition: border-color .2s, transform .15s;
+}
+.hist-card:hover {
+    border-color: #475569;
+    transform: translateY(-1px);
+}
+
+/* Input histórico focus */
+#histPlacaInput:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.2);
 }
 
 @media (max-width: 600px) {
