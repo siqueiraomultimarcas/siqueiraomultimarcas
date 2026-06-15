@@ -867,25 +867,38 @@ async function _enviarCRLV(id) {
 window.addEventListener('load', carregarVeiculos);
 
 /* ══════════════════════════════════════════════════
-   FIPE — BrasilAPI (sem autenticação, CORS liberado)
+   FIPE — via proxy Flask (evita CORS em produção)
    ══════════════════════════════════════════════════ */
-const _FIPE = 'https://brasilapi.com.br/api/fipe';
+const _FIPE = '/api/fipe';
+
+// Normaliza string para comparação: minúsculas, sem acento, sem pontuação
+function _fipeNorm(s) {
+    if (!s) return '';
+    return s.toLowerCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^a-z0-9 ]/g, '').replace(/\s+/g,' ').trim();
+}
 
 function toggleFipeSection() {
     const sec  = document.getElementById('fipeSection');
     const icon = document.getElementById('fipeChevronIcon');
     if (!sec) return;
     const aberto = sec.style.display !== 'none';
-    sec.style.display = aberto ? 'none' : 'block';
+    sec.style.display = aberto ? 'none' : '';
     if (icon) icon.className = aberto ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
-    // Carrega marcas automaticamente na primeira abertura
     if (!aberto) {
         const sel = document.getElementById('fipeMarca');
-        if (sel && sel.options.length <= 1) fipeCarregarMarcas();
+        if (sel && sel.options.length <= 1) {
+            // Lê marca e modelo do formulário para auto-match
+            const form = document.getElementById('formVeiculo');
+            const autoMarca  = form ? (form.querySelector('[name="marca"]')  || {}).value || '' : '';
+            const autoModelo = form ? (form.querySelector('[name="modelo"]') || {}).value || '' : '';
+            fipeCarregarMarcas(autoMarca, autoModelo);
+        }
     }
 }
 
-async function fipeCarregarMarcas() {
+async function fipeCarregarMarcas(autoMarca='', autoModelo='') {
     const tipo = document.getElementById('fipeTipo').value;
     const sel  = document.getElementById('fipeMarca');
     sel.disabled = true;
@@ -896,17 +909,30 @@ async function fipeCarregarMarcas() {
     document.getElementById('fipeAno').disabled     = true;
     document.getElementById('fipeResultado').innerHTML = '';
     try {
-        const marcas = await (await fetch(`${_FIPE}/marcas/v1/${tipo}`)).json();
+        const marcas = await (await fetch(`${_FIPE}/marcas/${tipo}`)).json();
         sel.innerHTML = '<option value="">Selecione a marca</option>' +
             marcas.map(m => `<option value="${m.valor}">${m.nome}</option>`).join('');
         sel.disabled = false;
+        // Auto-seleciona a marca do veículo cadastrado
+        if (autoMarca) {
+            const alvo = _fipeNorm(autoMarca);
+            const opt = [...sel.options].find(o =>
+                _fipeNorm(o.text) === alvo ||
+                _fipeNorm(o.text).startsWith(alvo) ||
+                alvo.startsWith(_fipeNorm(o.text))
+            );
+            if (opt) {
+                sel.value = opt.value;
+                await fipeCarregarModelos(autoModelo);
+            }
+        }
     } catch(e) {
         sel.innerHTML = '<option value="">Erro ao carregar marcas</option>';
         showToast('Erro ao acessar a API FIPE', 'error');
     }
 }
 
-async function fipeCarregarModelos() {
+async function fipeCarregarModelos(autoModelo='') {
     const marca = document.getElementById('fipeMarca').value;
     if (!marca) return;
     const sel = document.getElementById('fipeModelo');
@@ -916,12 +942,29 @@ async function fipeCarregarModelos() {
     document.getElementById('fipeAno').disabled  = true;
     document.getElementById('fipeResultado').innerHTML = '';
     try {
-        const modelos = await (await fetch(`${_FIPE}/veiculos/v1/${marca}`)).json();
+        const modelos = await (await fetch(`${_FIPE}/modelos/${marca}`)).json();
         sel.innerHTML = '<option value="">Selecione o modelo</option>' +
             modelos.map(m => `<option value="${m.valor}">${m.modelo}</option>`).join('');
         sel.disabled = false;
+        // Auto-seleciona o modelo do veículo cadastrado
+        if (autoModelo) {
+            const alvo = _fipeNorm(autoModelo);
+            const opt = [...sel.options].find(o =>
+                _fipeNorm(o.text) === alvo ||
+                _fipeNorm(o.text).startsWith(alvo) ||
+                alvo.startsWith(_fipeNorm(o.text))
+            );
+            if (opt) {
+                sel.value = opt.value;
+                await fipeCarregarAnos();
+            } else {
+                document.getElementById('fipeResultado').innerHTML =
+                    `<span style="color:#f59e0b;font-size:0.78rem;"><i class="fas fa-info-circle"></i> Marca encontrada, mas o modelo "<strong>${autoModelo}</strong>" não foi encontrado automaticamente. Selecione manualmente.</span>`;
+            }
+        }
     } catch(e) {
         sel.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+        showToast('Erro ao carregar modelos FIPE', 'error');
     }
 }
 
@@ -934,7 +977,7 @@ async function fipeCarregarAnos() {
     sel.innerHTML = '<option>Carregando...</option>';
     document.getElementById('fipeResultado').innerHTML = '';
     try {
-        const anos = await (await fetch(`${_FIPE}/anos/v1/${marca}/${modelo}`)).json();
+        const anos = await (await fetch(`${_FIPE}/anos/${marca}/${modelo}`)).json();
         sel.innerHTML = '<option value="">Selecione o ano</option>' +
             anos.map(a => `<option value="${a.valor}">${a.nome}</option>`).join('');
         sel.disabled = false;
@@ -953,13 +996,11 @@ async function fipeBuscarPreco() {
     res.innerHTML = '<span style="color:#94a3b8;font-size:0.8rem;"><i class="fas fa-spinner fa-spin"></i> Consultando...</span>';
 
     try {
-        const d = await (await fetch(`${_FIPE}/preco/v1/${marca}/${modelo}/${ano}`)).json();
+        const d = await (await fetch(`${_FIPE}/preco/${marca}/${modelo}/${ano}`)).json();
         if (d.erro || !d.valor) throw new Error('sem dado');
 
-        // Converte "R$ 28.800,00" → número
         const valorNum = parseFloat(d.valor.replace('R$','').trim().replace(/\./g,'').replace(',','.'));
 
-        // Preenche campos ocultos
         const form = document.getElementById('formVeiculo');
         if (form) {
             form.querySelector('[name="valor_fipe"]').value      = valorNum || '';

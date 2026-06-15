@@ -2290,6 +2290,47 @@ def delete_usuario(id):
     return jsonify({'success': True})
 
 
+# ==================== PROXY FIPE (BrasilAPI) ====================
+
+_BRASILAPI = 'https://brasilapi.com.br/api/fipe'
+
+@app.route('/api/fipe/marcas/<tipo>')
+@login_required
+def fipe_marcas(tipo):
+    try:
+        r = requests.get(f'{_BRASILAPI}/marcas/v1/{tipo}', timeout=10)
+        return jsonify(r.json()), r.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 503
+
+@app.route('/api/fipe/modelos/<marca>')
+@login_required
+def fipe_modelos(marca):
+    try:
+        r = requests.get(f'{_BRASILAPI}/veiculos/v1/{marca}', timeout=10)
+        return jsonify(r.json()), r.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 503
+
+@app.route('/api/fipe/anos/<marca>/<modelo>')
+@login_required
+def fipe_anos(marca, modelo):
+    try:
+        r = requests.get(f'{_BRASILAPI}/anos/v1/{marca}/{modelo}', timeout=10)
+        return jsonify(r.json()), r.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 503
+
+@app.route('/api/fipe/preco/<marca>/<modelo>/<ano>')
+@login_required
+def fipe_preco(marca, modelo, ano):
+    try:
+        r = requests.get(f'{_BRASILAPI}/preco/v1/{marca}/{modelo}/{ano}', timeout=10)
+        return jsonify(r.json()), r.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 503
+
+
 # Roda migrations no cold start do Vercel (e também localmente via __main__)
 try:
     init_db()
