@@ -97,8 +97,11 @@
     // ─── Helpers de data (formato brasileiro) ────────────────────────────────
     function _isoToBR(iso) {
         if (!iso) return '';
-        const p = iso.split('-');
-        return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+        // Suporta ISO "2026-06-09" e HTTP do Flask "Tue, 09 Jun 2026 00:00:00 GMT"
+        const d = new Date(iso);
+        if (!isNaN(d.getTime()))
+            return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
+        return '';
     }
     function _brToISO(br) {
         if (!br) return '';
@@ -275,18 +278,10 @@
                 ? `<div style="margin-bottom:3px;"><span style="background:#dbeafe;color:#1d4ed8;font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;">Ped. Nº ${m.numero_pedido}</span></div>`
                 : '';
 
-            let descHtml;
-            if (temItens) {
-                descHtml = `<div class="itens-lista-mini">${itens.map(i =>
-                    `<div class="item-mini-row">
-                        <span class="item-mini-dot">•</span>
-                        <span class="item-mini-desc">${i.descricao}</span>
-                        <span class="item-mini-val">${formatCurrency(i.valor_total)}</span>
-                    </div>`
-                ).join('')}</div>`;
-            } else {
-                descHtml = m.descricao || '-';
-            }
+            const itensBadge = temItens
+                ? ` <span style="display:inline-block;background:#dbeafe;color:#1d4ed8;font-size:0.62rem;font-weight:700;padding:2px 6px;border-radius:4px;vertical-align:middle;">${itens.length} ${itens.length===1?'item':'itens'}</span>`
+                : '';
+            const descHtml = `<span style="color:#374151;">${m.descricao || '-'}</span>${itensBadge}`;
 
             const btnDetalhes = temItens
                 ? `<button class="btn btn-sm btn-itens" onclick="verDetalhes(${m.id})" title="Ver itens do pedido"><i class="fas fa-list-ul"></i></button> `

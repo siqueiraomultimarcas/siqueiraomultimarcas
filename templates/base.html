@@ -715,7 +715,11 @@
     }
     function formatDate(dateStr) {
         if (!dateStr) return '-';
-        return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
+        // Suporta ISO "2026-06-09" e HTTP do Flask "Tue, 09 Jun 2026 00:00:00 GMT"
+        const d = (typeof dateStr === 'string' && !dateStr.includes('T') && !dateStr.includes(',') && !dateStr.includes(' '))
+            ? new Date(dateStr + 'T00:00:00')
+            : new Date(dateStr);
+        return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('pt-BR', {timeZone:'UTC'});
     }
 
     /* ── Máscaras ──────────────────────────────────────────── */
