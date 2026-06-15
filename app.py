@@ -10,7 +10,7 @@ import os
 import base64
 import re
 import io
-from datetime import datetime
+from datetime import datetime, date as _date
 from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
@@ -2044,17 +2044,21 @@ def get_relatorio_lucratividade():
         conn = get_conn()
         cur = conn.cursor()
 
-        cur.execute('''
-            SELECT TO_CHAR(data_inicio, 'YYYY-MM') as mes
-            FROM locacoes WHERE data_inicio >= %s AND data_inicio <= %s
-            GROUP BY mes ORDER BY mes
-        ''', (data_inicio, data_fim))
-        meses = [r[0] for r in cur.fetchall()]
+        # Gera lista de meses do período diretamente — não depende de locações
+        def _meses_periodo(ini, fim):
+            try:
+                c = _date.fromisoformat(ini).replace(day=1)
+                e = _date.fromisoformat(fim)
+                acc = []
+                while c <= e:
+                    acc.append(c.strftime('%Y-%m'))
+                    m2 = c.month + 1
+                    c = c.replace(year=c.year + (1 if m2 > 12 else 0), month=(1 if m2 > 12 else m2))
+                return acc
+            except Exception:
+                return []
 
-        if not meses:
-            cur.close()
-            conn.close()
-            return jsonify({'resultados': [], 'dados_mensais': []})
+        meses = _meses_periodo(data_inicio, data_fim)
 
         resultados = []
         for vid in veiculos_ids:
@@ -2106,7 +2110,7 @@ def get_relatorio_lucratividade():
             mr = float(cur.fetchone()[0])
             mm = ma = mmul = 0.0
             if inc_manut:
-                cur.execute("SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE TO_CHAR(data_manutencao,'YYYY-MM')=%s AND status='concluida'", (mes,))
+                cur.execute("SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE TO_CHAR(data_manutencao,'YYYY-MM')=%s", (mes,))
                 mm = float(cur.fetchone()[0])
             if inc_abast:
                 cur.execute("SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE TO_CHAR(data_abastecimento,'YYYY-MM')=%s", (mes,))
@@ -2140,22 +2144,31 @@ def get_relatorio_fornecedor():
         cur = conn.cursor()
 
         if not fornecedor_id:
+            # Agrupa por fornecedor cadastrado (via fornecedor_id) ou por nome da oficina (texto livre)
             cur.execute('''
-                SELECT m.oficina, COUNT(*) as qtd, COALESCE(SUM(m.custo), 0) as total
+                SELECT
+                    COALESCE(f.nome, NULLIF(m.oficina,''), 'Sem fornecedor') AS nome,
+                    COUNT(*)                          AS qtd,
+                    COALESCE(SUM(m.custo), 0)         AS total
                 FROM manutencoes m
+                LEFT JOIN fornecedores f ON f.id = m.fornecedor_id
                 WHERE m.data_manutencao >= %s AND m.data_manutencao <= %s
-                GROUP BY m.oficina ORDER BY total DESC
+                  AND COALESCE(m.custo, 0) > 0
+                GROUP BY COALESCE(f.nome, NULLIF(m.oficina,''), 'Sem fornecedor')
+                ORDER BY total DESC
             ''', (data_inicio, data_fim))
             rows = cur.fetchall()
-            resultados = [{'nome': r[0] or 'Sem fornecedor', 'qtd_servicos': r[1], 'total_gasto': round(float(r[2]), 2)} for r in rows if r[0]]
+            resultados = [{'nome': r[0], 'qtd_servicos': r[1], 'total_gasto': round(float(r[2]), 2)} for r in rows]
         else:
             cur.execute('SELECT nome FROM fornecedores WHERE id=%s', (fornecedor_id,))
             f = cur.fetchone()
             nome = f[0] if f else ''
+            # Busca por fornecedor_id OU por nome no campo oficina (retrocompatibilidade)
             cur.execute('''
-                SELECT COUNT(*), COALESCE(SUM(custo),0) FROM manutencoes
-                WHERE oficina=%s AND data_manutencao>=%s AND data_manutencao<=%s
-            ''', (nome, data_inicio, data_fim))
+                SELECT COUNT(*), COALESCE(SUM(custo), 0) FROM manutencoes
+                WHERE (fornecedor_id = %s OR oficina = %s)
+                  AND data_manutencao >= %s AND data_manutencao <= %s
+            ''', (fornecedor_id, nome, data_inicio, data_fim))
             r = cur.fetchone()
             resultados = [{'id': fornecedor_id, 'nome': nome, 'qtd_servicos': r[0], 'total_gasto': round(float(r[1]), 2)}]
 
