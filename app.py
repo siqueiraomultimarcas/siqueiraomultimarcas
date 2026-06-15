@@ -1098,57 +1098,128 @@ def importar_manutencao_pdf():
             result['km'] = None
 
         # ─── ITENS — tenta tabela pdfplumber primeiro (mais confiável) ───
+        def _monetario(s):
+            """Converte string '1.234,56' ou '1234,56' para float."""
+            s = (s or '').strip().replace('.', '').replace(',', '.')
+            try:
+                return float(s)
+            except Exception:
+                return None
+
+        def _extrair_itens_tabela(table):
+            """Extrai itens de uma tabela pdfplumber de forma flexível."""
+            itens_t = []
+            # Encontra a primeira linha de dados (pula cabeçalho)
+            start = 0
+            for i, row in enumerate(table[:4]):
+                cells = [str(c or '').upper().strip() for c in (row or [])]
+                if any('DESCRI' in c for c in cells):
+                    start = i + 1
+                    break
+            for row in table[start:]:
+                if not row or not row[0]:
+                    continue
+                row_str = [str(c or '').strip() for c in row]
+                if not re.match(r'^\d{1,3}$', row_str[0]):
+                    continue
+                # Coleta todos os valores monetários da linha
+                monetary = [(i, _monetario(c)) for i, c in enumerate(row_str)
+                            if re.match(r'^[\d.]*\d,\d{2}$', c.strip())]
+                if len(monetary) < 1:
+                    continue
+                total = monetary[-1][1]
+                unit_price = monetary[-2][1] if len(monetary) >= 2 else total
+                # Descrição = célula de texto mais longa
+                desc = max(
+                    (c for c in row_str[1:] if c and not re.match(r'^[\d.,]+$', c)),
+                    key=len, default=''
+                )
+                if not desc:
+                    continue
+                # Quantidade = primeiro número com vírgula antes da descrição
+                qty = 1.0
+                for c in row_str[1:]:
+                    if re.match(r'^\d+[,\.]\d+$', c):
+                        try:
+                            qty = float(c.replace(',', '.'))
+                            break
+                        except Exception:
+                            pass
+                # Unidade = palavra curta (≤ 6 chars) sem dígitos
+                unit = ''
+                for c in row_str[1:]:
+                    if re.match(r'^[A-Za-zÀ-ú]{1,6}$', c):
+                        unit = c
+                        break
+                try:
+                    itens_t.append({
+                        'codigo': row_str[1] if not re.match(r'^[\d.]*\d,\d{2}$', row_str[1]) and row_str[1] != desc else '',
+                        'descricao': desc,
+                        'quantidade': qty,
+                        'unidade': unit,
+                        'valor_unitario': unit_price,
+                        'valor_total': total
+                    })
+                except Exception:
+                    pass
+            return itens_t
+
         itens = []
         for table in all_tables:
             if not table or len(table) < 2:
                 continue
-            header = [str(c or '').upper().strip() for c in table[0]]
-            # Detectar tabela de itens: deve ter coluna de descrição e valores
-            if not (any('DESCRI' in h for h in header) and any('UNIT' in h or 'R$' in h or 'TOTAL' in h for h in header)):
-                continue
-            for row in table[1:]:
-                if not row or not row[0]:
-                    continue
-                try:
-                    row_str = [str(c or '').strip() for c in row]
-                    if not re.match(r'^\d{1,3}$', row_str[0]):
-                        continue
-                    if len(row_str) >= 8:
-                        itens.append({
-                            'codigo': row_str[1],
-                            'descricao': row_str[2],
-                            'quantidade': float((row_str[3] or '0').replace(',', '.')),
-                            'unidade': row_str[4],
-                            'valor_unitario': float((row_str[6] or '0').replace(',', '.')),
-                            'valor_total': float((row_str[7] or '0').replace(',', '.'))
-                        })
-                except Exception:
-                    pass
-            if itens:
+            t_itens = _extrair_itens_tabela(table)
+            if t_itens:
+                itens = t_itens
                 break
 
-        # Fallback: extrair itens via regex no texto
+        # Fallback A: regex texto entre "ITENS DO PEDIDO" e "Totalizadores"
+        # Aceita qualquer palavra como unidade e desconto opcional
         if not itens:
             m_ini = re.search(r'ITENS DO PEDIDO', all_text, re.IGNORECASE)
-            m_fim = re.search(r'Totalizadores', all_text, re.IGNORECASE)
-            if m_ini and m_fim:
-                bloco = all_text[m_ini.end():m_fim.start()]
-                item_re = re.compile(
-                    r'^\s*(\d{1,3})\s+(\d+)\s+(.+?)\s+([\d]+[,][\d]+)\s+(p[cç]a?|un|kg|lt|lts?|m|ml|fl)\s+[\d,]+\s+([\d]+[,][\d]+)\s+([\d]+[,][\d]+)',
-                    re.MULTILINE | re.IGNORECASE
-                )
-                for mi in item_re.finditer(bloco):
-                    try:
-                        itens.append({
-                            'codigo': mi.group(2),
-                            'descricao': mi.group(3).strip(),
-                            'quantidade': float(mi.group(4).replace(',', '.')),
-                            'unidade': mi.group(5),
-                            'valor_unitario': float(mi.group(6).replace(',', '.')),
-                            'valor_total': float(mi.group(7).replace(',', '.'))
-                        })
-                    except Exception:
-                        pass
+            m_fim = re.search(r'Totalizadores|TOTAL GERAL|Total da OS', all_text, re.IGNORECASE)
+            bloco_itens = all_text[m_ini.end():m_fim.start()] if (m_ini and m_fim) else all_text
+            item_re = re.compile(
+                r'^\s*(\d{1,3})\s+(\S+)\s+(.+?)\s+([\d]+[,][\d]+)\s+(\S{1,10})\s+(?:[\d.,]+\s+)?([\d]+[,][\d]+)\s+([\d]+[,][\d]+)',
+                re.MULTILINE | re.IGNORECASE
+            )
+            for mi in item_re.finditer(bloco_itens):
+                try:
+                    itens.append({
+                        'codigo': mi.group(2),
+                        'descricao': mi.group(3).strip(),
+                        'quantidade': float(mi.group(4).replace(',', '.')),
+                        'unidade': mi.group(5),
+                        'valor_unitario': float(mi.group(6).replace(',', '.')),
+                        'valor_total': float(mi.group(7).replace(',', '.'))
+                    })
+                except Exception:
+                    pass
+
+        # Fallback B: linhas com dois valores monetários (formato simples)
+        if not itens:
+            m_ini2 = re.search(r'ITENS|SERVIÇOS|OS\s+ITEM', all_text, re.IGNORECASE)
+            m_fim2 = re.search(r'Total|Subtotal|TOTAL', all_text, re.IGNORECASE)
+            bloco2 = all_text[m_ini2.end():m_fim2.start()] if (m_ini2 and m_fim2) else all_text
+            simple_re = re.compile(
+                r'^(.{5,60}?)\s+([\d]+[,][\d]{2})\s+([\d]+[,][\d]{2})\s*$',
+                re.MULTILINE
+            )
+            for mi in simple_re.finditer(bloco2):
+                try:
+                    desc = mi.group(1).strip()
+                    if re.match(r'^[\d\s/.-]+$', desc):
+                        continue
+                    itens.append({
+                        'codigo': '',
+                        'descricao': desc,
+                        'quantidade': 1.0,
+                        'unidade': '',
+                        'valor_unitario': float(mi.group(2).replace(',', '.')),
+                        'valor_total': float(mi.group(3).replace(',', '.'))
+                    })
+                except Exception:
+                    pass
 
         result['itens'] = itens
         # Debug: primeiras linhas do bloco de itens extraído (para diagnóstico)
