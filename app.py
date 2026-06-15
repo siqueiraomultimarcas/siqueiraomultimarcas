@@ -797,25 +797,55 @@ def _parse_crlv(texto):
                 dados['ano'] = int(m.group(1))
 
     # ---------- MARCA / MODELO / VERSÃO ----------
+    # O pdfplumber mescla colunas do CRLV, gerando ruído após o valor real.
+    # Além disso, o DENATRAN usa prefixo "I/" (importado) ou "N/" (nacional)
+    # antes da marca real: "I/CHEVROLET CLASSIC LS DADOS DO SEGURO DPVAT *"
     MARCAS_ABREV = {'VW', 'GM', 'BMW', 'KIA', 'JAC', 'BYD', 'GWM', 'MG', 'GAC', 'JMC'}
-    val_mmv = proxima_valor(r'MARCA\s*/?\s*MODELO')
-    if val_mmv and '/' in val_mmv:
-        idx = val_mmv.index('/')
-        marca_raw = val_mmv[:idx].strip().upper()
-        dados['marca'] = marca_raw if marca_raw in MARCAS_ABREV else marca_raw.title()
-        resto = val_mmv[idx + 1:].strip().split()
+    # Códigos DENATRAN de origem (1–2 letras) que precedem a marca real
+    CODIGOS_ORIGEM = {'I', 'N', 'E', 'C', 'M'}
 
-        # VERSÃO: primeiro token que é estritamente um número de versão (ex: "1.0", "1.6i")
-        versao_token = next(
-            (t for t in resto if re.match(r'^\d+[.,]\d+\w{0,2}$', t)),
-            None
-        )
-        if versao_token:
-            vi = resto.index(versao_token)
-            dados['modelo'] = ' '.join(resto[:vi]).title() if vi > 0 else (resto[0].title() if len(resto) > 1 else '')
-            dados['versao'] = versao_token
-        else:
-            dados['modelo'] = ' '.join(resto).title()
+    val_mmv = proxima_valor(r'MARCA\s*/?\s*MODELO')
+    if val_mmv:
+        # 1. Remove ruído de coluna direita: trunca em espaço duplo ou em palavras-chave
+        #    típicas da coluna DPVAT/SEGURO que pdfplumber mescla na mesma linha
+        val_mmv = re.split(
+            r'\s{2,}|\s+(?=DADOS\s+DO\s+SEGURO|REPASSE\s+OBRIG|CAT[.\s]+TARIF'
+            r'|COTA\s+[UÚ]NICA|INFORMA[ÇC][ÕO]ES\s+DO\s+SEGURO)',
+            val_mmv, flags=re.IGNORECASE
+        )[0].strip()
+        # 2. Remove asteriscos e qualquer coisa após eles (campos mascarados do CRLV)
+        val_mmv = re.sub(r'\s*\*+.*$', '', val_mmv).strip()
+
+        if '/' in val_mmv:
+            prefixo, _, resto_text = val_mmv.partition('/')
+            prefixo = prefixo.strip().upper()
+            tokens = resto_text.strip().split()
+
+            # Prefixo curto = código de origem (I, N…), a marca real é a 1ª palavra do resto
+            if prefixo in CODIGOS_ORIGEM or (len(prefixo) <= 2 and prefixo.isalpha()):
+                if tokens:
+                    marca_raw = tokens[0].upper()
+                    dados['marca'] = marca_raw if marca_raw in MARCAS_ABREV else marca_raw.title()
+                    tokens = tokens[1:]   # o resto é MODELO [VERSÃO]
+            else:
+                # Prefixo já é a marca (VW, FIAT, CHEVROLET, HONDA…)
+                dados['marca'] = prefixo if prefixo in MARCAS_ABREV else prefixo.title()
+                # tokens já é MODELO [VERSÃO]
+
+            # Detecta token de versão numérica: "1.0", "1.4T", "1.6i", "2.0T"
+            versao_token = next(
+                (t for t in tokens if re.match(r'^\d+[.,]\d+\w{0,3}$', t)),
+                None
+            )
+            if versao_token:
+                vi = tokens.index(versao_token)
+                dados['modelo'] = ' '.join(tokens[:vi]).title() if vi > 0 else ''
+                dados['versao'] = versao_token
+            else:
+                # Sem versão numérica: tudo é o modelo (ex: "Classic Ls", "Gol G7")
+                dados['modelo'] = ' '.join(tokens).title()
+        elif val_mmv:
+            dados['modelo'] = val_mmv.title()
 
     # ---------- COR PREDOMINANTE ----------
     # O layout de colunas do CRLV faz o pdfplumber pular a cor e pegar outro texto.
