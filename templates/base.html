@@ -545,22 +545,130 @@
             .card { box-shadow: none !important; border: 1px solid #ddd !important; }
         }
 
+        /* ── Top bar mobile (hamburguer) ──────────────────────── */
+        .mobile-topbar {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 56px;
+            background: var(--sidebar-bg);
+            z-index: 300;
+            align-items: center;
+            padding: 0 16px;
+            gap: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+        }
+        .mobile-topbar-logo { height: 30px; width: auto; }
+        .mobile-topbar-title { color: #94a3b8; font-size: 0.78rem; font-weight: 600; letter-spacing:.06em; text-transform:uppercase; flex:1; }
+        .hamburger {
+            background: none; border: none; cursor: pointer;
+            display: flex; flex-direction: column; gap: 5px; padding: 6px; flex-shrink:0;
+        }
+        .hamburger span {
+            display: block; width: 22px; height: 2px;
+            background: #e2e8f0; border-radius: 2px;
+            transition: all 0.2s;
+        }
+        /* Overlay escuro quando drawer está aberta */
+        .sidebar-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55); z-index: 250;
+        }
+        .sidebar-overlay.active { display: block; }
+
         /* ── Responsive ───────────────────────────────────────── */
         @media (max-width: 768px) {
-            .sidebar { width: 70px; }
+            /* Top bar aparece */
+            .mobile-topbar { display: flex; }
+
+            /* Sidebar vira drawer — oculta por padrão */
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.26s cubic-bezier(0.4,0,0.2,1);
+                z-index: 260;
+                width: 260px !important;
+            }
+            .sidebar.open { transform: translateX(0); }
+
+            /* Restaura textos da sidebar que estavam escondidos */
             .sidebar .logo-area span,
             .sidebar .nav-link span,
             .sidebar .nav-section,
             .sidebar-user-info,
-            .sidebar-logout span { display: none; }
-            .sidebar .nav-link { justify-content: center; padding: 12px; border-left: none !important; }
-            .sidebar .logo-area img { max-width: 40px; }
-            .main-content { margin-left: 70px; padding: 16px; }
+            .sidebar-logout span { display: block !important; }
+            .sidebar .nav-link { justify-content: flex-start !important; padding: 10px 12px !important; border-left: 3px solid transparent; }
+            .sidebar .logo-area img { max-width: 160px !important; }
+
+            /* Conteúdo ocupa tela cheia + espaço para top bar */
+            .main-content { margin-left: 0 !important; padding: 72px 14px 20px !important; }
+
+            /* Cabeçalho da página empilhado */
+            .page-header { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+            .page-header h1 { font-size: 1.15rem; }
+            .page-header > div { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+            .page-header > div .btn { flex: 1; justify-content: center; }
+
+            /* Grids: 1 coluna */
+            .grid-2, .grid-3 { grid-template-columns: 1fr !important; gap: 12px !important; }
+            .charts-grid { grid-template-columns: 1fr !important; }
+
+            /* KPI e stats: 2 colunas em mobile */
+            .kpi-grid  { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+            .stats-grid{ grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+
+            /* Card header: empilha filtros */
+            .card-header { flex-direction: column; align-items: stretch; gap: 10px; }
+            .card-header > div { flex-wrap: wrap; gap: 8px; }
+            .card-header input, .card-header select { width: 100% !important; }
+
+            /* Toolbar: vertical */
+            .toolbar { flex-direction: column; gap: 8px; }
+            .toolbar .search, .toolbar .form-control, .toolbar select { width: 100% !important; min-width: unset !important; }
+
+            /* Modal: bottom-sheet em mobile */
+            .modal { align-items: flex-end !important; }
+            .modal-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 92vh !important;
+                border-radius: 20px 20px 0 0 !important;
+            }
+
+            /* Toasts: full width */
+            #toast-container { left: 10px; right: 10px; top: 64px; }
+            .toast { min-width: unset; width: 100%; max-width: 100%; }
+
+            /* Tabela: padding menor para caber */
+            th, td { padding: 9px 10px; font-size: 0.8rem; }
+            .btn-sm { padding: 5px 8px; font-size: 0.72rem; }
+
+            /* Card: menos padding */
+            .card { padding: 16px; }
+            .kpi-card { padding: 14px 16px; }
+            .kpi-value { font-size: 1.45rem; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr !important; }
+            .kpi-value { font-size: 1.3rem; }
+            .page-header h1 { font-size: 1.05rem; }
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+
+<!-- Top bar mobile com hamburguer -->
+<div class="mobile-topbar">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+        <span></span><span></span><span></span>
+    </button>
+    <img src="/static/logo_nova.png" alt="Siqueirão" class="mobile-topbar-logo">
+    <span class="mobile-topbar-title">Sistema de Gestão</span>
+</div>
+<!-- Overlay escuro ao abrir o drawer -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
 <div class="app-container">
 
     <!-- ── SIDEBAR ─────────────────────────────────────────── -->
@@ -729,6 +837,22 @@
         Inputmask({"mask": "99.999.999/9999-99"}).mask(document.querySelectorAll('input[name="cnpj"]'));
     }
     document.addEventListener('DOMContentLoaded', aplicarMascaras);
+
+    /* ── Sidebar drawer mobile ────────────────────────────────── */
+    function toggleSidebar() {
+        const sidebar  = document.querySelector('.sidebar');
+        const overlay  = document.getElementById('sidebarOverlay');
+        const isOpen   = sidebar.classList.toggle('open');
+        overlay.classList.toggle('active', isOpen);
+        document.body.style.overflow = isOpen ? 'hidden' : '';
+    }
+    // Fecha o drawer ao clicar em qualquer link da sidebar (navegação mobile)
+    document.querySelectorAll('.nav-link').forEach(function(link) {
+        link.addEventListener('click', function() {
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar.classList.contains('open')) toggleSidebar();
+        });
+    });
 </script>
 {% block extra_js %}{% endblock %}
 </body>
