@@ -179,6 +179,9 @@ def init_db():
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS potencia TEXT")
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS versao TEXT")
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS crlv_url TEXT")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS valor_fipe NUMERIC(12,2)")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS codigo_fipe TEXT")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS referencia_fipe TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS numero_auto TEXT")
     for col, tipo in [('cep','TEXT'), ('bairro','TEXT'), ('nome_fantasia','TEXT'), ('data_fundacao','DATE'), ('situacao_receita','TEXT'), ('responsavel_principal','TEXT')]:
         cur.execute(f"ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS {col} {tipo}")
@@ -559,8 +562,8 @@ def add_veiculo():
         conn = get_conn()
         cur = conn.cursor()
         cur.execute('''
-            INSERT INTO veiculos (placa, marca, modelo, ano, cor, categoria, diaria, km_atual, status, combustivel, observacoes, renavam, chassi, ano_fabricacao, potencia, versao)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+            INSERT INTO veiculos (placa, marca, modelo, ano, cor, categoria, diaria, km_atual, status, combustivel, observacoes, renavam, chassi, ano_fabricacao, potencia, versao, valor_fipe, codigo_fipe, referencia_fipe)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
         ''', (data.get('placa'), data.get('marca'), data.get('modelo'),
               data.get('ano') or None, data.get('cor') or None,
               data.get('categoria') or None, data.get('diaria') or None,
@@ -568,7 +571,9 @@ def add_veiculo():
               data.get('combustivel') or None, data.get('observacoes') or None,
               data.get('renavam') or None, data.get('chassi') or None,
               data.get('ano_fabricacao') or None,
-              data.get('potencia') or None, data.get('versao') or None))
+              data.get('potencia') or None, data.get('versao') or None,
+              _float_or_none(data.get('valor_fipe')),
+              data.get('codigo_fipe') or None, data.get('referencia_fipe') or None))
         veiculo_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
@@ -592,7 +597,8 @@ def update_veiculo(id):
         cur.execute('''
             UPDATE veiculos SET placa=%s, marca=%s, modelo=%s, ano=%s, cor=%s, categoria=%s,
             diaria=%s, km_atual=%s, status=%s, combustivel=%s, observacoes=%s, renavam=%s,
-            chassi=%s, ano_fabricacao=%s, potencia=%s, versao=%s WHERE id=%s
+            chassi=%s, ano_fabricacao=%s, potencia=%s, versao=%s,
+            valor_fipe=%s, codigo_fipe=%s, referencia_fipe=%s WHERE id=%s
         ''', (data.get('placa'), data.get('marca'), data.get('modelo'),
               data.get('ano') or None, data.get('cor'), data.get('categoria'),
               data.get('diaria') or None, data.get('km_atual') or 0,
@@ -600,7 +606,9 @@ def update_veiculo(id):
               data.get('observacoes'), data.get('renavam') or None,
               data.get('chassi') or None,
               data.get('ano_fabricacao') or None,
-              data.get('potencia') or None, data.get('versao') or None, id))
+              data.get('potencia') or None, data.get('versao') or None,
+              _float_or_none(data.get('valor_fipe')),
+              data.get('codigo_fipe') or None, data.get('referencia_fipe') or None, id))
         conn.commit()
         cur.close()
         conn.close()

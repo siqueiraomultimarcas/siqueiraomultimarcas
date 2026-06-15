@@ -85,6 +85,7 @@
                     <th>Combustível</th>
                     <th>Categoria</th>
                     <th>Diária</th>
+                    <th>FIPE</th>
                     <th>Km</th>
                     <th>Status</th>
                     <th>Ações</th>
@@ -360,6 +361,7 @@ function renderizarVeiculos(lista) {
             <td>${v.combustivel || '-'}</td>
             <td>${v.categoria || '-'}</td>
             <td>${formatCurrency(v.diaria)}</td>
+            <td>${v.valor_fipe ? `<span style="color:#059669;font-weight:700;font-size:0.82rem;">${formatCurrency(v.valor_fipe)}</span>${v.referencia_fipe ? `<br><span style="font-size:0.65rem;color:#94a3b8;">${v.referencia_fipe}</span>` : ''}` : '<span style="color:#cbd5e1;font-size:0.78rem;">—</span>'}</td>
             <td>${(v.km_atual || 0).toLocaleString()} km</td>
             <td>${getStatusBadge(v.status)}</td>
             <td>
@@ -534,6 +536,56 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
                         `<option value="${val}" ${_optSel((v ? v.status : 'disponivel'), val)}>${lbl}</option>`
                     ).join('')}
                 </select>
+            </div>
+        </div>
+
+        <!-- ── Campos ocultos FIPE ── -->
+        <input type="hidden" name="valor_fipe" value="${v ? (v.valor_fipe||'') : ''}">
+        <input type="hidden" name="codigo_fipe" value="${v ? (v.codigo_fipe||'') : ''}">
+        <input type="hidden" name="referencia_fipe" value="${v ? (v.referencia_fipe||'') : ''}">
+
+        <!-- ── Consulta FIPE ── -->
+        <div style="border:1px solid #bfdbfe;border-radius:8px;overflow:hidden;margin-bottom:14px;">
+            <div style="background:#eff6ff;padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;"
+                 onclick="toggleFipeSection()">
+                <span style="font-size:0.82rem;font-weight:600;color:#1d4ed8;">
+                    <i class="fas fa-search-dollar" style="margin-right:6px;"></i>Consultar Tabela FIPE
+                    ${v && v.valor_fipe ? `<span style="margin-left:10px;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 8px;font-size:0.72rem;">${formatCurrency(v.valor_fipe)}</span>` : ''}
+                </span>
+                <i id="fipeChevronIcon" class="fas fa-chevron-down" style="color:#3b82f6;font-size:0.8rem;"></i>
+            </div>
+            <div id="fipeSection" style="display:none;padding:14px;border-top:1px solid #bfdbfe;background:#fff;">
+                <div class="grid-3" style="margin-bottom:10px;">
+                    <div class="form-group" style="margin-bottom:6px;">
+                        <label style="font-size:0.72rem;color:#64748b;">Tipo de Veículo</label>
+                        <select class="form-control" id="fipeTipo" onchange="fipeCarregarMarcas()">
+                            <option value="carros">Carros</option>
+                            <option value="motos">Motos</option>
+                            <option value="caminhoes">Caminhões</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:6px;">
+                        <label style="font-size:0.72rem;color:#64748b;">Marca</label>
+                        <select class="form-control" id="fipeMarca" onchange="fipeCarregarModelos()" disabled>
+                            <option value="">— carregue o tipo —</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:6px;">
+                        <label style="font-size:0.72rem;color:#64748b;">Modelo</label>
+                        <select class="form-control" id="fipeModelo" onchange="fipeCarregarAnos()" disabled>
+                            <option value="">— selecione a marca —</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:flex-end;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size:0.72rem;color:#64748b;">Ano / Combustível</label>
+                        <select class="form-control" id="fipeAno" onchange="fipeBuscarPreco()" disabled>
+                            <option value="">— selecione o modelo —</option>
+                        </select>
+                    </div>
+                    <div id="fipeResultado" style="font-size:0.78rem;color:#94a3b8;">Selecione marca, modelo e ano para consultar.</div>
+                </div>
             </div>
         </div>
 
@@ -813,5 +865,120 @@ async function _enviarCRLV(id) {
 
 /* ---------- INICIALIZAR ---------- */
 window.addEventListener('load', carregarVeiculos);
+
+/* ══════════════════════════════════════════════════
+   FIPE — BrasilAPI (sem autenticação, CORS liberado)
+   ══════════════════════════════════════════════════ */
+const _FIPE = 'https://brasilapi.com.br/api/fipe';
+
+function toggleFipeSection() {
+    const sec  = document.getElementById('fipeSection');
+    const icon = document.getElementById('fipeChevronIcon');
+    if (!sec) return;
+    const aberto = sec.style.display !== 'none';
+    sec.style.display = aberto ? 'none' : 'block';
+    if (icon) icon.className = aberto ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+    // Carrega marcas automaticamente na primeira abertura
+    if (!aberto) {
+        const sel = document.getElementById('fipeMarca');
+        if (sel && sel.options.length <= 1) fipeCarregarMarcas();
+    }
+}
+
+async function fipeCarregarMarcas() {
+    const tipo = document.getElementById('fipeTipo').value;
+    const sel  = document.getElementById('fipeMarca');
+    sel.disabled = true;
+    sel.innerHTML = '<option>Carregando...</option>';
+    document.getElementById('fipeModelo').innerHTML = '<option value="">— selecione a marca —</option>';
+    document.getElementById('fipeModelo').disabled = true;
+    document.getElementById('fipeAno').innerHTML    = '<option value="">— selecione o modelo —</option>';
+    document.getElementById('fipeAno').disabled     = true;
+    document.getElementById('fipeResultado').innerHTML = '';
+    try {
+        const marcas = await (await fetch(`${_FIPE}/marcas/v1/${tipo}`)).json();
+        sel.innerHTML = '<option value="">Selecione a marca</option>' +
+            marcas.map(m => `<option value="${m.valor}">${m.nome}</option>`).join('');
+        sel.disabled = false;
+    } catch(e) {
+        sel.innerHTML = '<option value="">Erro ao carregar marcas</option>';
+        showToast('Erro ao acessar a API FIPE', 'error');
+    }
+}
+
+async function fipeCarregarModelos() {
+    const marca = document.getElementById('fipeMarca').value;
+    if (!marca) return;
+    const sel = document.getElementById('fipeModelo');
+    sel.disabled = true;
+    sel.innerHTML = '<option>Carregando...</option>';
+    document.getElementById('fipeAno').innerHTML = '<option value="">— selecione o modelo —</option>';
+    document.getElementById('fipeAno').disabled  = true;
+    document.getElementById('fipeResultado').innerHTML = '';
+    try {
+        const modelos = await (await fetch(`${_FIPE}/veiculos/v1/${marca}`)).json();
+        sel.innerHTML = '<option value="">Selecione o modelo</option>' +
+            modelos.map(m => `<option value="${m.valor}">${m.modelo}</option>`).join('');
+        sel.disabled = false;
+    } catch(e) {
+        sel.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+    }
+}
+
+async function fipeCarregarAnos() {
+    const marca  = document.getElementById('fipeMarca').value;
+    const modelo = document.getElementById('fipeModelo').value;
+    if (!marca || !modelo) return;
+    const sel = document.getElementById('fipeAno');
+    sel.disabled = true;
+    sel.innerHTML = '<option>Carregando...</option>';
+    document.getElementById('fipeResultado').innerHTML = '';
+    try {
+        const anos = await (await fetch(`${_FIPE}/anos/v1/${marca}/${modelo}`)).json();
+        sel.innerHTML = '<option value="">Selecione o ano</option>' +
+            anos.map(a => `<option value="${a.valor}">${a.nome}</option>`).join('');
+        sel.disabled = false;
+    } catch(e) {
+        sel.innerHTML = '<option value="">Erro ao carregar anos</option>';
+    }
+}
+
+async function fipeBuscarPreco() {
+    const marca  = document.getElementById('fipeMarca').value;
+    const modelo = document.getElementById('fipeModelo').value;
+    const ano    = document.getElementById('fipeAno').value;
+    if (!marca || !modelo || !ano) return;
+
+    const res = document.getElementById('fipeResultado');
+    res.innerHTML = '<span style="color:#94a3b8;font-size:0.8rem;"><i class="fas fa-spinner fa-spin"></i> Consultando...</span>';
+
+    try {
+        const d = await (await fetch(`${_FIPE}/preco/v1/${marca}/${modelo}/${ano}`)).json();
+        if (d.erro || !d.valor) throw new Error('sem dado');
+
+        // Converte "R$ 28.800,00" → número
+        const valorNum = parseFloat(d.valor.replace('R$','').trim().replace(/\./g,'').replace(',','.'));
+
+        // Preenche campos ocultos
+        const form = document.getElementById('formVeiculo');
+        if (form) {
+            form.querySelector('[name="valor_fipe"]').value      = valorNum || '';
+            form.querySelector('[name="codigo_fipe"]').value     = d.codigoFipe || '';
+            form.querySelector('[name="referencia_fipe"]').value = d.mesReferencia || '';
+        }
+
+        res.innerHTML = `
+            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;">
+                <div style="font-size:0.68rem;color:#15803d;font-weight:600;letter-spacing:.04em;margin-bottom:2px;">
+                    FIPE ${d.codigoFipe} · ${d.mesReferencia}
+                </div>
+                <div style="font-size:1.15rem;font-weight:800;color:#059669;">${d.valor}</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">${d.modelo}</div>
+            </div>`;
+        showToast(`FIPE: ${d.valor} — preenchida no formulário`, 'success');
+    } catch(e) {
+        res.innerHTML = '<span style="color:#ef4444;font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> Erro ao consultar FIPE. Tente novamente.</span>';
+    }
+}
 </script>
 {% endblock %}
