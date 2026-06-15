@@ -871,12 +871,25 @@ window.addEventListener('load', carregarVeiculos);
    ══════════════════════════════════════════════════ */
 const _FIPE = '/api/fipe';
 
-// Normaliza string para comparação: minúsculas, sem acento, sem pontuação
+// Normaliza string: minúsculas, sem acento, sem pontuação
 function _fipeNorm(s) {
     if (!s) return '';
-    return s.toLowerCase()
-            .normalize('NFD').replace(/[̀-ͯ]/g, '')
-            .replace(/[^a-z0-9 ]/g, '').replace(/\s+/g,' ').trim();
+    return String(s).toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9 ]/g, '').replace(/\s+/g,' ').trim();
+}
+
+// Lê campos do veículo já preenchidos no formulário
+function _fipeDadosVeiculo() {
+    const f = document.getElementById('formVeiculo');
+    if (!f) return {};
+    const g = n => (f.querySelector(`[name="${n}"]`) || {}).value || '';
+    return {
+        marca:       g('marca'),
+        modelo:      g('modelo'),
+        ano:         g('ano'),           // ano modelo
+        combustivel: g('combustivel'),
+    };
 }
 
 function toggleFipeSection() {
@@ -887,18 +900,24 @@ function toggleFipeSection() {
     sec.style.display = aberto ? 'none' : '';
     if (icon) icon.className = aberto ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
     if (!aberto) {
-        const sel = document.getElementById('fipeMarca');
-        if (sel && sel.options.length <= 1) {
-            // Lê marca e modelo do formulário para auto-match
-            const form = document.getElementById('formVeiculo');
-            const autoMarca  = form ? (form.querySelector('[name="marca"]')  || {}).value || '' : '';
-            const autoModelo = form ? (form.querySelector('[name="modelo"]') || {}).value || '' : '';
-            fipeCarregarMarcas(autoMarca, autoModelo);
+        const selMarca = document.getElementById('fipeMarca');
+        if (selMarca && selMarca.options.length <= 1) {
+            const v = _fipeDadosVeiculo();
+            // Mostra status de preenchimento automático
+            if (v.marca || v.modelo) {
+                const partes = [v.marca, v.modelo, v.ano, v.combustivel].filter(Boolean);
+                document.getElementById('fipeResultado').innerHTML =
+                    `<span style="color:#3b82f6;font-size:0.78rem;">
+                        <i class="fas fa-magic"></i> Preenchendo automaticamente com:
+                        <strong>${partes.join(' · ')}</strong>
+                    </span>`;
+            }
+            fipeCarregarMarcas(v.marca, v.modelo, v.ano, v.combustivel);
         }
     }
 }
 
-async function fipeCarregarMarcas(autoMarca='', autoModelo='') {
+async function fipeCarregarMarcas(autoMarca='', autoModelo='', autoAno='', autoComb='') {
     const tipo = document.getElementById('fipeTipo').value;
     const sel  = document.getElementById('fipeMarca');
     sel.disabled = true;
@@ -907,13 +926,12 @@ async function fipeCarregarMarcas(autoMarca='', autoModelo='') {
     document.getElementById('fipeModelo').disabled = true;
     document.getElementById('fipeAno').innerHTML    = '<option value="">— selecione o modelo —</option>';
     document.getElementById('fipeAno').disabled     = true;
-    document.getElementById('fipeResultado').innerHTML = '';
+    if (!autoMarca) document.getElementById('fipeResultado').innerHTML = '';
     try {
         const marcas = await (await fetch(`${_FIPE}/marcas/${tipo}`)).json();
         sel.innerHTML = '<option value="">Selecione a marca</option>' +
             marcas.map(m => `<option value="${m.valor}">${m.nome}</option>`).join('');
         sel.disabled = false;
-        // Auto-seleciona a marca do veículo cadastrado
         if (autoMarca) {
             const alvo = _fipeNorm(autoMarca);
             const opt = [...sel.options].find(o =>
@@ -923,7 +941,11 @@ async function fipeCarregarMarcas(autoMarca='', autoModelo='') {
             );
             if (opt) {
                 sel.value = opt.value;
-                await fipeCarregarModelos(autoModelo);
+                await fipeCarregarModelos(autoModelo, autoAno, autoComb);
+            } else {
+                document.getElementById('fipeResultado').innerHTML =
+                    `<span style="color:#f59e0b;font-size:0.78rem;"><i class="fas fa-info-circle"></i>
+                    Marca "<strong>${autoMarca}</strong>" não encontrada na FIPE. Selecione manualmente.</span>`;
             }
         }
     } catch(e) {
@@ -932,7 +954,7 @@ async function fipeCarregarMarcas(autoMarca='', autoModelo='') {
     }
 }
 
-async function fipeCarregarModelos(autoModelo='') {
+async function fipeCarregarModelos(autoModelo='', autoAno='', autoComb='') {
     const marca = document.getElementById('fipeMarca').value;
     if (!marca) return;
     const sel = document.getElementById('fipeModelo');
@@ -940,27 +962,27 @@ async function fipeCarregarModelos(autoModelo='') {
     sel.innerHTML = '<option>Carregando...</option>';
     document.getElementById('fipeAno').innerHTML = '<option value="">— selecione o modelo —</option>';
     document.getElementById('fipeAno').disabled  = true;
-    document.getElementById('fipeResultado').innerHTML = '';
+    if (!autoModelo) document.getElementById('fipeResultado').innerHTML = '';
     try {
         const tipo = document.getElementById('fipeTipo').value;
         const modelos = await (await fetch(`${_FIPE}/modelos/${marca}?tipo=${tipo}`)).json();
         sel.innerHTML = '<option value="">Selecione o modelo</option>' +
             modelos.map(m => `<option value="${m.valor}">${m.modelo}</option>`).join('');
         sel.disabled = false;
-        // Auto-seleciona o modelo do veículo cadastrado
         if (autoModelo) {
             const alvo = _fipeNorm(autoModelo);
-            const opt = [...sel.options].find(o =>
-                _fipeNorm(o.text) === alvo ||
-                _fipeNorm(o.text).startsWith(alvo) ||
-                alvo.startsWith(_fipeNorm(o.text))
-            );
+            // Tenta match exato, depois por prefixo (modelo cadastrado pode ser abreviado)
+            const opt = [...sel.options].find(o => _fipeNorm(o.text) === alvo)
+                     || [...sel.options].find(o => _fipeNorm(o.text).startsWith(alvo))
+                     || [...sel.options].find(o => alvo.split(' ').every(w => _fipeNorm(o.text).includes(w)));
             if (opt) {
                 sel.value = opt.value;
-                await fipeCarregarAnos();
+                await fipeCarregarAnos(autoAno, autoComb);
             } else {
                 document.getElementById('fipeResultado').innerHTML =
-                    `<span style="color:#f59e0b;font-size:0.78rem;"><i class="fas fa-info-circle"></i> Marca encontrada, mas o modelo "<strong>${autoModelo}</strong>" não foi encontrado automaticamente. Selecione manualmente.</span>`;
+                    `<span style="color:#f59e0b;font-size:0.78rem;"><i class="fas fa-info-circle"></i>
+                    Modelo "<strong>${autoModelo}</strong>" não encontrado automaticamente.
+                    Selecione o modelo na lista acima.</span>`;
             }
         }
     } catch(e) {
@@ -969,20 +991,32 @@ async function fipeCarregarModelos(autoModelo='') {
     }
 }
 
-async function fipeCarregarAnos() {
+async function fipeCarregarAnos(autoAno='', autoComb='') {
     const marca  = document.getElementById('fipeMarca').value;
     const modelo = document.getElementById('fipeModelo').value;
     if (!marca || !modelo) return;
     const sel = document.getElementById('fipeAno');
     sel.disabled = true;
     sel.innerHTML = '<option>Carregando...</option>';
-    document.getElementById('fipeResultado').innerHTML = '';
+    if (!autoAno) document.getElementById('fipeResultado').innerHTML = '';
     try {
         const tipo = document.getElementById('fipeTipo').value;
         const anos = await (await fetch(`${_FIPE}/anos/${marca}/${modelo}?tipo=${tipo}`)).json();
         sel.innerHTML = '<option value="">Selecione o ano</option>' +
             anos.map(a => `<option value="${a.valor}">${a.nome}</option>`).join('');
         sel.disabled = false;
+        if (autoAno) {
+            const anoAlvo  = String(autoAno).trim();
+            const combAlvo = _fipeNorm(autoComb);
+            // Prioridade: ano + combustível; fallback: só ano
+            const opt = [...sel.options].find(o =>
+                            o.text.startsWith(anoAlvo) && _fipeNorm(o.text).includes(combAlvo) && combAlvo
+                        ) || [...sel.options].find(o => o.text.startsWith(anoAlvo));
+            if (opt) {
+                sel.value = opt.value;
+                await fipeBuscarPreco(); // Busca preço automaticamente
+            }
+        }
     } catch(e) {
         sel.innerHTML = '<option value="">Erro ao carregar anos</option>';
     }
