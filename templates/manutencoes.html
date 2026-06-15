@@ -149,6 +149,11 @@
         return `<span class="badge ${badges[status] || 'badge-info'}">${labels[status] || status}</span>`;
     }
     
+    function _parseItens(m) {
+        if (!m.itens_json) return [];
+        try { return JSON.parse(m.itens_json); } catch(e) { return []; }
+    }
+
     function renderizarManutencoes(lista) {
         const tbody = document.getElementById('tabelaManutencoes');
         document.getElementById('countManutBadge').textContent = lista.length;
@@ -156,27 +161,137 @@
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px 0;"><i class="fas fa-tools" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>Nenhuma manutenção encontrada</td></tr>';
             return;
         }
-        
-        tbody.innerHTML = lista.map(m => `
-            <tr>
-                <td>${formatDate(m.data_manutencao)}</td>
-                <td>${m.placa || '-'} - ${m.marca || ''} ${m.modelo || ''}</td>
-                <td>${m.tipo}</td>
-                <td>${m.descricao || '-'}</td>
-                <td>${m.km_manutencao ? m.km_manutencao.toLocaleString() + ' km' : '-'}</td>
-                <td>${formatCurrency(m.custo)}</td>
-                <td>${m.oficina || '-'}</td>
-                <td>${getStatusBadge(m.status)}</td>
-                <td>
-                    <button class="btn btn-sm btn-primary" onclick="editarManutencao(${m.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="excluirManutencao(${m.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
+
+        tbody.innerHTML = lista.map(m => {
+            const itens = _parseItens(m);
+            const temItens = itens.length > 0;
+
+            const pedidoBadge = m.numero_pedido
+                ? `<div style="margin-bottom:3px;"><span style="background:#dbeafe;color:#1d4ed8;font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;">Ped. Nº ${m.numero_pedido}</span></div>`
+                : '';
+
+            let descHtml;
+            if (temItens) {
+                descHtml = `<div class="itens-lista-mini">${itens.map(i =>
+                    `<div class="item-mini-row">
+                        <span class="item-mini-dot">•</span>
+                        <span class="item-mini-desc">${i.descricao}</span>
+                        <span class="item-mini-val">${formatCurrency(i.valor_total)}</span>
+                    </div>`
+                ).join('')}</div>`;
+            } else {
+                descHtml = m.descricao || '-';
+            }
+
+            const btnDetalhes = temItens
+                ? `<button class="btn btn-sm btn-itens" onclick="verDetalhes(${m.id})" title="Ver itens do pedido"><i class="fas fa-list-ul"></i></button> `
+                : '';
+
+            return `
+                <tr class="${temItens ? 'tr-tem-itens' : ''}">
+                    <td style="white-space:nowrap;">${formatDate(m.data_manutencao)}</td>
+                    <td>
+                        ${pedidoBadge}
+                        <span style="font-weight:600;color:#1e293b;">${m.placa || '-'}</span>
+                        <span style="color:#64748b;font-size:0.8rem;"> ${m.marca || ''} ${m.modelo || ''}</span>
+                    </td>
+                    <td>${m.tipo}</td>
+                    <td>${descHtml}</td>
+                    <td style="white-space:nowrap;">${m.km_manutencao ? m.km_manutencao.toLocaleString() + ' km' : '-'}</td>
+                    <td style="font-weight:700;color:#1e293b;">${formatCurrency(m.custo)}</td>
+                    <td style="font-size:0.82rem;">${m.oficina || '-'}</td>
+                    <td>${getStatusBadge(m.status)}</td>
+                    <td style="white-space:nowrap;">
+                        ${btnDetalhes}<button class="btn btn-sm btn-primary" onclick="editarManutencao(${m.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="excluirManutencao(${m.id})" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    function verDetalhes(id) {
+        const m = manutencoes.find(x => x.id === id);
+        if (!m) return;
+        const itens = _parseItens(m);
+        const valorTotal = parseFloat(m.custo) || 0;
+
+        const rowsHtml = itens.map((it, idx) => `
+            <tr style="border-bottom:1px solid #f1f5f9;${idx % 2 === 1 ? 'background:#fafafa;' : ''}">
+                <td style="padding:11px 16px;">
+                    <span style="font-weight:600;color:#1e293b;">${it.descricao}</span>
+                    ${it.codigo ? `<span style="font-size:0.7rem;color:#94a3b8;margin-left:6px;">${it.codigo}</span>` : ''}
                 </td>
-            </tr>
-        `).join('');
+                <td style="padding:11px 16px;text-align:center;color:#475569;">${(it.quantidade||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                <td style="padding:11px 16px;text-align:center;color:#64748b;font-size:0.75rem;text-transform:uppercase;">${it.unidade||''}</td>
+                <td style="padding:11px 16px;text-align:right;color:#475569;">${formatCurrency(it.valor_unitario)}</td>
+                <td style="padding:11px 16px;text-align:right;font-weight:700;color:#059669;">${formatCurrency(it.valor_total)}</td>
+            </tr>`).join('');
+
+        const content = `
+            <div style="margin:-20px -20px 20px;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:20px 24px;color:#fff;border-radius:0;">
+                <div style="font-size:0.72rem;color:#94a3b8;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-car"></i> ${m.placa || ''} · ${m.marca || ''} ${m.modelo || ''}
+                    &nbsp;·&nbsp;<i class="fas fa-road"></i> ${m.km_manutencao ? m.km_manutencao.toLocaleString() + ' km' : '-'}
+                    &nbsp;·&nbsp;<i class="fas fa-calendar"></i> ${formatDate(m.data_manutencao)}
+                </div>
+                <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:0.85rem;">
+                    <span><i class="fas fa-store" style="color:#60a5fa;margin-right:5px;"></i>${m.oficina || 'Não informado'}</span>
+                    ${m.numero_pedido ? `<span><i class="fas fa-file-invoice" style="color:#60a5fa;margin-right:5px;"></i>Pedido Nº <strong>${m.numero_pedido}</strong></span>` : ''}
+                    <span><i class="fas fa-tag" style="color:#60a5fa;margin-right:5px;"></i>${m.tipo}</span>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:0.62rem;color:#059669;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Itens</div>
+                    <div style="font-size:1.6rem;font-weight:800;color:#065f46;">${itens.length}</div>
+                </div>
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:0.62rem;color:#1d4ed8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Valor Total</div>
+                    <div style="font-size:1.2rem;font-weight:800;color:#1e3a8a;">${formatCurrency(valorTotal)}</div>
+                </div>
+                <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:0.62rem;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Status</div>
+                    <div style="margin-top:4px;">${getStatusBadge(m.status)}</div>
+                </div>
+            </div>
+
+            <div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:16px;">
+                <div style="background:#f8fafc;padding:11px 16px;font-weight:700;font-size:0.8rem;color:#475569;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-list-ul" style="color:#2563eb;"></i> Itens do Serviço
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:0.83rem;">
+                    <thead>
+                        <tr style="background:#f8fafc;">
+                            <th style="padding:10px 16px;text-align:left;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;">Descrição</th>
+                            <th style="padding:10px 16px;text-align:center;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;width:70px;">Qtd</th>
+                            <th style="padding:10px 16px;text-align:center;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;width:50px;">Un</th>
+                            <th style="padding:10px 16px;text-align:right;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;width:110px;">Unitário</th>
+                            <th style="padding:10px 16px;text-align:right;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;width:110px;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                    <tfoot>
+                        <tr style="background:#f0fdf4;border-top:2px solid #bbf7d0;">
+                            <td colspan="4" style="padding:12px 16px;font-weight:700;color:#374151;">Total Geral</td>
+                            <td style="padding:12px 16px;text-align:right;font-weight:800;color:#059669;font-size:1rem;">${formatCurrency(valorTotal)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            ${m.descricao ? `<div style="padding:12px 16px;background:#fafafa;border:1px solid #e2e8f0;border-radius:8px;font-size:0.82rem;color:#475569;margin-bottom:16px;">
+                <span style="font-weight:600;color:#374151;">Observação:</span> ${m.descricao}
+            </div>` : ''}
+
+            <div style="text-align:right;">
+                <button class="btn btn-secondary" onclick="fecharModal()" style="margin-right:8px;">Fechar</button>
+                <button class="btn btn-primary" onclick="fecharModal();editarManutencao(${m.id})">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+            </div>`;
+
+        abrirModal(`${m.numero_pedido ? 'Pedido Nº ' + m.numero_pedido + ' — ' : ''}${m.oficina || 'Manutenção'}`, content);
     }
     
     function filtrarManutencoes() {
@@ -899,10 +1014,33 @@
 #rev_itens_tbody tr:last-child { border-bottom: none; }
 #rev_itens_tbody td { padding: 9px 12px; color: #374151; }
 
+/* Itens na tabela de manutenções */
+.itens-lista-mini { font-size: 0.76rem; }
+.item-mini-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 1px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.item-mini-row:last-child { border-bottom: none; }
+.item-mini-dot { color: #2563eb; flex-shrink: 0; font-size: 0.7rem; }
+.item-mini-desc { color: #374151; flex: 1; font-size: 0.76rem; }
+.item-mini-val { color: #059669; font-weight: 700; font-size: 0.73rem; white-space: nowrap; }
+.tr-tem-itens td { vertical-align: top; padding-top: 10px; }
+
+.btn-itens {
+    background: #f0fdf4;
+    color: #059669;
+    border: 1px solid #bbf7d0;
+}
+.btn-itens:hover {
+    background: #dcfce7;
+    color: #047857;
+}
+
 @media (max-width: 600px) {
-    #rev_veiculo_card, #rev_fornecedor_card {
-        grid-column: 1 / -1;
-    }
+    #rev_veiculo_card, #rev_fornecedor_card { grid-column: 1 / -1; }
 }
 </style>
 {% endblock %}

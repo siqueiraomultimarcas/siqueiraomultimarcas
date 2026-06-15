@@ -1003,9 +1003,13 @@ def importar_manutencao_pdf():
     try:
         pdf_bytes = io.BytesIO(pdf_file.read())
         all_text = ''
+        all_tables = []
         with pdfplumber.open(pdf_bytes) as pdf:
             for page in pdf.pages:
                 all_text += (page.extract_text() or '') + '\n'
+                tbls = page.extract_tables()
+                if tbls:
+                    all_tables.extend(tbls)
 
         result = {}
 
@@ -1013,7 +1017,7 @@ def importar_manutencao_pdf():
         m = re.search(r'PEDIDO\s+N[Oº°]\s*(\d+)', all_text, re.IGNORECASE)
         result['numero_pedido'] = m.group(1) if m else ''
 
-        # Nome do fornecedor — primeira linha antes da data
+        # Nome do fornecedor — primeira linha antes da data/hora
         lines = [l.strip() for l in all_text.split('\n') if l.strip()]
         fornec_nome_raw = ''
         if lines:
@@ -1025,17 +1029,22 @@ def importar_manutencao_pdf():
         cnpj_raw = m.group(1).strip() if m else ''
         result['fornecedor_cnpj_raw'] = cnpj_raw
 
-        # Data do serviço
+        # Data do serviço — múltiplos formatos
         meses_pt = {'jan':'01','fev':'02','mar':'03','abr':'04','mai':'05','jun':'06',
                     'jul':'07','ago':'08','set':'09','out':'10','nov':'11','dez':'12'}
-        m = re.search(r'Data[:\s]+(\d{1,2})/(\w{3})/(\d{4})', all_text, re.IGNORECASE)
-        if m:
-            d, mes_str, a = m.group(1), m.group(2).lower(), m.group(3)
-            result['data_manutencao'] = f'{a}-{meses_pt.get(mes_str,"01")}-{int(d):02d}'
-        else:
-            result['data_manutencao'] = ''
+        data_parsed = ''
+        # Formato: Data: 09/jun/2026
+        m = re.search(r'(?<!\w)Data[:\s]+(\d{1,2})/([a-zA-Z]{3})/(\d{4})', all_text, re.IGNORECASE)
+        if m and m.group(2).lower() in meses_pt:
+            data_parsed = f'{m.group(3)}-{meses_pt[m.group(2).lower()]}-{int(m.group(1)):02d}'
+        # Formato numérico: Data: 09/06/2026
+        if not data_parsed:
+            m = re.search(r'(?<!\w)Data[:\s]+(\d{2})/(\d{2})/(\d{4})', all_text, re.IGNORECASE)
+            if m:
+                data_parsed = f'{m.group(3)}-{m.group(2)}-{m.group(1)}'
+        result['data_manutencao'] = data_parsed
 
-        # Placa
+        # Placa — padrão Mercosul e antigo
         m = re.search(r'Placa[:\s|]+([A-Z]{3}[\d][A-Z\d][\d]{2})', all_text, re.IGNORECASE)
         result['placa'] = m.group(1).upper() if m else ''
 
@@ -1049,36 +1058,75 @@ def importar_manutencao_pdf():
         else:
             result['km'] = None
 
-        # Total líquido
-        m = re.search(r'Total\s+L[íi]quido\s+R\$\s*([\d.,]+)', all_text, re.IGNORECASE)
-        try:
-            result['total'] = float(m.group(1).replace('.', '').replace(',', '.')) if m else 0.0
-        except Exception:
-            result['total'] = 0.0
-
-        # Itens do pedido
+        # ─── ITENS — tenta tabela pdfplumber primeiro (mais confiável) ───
         itens = []
-        m_ini = re.search(r'ITENS DO PEDIDO', all_text, re.IGNORECASE)
-        m_fim = re.search(r'Totalizadores', all_text, re.IGNORECASE)
-        if m_ini and m_fim:
-            bloco = all_text[m_ini.end():m_fim.start()]
-            item_re = re.compile(
-                r'^\s*(\d{1,3})\s+(\d+)\s+(.+?)\s+([\d]+[,][\d]+)\s+(pc|un|pç|kg|lt|lts?|m|ml|fl)\s+[\d,]+\s+([\d]+[,][\d]+)\s+([\d]+[,][\d]+)',
-                re.MULTILINE | re.IGNORECASE
-            )
-            for mi in item_re.finditer(bloco):
+        for table in all_tables:
+            if not table or len(table) < 2:
+                continue
+            header = [str(c or '').upper().strip() for c in table[0]]
+            # Detectar tabela de itens: deve ter coluna de descrição e valores
+            if not (any('DESCRI' in h for h in header) and any('UNIT' in h or 'R$' in h or 'TOTAL' in h for h in header)):
+                continue
+            for row in table[1:]:
+                if not row or not row[0]:
+                    continue
                 try:
-                    itens.append({
-                        'codigo': mi.group(2),
-                        'descricao': mi.group(3).strip(),
-                        'quantidade': float(mi.group(4).replace(',', '.')),
-                        'unidade': mi.group(5),
-                        'valor_unitario': float(mi.group(6).replace(',', '.')),
-                        'valor_total': float(mi.group(7).replace(',', '.'))
-                    })
+                    row_str = [str(c or '').strip() for c in row]
+                    if not re.match(r'^\d{1,3}$', row_str[0]):
+                        continue
+                    if len(row_str) >= 8:
+                        itens.append({
+                            'codigo': row_str[1],
+                            'descricao': row_str[2],
+                            'quantidade': float((row_str[3] or '0').replace(',', '.')),
+                            'unidade': row_str[4],
+                            'valor_unitario': float((row_str[6] or '0').replace(',', '.')),
+                            'valor_total': float((row_str[7] or '0').replace(',', '.'))
+                        })
                 except Exception:
                     pass
+            if itens:
+                break
+
+        # Fallback: extrair itens via regex no texto
+        if not itens:
+            m_ini = re.search(r'ITENS DO PEDIDO', all_text, re.IGNORECASE)
+            m_fim = re.search(r'Totalizadores', all_text, re.IGNORECASE)
+            if m_ini and m_fim:
+                bloco = all_text[m_ini.end():m_fim.start()]
+                item_re = re.compile(
+                    r'^\s*(\d{1,3})\s+(\d+)\s+(.+?)\s+([\d]+[,][\d]+)\s+(p[cç]a?|un|kg|lt|lts?|m|ml|fl)\s+[\d,]+\s+([\d]+[,][\d]+)\s+([\d]+[,][\d]+)',
+                    re.MULTILINE | re.IGNORECASE
+                )
+                for mi in item_re.finditer(bloco):
+                    try:
+                        itens.append({
+                            'codigo': mi.group(2),
+                            'descricao': mi.group(3).strip(),
+                            'quantidade': float(mi.group(4).replace(',', '.')),
+                            'unidade': mi.group(5),
+                            'valor_unitario': float(mi.group(6).replace(',', '.')),
+                            'valor_total': float(mi.group(7).replace(',', '.'))
+                        })
+                    except Exception:
+                        pass
+
         result['itens'] = itens
+
+        # Total: soma dos itens (confiável) — evita bug do regex capturar nº de itens
+        if itens:
+            result['total'] = round(sum(i['valor_total'] for i in itens), 2)
+        else:
+            # Fallback: último valor monetário na seção totalizadores
+            m_tot = re.search(r'Totalizadores([\s\S]{0,600})', all_text, re.IGNORECASE)
+            if m_tot:
+                nums = re.findall(r'(\d{1,3}(?:\.\d{3})*,\d{2})', m_tot.group(1))
+                try:
+                    result['total'] = float(nums[-1].replace('.', '').replace(',', '.')) if nums else 0.0
+                except Exception:
+                    result['total'] = 0.0
+            else:
+                result['total'] = 0.0
 
         # Cruzamento de veículo
         conn = get_conn()
@@ -1095,7 +1143,7 @@ def importar_manutencao_pdf():
                                  'modelo': row[3], 'ano': row[4], 'km_atual': row[5]}
         result['veiculo'] = veiculo_match
 
-        # Cruzamento de fornecedor — por CNPJ primeiro, depois por nome
+        # Cruzamento de fornecedor — CNPJ primeiro, depois nome parcial
         fornecedor_match = None
         cnpj_clean = re.sub(r'\D', '', cnpj_raw)
         if cnpj_clean:
