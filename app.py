@@ -925,7 +925,8 @@ def historico_veiculo(placa):
     if not row:
         cur.close(); conn.close()
         return jsonify({'error': 'Veículo não encontrado'}), 404
-    veiculo = row_to_dict(cur, row)
+    cols = [d[0] for d in cur.description]
+    veiculo = dict(zip(cols, row))
 
     cur.execute(
         'SELECT m.*, v.placa, v.marca, v.modelo '
@@ -1069,9 +1070,14 @@ def importar_manutencao_pdf():
             m = re.search(r'(\d{1,2})/(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/(\d{4})', all_text, re.IGNORECASE)
             if m:
                 data_parsed = f'{m.group(3)}-{meses_pt[m.group(2).lower()]}-{int(m.group(1)):02d}'
-        # 3) Formato numérico: dd/mm/yyyy
+        # 3) Formato numérico: dd/mm/yyyy com prefixo "Data:"
         if not data_parsed:
             m = re.search(r'Data[:\s]+(\d{2})/(\d{2})/(\d{4})', all_text, re.IGNORECASE)
+            if m:
+                data_parsed = f'{m.group(3)}-{m.group(2)}-{m.group(1)}'
+        # 4) Qualquer dd/mm/yyyy no texto (fallback mais agressivo)
+        if not data_parsed:
+            m = re.search(r'\b(\d{2})/(\d{2})/(\d{4})\b', all_text)
             if m:
                 data_parsed = f'{m.group(3)}-{m.group(2)}-{m.group(1)}'
         result['data_manutencao'] = data_parsed
