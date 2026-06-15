@@ -979,20 +979,46 @@ def add_manutencao():
         custo, oficina, proxima_manutencao_km, proxima_manutencao_data, status,
         numero_pedido, fornecedor_id, itens_json)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ''', (data['veiculo_id'], data['tipo'], data.get('descricao'), data.get('data_manutencao'),
-          data.get('km_manutencao'), data.get('custo'), data.get('oficina'),
-          data.get('proxima_manutencao_km'), data.get('proxima_manutencao_data'),
-          data.get('status', 'concluida'), data.get('numero_pedido'),
-          data.get('fornecedor_id') or None, data.get('itens_json')))
+    ''', (_int_or_none(data.get('veiculo_id')),
+          data.get('tipo'),
+          data.get('descricao') or None,
+          data.get('data_manutencao') or None,
+          _int_or_none(data.get('km_manutencao')),
+          _float_or_none(data.get('custo')),
+          data.get('oficina') or None,
+          _int_or_none(data.get('proxima_manutencao_km')),
+          data.get('proxima_manutencao_data') or None,
+          data.get('status') or 'concluida',
+          data.get('numero_pedido') or None,
+          _int_or_none(data.get('fornecedor_id')),
+          data.get('itens_json') or None))
 
-    if data.get('km_manutencao'):
-        cur.execute('UPDATE veiculos SET km_atual = %s WHERE id = %s',
-                    (data['km_manutencao'], data['veiculo_id']))
+    km = _int_or_none(data.get('km_manutencao'))
+    vid = _int_or_none(data.get('veiculo_id'))
+    if km and vid:
+        cur.execute('UPDATE veiculos SET km_atual = %s WHERE id = %s', (km, vid))
 
     conn.commit()
     cur.close()
     conn.close()
     return jsonify({'success': True})
+
+
+def _int_or_none(v):
+    if v is None or v == '':
+        return None
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+def _float_or_none(v):
+    if v is None or v == '':
+        return None
+    try:
+        return float(str(v).replace(',', '.'))
+    except (TypeError, ValueError):
+        return None
 
 
 @app.route('/api/manutencoes/<int:id>', methods=['PUT'])
@@ -1006,16 +1032,25 @@ def update_manutencao(id):
         km_manutencao=%s, custo=%s, oficina=%s, proxima_manutencao_km=%s,
         proxima_manutencao_data=%s, status=%s, fornecedor_id=%s, numero_pedido=%s, itens_json=%s
         WHERE id=%s
-    ''', (data.get('veiculo_id'), data.get('tipo'), data.get('descricao'),
-          data.get('data_manutencao') or None, data.get('km_manutencao'), data.get('custo'),
-          data.get('oficina'), data.get('proxima_manutencao_km'),
-          data.get('proxima_manutencao_data') or None, data.get('status'),
-          data.get('fornecedor_id') or None, data.get('numero_pedido') or None,
-          data.get('itens_json') or None, id))
+    ''', (_int_or_none(data.get('veiculo_id')),
+          data.get('tipo'),
+          data.get('descricao') or None,
+          data.get('data_manutencao') or None,
+          _int_or_none(data.get('km_manutencao')),
+          _float_or_none(data.get('custo')),
+          data.get('oficina') or None,
+          _int_or_none(data.get('proxima_manutencao_km')),
+          data.get('proxima_manutencao_data') or None,
+          data.get('status'),
+          _int_or_none(data.get('fornecedor_id')),
+          data.get('numero_pedido') or None,
+          data.get('itens_json') or None,
+          id))
 
-    if data.get('km_manutencao'):
-        cur.execute('UPDATE veiculos SET km_atual = %s WHERE id = %s',
-                    (data['km_manutencao'], data.get('veiculo_id')))
+    km = _int_or_none(data.get('km_manutencao'))
+    vid = _int_or_none(data.get('veiculo_id'))
+    if km and vid:
+        cur.execute('UPDATE veiculos SET km_atual = %s WHERE id = %s', (km, vid))
 
     conn.commit()
     cur.close()
