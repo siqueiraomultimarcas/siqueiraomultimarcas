@@ -35,9 +35,23 @@
     </div>
 </div>
 
-<!-- Busca -->
+<!-- Filtros -->
 <div class="card" style="padding:14px 20px;margin-bottom:16px;">
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <!-- Navegação de mês -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <button onclick="mudarMes(-1)" class="btn btn-secondary" style="padding:6px 12px;font-size:0.85rem;">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <div id="mesTabs" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
+        <button onclick="mudarMes(1)" class="btn btn-secondary" style="padding:6px 12px;font-size:0.85rem;">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+        <button onclick="selecionarMes('')" class="btn btn-secondary" id="btnTodosMeses" style="padding:6px 12px;font-size:0.82rem;white-space:nowrap;">
+            Todos
+        </button>
+    </div>
+    <!-- Busca + pendentes -->
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-top:1px solid #f1f5f9;padding-top:12px;">
         <div style="position:relative;flex:1;min-width:200px;max-width:320px;">
             <input type="text" class="form-control" id="buscaPlaca"
                    placeholder="Buscar por placa ou cliente..."
@@ -150,9 +164,10 @@
 </style>
 
 <script>
-let _cobrancas = [];
-let _pagAtual  = {};
-let _abertos   = new Set();
+let _cobrancas      = [];
+let _pagAtual       = {};
+let _abertos        = new Set();
+let _mesSelecionado = hoje().slice(0, 7); // YYYY-MM, padrão = mês atual
 
 function fmtR(v) {
     return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -169,12 +184,68 @@ function fmtDFull(iso) {
 }
 function hoje() { return new Date().toISOString().split('T')[0]; }
 
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function semanasMes(semanas, yyyymm) {
+    if (!yyyymm) return semanas;
+    return semanas.filter(s => s.data_inicio.slice(0,7) === yyyymm
+                            || s.data_fim.slice(0,7) === yyyymm);
+}
+
+function labelMes(yyyymm) {
+    const [y, m] = yyyymm.split('-');
+    return `${MESES_PT[parseInt(m)-1].slice(0,3)} ${y}`;
+}
+
+function renderMesTabs() {
+    // Coleta todos os YYYY-MM distintos presentes nos dados
+    const meses = new Set();
+    for (const loc of _cobrancas)
+        for (const s of loc.semanas) {
+            meses.add(s.data_inicio.slice(0,7));
+            meses.add(s.data_fim.slice(0,7));
+        }
+    const lista = [...meses].sort();
+    const tabs = document.getElementById('mesTabs');
+    tabs.innerHTML = lista.map(m => `
+        <button onclick="selecionarMes('${m}')"
+                style="padding:5px 14px;border-radius:20px;border:2px solid ${m===_mesSelecionado?'#2563eb':'#e2e8f0'};
+                       background:${m===_mesSelecionado?'#2563eb':'#fff'};
+                       color:${m===_mesSelecionado?'#fff':'#475569'};
+                       font-size:0.8rem;font-weight:600;cursor:pointer;white-space:nowrap;
+                       transition:all 0.15s;">
+            ${labelMes(m)}
+        </button>`).join('');
+
+    // Botão "Todos"
+    const btnTodos = document.getElementById('btnTodosMeses');
+    btnTodos.style.background = _mesSelecionado === '' ? '#475569' : '';
+    btnTodos.style.color      = _mesSelecionado === '' ? '#fff' : '';
+}
+
+function selecionarMes(yyyymm) {
+    _mesSelecionado = yyyymm;
+    renderMesTabs();
+    renderLista();
+}
+
+function mudarMes(delta) {
+    if (!_mesSelecionado) return;
+    const [y, m] = _mesSelecionado.split('-').map(Number);
+    let nm = m + delta, ny = y;
+    if (nm > 12) { nm = 1;  ny++; }
+    if (nm < 1)  { nm = 12; ny--; }
+    selecionarMes(`${ny}-${String(nm).padStart(2,'0')}`);
+}
+
 async function carregarCobrancas() {
     document.getElementById('listaContratos').innerHTML =
         '<div style="text-align:center;padding:40px;color:#94a3b8;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><p style="margin-top:12px;">Carregando...</p></div>';
     try {
         const r = await fetch('/api/cobrancas');
         _cobrancas = await r.json();
+        renderMesTabs();
         renderLista();
     } catch(e) {
         showToast('Erro ao carregar cobranças', 'error');
@@ -195,14 +266,18 @@ function renderLista() {
             !loc.cliente.toLowerCase().includes(busca) &&
             !loc.veiculo.toLowerCase().includes(busca)) continue;
 
-        const pendentes = loc.semanas.filter(s=>s.status==='pendente').length;
+        // Filtro de mês: mostra só semanas do mês selecionado
+        const semanasFiltradas = semanasMes(loc.semanas, _mesSelecionado);
+        if (_mesSelecionado && semanasFiltradas.length === 0) continue;
+
+        const semanasVisiveis = semanasFiltradas;
+        const pendentes = semanasVisiveis.filter(s=>s.status==='pendente').length;
         if (soPend && pendentes === 0) continue;
 
         totLoc++;
         totPend     += pendentes;
-        totRec      += loc.total_pago;
-        totAReceber += loc.semanas.filter(s=>s.status==='pendente')
-                           .reduce((a,s)=>a+s.valor_previsto,0);
+        totRec      += semanasVisiveis.filter(s=>s.status==='pago').reduce((a,s)=>a+(s.valor_pago||0),0);
+        totAReceber += semanasVisiveis.filter(s=>s.status==='pendente').reduce((a,s)=>a+s.valor_previsto,0);
 
         const aberto = _abertos.has(loc.locacao_id);
 
@@ -221,7 +296,7 @@ function renderLista() {
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     ${pendentes > 0
-                        ? `<span style="background:#fef3c7;color:#d97706;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;white-space:nowrap;">${pendentes} pendente${pendentes>1?'s':''} · ${fmtR(loc.semanas.filter(s=>s.status==='pendente').reduce((a,s)=>a+s.valor_previsto,0))}</span>`
+                        ? `<span style="background:#fef3c7;color:#d97706;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;white-space:nowrap;">${pendentes} pendente${pendentes>1?'s':''} · ${fmtR(semanasVisiveis.filter(s=>s.status==='pendente').reduce((a,s)=>a+s.valor_previsto,0))}</span>`
                         : `<span style="background:#dcfce7;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">Em dia ✓</span>`
                     }
                     <i class="fas fa-chevron-${aberto?'up':'down'}" style="color:#94a3b8;font-size:0.85rem;transition:transform 0.2s;"></i>
@@ -232,11 +307,12 @@ function renderLista() {
             <div style="border-top:1px solid #f1f5f9;">
                 <!-- Resumo rápido -->
                 <div style="display:flex;gap:20px;padding:10px 20px 0;flex-wrap:wrap;">
-                    <span style="font-size:0.78rem;color:#16a34a;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>${loc.semanas.filter(s=>s.status==='pago').length} semana${loc.semanas.filter(s=>s.status==='pago').length!==1?'s':''} paga${loc.semanas.filter(s=>s.status==='pago').length!==1?'s':''} · ${fmtR(loc.total_pago)}</span>
-                    <span style="font-size:0.78rem;color:#d97706;font-weight:600;"><i class="fas fa-clock" style="margin-right:4px;"></i>${pendentes} pendente${pendentes!==1?'s':''} · ${fmtR(loc.semanas.filter(s=>s.status==='pendente').reduce((a,s)=>a+s.valor_previsto,0))}</span>
+                    <span style="font-size:0.78rem;color:#16a34a;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>${semanasVisiveis.filter(s=>s.status==='pago').length} paga${semanasVisiveis.filter(s=>s.status==='pago').length!==1?'s':''} · ${fmtR(semanasVisiveis.filter(s=>s.status==='pago').reduce((a,s)=>a+(s.valor_pago||0),0))}</span>
+                    <span style="font-size:0.78rem;color:#d97706;font-weight:600;"><i class="fas fa-clock" style="margin-right:4px;"></i>${pendentes} pendente${pendentes!==1?'s':''} · ${fmtR(semanasVisiveis.filter(s=>s.status==='pendente').reduce((a,s)=>a+s.valor_previsto,0))}</span>
+                    ${_mesSelecionado ? `<span style="font-size:0.78rem;color:#64748b;"><i class="fas fa-calendar" style="margin-right:4px;"></i>${labelMes(_mesSelecionado)} — ${semanasVisiveis.length} semana${semanasVisiveis.length!==1?'s':''}</span>` : ''}
                 </div>
                 <div class="semanas-grid">
-                    ${loc.semanas.map(s => {
+                    ${semanasVisiveis.map(s => {
                         const isHoje = s.data_inicio <= hoje() && hoje() <= s.data_fim;
                         const pago   = s.status === 'pago';
                         return `
