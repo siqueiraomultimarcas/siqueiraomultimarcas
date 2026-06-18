@@ -1,0 +1,54 @@
+{
+  "name": "Siqueirão Multimarcas",
+  "short_name": "Siqueirão",
+  "description": "Sistema de Gestão de Locadora de Veículos",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/static/logo_nova.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/logo_nova.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/logo_nova.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Locações",
+      "short_name": "Locações",
+      "url": "/locacoes",
+      "icons": [{ "src": "/static/logo_nova.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Cobranças",
+      "short_name": "Cobranças",
+      "url": "/cobrancas",
+      "icons": [{ "src": "/static/logo_nova.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Clientes",
+      "short_name": "Clientes",
+      "url": "/clientes",
+      "icons": [{ "src": "/static/logo_nova.png", "sizes": "96x96" }]
+    }
+  ]
+}
