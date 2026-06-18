@@ -187,6 +187,8 @@ def init_db():
         cur.execute(f"ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS {col} {tipo}")
     for col, tipo in [('numero_pedido','TEXT'), ('fornecedor_id','INTEGER'), ('itens_json','TEXT')]:
         cur.execute(f"ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS {col} {tipo}")
+    cur.execute("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cep TEXT")
+    cur.execute("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS bairro TEXT")
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS abastecimentos (
@@ -494,10 +496,11 @@ def add_cliente():
         conn = get_conn()
         cur = conn.cursor()
         cur.execute('''
-            INSERT INTO clientes (nome, cpf, cnh, telefone, email, endereco, cidade, estado, status, observacoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO clientes (nome, cpf, cnh, telefone, email, cep, endereco, bairro, cidade, estado, status, observacoes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (data['nome'], data.get('cpf'), data.get('cnh'), data.get('telefone'),
-              data.get('email'), data.get('endereco'), data.get('cidade'),
+              data.get('email'), data.get('cep') or None, data.get('endereco'),
+              data.get('bairro') or None, data.get('cidade'),
               data.get('estado'), data.get('status', 'ativo'), data.get('observacoes')))
         conn.commit()
         cur.close()
@@ -519,9 +522,11 @@ def update_cliente(id):
     cur = conn.cursor()
     cur.execute('''
         UPDATE clientes SET nome=%s, cpf=%s, cnh=%s, telefone=%s, email=%s,
-        endereco=%s, cidade=%s, estado=%s, status=%s, observacoes=%s WHERE id=%s
+        cep=%s, endereco=%s, bairro=%s, cidade=%s, estado=%s, status=%s, observacoes=%s
+        WHERE id=%s
     ''', (data['nome'], data.get('cpf'), data.get('cnh'), data.get('telefone'),
-          data.get('email'), data.get('endereco'), data.get('cidade'),
+          data.get('email'), data.get('cep') or None, data.get('endereco'),
+          data.get('bairro') or None, data.get('cidade'),
           data.get('estado'), data.get('status'), data.get('observacoes'), id))
     conn.commit()
     cur.close()
