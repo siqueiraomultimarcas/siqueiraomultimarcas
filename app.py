@@ -545,6 +545,119 @@ def delete_cliente(id):
     conn.close()
     return jsonify({'success': True})
 
+@app.route('/api/clientes/importar', methods=['POST'])
+@login_required
+def importar_clientes():
+    if 'file' not in request.files:
+        return jsonify({'error': 'Arquivo não enviado'}), 400
+    f = request.files['file']
+    fname = f.filename.lower()
+
+    try:
+        raw = f.read()
+        if fname.endswith('.xls'):
+            import xlrd
+            wb = xlrd.open_workbook(file_contents=raw)
+            ws = wb.sheet_by_index(0)
+            rows = [[ws.cell_value(r, c) for c in range(ws.ncols)] for r in range(ws.nrows)]
+        elif fname.endswith('.xlsx'):
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=True)
+            ws = wb.active
+            rows = [[cell.value for cell in row] for row in ws.iter_rows()]
+        else:
+            return jsonify({'error': 'Use .xls ou .xlsx'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Erro ao ler arquivo: {e}'}), 400
+
+    if len(rows) < 2:
+        return jsonify({'error': 'Planilha vazia'}), 400
+
+    import unicodedata
+    def _norm(s):
+        return unicodedata.normalize('NFKD', str(s or '')).encode('ascii', 'ignore').decode().lower().strip()
+
+    header = [_norm(h) for h in rows[0]]
+
+    def col(*frags):
+        for i, h in enumerate(header):
+            if any(f in h for f in frags):
+                return i
+        return -1
+
+    I_NOME   = col('nome')
+    I_CPF    = col('cpf', 'cnpj')
+    I_EMAIL  = col('email')
+    I_CEL    = col('celular')
+    I_FONE   = col('fone', 'telefone')
+    I_RUA    = col('rua', 'endereco', 'logradouro')
+    I_NUM    = col('numero', 'n')
+    I_COMP   = col('complemento')
+    I_BAIRRO = col('bairro')
+    I_CIDADE = col('cidade')
+    I_CEP    = col('cep')
+    I_UF     = col('estado', 'uf')
+
+    def get(row, i):
+        if i < 0 or i >= len(row): return ''
+        v = row[i]
+        return str(v).strip() if v is not None else ''
+
+    def fmt_cep(v):
+        d = re.sub(r'\D', '', v)
+        return f'{d[:5]}-{d[5:]}' if len(d) == 8 else (v or None)
+
+    def fmt_cpf(v):
+        d = re.sub(r'\D', '', v)
+        return d if d else None
+
+    conn = get_conn()
+    cur = conn.cursor()
+    importados = ignorados = 0
+    erros = []
+
+    for i, row in enumerate(rows[1:], start=2):
+        nome = get(row, I_NOME)
+        if not nome:
+            continue
+
+        cpf = fmt_cpf(get(row, I_CPF))
+
+        if cpf:
+            cur.execute('SELECT id FROM clientes WHERE cpf=%s', (cpf,))
+            if cur.fetchone():
+                ignorados += 1
+                continue
+
+        telefone = re.sub(r'\D', '', get(row, I_CEL) or get(row, I_FONE)) or None
+        email    = get(row, I_EMAIL) or None
+        rua      = get(row, I_RUA)
+        num      = get(row, I_NUM)
+        comp     = get(row, I_COMP)
+        endereco = ', '.join(p for p in [rua, num, comp] if p) or None
+        bairro   = get(row, I_BAIRRO) or None
+        cidade_r = get(row, I_CIDADE)
+        cidade   = cidade_r.split(' - ')[0].strip() if ' - ' in cidade_r else (cidade_r or None)
+        cep      = fmt_cep(get(row, I_CEP))
+        estado   = get(row, I_UF) or None
+
+        try:
+            cur.execute('SAVEPOINT sp_imp')
+            cur.execute('''
+                INSERT INTO clientes (nome, cpf, telefone, email, cep, endereco, bairro, cidade, estado, status)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ''', (nome, cpf, telefone, email, cep, endereco, bairro, cidade, estado, 'ativo'))
+            cur.execute('RELEASE SAVEPOINT sp_imp')
+            importados += 1
+        except Exception as e:
+            cur.execute('ROLLBACK TO SAVEPOINT sp_imp')
+            erros.append(f'Linha {i} ({nome}): {str(e)[:100]}')
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'importados': importados, 'ignorados': ignorados, 'erros': erros})
+
 # ==================== API VEÍCULOS ====================
 
 @app.route('/api/veiculos', methods=['GET'])

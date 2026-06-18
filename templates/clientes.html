@@ -8,9 +8,15 @@
         <h1><i class="fas fa-users"></i> Clientes</h1>
         <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Cadastro e gestão de clientes da locadora</p>
     </div>
-    <button class="btn btn-primary" onclick="abrirModalCliente()">
-        <i class="fas fa-plus"></i> Novo Cliente
-    </button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <label class="btn" style="background:#16a34a;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Importar clientes de planilha Excel (.xls ou .xlsx)">
+            <i class="fas fa-file-excel"></i> Importar Excel
+            <input type="file" accept=".xls,.xlsx" style="display:none" onchange="importarPlanilha(this)">
+        </label>
+        <button class="btn btn-primary" onclick="abrirModalCliente()">
+            <i class="fas fa-plus"></i> Novo Cliente
+        </button>
+    </div>
 </div>
 
 <!-- Stats -->
@@ -342,6 +348,45 @@
             showToast('Erro ao carregar histórico', 'error');
         }
     }
+
+    // ── Importação Excel ─────────────────────────────────────────────────────
+    async function importarPlanilha(input) {
+        const file = input.files[0];
+        if (!file) return;
+        input.value = '';
+
+        const fd = new FormData();
+        fd.append('file', file);
+
+        showToast('Importando planilha, aguarde...', 'info', 8000);
+
+        try {
+            const resp = await fetch('/api/clientes/importar', { method: 'POST', body: fd });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                showToast(data.error || 'Erro ao importar', 'error');
+                return;
+            }
+
+            const partes = [];
+            if (data.importados > 0) partes.push(`${data.importados} importado${data.importados > 1 ? 's' : ''}`);
+            if (data.ignorados  > 0) partes.push(`${data.ignorados} já cadastrado${data.ignorados > 1 ? 's' : ''}`);
+            if (data.erros && data.erros.length > 0) partes.push(`${data.erros.length} erro${data.erros.length > 1 ? 's' : ''}`);
+
+            const tipo = data.importados > 0 ? 'success' : (data.ignorados > 0 ? 'warning' : 'error');
+            showToast(partes.join(' · '), tipo, 7000);
+
+            if (data.importados > 0) carregarClientes();
+
+            if (data.erros && data.erros.length > 0) {
+                console.warn('Erros na importação:', data.erros);
+            }
+        } catch (err) {
+            showToast('Erro ao enviar arquivo', 'error');
+        }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // ── CEP helpers ──────────────────────────────────────────────────────────
     function maskCep(el) {
