@@ -2,9 +2,19 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Login — Siqueirão Multimarcas</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Siqueirão">
+    <link rel="apple-touch-icon" href="/static/logo_nova.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,13 +22,12 @@
         body {
             font-family: 'Poppins', sans-serif;
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             background: #000;
         }
 
-        /* ============================
-           PAINEL ESQUERDO — HERO
-        ============================= */
+        /* ── PAINEL ESQUERDO — HERO ── */
         .hero {
             flex: 1;
             position: relative;
@@ -28,8 +37,6 @@
             overflow: hidden;
             background: #000;
         }
-
-        /* Imagem do carro — ocupa todo o painel */
         .hero-img {
             position: absolute;
             inset: 0;
@@ -39,24 +46,19 @@
             object-position: center center;
             display: block;
         }
-
-        /* Overlay escuro sobre a imagem para legibilidade do texto */
         .hero-overlay {
             position: absolute;
             inset: 0;
             background:
-                linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.45) 40%, rgba(0,0,0,0.1) 100%),
-                linear-gradient(to right, rgba(0,0,0,0.5) 0%, transparent 60%);
+                linear-gradient(to top, rgba(0,0,0,0.93) 0%, rgba(0,0,0,0.45) 40%, rgba(0,0,0,0.12) 100%),
+                linear-gradient(to right, rgba(0,0,0,0.55) 0%, transparent 60%);
             z-index: 1;
         }
-
-        /* Conteúdo sobre a imagem */
         .hero-content {
             position: relative;
             z-index: 2;
             padding: 52px 60px;
         }
-
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -80,10 +82,7 @@
             box-shadow: 0 0 6px #2563eb;
             animation: blink 2s ease-in-out infinite;
         }
-        @keyframes blink {
-            0%,100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
         .hero-title {
             font-size: clamp(2.2rem, 4.5vw, 4rem);
@@ -104,12 +103,7 @@
             color: rgba(255,255,255,0.45);
             margin-bottom: 36px;
         }
-
-        /* Stats na parte inferior */
-        .hero-stats {
-            display: flex;
-            gap: 40px;
-        }
+        .hero-stats { display: flex; gap: 40px; }
         .stat strong {
             display: block;
             font-size: 1.6rem;
@@ -128,12 +122,11 @@
             display: block;
         }
 
-        /* ============================
-           PAINEL DIREITO — FORMULÁRIO
-        ============================= */
+        /* ── PAINEL DIREITO — FORMULÁRIO ── */
         .panel {
             width: 420px;
             min-height: 100vh;
+            min-height: 100dvh;
             background: #08090f;
             border-left: 1px solid rgba(255,255,255,0.06);
             display: flex;
@@ -143,8 +136,6 @@
             position: relative;
             flex-shrink: 0;
         }
-
-        /* Linha de acento no topo */
         .panel::before {
             content: '';
             position: absolute;
@@ -153,29 +144,20 @@
             background: linear-gradient(90deg, transparent, #2563eb 35%, #60a5fa 65%, transparent);
         }
 
-        /* Logo acima do título */
-        .login-header {
-            margin-bottom: 32px;
-        }
+        .login-header { margin-bottom: 32px; }
         .login-header img {
-            width: 280px;
+            width: 200px;
             height: auto;
             display: block;
             margin-bottom: 24px;
         }
-
-        /* Título e subtítulo do form */
         .form-title {
             font-size: 1.45rem;
             font-weight: 700;
             color: #f1f5f9;
             margin-bottom: 5px;
         }
-        .form-sub {
-            font-size: 0.82rem;
-            color: #4b5563;
-            margin-bottom: 0;
-        }
+        .form-sub { font-size: 0.82rem; color: #4b5563; }
 
         /* Campos */
         .field { margin-bottom: 17px; }
@@ -209,15 +191,14 @@
             font-size: 0.88rem;
             font-family: 'Poppins', sans-serif;
             outline: none;
-            transition: border-color 0.2s, background 0.2s;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
         }
         .field-inner input::placeholder { color: #374151; }
         .field-inner input:focus {
             border-color: rgba(37,99,235,0.55);
             background: rgba(37,99,235,0.05);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
         }
-        .field-inner input:focus ~ .ico-left { color: #3b82f6; }
-
         .ico-right {
             position: absolute;
             right: 13px;
@@ -227,20 +208,19 @@
             font-size: 0.8rem;
             cursor: pointer;
             transition: color 0.2s;
+            padding: 6px;
         }
         .ico-right:hover { color: #2563eb; }
 
-        /* Checkbox lembrar */
         .row-check {
             display: flex;
             align-items: center;
             gap: 9px;
             margin-bottom: 24px;
         }
-        .row-check input { accent-color: #2563eb; cursor: pointer; }
+        .row-check input { accent-color: #2563eb; cursor: pointer; width: 16px; height: 16px; }
         .row-check label { font-size: 0.8rem; color: #4b5563; cursor: pointer; }
 
-        /* Botão entrar */
         .btn-enter {
             width: 100%;
             padding: 14px;
@@ -258,6 +238,8 @@
             justify-content: center;
             gap: 10px;
             transition: background 0.2s, box-shadow 0.2s, transform 0.12s;
+            position: relative;
+            overflow: hidden;
         }
         .btn-enter:hover {
             background: #1d4ed8;
@@ -265,8 +247,19 @@
             transform: translateY(-1px);
         }
         .btn-enter:active { transform: translateY(0); }
+        .btn-enter.loading { opacity: 0.7; pointer-events: none; }
 
-        /* Erro */
+        /* Spinner dentro do botão */
+        .btn-spinner {
+            display: none;
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         .msg-erro {
             background: rgba(239,68,68,0.08);
             border: 1px solid rgba(239,68,68,0.25);
@@ -280,7 +273,6 @@
             gap: 8px;
         }
 
-        /* Separador */
         .sep {
             display: flex;
             align-items: center;
@@ -290,7 +282,6 @@
         .sep::before, .sep::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.05); }
         .sep span { font-size: 0.66rem; color: #1f2937; letter-spacing: 0.12em; text-transform: uppercase; }
 
-        /* Selos */
         .seals {
             display: flex;
             border: 1px solid rgba(255,255,255,0.05);
@@ -310,7 +301,6 @@
         .seal i { color: #1e3a8a; font-size: 0.88rem; }
         .seal span { font-size: 0.6rem; color: #374151; text-align: center; line-height: 1.3; }
 
-        /* Rodapé */
         .footer {
             margin-top: 28px;
             text-align: center;
@@ -319,65 +309,76 @@
             letter-spacing: 0.04em;
         }
 
-        /* Responsivo */
+        /* ── Mobile (PWA standalone) ── */
         @media (max-width: 860px) {
             .hero { display: none; }
-            .panel { width: 100%; border: none; background: #05060d; }
+            .panel {
+                width: 100%;
+                border: none;
+                background: #05060d;
+                padding: 48px 28px 40px;
+                /* safe area para notch/câmera */
+                padding-top: max(48px, env(safe-area-inset-top) + 24px);
+                padding-bottom: max(40px, env(safe-area-inset-bottom) + 20px);
+            }
+            .login-header img { width: 180px; margin-bottom: 20px; }
+            .form-title { font-size: 1.3rem; }
+            .field-inner input { font-size: 16px; /* evita zoom no iOS */ padding: 14px 14px 14px 42px; }
+            .btn-enter { padding: 15px; font-size: 0.95rem; }
+        }
+
+        /* Banner PWA Install */
+        #pwa-banner {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: #0f172a;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 14px 20px;
+            align-items: center;
+            gap: 12px;
+            z-index: 999;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+        }
+        #pwa-banner img { width: 38px; height: 38px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+        #pwa-banner .pwa-text { flex: 1; }
+        #pwa-banner .pwa-text strong { display: block; font-size: .82rem; color: #e2e8f0; }
+        #pwa-banner .pwa-text small { font-size: .7rem; color: #475569; }
+        #pwa-banner .pwa-install {
+            background: #2563eb; color: #fff; border: none; border-radius: 8px;
+            padding: 8px 16px; font-size: .82rem; font-weight: 600; cursor: pointer; flex-shrink: 0;
+        }
+        #pwa-banner .pwa-close {
+            background: none; border: none; color: #475569; font-size: 1.3rem; cursor: pointer; flex-shrink: 0; padding: 4px;
         }
     </style>
 </head>
 <body>
 
-<!-- ============================
-     PAINEL ESQUERDO — HERO
-============================= -->
+<!-- PAINEL ESQUERDO — HERO -->
 <div class="hero">
-    <!-- Imagem do carro (salve como static/car_hero.png) -->
-    <img
-        class="hero-img"
-        src="/static/pngtree-unbranded-blue-car-in-a-sleek-black-studio-3d-render-picture-image_11948911.jpg"
-        alt="Siqueirão Multimarcas"
-        onerror="this.style.background='radial-gradient(ellipse at 50% 60%, #0d2260 0%, #000 70%)'; this.removeAttribute('src')">
-
+    <img class="hero-img"
+         src="/static/pngtree-unbranded-blue-car-in-a-sleek-black-studio-3d-render-picture-image_11948911.jpg"
+         alt="Siqueirão Multimarcas"
+         onerror="this.style.background='radial-gradient(ellipse at 50% 60%, #0d2260 0%, #000 70%)'; this.removeAttribute('src')">
     <div class="hero-overlay"></div>
-
     <div class="hero-content">
         <div class="hero-badge">
             <span class="dot"></span>
             Sistema Profissional de Gestão
         </div>
-
-        <h1 class="hero-title">
-            SIQUEIR<span>ÃO</span><br>
-            MULTIMARCAS
-        </h1>
-
+        <h1 class="hero-title">SIQUEIR<span>ÃO</span><br>MULTIMARCAS</h1>
         <p class="hero-sub">Locadora &nbsp;·&nbsp; Frota &nbsp;·&nbsp; Controle Total</p>
-
         <div class="hero-stats">
-            <div class="stat">
-                <strong>360°</strong>
-                <span>Gestão completa</span>
-            </div>
-            <div class="stat">
-                <strong class="blue">24/7</strong>
-                <span>Disponível online</span>
-            </div>
-            <div class="stat">
-                <strong>100%</strong>
-                <span>Controle de frota</span>
-            </div>
+            <div class="stat"><strong>360°</strong><span>Gestão completa</span></div>
+            <div class="stat"><strong class="blue">24/7</strong><span>Disponível online</span></div>
+            <div class="stat"><strong>100%</strong><span>Controle de frota</span></div>
         </div>
     </div>
 </div>
 
-
-<!-- ============================
-     PAINEL DIREITO — FORMULÁRIO
-============================= -->
+<!-- PAINEL DIREITO — FORMULÁRIO -->
 <div class="panel">
-
-    <!-- Logo acima do título -->
     <div class="login-header">
         <img src="/static/logo_nova.png" alt="Siqueirão Multimarcas">
         <div class="form-title">Bem-vindo de volta</div>
@@ -390,14 +391,13 @@
     </div>
     {% endif %}
 
-    <form method="POST" action="/login">
+    <form method="POST" action="/login" onsubmit="onSubmit(this)">
         <div class="field">
             <label>CPF / Login</label>
             <div class="field-inner">
                 <i class="fas fa-id-card ico-left"></i>
-                <input type="text" name="email"
-                       placeholder="Digite seu CPF"
-                       required autofocus autocomplete="username">
+                <input type="text" name="email" placeholder="Digite seu CPF"
+                       required autofocus autocomplete="username" inputmode="numeric">
             </div>
         </div>
         <div class="field">
@@ -405,8 +405,7 @@
             <div class="field-inner">
                 <i class="fas fa-lock ico-left"></i>
                 <input type="password" name="senha" id="pwField"
-                       placeholder="••••••••"
-                       required autocomplete="current-password">
+                       placeholder="••••••••" required autocomplete="current-password">
                 <i class="fas fa-eye ico-right" id="pwIcon" onclick="togglePw()"></i>
             </div>
         </div>
@@ -414,34 +413,34 @@
             <input type="checkbox" id="lembrar" name="lembrar">
             <label for="lembrar">Manter conectado</label>
         </div>
-        <button type="submit" class="btn-enter">
-            <i class="fas fa-arrow-right-to-bracket"></i>
-            Entrar no Sistema
+        <button type="submit" class="btn-enter" id="btnEntrar">
+            <span class="btn-spinner" id="btnSpinner"></span>
+            <i class="fas fa-arrow-right-to-bracket" id="btnIcon"></i>
+            <span id="btnLabel">Entrar no Sistema</span>
         </button>
     </form>
 
     <div class="sep"><span>Acesso Seguro</span></div>
 
     <div class="seals">
-        <div class="seal">
-            <i class="fas fa-shield-halved"></i>
-            <span>Criptografado</span>
-        </div>
-        <div class="seal">
-            <i class="fas fa-cloud"></i>
-            <span>Na Nuvem</span>
-        </div>
-        <div class="seal">
-            <i class="fas fa-user-shield"></i>
-            <span>Por Nível</span>
-        </div>
-        <div class="seal">
-            <i class="fas fa-lock"></i>
-            <span>Auditado</span>
-        </div>
+        <div class="seal"><i class="fas fa-shield-halved"></i><span>Criptografado</span></div>
+        <div class="seal"><i class="fas fa-cloud"></i><span>Na Nuvem</span></div>
+        <div class="seal"><i class="fas fa-mobile-alt"></i><span>PWA App</span></div>
+        <div class="seal"><i class="fas fa-lock"></i><span>Seguro</span></div>
     </div>
 
     <div class="footer">&copy; 2026 Siqueirão Multimarcas — Todos os direitos reservados</div>
+</div>
+
+<!-- Banner de instalação PWA -->
+<div id="pwa-banner">
+    <img src="/static/logo_nova.png" alt="">
+    <div class="pwa-text">
+        <strong>Instalar Siqueirão</strong>
+        <small>Acesse direto do celular como app</small>
+    </div>
+    <button class="pwa-install" onclick="instalarPWA()">Instalar</button>
+    <button class="pwa-close" onclick="fecharBanner()">×</button>
 </div>
 
 <script>
@@ -450,6 +449,41 @@
         const i = document.getElementById('pwIcon');
         f.type = f.type === 'password' ? 'text' : 'password';
         i.className = f.type === 'password' ? 'fas fa-eye ico-right' : 'fas fa-eye-slash ico-right';
+    }
+
+    function onSubmit(form) {
+        const btn = document.getElementById('btnEntrar');
+        const spinner = document.getElementById('btnSpinner');
+        const icon = document.getElementById('btnIcon');
+        const label = document.getElementById('btnLabel');
+        btn.classList.add('loading');
+        spinner.style.display = 'block';
+        icon.style.display = 'none';
+        label.textContent = 'Entrando...';
+    }
+
+    /* PWA install prompt */
+    let _prompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        _prompt = e;
+        if (!sessionStorage.getItem('pwa-ok')) {
+            document.getElementById('pwa-banner').style.display = 'flex';
+        }
+    });
+    function instalarPWA() {
+        if (!_prompt) return;
+        _prompt.prompt();
+        _prompt.userChoice.then(() => { _prompt = null; fecharBanner(); });
+    }
+    function fecharBanner() {
+        document.getElementById('pwa-banner').style.display = 'none';
+        sessionStorage.setItem('pwa-ok', '1');
+    }
+
+    /* Service Worker */
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
     }
 </script>
 </body>
