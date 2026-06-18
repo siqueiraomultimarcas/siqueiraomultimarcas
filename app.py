@@ -591,7 +591,7 @@ def importar_clientes():
     I_CEL    = col('celular')
     I_FONE   = col('fone', 'telefone')
     I_RUA    = col('rua', 'endereco', 'logradouro')
-    I_NUM    = col('numero', 'n')
+    I_NUM    = col('numero', 'nro', 'n.')
     I_COMP   = col('complemento')
     I_BAIRRO = col('bairro')
     I_CIDADE = col('cidade')
@@ -603,13 +603,21 @@ def importar_clientes():
         v = row[i]
         return str(v).strip() if v is not None else ''
 
+    def _to_str_int(v):
+        # xlrd lê células numéricas como float (ex: 82720414.0); converte para inteiro antes
+        try:
+            return str(int(float(v)))
+        except (ValueError, TypeError):
+            return str(v).strip()
+
     def fmt_cep(v):
-        d = re.sub(r'\D', '', v)
-        return f'{d[:5]}-{d[5:]}' if len(d) == 8 else (v or None)
+        d = re.sub(r'\D', '', _to_str_int(v))
+        return f'{d[:5]}-{d[5:]}' if len(d) == 8 else (d or None)
 
     def fmt_cpf(v):
-        d = re.sub(r'\D', '', v)
-        return d if d else None
+        s = _to_str_int(v)
+        d = re.sub(r'\D', '', s)
+        return d.zfill(11) if d and len(d) <= 11 else (d or None)
 
     conn = get_conn()
     cur = conn.cursor()
