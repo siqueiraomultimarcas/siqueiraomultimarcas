@@ -699,7 +699,7 @@ def get_cobrancas():
     cur = conn.cursor()
 
     cur.execute('''
-        SELECT l.id, l.data_inicio, l.data_fim, l.data_devolucao_real, l.diaria, l.status,
+        SELECT l.id, l.data_inicio, l.data_fim, l.diaria,
                v.placa, v.marca, v.modelo,
                c.nome AS cliente_nome
         FROM locacoes l
@@ -711,79 +711,60 @@ def get_cobrancas():
     locacoes_db = rows_to_dict(cur)
 
     ids = [l['id'] for l in locacoes_db]
-    pagamentos_map = {}
+    pagamentos_por_loc = {}
     if ids:
         ph = ','.join(['%s'] * len(ids))
         cur.execute(f'''
-            SELECT id, locacao_id, semana_numero, valor_previsto, valor_pago,
-                   desconto, justificativa_desconto, status, data_pagamento, observacoes
-            FROM pagamentos_locacao WHERE locacao_id IN ({ph})
+            SELECT id, locacao_id, semana_numero, data_inicio, data_fim,
+                   valor_previsto, valor_pago, desconto,
+                   justificativa_desconto, status, data_pagamento, observacoes
+            FROM pagamentos_locacao
+            WHERE locacao_id IN ({ph})
+            ORDER BY locacao_id, data_inicio
         ''', ids)
         for p in rows_to_dict(cur):
-            pagamentos_map[(p['locacao_id'], p['semana_numero'])] = p
+            lid = p['locacao_id']
+            pagamentos_por_loc.setdefault(lid, []).append({
+                'id':                   p['id'],
+                'semana_numero':        p['semana_numero'],
+                'data_inicio':          str(p['data_inicio']) if p['data_inicio'] else None,
+                'data_fim':             str(p['data_fim']) if p['data_fim'] else None,
+                'dias':                 (((_date.fromisoformat(str(p['data_fim'])) - _date.fromisoformat(str(p['data_inicio']))).days + 1)
+                                         if p['data_inicio'] and p['data_fim'] else 0),
+                'valor_previsto':       float(p['valor_previsto'] or 0),
+                'valor_pago':           float(p['valor_pago'] or 0),
+                'desconto':             float(p['desconto'] or 0),
+                'justificativa_desconto': p['justificativa_desconto'],
+                'status':               p['status'],
+                'data_pagamento':       str(p['data_pagamento']) if p['data_pagamento'] else None,
+                'observacoes':          p['observacoes'],
+            })
 
     cur.close()
     conn.close()
 
-    today = _date.today()
     result = []
-
     for loc in locacoes_db:
         try:
             di = _date.fromisoformat(str(loc['data_inicio']))
         except Exception:
             continue
-
-        # Locação ativa: gera semanas até hoje (independente de data_fim)
-        # Locação devolvida: usa data real de devolução
-        if loc.get('data_devolucao_real'):
-            try:
-                df = _date.fromisoformat(str(loc['data_devolucao_real']))
-            except Exception:
-                df = today
-        else:
-            df = today  # sempre até hoje para locações ativas
-
         diaria = float(loc['diaria'] or 0)
-        semanas = []
-        num = 1
-        s_ini = di
-
-        while s_ini <= df and num <= 260:
-            s_fim = min(s_ini + timedelta(days=6), df)
-            dias = (s_fim - s_ini).days + 1
-            valor_prev = round(diaria * dias, 2)
-            pag = pagamentos_map.get((loc['id'], num), {})
-            semanas.append({
-                'numero': num,
-                'data_inicio': s_ini.isoformat(),
-                'data_fim': s_fim.isoformat(),
-                'dias': dias,
-                'valor_previsto': valor_prev,
-                'pagamento_id': pag.get('id'),
-                'status': pag.get('status', 'pendente'),
-                'valor_pago': pag.get('valor_pago'),
-                'desconto': pag.get('desconto'),
-                'justificativa_desconto': pag.get('justificativa_desconto'),
-                'data_pagamento': str(pag['data_pagamento']) if pag.get('data_pagamento') else None,
-                'observacoes': pag.get('observacoes'),
-            })
-            num += 1
-            s_ini += timedelta(days=7)
+        pagamentos = pagamentos_por_loc.get(loc['id'], [])
+        total_pago = sum(p['valor_pago'] for p in pagamentos)
 
         result.append({
-            'locacao_id': loc['id'],
-            'placa': loc['placa'],
-            'veiculo': f"{loc['placa']} — {loc['marca']} {loc['modelo']}",
-            'cliente': loc['cliente_nome'],
-            'data_inicio': str(loc['data_inicio']),
-            'data_fim': str(loc['data_fim']) if loc['data_fim'] else None,
-            'diaria': diaria,
+            'locacao_id':    loc['id'],
+            'placa':         loc['placa'],
+            'veiculo':       f"{loc['placa']} — {loc['marca']} {loc['modelo']}",
+            'cliente':       loc['cliente_nome'],
+            'data_inicio':   str(loc['data_inicio']),
+            'data_fim':      str(loc['data_fim']) if loc['data_fim'] else None,
+            'diaria':        diaria,
             'valor_semanal': round(diaria * 7, 2),
-            'semanas': semanas,
-            'total_previsto': sum(s['valor_previsto'] for s in semanas),
-            'total_pago': sum(float(s['valor_pago'] or 0) for s in semanas),
-            'pendentes': sum(1 for s in semanas if s['status'] == 'pendente'),
+            'pagamentos':    pagamentos,
+            'total_pago':    total_pago,
+            'n_pagamentos':  len(pagamentos),
         })
 
     return jsonify(result)
@@ -791,44 +772,65 @@ def get_cobrancas():
 @app.route('/api/cobrancas', methods=['POST'])
 @login_required
 def registrar_pagamento():
-    data = request.json
-    locacao_id   = data.get('locacao_id')
-    semana_num   = data.get('semana_numero')
-    valor_prev   = float(data.get('valor_previsto') or 0)
-    desconto     = float(data.get('desconto') or 0)
-    just         = (data.get('justificativa_desconto') or '').strip()
-    data_pag     = data.get('data_pagamento') or str(_date.today())
-    obs          = data.get('observacoes') or None
+    data       = request.json
+    locacao_id = int(data.get('locacao_id'))
+    d_ini      = data.get('data_inicio')
+    d_fim      = data.get('data_fim')
+    desconto   = float(data.get('desconto') or 0)
+    just       = (data.get('justificativa_desconto') or '').strip()
+    data_pag   = data.get('data_pagamento') or str(_date.today())
+    obs        = data.get('observacoes') or None
 
+    if not d_ini or not d_fim:
+        return jsonify({'error': 'Informe data de início e fim do período'}), 400
+    if d_fim < d_ini:
+        return jsonify({'error': 'Data fim deve ser igual ou posterior à data início'}), 400
     if desconto < 0:
         return jsonify({'error': 'Desconto não pode ser negativo'}), 400
     if desconto > 0 and not just:
         return jsonify({'error': 'Justificativa obrigatória quando há desconto'}), 400
 
-    valor_pago = round(valor_prev - desconto, 2)
-
     conn = get_conn()
     cur = conn.cursor()
+
+    # Verifica sobreposição com períodos já pagos
+    cur.execute('''
+        SELECT id, data_inicio, data_fim FROM pagamentos_locacao
+        WHERE locacao_id = %s AND status = 'pago'
+          AND data_inicio <= %s AND data_fim >= %s
+    ''', (locacao_id, d_fim, d_ini))
+    overlap = cur.fetchone()
+    if overlap:
+        cur.close(); conn.close()
+        return jsonify({'error': f'Período sobrepõe pagamento já registrado ({overlap[1]} a {overlap[2]})'}), 400
+
+    dias = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days + 1
+    # Busca diária do contrato para calcular valor previsto
+    cur.execute('SELECT diaria FROM locacoes WHERE id=%s', (locacao_id,))
+    row = cur.fetchone()
+    diaria = float(row[0]) if row else 0
+    valor_prev = round(diaria * dias, 2)
+    valor_pago = round(valor_prev - desconto, 2)
+
+    # Número sequencial do pagamento neste contrato
+    cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
+    semana_num = cur.fetchone()[0]
+
     cur.execute('''
         INSERT INTO pagamentos_locacao
-            (locacao_id, semana_numero, valor_previsto, valor_pago, desconto,
-             justificativa_desconto, status, data_pagamento, observacoes)
-        VALUES (%s,%s,%s,%s,%s,%s,'pago',%s,%s)
-        ON CONFLICT (locacao_id, semana_numero) DO UPDATE SET
-            valor_previsto=EXCLUDED.valor_previsto,
-            valor_pago=EXCLUDED.valor_pago,
-            desconto=EXCLUDED.desconto,
-            justificativa_desconto=EXCLUDED.justificativa_desconto,
-            status='pago',
-            data_pagamento=EXCLUDED.data_pagamento,
-            observacoes=EXCLUDED.observacoes
+            (locacao_id, semana_numero, data_inicio, data_fim,
+             valor_previsto, valor_pago, desconto, justificativa_desconto,
+             status, data_pagamento, observacoes)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'pago',%s,%s)
         RETURNING id
-    ''', (locacao_id, semana_num, valor_prev, valor_pago, desconto, just or None, data_pag, obs))
+    ''', (locacao_id, semana_num, d_ini, d_fim,
+          valor_prev, valor_pago, desconto, just or None,
+          data_pag, obs))
     new_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
     conn.close()
-    return jsonify({'success': True, 'id': new_id, 'valor_pago': valor_pago})
+    return jsonify({'success': True, 'id': new_id, 'valor_pago': valor_pago, 'valor_previsto': valor_prev, 'dias': dias})
 
 @app.route('/api/cobrancas/<int:pagamento_id>', methods=['DELETE'])
 @login_required

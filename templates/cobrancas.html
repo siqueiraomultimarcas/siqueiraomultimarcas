@@ -1,10 +1,109 @@
 {% extends "base.html" %}
 {% block title %}Cobranças - Locadora{% endblock %}
 {% block content %}
+
+<style>
+/* ── KPI ──────────────────────────────────────────────────────────── */
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:14px; }
+.kpi-card { position:relative; background:#fff; border-radius:12px; padding:18px 20px;
+            box-shadow:0 1px 4px rgba(0,0,0,.08); overflow:hidden; }
+.kpi-card .kpi-label { font-size:.65rem; font-weight:700; text-transform:uppercase;
+                        letter-spacing:.07em; color:#64748b; margin-bottom:4px; }
+.kpi-card .kpi-value { font-size:1.6rem; font-weight:700; color:#0f172a; }
+.kpi-card .kpi-icon-bg { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
+.kpi-card.blue  .kpi-value { color:#2563eb; } .kpi-card.blue  .kpi-icon-bg { color:#2563eb; }
+.kpi-card.green .kpi-value { color:#16a34a; } .kpi-card.green .kpi-icon-bg { color:#16a34a; }
+.kpi-card.amber .kpi-value { color:#d97706; } .kpi-card.amber .kpi-icon-bg { color:#d97706; }
+
+/* ── Accordion cards ─────────────────────────────────────────────── */
+.contrato-card { background:#fff; border-radius:12px; margin-bottom:12px;
+                 box-shadow:0 1px 4px rgba(0,0,0,.07); overflow:hidden; }
+.contrato-header { display:flex; align-items:center; gap:14px; padding:14px 18px;
+                   cursor:pointer; user-select:none; }
+.contrato-header:hover { background:#f8fafc; }
+.contrato-toggle { color:#94a3b8; font-size:.85rem; margin-left:auto; transition:transform .2s; }
+.contrato-card.open .contrato-toggle { transform:rotate(180deg); }
+.contrato-placa { background:#1e293b; color:#fff; font-weight:700; font-size:.8rem;
+                  padding:4px 10px; border-radius:6px; letter-spacing:.05em; }
+.contrato-info  { flex:1; min-width:0; }
+.contrato-info .veiculo { font-weight:600; font-size:.9rem; color:#0f172a; white-space:nowrap;
+                           overflow:hidden; text-overflow:ellipsis; }
+.contrato-info .cliente { font-size:.75rem; color:#64748b; }
+.contrato-meta  { text-align:right; font-size:.75rem; color:#64748b; flex-shrink:0; }
+.contrato-meta .total { font-weight:700; font-size:.9rem; color:#16a34a; }
+.contrato-meta .diaria { color:#94a3b8; }
+.contrato-body  { display:none; border-top:1px solid #f1f5f9; padding:20px 18px; }
+.contrato-card.open .contrato-body { display:block; }
+
+/* ── Mini Calendário ─────────────────────────────────────────────── */
+.cal-wrap { max-width:380px; }
+.cal-nav  { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.cal-nav h4 { font-size:.9rem; font-weight:700; color:#0f172a; margin:0; text-transform:capitalize; }
+.cal-nav button { background:none; border:1px solid #e2e8f0; border-radius:6px; width:30px; height:30px;
+                  cursor:pointer; color:#64748b; display:flex; align-items:center; justify-content:center; }
+.cal-nav button:hover { background:#f1f5f9; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.cal-dow  { text-align:center; font-size:.6rem; font-weight:700; color:#94a3b8;
+            text-transform:uppercase; padding-bottom:4px; }
+.cal-day  { aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+            border-radius:8px; font-size:.78rem; font-weight:500; cursor:pointer;
+            border:2px solid transparent; transition:all .12s; }
+.cal-day:hover:not(.disabled):not(.empty) { border-color:#6366f1; background:#eef2ff; }
+.cal-day.empty    { cursor:default; }
+.cal-day.disabled { color:#cbd5e1; cursor:not-allowed; background:#f8fafc; }
+.cal-day.paid     { background:#dcfce7; color:#15803d; cursor:not-allowed; font-weight:700;
+                    border-color:#86efac; position:relative; }
+.cal-day.paid::after { content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
+                        width:4px; height:4px; border-radius:50%; background:#15803d; }
+.cal-day.start    { background:#4f46e5; color:#fff; border-color:#4f46e5; }
+.cal-day.end      { background:#4f46e5; color:#fff; border-color:#4f46e5; }
+.cal-day.inrange  { background:#e0e7ff; color:#3730a3; border-color:#c7d2fe; }
+.cal-day.today-ring { outline:2px dashed #f59e0b; outline-offset:2px; }
+
+/* ── Seleção resumo ──────────────────────────────────────────────── */
+.sel-resumo { margin-top:14px; padding:12px 16px; background:#f1f5f9;
+              border-radius:10px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.sel-resumo .sel-info { flex:1; min-width:0; }
+.sel-resumo .sel-dias { font-size:.8rem; color:#64748b; }
+.sel-resumo .sel-valor { font-size:1.2rem; font-weight:700; color:#0f172a; }
+.sel-resumo .sel-detalhe { font-size:.72rem; color:#94a3b8; }
+
+/* ── Histórico pago ──────────────────────────────────────────────── */
+.hist-list { margin-top:18px; }
+.hist-title { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+              color:#94a3b8; margin-bottom:8px; }
+.hist-item { display:flex; align-items:center; gap:10px; padding:8px 12px;
+             background:#f8fafc; border-radius:8px; margin-bottom:6px; font-size:.78rem; }
+.hist-period { font-weight:600; color:#0f172a; min-width:120px; }
+.hist-dias   { color:#64748b; }
+.hist-val    { font-weight:700; color:#16a34a; margin-left:auto; }
+.hist-del    { background:none; border:none; color:#ef4444; cursor:pointer; padding:2px 6px;
+               border-radius:4px; font-size:.75rem; }
+.hist-del:hover { background:#fee2e2; }
+
+/* ── Modal ────────────────────────────────────────────────────────── */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
+                 z-index:1000; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal-box { background:#fff; border-radius:16px; padding:28px; width:100%; max-width:440px;
+             box-shadow:0 20px 60px rgba(0,0,0,.25); animation:slideUp .2s ease; }
+@keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+.modal-title { font-size:1.1rem; font-weight:700; color:#0f172a; margin-bottom:18px;
+               display:flex; align-items:center; gap:8px; }
+.modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+
+/* ── Layout 2 colunas calendário + histórico ─────────────────────── */
+@media(min-width:600px){
+.body-cols { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
+}
+</style>
+
 <div class="page-header">
     <div>
         <h1><i class="fas fa-hand-holding-usd"></i> Cobranças</h1>
-        <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Controle semanal de recebimentos por locação</p>
+        <p style="font-size:.8rem;color:#94a3b8;margin-top:2px;">
+            Selecione o período de cada pagamento diretamente no calendário
+        </p>
     </div>
     <button class="btn btn-secondary" onclick="carregarCobrancas()">
         <i class="fas fa-sync-alt"></i> Atualizar
@@ -18,466 +117,532 @@
         <div class="kpi-value" id="kpiLocacoes">0</div>
         <i class="fas fa-key kpi-icon-bg"></i>
     </div>
-    <div class="kpi-card red">
-        <div class="kpi-label">Semanas Pendentes</div>
-        <div class="kpi-value" id="kpiPendentes">0</div>
-        <i class="fas fa-clock kpi-icon-bg"></i>
-    </div>
     <div class="kpi-card green">
         <div class="kpi-label">Total Recebido</div>
-        <div class="kpi-value" id="kpiRecebido" style="font-size:1.1rem;">R$ 0,00</div>
+        <div class="kpi-value" id="kpiRecebido" style="font-size:1.1rem">R$ 0,00</div>
         <i class="fas fa-check-circle kpi-icon-bg"></i>
     </div>
-    <div class="kpi-card yellow">
-        <div class="kpi-label">A Receber (pendente)</div>
-        <div class="kpi-value" id="kpiAReceber" style="font-size:1.1rem;">R$ 0,00</div>
-        <i class="fas fa-exclamation-circle kpi-icon-bg"></i>
+    <div class="kpi-card amber">
+        <div class="kpi-label">Pagamentos Registrados</div>
+        <div class="kpi-value" id="kpiPagamentos">0</div>
+        <i class="fas fa-receipt kpi-icon-bg"></i>
     </div>
 </div>
 
-<!-- Filtros -->
-<div class="card" style="padding:14px 20px;margin-bottom:16px;">
-    <!-- Navegação de mês -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-        <button onclick="mudarMes(-1)" class="btn btn-secondary" style="padding:6px 12px;font-size:0.85rem;">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        <div id="mesTabs" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
-        <button onclick="mudarMes(1)" class="btn btn-secondary" style="padding:6px 12px;font-size:0.85rem;">
-            <i class="fas fa-chevron-right"></i>
-        </button>
-        <button onclick="selecionarMes('')" class="btn btn-secondary" id="btnTodosMeses" style="padding:6px 12px;font-size:0.82rem;white-space:nowrap;">
-            Todos
-        </button>
-    </div>
-    <!-- Busca + pendentes -->
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-top:1px solid #f1f5f9;padding-top:12px;">
-        <div style="position:relative;flex:1;min-width:200px;max-width:320px;">
-            <input type="text" class="form-control" id="buscaPlaca"
-                   placeholder="Buscar por placa ou cliente..."
-                   oninput="renderLista()"
-                   style="padding-left:36px;">
-            <i class="fas fa-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none;"></i>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#475569;font-size:0.85rem;user-select:none;">
-            <input type="checkbox" id="soPendentes" checked onchange="renderLista()"
-                   style="width:16px;height:16px;accent-color:#2563eb;">
-            Mostrar só com pendentes
-        </label>
+<!-- Busca -->
+<div class="card" style="padding:14px 18px;margin-bottom:14px;">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input type="text" id="busca" class="form-control" placeholder="Buscar placa ou cliente..."
+               oninput="filtrar()" style="max-width:300px;">
+        <span style="font-size:.78rem;color:#94a3b8;" id="infoContratos"></span>
     </div>
 </div>
 
 <!-- Lista de contratos -->
-<div id="listaContratos" style="display:flex;flex-direction:column;gap:10px;">
-    <div style="text-align:center;padding:40px;color:#94a3b8;">
-        <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-        <p style="margin-top:12px;">Carregando...</p>
-    </div>
+<div id="listaContratos">
+    <p style="text-align:center;color:#94a3b8;padding:40px;">Carregando contratos...</p>
 </div>
 
-<!-- Modal Registrar Pagamento -->
-<div id="modalPagamento" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2000;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:14px;padding:28px;width:460px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
-            <div>
-                <h3 id="modalPagTitulo" style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0;"></h3>
-                <p id="modalPagSubtitulo" style="font-size:0.8rem;color:#64748b;margin:4px 0 0;"></p>
-            </div>
-            <button onclick="fecharModalPag()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#94a3b8;line-height:1;">&times;</button>
+<!-- ── Modal Registrar Pagamento ── -->
+<div class="modal-overlay" id="modalOverlay" onclick="fecharModalPag(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-title"><i class="fas fa-money-bill-wave" style="color:#16a34a"></i> Registrar Pagamento</div>
+
+        <div id="modalResumo" style="background:#f1f5f9;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.82rem;color:#0f172a;"></div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-size:.78rem;font-weight:600;color:#374151;">Valor Previsto (R$)</label>
+            <input type="number" id="mValorPrev" class="form-control" readonly style="background:#f8fafc;font-weight:700;">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-size:.78rem;font-weight:600;color:#374151;">Desconto (R$)</label>
+            <input type="number" id="mDesconto" class="form-control" value="0" min="0" step="0.01"
+                   oninput="onDescontoChange()">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;display:none;" id="mJustWrap">
+            <label style="font-size:.78rem;font-weight:600;color:#ef4444;">Justificativa do Desconto *</label>
+            <input type="text" id="mJustificativa" class="form-control" placeholder="Motivo do desconto...">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-size:.78rem;font-weight:600;color:#374151;">Data do Pagamento</label>
+            <input type="date" id="mDataPag" class="form-control">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:.78rem;font-weight:600;color:#374151;">Observações</label>
+            <input type="text" id="mObs" class="form-control" placeholder="Opcional...">
         </div>
 
-        <!-- Info da semana -->
-        <div id="modalPagInfo" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:18px;"></div>
-
-        <!-- Valor previsto -->
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding:12px 16px;background:#eff6ff;border-radius:8px;">
-            <span style="font-size:0.8rem;font-weight:600;color:#3b82f6;text-transform:uppercase;letter-spacing:0.5px;">Valor Previsto</span>
-            <span id="valorPrevDisplay" style="font-size:1.5rem;font-weight:700;color:#1d4ed8;"></span>
-        </div>
-
-        <div class="grid-2" style="gap:12px;">
-            <div class="form-group" style="margin-bottom:0;">
-                <label>Desconto (R$)</label>
-                <input type="number" class="form-control" id="pagDesconto" value="0" min="0" step="0.01"
-                       oninput="calcularValorPagar()">
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-                <label>Valor a Receber</label>
-                <div id="valorPagarDisplay" style="font-size:1.3rem;font-weight:700;color:#16a34a;padding:8px 4px;"></div>
-            </div>
-        </div>
-
-        <div class="form-group" id="grupoJustificativa" style="display:none;margin-top:14px;">
-            <label style="color:#ef4444;font-weight:600;">
-                Justificativa do Desconto
-                <span style="font-weight:400;font-size:0.75rem;color:#94a3b8;"> — obrigatório</span>
-            </label>
-            <textarea class="form-control" id="pagJustificativa" rows="2"
-                      placeholder="Ex: Cliente negociou redução, parcial acordado..."></textarea>
-        </div>
-
-        <div class="grid-2" style="margin-top:14px;gap:12px;">
-            <div class="form-group" style="margin-bottom:0;">
-                <label>Data do Recebimento</label>
-                <input type="date" class="form-control" id="pagDataPagamento">
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-                <label>Observações <span style="font-weight:400;color:#94a3b8;font-size:0.75rem;">(opcional)</span></label>
-                <input type="text" class="form-control" id="pagObservacoes" placeholder="Forma de pgto., recibo...">
-            </div>
-        </div>
-
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;padding-top:16px;border-top:1px solid #f1f5f9;">
-            <button class="btn" onclick="fecharModalPag()" style="background:#f1f5f9;color:#64748b;">Cancelar</button>
-            <button class="btn btn-primary" onclick="confirmarPagamento()" id="btnConfirmarPag">
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="fecharModalPag()">Cancelar</button>
+            <button class="btn btn-primary" onclick="confirmarPagamento()" style="background:#16a34a;">
                 <i class="fas fa-check"></i> Confirmar Recebimento
             </button>
         </div>
     </div>
 </div>
 
-<style>
-.contrato-card { background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;transition:box-shadow 0.15s; }
-.contrato-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.08); }
-.contrato-header { display:flex;justify-content:space-between;align-items:center;padding:14px 20px;cursor:pointer;user-select:none;flex-wrap:wrap;gap:10px; }
-.contrato-header:hover { background:#f8fafc; }
-.semanas-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;padding:16px 20px 20px; }
-.semana-chip { border-radius:10px;padding:12px 14px;cursor:pointer;transition:transform 0.1s,box-shadow 0.1s;position:relative;border:2px solid transparent; }
-.semana-chip:hover { transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.12); }
-.semana-chip.pendente { background:#fefce8;border-color:#fde68a; }
-.semana-chip.pendente:hover { border-color:#f59e0b; }
-.semana-chip.pago { background:#f0fdf4;border-color:#bbf7d0;cursor:default; }
-.semana-chip.pago:hover { transform:none;box-shadow:none; }
-.semana-chip.atual { box-shadow:0 0 0 3px #3b82f680; }
-.chip-num { font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px; }
-.chip-periodo { font-size:0.72rem;margin-bottom:6px; }
-.chip-valor { font-size:0.95rem;font-weight:700;margin-bottom:6px; }
-.chip-badge { display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.65rem;font-weight:600; }
-.chip-dar-baixa { margin-top:8px;width:100%;font-size:0.72rem;padding:5px 0;border-radius:6px;border:none;background:#f59e0b;color:#fff;font-weight:600;cursor:pointer;transition:background 0.15s; }
-.chip-dar-baixa:hover { background:#d97706; }
-.chip-undo { position:absolute;top:6px;right:6px;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:0.75rem;padding:2px; }
-.chip-undo:hover { color:#ef4444; }
-@media (max-width:600px) {
-    .semanas-grid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
-    .contrato-header { flex-direction:column;align-items:flex-start; }
-}
-</style>
-
 <script>
-let _cobrancas      = [];
-let _pagAtual       = {};
-let _abertos        = new Set();
-let _mesSelecionado = hoje().slice(0, 7); // YYYY-MM, padrão = mês atual
+// ─── Estado global ───────────────────────────────────────────────────────────
+let _dados = [];   // lista de contratos retornada pela API
 
-function fmtR(v) {
-    return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-}
-function fmtD(iso) {
-    if (!iso) return '–';
-    const [y,m,d] = iso.split('-');
-    return `${d}/${m}`;
-}
-function fmtDFull(iso) {
-    if (!iso) return '–';
-    const [y,m,d] = iso.split('-');
-    return `${d}/${m}/${y}`;
-}
-function hoje() { return new Date().toISOString().split('T')[0]; }
+// Estado por contrato (locacao_id → {...})
+const _estado = {};
 
-const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-
-function semanasMes(semanas, yyyymm) {
-    if (!yyyymm) return semanas;
-    return semanas.filter(s => s.data_inicio.slice(0,7) === yyyymm
-                            || s.data_fim.slice(0,7) === yyyymm);
+function getEstado(lid) {
+    if (!_estado[lid]) {
+        const now = new Date();
+        _estado[lid] = {
+            ano:   now.getFullYear(),
+            mes:   now.getMonth(),   // 0-based
+            start: null,             // dia (1-31) selecionado como início
+            end:   null,             // dia (1-31) selecionado como fim
+        };
+    }
+    return _estado[lid];
 }
 
-function labelMes(yyyymm) {
-    const [y, m] = yyyymm.split('-');
-    return `${MESES_PT[parseInt(m)-1].slice(0,3)} ${y}`;
-}
+// Estado do modal
+let _modalCtx = null;   // { locacaoId, diaria, d_ini_str, d_fim_str, dias, valorPrev }
 
-function renderMesTabs() {
-    // Coleta todos os YYYY-MM distintos presentes nos dados
-    const meses = new Set();
-    for (const loc of _cobrancas)
-        for (const s of loc.semanas) {
-            meses.add(s.data_inicio.slice(0,7));
-            meses.add(s.data_fim.slice(0,7));
-        }
-    const lista = [...meses].sort();
-    const tabs = document.getElementById('mesTabs');
-    tabs.innerHTML = lista.map(m => `
-        <button onclick="selecionarMes('${m}')"
-                style="padding:5px 14px;border-radius:20px;border:2px solid ${m===_mesSelecionado?'#2563eb':'#e2e8f0'};
-                       background:${m===_mesSelecionado?'#2563eb':'#fff'};
-                       color:${m===_mesSelecionado?'#fff':'#475569'};
-                       font-size:0.8rem;font-weight:600;cursor:pointer;white-space:nowrap;
-                       transition:all 0.15s;">
-            ${labelMes(m)}
-        </button>`).join('');
+// ─── Formatação ──────────────────────────────────────────────────────────────
+const fmtR = v => 'R$ ' + Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtDate = s => { if(!s) return '—'; const [y,m,d] = s.split('-'); return `${d}/${m}/${y}`; };
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const SEMANAS = ['D','S','T','Q','Q','S','S'];
 
-    // Botão "Todos"
-    const btnTodos = document.getElementById('btnTodosMeses');
-    btnTodos.style.background = _mesSelecionado === '' ? '#475569' : '';
-    btnTodos.style.color      = _mesSelecionado === '' ? '#fff' : '';
-}
-
-function selecionarMes(yyyymm) {
-    _mesSelecionado = yyyymm;
-    renderMesTabs();
-    renderLista();
-}
-
-function mudarMes(delta) {
-    if (!_mesSelecionado) return;
-    const [y, m] = _mesSelecionado.split('-').map(Number);
-    let nm = m + delta, ny = y;
-    if (nm > 12) { nm = 1;  ny++; }
-    if (nm < 1)  { nm = 12; ny--; }
-    selecionarMes(`${ny}-${String(nm).padStart(2,'0')}`);
-}
-
+// ─── Carregar dados ──────────────────────────────────────────────────────────
 async function carregarCobrancas() {
-    document.getElementById('listaContratos').innerHTML =
-        '<div style="text-align:center;padding:40px;color:#94a3b8;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><p style="margin-top:12px;">Carregando...</p></div>';
     try {
         const r = await fetch('/api/cobrancas');
-        _cobrancas = await r.json();
-        renderMesTabs();
-        renderLista();
+        _dados = await r.json();
+        atualizarKPIs();
+        filtrar();
     } catch(e) {
-        showToast('Erro ao carregar cobranças', 'error');
+        document.getElementById('listaContratos').innerHTML =
+            '<p style="text-align:center;color:#ef4444;padding:40px;">Erro ao carregar dados.</p>';
     }
 }
 
-function renderLista() {
-    const busca      = (document.getElementById('buscaPlaca').value||'').toLowerCase().trim();
-    const soPend     = document.getElementById('soPendentes').checked;
-    const container  = document.getElementById('listaContratos');
+function atualizarKPIs() {
+    document.getElementById('kpiLocacoes').textContent   = _dados.length;
+    document.getElementById('kpiPagamentos').textContent = _dados.reduce((s,l) => s + l.n_pagamentos, 0);
+    const total = _dados.reduce((s,l) => s + (l.total_pago||0), 0);
+    document.getElementById('kpiRecebido').textContent   = fmtR(total);
+}
 
-    let totLoc=0, totPend=0, totRec=0, totAReceber=0;
+// ─── Filtrar + renderizar lista ──────────────────────────────────────────────
+function filtrar() {
+    const q = (document.getElementById('busca').value||'').toLowerCase();
+    const lista = _dados.filter(l =>
+        l.placa.toLowerCase().includes(q) || l.cliente.toLowerCase().includes(q)
+    );
+    document.getElementById('infoContratos').textContent =
+        `${lista.length} contrato${lista.length===1?'':'s'}`;
+    renderLista(lista);
+}
 
-    let html = '';
-    for (const loc of _cobrancas) {
-        // filtro busca
-        if (busca && !loc.placa.toLowerCase().includes(busca) &&
-            !loc.cliente.toLowerCase().includes(busca) &&
-            !loc.veiculo.toLowerCase().includes(busca)) continue;
+function renderLista(lista) {
+    const el = document.getElementById('listaContratos');
+    if (!lista.length) {
+        el.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:40px;">Nenhum contrato ativo encontrado.</p>';
+        return;
+    }
+    el.innerHTML = lista.map(l => renderContrato(l)).join('');
+}
 
-        // Filtro de mês: mostra só semanas do mês selecionado
-        const semanasFiltradas = semanasMes(loc.semanas, _mesSelecionado);
-        if (_mesSelecionado && semanasFiltradas.length === 0) continue;
+// ─── Renderizar card de contrato ─────────────────────────────────────────────
+function renderContrato(loc) {
+    const st  = getEstado(loc.locacao_id);
+    const pags = loc.pagamentos || [];
+    const ultimoPag = pags.length ? pags[pags.length-1] : null;
+    const dataRef = ultimoPag ? `Último: ${fmtDate(ultimoPag.data_inicio)} a ${fmtDate(ultimoPag.data_fim)}` : 'Sem pagamentos';
+    const dtInicio = loc.data_inicio ? loc.data_inicio.slice(0,10) : null;
+    const dtFim    = loc.data_fim    ? loc.data_fim.slice(0,10) : null;
+    const contratoStr = dtFim ? `${fmtDate(dtInicio)} a ${fmtDate(dtFim)}` : `Desde ${fmtDate(dtInicio)} (aberto)`;
 
-        const semanasVisiveis = semanasFiltradas;
-        const pendentes = semanasVisiveis.filter(s=>s.status==='pendente').length;
-        if (soPend && pendentes === 0) continue;
-
-        totLoc++;
-        totPend     += pendentes;
-        totRec      += semanasVisiveis.filter(s=>s.status==='pago').reduce((a,s)=>a+(s.valor_pago||0),0);
-        totAReceber += semanasVisiveis.filter(s=>s.status==='pendente').reduce((a,s)=>a+s.valor_previsto,0);
-
-        const aberto = _abertos.has(loc.locacao_id);
-
-        html += `
-        <div class="contrato-card">
-            <div class="contrato-header" onclick="toggleContrato(${loc.locacao_id})">
-                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-                    <div>
-                        <div style="font-weight:700;font-size:0.97rem;color:#0f172a;">${loc.placa} — ${loc.veiculo.split('—')[1]||''}</div>
-                        <div style="font-size:0.8rem;color:#64748b;margin-top:2px;"><i class="fas fa-user" style="margin-right:4px;opacity:0.6;"></i>${loc.cliente}</div>
-                    </div>
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-                        <span style="font-size:0.78rem;color:#475569;background:#f1f5f9;padding:3px 10px;border-radius:6px;">Desde ${fmtDFull(loc.data_inicio)}</span>
-                        <span style="font-size:0.78rem;color:#475569;background:#f1f5f9;padding:3px 10px;border-radius:6px;">${fmtR(loc.diaria)}/dia · ${fmtR(loc.valor_semanal)}/sem</span>
-                    </div>
+    return `
+    <div class="contrato-card" id="card_${loc.locacao_id}">
+        <div class="contrato-header" onclick="toggleContrato(${loc.locacao_id})">
+            <span class="contrato-placa">${loc.placa}</span>
+            <div class="contrato-info">
+                <div class="veiculo">${loc.veiculo}</div>
+                <div class="cliente"><i class="fas fa-user" style="margin-right:4px;"></i>${loc.cliente}</div>
+            </div>
+            <div class="contrato-meta">
+                <div class="total">${fmtR(loc.total_pago)} recebido</div>
+                <div class="diaria">${fmtR(loc.diaria)}/dia · ${fmtR(loc.valor_semanal)}/sem</div>
+                <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${dataRef}</div>
+            </div>
+            <i class="fas fa-chevron-down contrato-toggle"></i>
+        </div>
+        <div class="contrato-body" id="body_${loc.locacao_id}">
+            <div style="font-size:.72rem;color:#94a3b8;margin-bottom:14px;">
+                <i class="fas fa-calendar-alt" style="margin-right:4px;"></i>${contratoStr}
+            </div>
+            <div class="body-cols">
+                <div>
+                    ${renderCalendario(loc)}
+                    ${renderResumoSel(loc)}
                 </div>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    ${pendentes > 0
-                        ? `<span style="background:#fef3c7;color:#d97706;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;white-space:nowrap;">${pendentes} pendente${pendentes>1?'s':''} · ${fmtR(semanasVisiveis.filter(s=>s.status==='pendente').reduce((a,s)=>a+s.valor_previsto,0))}</span>`
-                        : `<span style="background:#dcfce7;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">Em dia ✓</span>`
-                    }
-                    <i class="fas fa-chevron-${aberto?'up':'down'}" style="color:#94a3b8;font-size:0.85rem;transition:transform 0.2s;"></i>
+                <div>
+                    ${renderHistorico(loc)}
                 </div>
             </div>
+        </div>
+    </div>`;
+}
 
-            ${aberto ? `
-            <div style="border-top:1px solid #f1f5f9;">
-                <!-- Resumo rápido -->
-                <div style="display:flex;gap:20px;padding:10px 20px 0;flex-wrap:wrap;">
-                    <span style="font-size:0.78rem;color:#16a34a;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>${semanasVisiveis.filter(s=>s.status==='pago').length} paga${semanasVisiveis.filter(s=>s.status==='pago').length!==1?'s':''} · ${fmtR(semanasVisiveis.filter(s=>s.status==='pago').reduce((a,s)=>a+(s.valor_pago||0),0))}</span>
-                    <span style="font-size:0.78rem;color:#d97706;font-weight:600;"><i class="fas fa-clock" style="margin-right:4px;"></i>${pendentes} pendente${pendentes!==1?'s':''} · ${fmtR(semanasVisiveis.filter(s=>s.status==='pendente').reduce((a,s)=>a+s.valor_previsto,0))}</span>
-                    ${_mesSelecionado ? `<span style="font-size:0.78rem;color:#64748b;"><i class="fas fa-calendar" style="margin-right:4px;"></i>${labelMes(_mesSelecionado)} — ${semanasVisiveis.length} semana${semanasVisiveis.length!==1?'s':''}</span>` : ''}
-                </div>
-                <div class="semanas-grid">
-                    ${semanasVisiveis.map(s => {
-                        const isHoje = s.data_inicio <= hoje() && hoje() <= s.data_fim;
-                        const pago   = s.status === 'pago';
-                        return `
-                        <div class="semana-chip ${pago?'pago':'pendente'}${isHoje?' atual':''}"
-                             onclick="${pago ? '' : `abrirModalPag(${JSON.stringify(loc).replace(/"/g,"'")}, ${JSON.stringify(s).replace(/"/g,"'")})`}"
-                             title="${pago ? 'Recebido em '+fmtDFull(s.data_pagamento) : 'Clique para registrar recebimento'}">
-                            ${pago ? `<button class="chip-undo" onclick="event.stopPropagation();cancelarPagamento(${s.pagamento_id},${loc.locacao_id},${s.numero})" title="Desfazer"><i class="fas fa-undo"></i></button>` : ''}
-                            <div class="chip-num" style="color:${pago?'#16a34a':'#92400e'};">Semana #${s.numero}${isHoje?' · atual':''}</div>
-                            <div class="chip-periodo" style="color:${pago?'#475569':'#78350f'};">${fmtD(s.data_inicio)} a ${fmtD(s.data_fim)} <span style="opacity:0.6;">(${s.dias}d)</span></div>
-                            <div class="chip-valor" style="color:${pago?'#15803d':'#92400e'};">${fmtR(pago ? s.valor_pago : s.valor_previsto)}</div>
-                            ${pago
-                                ? `<span class="chip-badge" style="background:#dcfce7;color:#16a34a;">✓ Pago ${fmtDFull(s.data_pagamento)}</span>${s.desconto ? `<div style="font-size:0.68rem;color:#ef4444;margin-top:4px;">Desc. ${fmtR(s.desconto)}</div>` : ''}`
-                                : `<span class="chip-badge" style="background:#fde68a;color:#92400e;">Pendente</span><button class="chip-dar-baixa" onclick="event.stopPropagation();abrirModalPagStr('${loc.locacao_id}','${s.numero}')">✓ Dar Baixa</button>`
-                            }
-                        </div>`;
-                    }).join('')}
-                </div>
-            </div>` : ''}
+function toggleContrato(lid) {
+    const card = document.getElementById(`card_${lid}`);
+    card.classList.toggle('open');
+}
+
+// ─── Calendário ──────────────────────────────────────────────────────────────
+function renderCalendario(loc) {
+    const lid  = loc.locacao_id;
+    const st   = getEstado(lid);
+    const ano  = st.ano;
+    const mes  = st.mes;
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+
+    const dtInicio = loc.data_inicio ? new Date(loc.data_inicio + 'T00:00:00') : null;
+
+    // Dias bloqueados (pagos)
+    const diasPagos = new Set();
+    (loc.pagamentos||[]).forEach(p => {
+        if (p.status === 'pago' && p.data_inicio && p.data_fim) {
+            let d = new Date(p.data_inicio + 'T00:00:00');
+            const fim = new Date(p.data_fim + 'T00:00:00');
+            while (d <= fim) {
+                if (d.getFullYear() === ano && d.getMonth() === mes)
+                    diasPagos.add(d.getDate());
+                d.setDate(d.getDate()+1);
+            }
+        }
+    });
+
+    const diasNoMes  = new Date(ano, mes+1, 0).getDate();
+    const inicioSem  = new Date(ano, mes, 1).getDay(); // 0=dom
+
+    let grid = '';
+    SEMANAS.forEach(d => { grid += `<div class="cal-dow">${d}</div>`; });
+
+    // células vazias antes do dia 1
+    for (let i=0; i<inicioSem; i++) grid += `<div class="cal-day empty"></div>`;
+
+    for (let dia=1; dia<=diasNoMes; dia++) {
+        const thisDate = new Date(ano, mes, dia);
+        thisDate.setHours(0,0,0,0);
+
+        const isPaid     = diasPagos.has(dia);
+        const isFuture   = thisDate > hoje;
+        const isBeforeContract = dtInicio && thisDate < dtInicio;
+        const disabled   = isPaid || isFuture || isBeforeContract;
+
+        const isStart    = st.start === dia;
+        const isEnd      = st.end   === dia;
+        const isInRange  = st.start && st.end && dia > Math.min(st.start,st.end) && dia < Math.max(st.start,st.end);
+        const isToday    = thisDate.getTime() === hoje.getTime();
+
+        let cls = 'cal-day';
+        if (disabled && isPaid)          cls += ' paid';
+        else if (disabled)               cls += ' disabled';
+        else if (isStart || isEnd)       cls += ' start';
+        else if (isInRange)              cls += ' inrange';
+        if (isToday && !isPaid)          cls += ' today-ring';
+
+        const onclick = disabled ? '' : `onclick="selecionarDia(${lid},${dia})"`;
+        const title = isPaid ? 'Período já pago' :
+                      isFuture ? 'Data futura' :
+                      isBeforeContract ? 'Antes do início do contrato' : '';
+
+        grid += `<div class="${cls}" ${onclick} title="${title}">${dia}</div>`;
+    }
+
+    const mesStr = `${MESES[mes]} ${ano}`;
+    return `
+    <div class="cal-wrap">
+        <div class="cal-nav">
+            <button onclick="mudarMes(${lid},-1)"><i class="fas fa-chevron-left"></i></button>
+            <h4>${mesStr}</h4>
+            <button onclick="mudarMes(${lid},1)"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="cal-grid">${grid}</div>
+    </div>`;
+}
+
+function mudarMes(lid, delta) {
+    const st = getEstado(lid);
+    st.mes += delta;
+    if (st.mes < 0)  { st.mes = 11; st.ano--; }
+    if (st.mes > 11) { st.mes = 0;  st.ano++; }
+    st.start = null; st.end = null;
+    reRenderContrato(lid);
+}
+
+function selecionarDia(lid, dia) {
+    const st = getEstado(lid);
+
+    if (!st.start || (st.start && st.end)) {
+        // Novo início
+        st.start = dia;
+        st.end   = null;
+    } else {
+        // Segundo clique
+        if (dia === st.start) { st.start = null; st.end = null; }
+        else if (dia < st.start) { st.start = dia; st.end = null; }
+        else { st.end = dia; }
+    }
+
+    // Verifica se algum dia do range está pago
+    if (st.start && st.end) {
+        const loc = _dados.find(l => l.locacao_id === lid);
+        if (loc && rangeTemDiaPago(loc, st)) {
+            showToast('O período selecionado inclui dias já pagos. Ajuste a seleção.', 'warning');
+            st.end = null;
+        }
+    }
+
+    reRenderContrato(lid);
+}
+
+function rangeTemDiaPago(loc, st) {
+    const { ano, mes, start, end } = st;
+    const d1 = new Date(ano, mes, Math.min(start,end));
+    const d2 = new Date(ano, mes, Math.max(start,end));
+    return (loc.pagamentos||[]).some(p => {
+        if (p.status !== 'pago' || !p.data_inicio || !p.data_fim) return false;
+        const pi = new Date(p.data_inicio + 'T00:00:00');
+        const pf = new Date(p.data_fim    + 'T00:00:00');
+        return pi <= d2 && pf >= d1;
+    });
+}
+
+// ─── Resumo da seleção ────────────────────────────────────────────────────────
+function renderResumoSel(loc) {
+    const lid = loc.locacao_id;
+    const st  = getEstado(lid);
+
+    if (!st.start) {
+        return `<div class="sel-resumo" style="margin-top:14px;">
+            <div class="sel-info" style="color:#94a3b8;font-size:.8rem;">
+                <i class="fas fa-hand-pointer" style="margin-right:6px;"></i>
+                Clique no 1° dia e depois no último dia do período
+            </div>
+        </div>`;
+    }
+    if (st.start && !st.end) {
+        const d1str = `${String(st.start).padStart(2,'0')}/${String(st.mes+1).padStart(2,'0')}/${st.ano}`;
+        return `<div class="sel-resumo" style="margin-top:14px;background:#fffbeb;border:1px solid #fde68a;">
+            <div class="sel-info" style="color:#92400e;font-size:.8rem;">
+                <i class="fas fa-calendar-day" style="margin-right:6px;"></i>
+                Início: <strong>${d1str}</strong> — clique no dia final
+            </div>
         </div>`;
     }
 
-    if (!html) {
-        html = `<div style="text-align:center;padding:60px;color:#94a3b8;">
-            <i class="fas fa-search" style="font-size:3rem;margin-bottom:16px;display:block;"></i>
-            <p>Nenhum contrato encontrado.</p>
-        </div>`;
-    }
+    const dias = Math.abs(st.end - st.start) + 1;
+    const valorPrev = Math.round(loc.diaria * dias * 100) / 100;
+    const d1 = Math.min(st.start, st.end), d2 = Math.max(st.start, st.end);
+    const fmtD = d => `${String(d).padStart(2,'0')}/${String(st.mes+1).padStart(2,'0')}/${st.ano}`;
 
-    container.innerHTML = html;
-
-    document.getElementById('kpiLocacoes').textContent   = totLoc;
-    document.getElementById('kpiPendentes').textContent  = totPend;
-    document.getElementById('kpiRecebido').textContent   = fmtR(totRec);
-    document.getElementById('kpiAReceber').textContent   = fmtR(totAReceber);
+    return `<div class="sel-resumo" style="margin-top:14px;border:1px solid #bbf7d0;">
+        <div class="sel-info">
+            <div class="sel-dias">${fmtD(d1)} a ${fmtD(d2)}</div>
+            <div class="sel-valor">${fmtR(valorPrev)}</div>
+            <div class="sel-detalhe">${dias} dia${dias===1?'':'s'} × ${fmtR(loc.diaria)}/dia</div>
+        </div>
+        <button class="btn btn-primary" style="background:#16a34a;white-space:nowrap;"
+                onclick="abrirModalPag(${lid})">
+            <i class="fas fa-check"></i> Dar Baixa
+        </button>
+    </div>`;
 }
 
-function toggleContrato(locacao_id) {
-    if (_abertos.has(locacao_id)) _abertos.delete(locacao_id);
-    else _abertos.add(locacao_id);
-    renderLista();
-}
-
-// Permite chamar de dentro do template literal sem JSON complexo
-function abrirModalPagStr(locacao_id, semana_num) {
-    const loc = _cobrancas.find(l => String(l.locacao_id) === String(locacao_id));
-    const sem = loc?.semanas.find(s => String(s.numero) === String(semana_num));
-    if (loc && sem) abrirModalPag(loc, sem);
-}
-
-function abrirModalPag(loc, semana) {
-    _pagAtual = { loc, semana };
-
-    document.getElementById('modalPagTitulo').textContent =
-        `Semana #${semana.numero} — ${loc.placa}`;
-    document.getElementById('modalPagSubtitulo').textContent = loc.cliente;
-
-    document.getElementById('modalPagInfo').innerHTML = `
-        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-            <div><span style="font-size:0.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Período</span><br>
-                 <strong style="font-size:0.88rem;">${fmtDFull(semana.data_inicio)} a ${fmtDFull(semana.data_fim)}</strong>
-                 <span style="color:#94a3b8;font-size:0.8rem;"> (${semana.dias} dias)</span></div>
-            <div><span style="font-size:0.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Veículo</span><br>
-                 <strong style="font-size:0.88rem;">${loc.veiculo}</strong></div>
+// ─── Histórico de pagamentos ──────────────────────────────────────────────────
+function renderHistorico(loc) {
+    const pags = (loc.pagamentos||[]).slice().reverse();
+    if (!pags.length) return `
+        <div class="hist-list">
+            <div class="hist-title">Histórico de Pagamentos</div>
+            <p style="font-size:.78rem;color:#94a3b8;text-align:center;padding:20px 0;">
+                Nenhum pagamento registrado
+            </p>
         </div>`;
 
-    document.getElementById('valorPrevDisplay').textContent = fmtR(semana.valor_previsto);
-    document.getElementById('pagDesconto').value = '0';
-    document.getElementById('pagJustificativa').value = '';
-    document.getElementById('pagObservacoes').value = '';
-    document.getElementById('pagDataPagamento').value = hoje();
-    document.getElementById('grupoJustificativa').style.display = 'none';
-    calcularValorPagar();
+    const itens = pags.map(p => {
+        const periodo = `${fmtDate(p.data_inicio)} a ${fmtDate(p.data_fim)}`;
+        const dias    = p.dias || 0;
+        const desc    = p.desconto > 0 ? ` <span style="color:#f59e0b;font-size:.7rem;">(desc. ${fmtR(p.desconto)})</span>` : '';
+        return `<div class="hist-item">
+            <div>
+                <div class="hist-period">${periodo}</div>
+                <div class="hist-dias">${dias} dia${dias===1?'':'s'} · pago em ${fmtDate(p.data_pagamento)}</div>
+            </div>
+            <div class="hist-val">${fmtR(p.valor_pago)}${desc}</div>
+            <button class="hist-del" onclick="cancelarPagamento(${p.id}, ${loc.locacao_id})" title="Desfazer">
+                <i class="fas fa-undo"></i>
+            </button>
+        </div>`;
+    }).join('');
 
-    const m = document.getElementById('modalPagamento');
-    m.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
+    return `<div class="hist-list">
+        <div class="hist-title">Histórico de Pagamentos</div>
+        ${itens}
+    </div>`;
 }
 
-function fecharModalPag() {
-    document.getElementById('modalPagamento').style.display = 'none';
-    document.body.style.overflow = '';
+// ─── Re-render de um único contrato ─────────────────────────────────────────
+function reRenderContrato(lid) {
+    const loc  = _dados.find(l => l.locacao_id === lid);
+    if (!loc) return;
+    const card = document.getElementById(`card_${lid}`);
+    if (!card) return;
+    const wasOpen = card.classList.contains('open');
+    card.outerHTML = renderContrato(loc);
+    const newCard = document.getElementById(`card_${lid}`);
+    if (wasOpen) newCard.classList.add('open');
 }
 
-function calcularValorPagar() {
-    const prev = parseFloat(_pagAtual.semana?.valor_previsto || 0);
-    const desc = parseFloat(document.getElementById('pagDesconto').value) || 0;
-    document.getElementById('valorPagarDisplay').textContent = fmtR(Math.max(0, prev - desc));
-    document.getElementById('grupoJustificativa').style.display = desc > 0 ? 'block' : 'none';
+// ─── Modal Pagamento ─────────────────────────────────────────────────────────
+function abrirModalPag(lid) {
+    const loc = _dados.find(l => l.locacao_id === lid);
+    if (!loc) return;
+    const st  = getEstado(lid);
+    if (!st.start || !st.end) return;
+
+    const d1   = Math.min(st.start, st.end), d2 = Math.max(st.start, st.end);
+    const fmtISO = d => `${st.ano}-${String(st.mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const d1iso  = fmtISO(d1), d2iso = fmtISO(d2);
+    const fmtD   = s => { const [y,m,d] = s.split('-'); return `${d}/${m}/${y}`; };
+    const dias   = d2 - d1 + 1;
+    const valPrev= Math.round(loc.diaria * dias * 100) / 100;
+
+    _modalCtx = { locacaoId: lid, diaria: loc.diaria, d_ini: d1iso, d_fim: d2iso, dias, valorPrev: valPrev };
+
+    document.getElementById('modalResumo').innerHTML =
+        `<strong>${loc.placa}</strong> — ${loc.cliente}<br>
+         Período: <strong>${fmtD(d1iso)}</strong> a <strong>${fmtD(d2iso)}</strong>
+         (${dias} dia${dias===1?'':'s'})<br>
+         Diária: ${fmtR(loc.diaria)} · <strong>Total: ${fmtR(valPrev)}</strong>`;
+
+    document.getElementById('mValorPrev').value = valPrev.toFixed(2);
+    document.getElementById('mDesconto').value  = '0';
+    document.getElementById('mJustWrap').style.display = 'none';
+    document.getElementById('mJustificativa').value    = '';
+    document.getElementById('mObs').value              = '';
+
+    const hoje = new Date();
+    document.getElementById('mDataPag').value =
+        `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+
+    document.getElementById('modalOverlay').classList.add('show');
+}
+
+function fecharModalPag(evt) {
+    if (evt && evt.target !== document.getElementById('modalOverlay')) return;
+    document.getElementById('modalOverlay').classList.remove('show');
+    _modalCtx = null;
+}
+
+function onDescontoChange() {
+    const desc = parseFloat(document.getElementById('mDesconto').value) || 0;
+    document.getElementById('mJustWrap').style.display = desc > 0 ? 'block' : 'none';
 }
 
 async function confirmarPagamento() {
-    const { loc, semana } = _pagAtual;
-    const desconto = parseFloat(document.getElementById('pagDesconto').value) || 0;
-    const just     = document.getElementById('pagJustificativa').value.trim();
-    const data_pag = document.getElementById('pagDataPagamento').value;
-    const obs      = document.getElementById('pagObservacoes').value.trim();
-
-    if (desconto > semana.valor_previsto) {
-        showToast('Desconto não pode ser maior que o valor previsto', 'error'); return;
+    if (!_modalCtx) return;
+    const desc = parseFloat(document.getElementById('mDesconto').value) || 0;
+    const just = document.getElementById('mJustificativa').value.trim();
+    if (desc > 0 && !just) {
+        showToast('Informe a justificativa do desconto.', 'warning'); return;
     }
-    if (desconto > 0 && !just) {
-        showToast('Preencha a justificativa do desconto', 'error');
-        document.getElementById('pagJustificativa').focus(); return;
-    }
-    if (!data_pag) {
-        showToast('Informe a data do recebimento', 'error'); return;
+    const dataPag = document.getElementById('mDataPag').value;
+    if (!dataPag) { showToast('Informe a data do pagamento.', 'warning'); return; }
+    if (desc > _modalCtx.valorPrev) {
+        showToast('Desconto não pode ser maior que o valor previsto.', 'error'); return;
     }
 
-    const btn = document.getElementById('btnConfirmarPag');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    const body = {
+        locacao_id:             _modalCtx.locacaoId,
+        data_inicio:            _modalCtx.d_ini,
+        data_fim:               _modalCtx.d_fim,
+        desconto:               desc,
+        justificativa_desconto: just || null,
+        data_pagamento:         dataPag,
+        observacoes:            document.getElementById('mObs').value.trim() || null,
+    };
 
     try {
         const r = await fetch('/api/cobrancas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                locacao_id: loc.locacao_id, semana_numero: semana.numero,
-                valor_previsto: semana.valor_previsto, desconto,
-                justificativa_desconto: just || null,
-                data_pagamento: data_pag, observacoes: obs || null
-            })
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(body)
         });
-        const d = await r.json();
-        if (!r.ok) { showToast(d.error || 'Erro ao registrar', 'error'); return; }
-        fecharModalPag();
-        showToast(`Semana #${semana.numero} recebida — ${fmtR(d.valor_pago)}`, 'success');
-        await carregarCobrancas();
+        const data = await r.json();
+        if (!r.ok) { showToast(data.error || 'Erro ao registrar pagamento', 'error'); return; }
+
+        document.getElementById('modalOverlay').classList.remove('show');
+        const lid = _modalCtx.locacaoId;
+        _modalCtx = null;
+
+        // Atualiza local e re-renderiza
+        await recarregarContrato(lid);
+        showToast('Pagamento registrado com sucesso!', 'success');
     } catch(e) {
-        showToast('Erro ao salvar pagamento', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Recebimento';
+        showToast('Erro de conexão ao registrar pagamento.', 'error');
     }
 }
 
-async function cancelarPagamento(pagamento_id, locacao_id, semana_num) {
-    abrirModal('Desfazer Pagamento', `
-        <div style="text-align:center;padding:16px 0;">
-            <i class="fas fa-exclamation-triangle" style="font-size:40px;color:#f59e0b;margin-bottom:12px;display:block;"></i>
-            <p>Desfazer o pagamento da <strong>Semana #${semana_num}</strong>?</p>
-            <p style="color:#64748b;font-size:0.83rem;margin-top:6px;">O status voltará para Pendente.</p>
-            <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;">
-                <button class="btn" onclick="fecharModal()" style="background:#f1f5f9;color:#64748b;">Cancelar</button>
-                <button class="btn btn-danger" onclick="executarCancelamento(${pagamento_id})">Desfazer</button>
-            </div>
+// ─── Cancelar pagamento ──────────────────────────────────────────────────────
+async function cancelarPagamento(pagId, lid) {
+    abrirModal('Desfazer Pagamento',`
+        <div style="text-align:center;padding:10px 0 20px;">
+            <i class="fas fa-undo" style="font-size:42px;color:#f59e0b;margin-bottom:12px;display:block;"></i>
+            <p style="color:#374151;">Deseja desfazer este registro de pagamento?</p>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+            <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+            <button class="btn" style="background:#ef4444;color:#fff;"
+                    onclick="executarCancelamento(${pagId},${lid})">
+                <i class="fas fa-trash"></i> Desfazer
+            </button>
         </div>`);
 }
 
-async function executarCancelamento(pagamento_id) {
+async function executarCancelamento(pagId, lid) {
     fecharModal();
     try {
-        const r = await fetch(`/api/cobrancas/${pagamento_id}`, { method: 'DELETE' });
-        if (!r.ok) { showToast('Erro ao desfazer pagamento', 'error'); return; }
-        showToast('Pagamento desfeito', 'warning');
-        await carregarCobrancas();
+        const r = await fetch(`/api/cobrancas/${pagId}`, { method:'DELETE' });
+        const data = await r.json();
+        if (!r.ok) { showToast(data.error||'Erro ao cancelar', 'error'); return; }
+        await recarregarContrato(lid);
+        showToast('Pagamento desfeito.', 'info');
     } catch(e) {
-        showToast('Erro ao desfazer', 'error');
+        showToast('Erro de conexão.', 'error');
     }
 }
 
-document.getElementById('modalPagamento').addEventListener('click', function(e) {
-    if (e.target === this) fecharModalPag();
-});
+// ─── Recarregar um contrato específico ───────────────────────────────────────
+async function recarregarContrato(lid) {
+    try {
+        const r = await fetch('/api/cobrancas');
+        _dados = await r.json();
+        atualizarKPIs();
 
+        // Limpa seleção
+        if (_estado[lid]) { _estado[lid].start = null; _estado[lid].end = null; }
+
+        reRenderContrato(lid);
+        filtrar();
+    } catch(e) {
+        showToast('Erro ao recarregar dados.', 'error');
+    }
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('load', carregarCobrancas);
 </script>
+
 {% endblock %}
