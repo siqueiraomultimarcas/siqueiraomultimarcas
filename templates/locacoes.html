@@ -294,8 +294,9 @@
                 '<div class="form-group"><label>Data Início *</label><input type="date" class="form-control" name="data_inicio" id="dataInicio" value="' + (isEdit ? locacao.data_inicio : '') + '" required onchange="calcularTotal()"></div>' +
                 '<div class="form-group"><label>Data Fim *</label><input type="date" class="form-control" name="data_fim" id="dataFim" value="' + (isEdit ? locacao.data_fim : '') + '" required onchange="calcularTotal()"></div>' +
             '</div>' +
-            '<div class="grid-2">' +
-                '<div class="form-group"><label>Valor Diária (R$)</label><input type="number" class="form-control" name="diaria" id="diariaLoc" value="' + (isEdit ? locacao.diaria : '') + '" step="0.01" min="0" onchange="calcularTotal()"></div>' +
+            '<div class="grid-3">' +
+                '<div class="form-group"><label>Valor Diária (R$)</label><input type="number" class="form-control" name="diaria" id="diariaLoc" value="' + (isEdit ? locacao.diaria : '') + '" step="0.01" min="0" oninput="sincDiaria()"></div>' +
+                '<div class="form-group"><label>Valor Semanal (R$) <span style="font-size:0.7rem;color:#64748b;font-weight:400">÷7 = diária</span></label><input type="number" class="form-control" id="semanalLoc" value="' + (isEdit && locacao.diaria ? (Math.round(locacao.diaria * 7 * 100)/100) : '') + '" step="0.01" min="0" oninput="sincSemanal()" placeholder="Ex: 529,97"></div>' +
                 '<div class="form-group"><label>Km Saída</label><input type="number" class="form-control" name="km_saida" id="kmSaida" value="' + (isEdit ? (locacao.km_saida || '') : '') + '" min="0"></div>' +
             '</div>' +
             '<div class="form-group"><label>Total Calculado</label><div id="totalCalculado" style="font-size:1.5rem;font-weight:bold;color:#2563eb;">' + (isEdit ? formatCurrency(locacao.total) : 'R$ 0,00') + '</div></div>' +
@@ -323,8 +324,25 @@
     function atualizarDiaria() {
         const select = document.getElementById('selectVeiculo');
         const option = select.options[select.selectedIndex];
-        document.getElementById('diariaLoc').value = option.dataset.diaria || 0;
+        const d = parseFloat(option.dataset.diaria) || 0;
+        document.getElementById('diariaLoc').value = d || '';
         document.getElementById('kmSaida').value = option.dataset.km || 0;
+        const sem = document.getElementById('semanalLoc');
+        if (sem) sem.value = d > 0 ? Math.round(d * 7 * 100) / 100 : '';
+        calcularTotal();
+    }
+
+    function sincDiaria() {
+        const d = parseFloat(document.getElementById('diariaLoc').value) || 0;
+        const sem = document.getElementById('semanalLoc');
+        if (sem) sem.value = d > 0 ? Math.round(d * 7 * 100) / 100 : '';
+        calcularTotal();
+    }
+
+    function sincSemanal() {
+        const s = parseFloat(document.getElementById('semanalLoc').value) || 0;
+        const dia = document.getElementById('diariaLoc');
+        if (dia) dia.value = s > 0 ? Math.round(s / 7 * 100) / 100 : '';
         calcularTotal();
     }
 
