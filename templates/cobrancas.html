@@ -6,10 +6,17 @@
         <h1><i class="fas fa-hand-holding-usd"></i> Cobranças</h1>
         <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Controle semanal de recebimentos por locação</p>
     </div>
-    <div style="display:flex;gap:10px;align-items:center;">
-        <select class="form-control" id="filtroStatus" onchange="renderCobrancas()" style="width:160px;">
-            <option value="todos">Todas as semanas</option>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div style="position:relative;">
+            <input type="text" class="form-control" id="buscaPlaca"
+                   placeholder="Buscar por placa..." maxlength="8"
+                   oninput="renderCobrancas()"
+                   style="width:170px;padding-left:32px;text-transform:uppercase;">
+            <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none;"></i>
+        </div>
+        <select class="form-control" id="filtroStatus" onchange="renderCobrancas()" style="width:170px;">
             <option value="pendente" selected>Só pendentes</option>
+            <option value="todos">Todas as semanas</option>
             <option value="pago">Só pagas</option>
         </select>
         <button class="btn btn-secondary" onclick="carregarCobrancas()">
@@ -125,12 +132,16 @@ async function carregarCobrancas() {
 
 function renderCobrancas() {
     const filtro = document.getElementById('filtroStatus').value;
+    const busca  = (document.getElementById('buscaPlaca').value || '').toUpperCase().trim();
     const lista  = document.getElementById('listaCobrancas');
 
     let totalPendentes = 0, totalRecebido = 0, totalAReceber = 0;
 
     let html = '';
     for (const loc of _cobrancas) {
+        // filtro por placa
+        if (busca && !loc.placa.toUpperCase().includes(busca)) continue;
+
         const semFiltradas = filtro === 'todos' ? loc.semanas
             : loc.semanas.filter(s => s.status === filtro);
         if (!semFiltradas.length && filtro !== 'todos') continue;

@@ -734,12 +734,15 @@ def get_cobrancas():
         except Exception:
             continue
 
+        # Locação ativa: gera semanas até hoje (independente de data_fim)
+        # Locação devolvida: usa data real de devolução
         if loc.get('data_devolucao_real'):
-            df = _date.fromisoformat(str(loc['data_devolucao_real']))
-        elif loc.get('data_fim'):
-            df = _date.fromisoformat(str(loc['data_fim']))
+            try:
+                df = _date.fromisoformat(str(loc['data_devolucao_real']))
+            except Exception:
+                df = today
         else:
-            df = today
+            df = today  # sempre até hoje para locações ativas
 
         diaria = float(loc['diaria'] or 0)
         semanas = []
