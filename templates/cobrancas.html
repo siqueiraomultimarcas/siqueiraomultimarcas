@@ -6,23 +6,9 @@
         <h1><i class="fas fa-hand-holding-usd"></i> Cobranças</h1>
         <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Controle semanal de recebimentos por locação</p>
     </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <div style="position:relative;">
-            <input type="text" class="form-control" id="buscaPlaca"
-                   placeholder="Buscar por placa..." maxlength="8"
-                   oninput="renderCobrancas()"
-                   style="width:170px;padding-left:32px;text-transform:uppercase;">
-            <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none;"></i>
-        </div>
-        <select class="form-control" id="filtroStatus" onchange="renderCobrancas()" style="width:170px;">
-            <option value="pendente" selected>Só pendentes</option>
-            <option value="todos">Todas as semanas</option>
-            <option value="pago">Só pagas</option>
-        </select>
-        <button class="btn btn-secondary" onclick="carregarCobrancas()">
-            <i class="fas fa-sync-alt"></i> Atualizar
-        </button>
-    </div>
+    <button class="btn btn-secondary" onclick="carregarCobrancas()">
+        <i class="fas fa-sync-alt"></i> Atualizar
+    </button>
 </div>
 
 <!-- KPIs -->
@@ -39,220 +25,288 @@
     </div>
     <div class="kpi-card green">
         <div class="kpi-label">Total Recebido</div>
-        <div class="kpi-value" id="kpiRecebido" style="font-size:1.2rem;">R$ 0</div>
+        <div class="kpi-value" id="kpiRecebido" style="font-size:1.1rem;">R$ 0,00</div>
         <i class="fas fa-check-circle kpi-icon-bg"></i>
     </div>
     <div class="kpi-card yellow">
         <div class="kpi-label">A Receber (pendente)</div>
-        <div class="kpi-value" id="kpiAReceber" style="font-size:1.2rem;">R$ 0</div>
+        <div class="kpi-value" id="kpiAReceber" style="font-size:1.1rem;">R$ 0,00</div>
         <i class="fas fa-exclamation-circle kpi-icon-bg"></i>
     </div>
 </div>
 
-<div id="listaCobrancas" style="display:flex;flex-direction:column;gap:16px;">
+<!-- Busca -->
+<div class="card" style="padding:14px 20px;margin-bottom:16px;">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <div style="position:relative;flex:1;min-width:200px;max-width:320px;">
+            <input type="text" class="form-control" id="buscaPlaca"
+                   placeholder="Buscar por placa ou cliente..."
+                   oninput="renderLista()"
+                   style="padding-left:36px;">
+            <i class="fas fa-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none;"></i>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#475569;font-size:0.85rem;user-select:none;">
+            <input type="checkbox" id="soPendentes" checked onchange="renderLista()"
+                   style="width:16px;height:16px;accent-color:#2563eb;">
+            Mostrar só com pendentes
+        </label>
+    </div>
+</div>
+
+<!-- Lista de contratos -->
+<div id="listaContratos" style="display:flex;flex-direction:column;gap:10px;">
     <div style="text-align:center;padding:40px;color:#94a3b8;">
         <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-        <p style="margin-top:12px;">Carregando cobranças...</p>
+        <p style="margin-top:12px;">Carregando...</p>
     </div>
 </div>
 
 <!-- Modal Registrar Pagamento -->
-<div id="modalPagamento" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:12px;padding:28px;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h3 id="modalPagTitulo" style="font-size:1.1rem;font-weight:700;color:#0f172a;margin:0;">Registrar Pagamento</h3>
-            <button onclick="fecharModalPag()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#64748b;">&times;</button>
+<div id="modalPagamento" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:14px;padding:28px;width:460px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+            <div>
+                <h3 id="modalPagTitulo" style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0;"></h3>
+                <p id="modalPagSubtitulo" style="font-size:0.8rem;color:#64748b;margin:4px 0 0;"></p>
+            </div>
+            <button onclick="fecharModalPag()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#94a3b8;line-height:1;">&times;</button>
         </div>
 
-        <div id="modalPagInfo" style="background:#f1f5f9;border-radius:8px;padding:12px;margin-bottom:16px;font-size:0.85rem;color:#475569;"></div>
+        <!-- Info da semana -->
+        <div id="modalPagInfo" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:18px;"></div>
 
-        <div class="form-group">
-            <label>Valor Previsto</label>
-            <div id="valorPrevDisplay" style="font-size:1.4rem;font-weight:700;color:#0f172a;padding:6px 0;"></div>
+        <!-- Valor previsto -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding:12px 16px;background:#eff6ff;border-radius:8px;">
+            <span style="font-size:0.8rem;font-weight:600;color:#3b82f6;text-transform:uppercase;letter-spacing:0.5px;">Valor Previsto</span>
+            <span id="valorPrevDisplay" style="font-size:1.5rem;font-weight:700;color:#1d4ed8;"></span>
         </div>
 
-        <div class="grid-2">
-            <div class="form-group">
+        <div class="grid-2" style="gap:12px;">
+            <div class="form-group" style="margin-bottom:0;">
                 <label>Desconto (R$)</label>
                 <input type="number" class="form-control" id="pagDesconto" value="0" min="0" step="0.01"
                        oninput="calcularValorPagar()">
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom:0;">
                 <label>Valor a Receber</label>
-                <div id="valorPagarDisplay" style="font-size:1.3rem;font-weight:700;color:#16a34a;padding:8px 0;"></div>
+                <div id="valorPagarDisplay" style="font-size:1.3rem;font-weight:700;color:#16a34a;padding:8px 4px;"></div>
             </div>
         </div>
 
-        <div class="form-group" id="grupoJustificativa" style="display:none;">
-            <label style="color:#ef4444;">Justificativa do Desconto <span style="font-weight:400;font-size:0.8rem;">(obrigatório)</span></label>
-            <textarea class="form-control" id="pagJustificativa" rows="2" placeholder="Ex: Cliente pagou com dificuldade, acordado redução..."></textarea>
+        <div class="form-group" id="grupoJustificativa" style="display:none;margin-top:14px;">
+            <label style="color:#ef4444;font-weight:600;">
+                Justificativa do Desconto
+                <span style="font-weight:400;font-size:0.75rem;color:#94a3b8;"> — obrigatório</span>
+            </label>
+            <textarea class="form-control" id="pagJustificativa" rows="2"
+                      placeholder="Ex: Cliente negociou redução, parcial acordado..."></textarea>
         </div>
 
-        <div class="form-group">
-            <label>Data do Recebimento</label>
-            <input type="date" class="form-control" id="pagDataPagamento">
+        <div class="grid-2" style="margin-top:14px;gap:12px;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Data do Recebimento</label>
+                <input type="date" class="form-control" id="pagDataPagamento">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Observações <span style="font-weight:400;color:#94a3b8;font-size:0.75rem;">(opcional)</span></label>
+                <input type="text" class="form-control" id="pagObservacoes" placeholder="Forma de pgto., recibo...">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Observações <span style="font-weight:400;font-size:0.8rem;color:#64748b;">(opcional)</span></label>
-            <textarea class="form-control" id="pagObservacoes" rows="2" placeholder="Forma de pagamento, recibo etc."></textarea>
-        </div>
-
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-            <button class="btn" onclick="fecharModalPag()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;padding-top:16px;border-top:1px solid #f1f5f9;">
+            <button class="btn" onclick="fecharModalPag()" style="background:#f1f5f9;color:#64748b;">Cancelar</button>
             <button class="btn btn-primary" onclick="confirmarPagamento()" id="btnConfirmarPag">
-                <i class="fas fa-check"></i> Registrar Recebimento
+                <i class="fas fa-check"></i> Confirmar Recebimento
             </button>
         </div>
     </div>
 </div>
 
+<style>
+.contrato-card { background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;transition:box-shadow 0.15s; }
+.contrato-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+.contrato-header { display:flex;justify-content:space-between;align-items:center;padding:14px 20px;cursor:pointer;user-select:none;flex-wrap:wrap;gap:10px; }
+.contrato-header:hover { background:#f8fafc; }
+.semanas-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;padding:16px 20px 20px; }
+.semana-chip { border-radius:10px;padding:12px 14px;cursor:pointer;transition:transform 0.1s,box-shadow 0.1s;position:relative;border:2px solid transparent; }
+.semana-chip:hover { transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.12); }
+.semana-chip.pendente { background:#fefce8;border-color:#fde68a; }
+.semana-chip.pendente:hover { border-color:#f59e0b; }
+.semana-chip.pago { background:#f0fdf4;border-color:#bbf7d0;cursor:default; }
+.semana-chip.pago:hover { transform:none;box-shadow:none; }
+.semana-chip.atual { box-shadow:0 0 0 3px #3b82f680; }
+.chip-num { font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px; }
+.chip-periodo { font-size:0.72rem;margin-bottom:6px; }
+.chip-valor { font-size:0.95rem;font-weight:700;margin-bottom:6px; }
+.chip-badge { display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.65rem;font-weight:600; }
+.chip-dar-baixa { margin-top:8px;width:100%;font-size:0.72rem;padding:5px 0;border-radius:6px;border:none;background:#f59e0b;color:#fff;font-weight:600;cursor:pointer;transition:background 0.15s; }
+.chip-dar-baixa:hover { background:#d97706; }
+.chip-undo { position:absolute;top:6px;right:6px;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:0.75rem;padding:2px; }
+.chip-undo:hover { color:#ef4444; }
+@media (max-width:600px) {
+    .semanas-grid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
+    .contrato-header { flex-direction:column;align-items:flex-start; }
+}
+</style>
+
 <script>
 let _cobrancas = [];
 let _pagAtual  = {};
+let _abertos   = new Set();
 
 function fmtR(v) {
-    return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 }
 function fmtD(iso) {
-    if (!iso) return '-';
+    if (!iso) return '–';
+    const [y,m,d] = iso.split('-');
+    return `${d}/${m}`;
+}
+function fmtDFull(iso) {
+    if (!iso) return '–';
     const [y,m,d] = iso.split('-');
     return `${d}/${m}/${y}`;
 }
+function hoje() { return new Date().toISOString().split('T')[0]; }
 
 async function carregarCobrancas() {
+    document.getElementById('listaContratos').innerHTML =
+        '<div style="text-align:center;padding:40px;color:#94a3b8;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><p style="margin-top:12px;">Carregando...</p></div>';
     try {
         const r = await fetch('/api/cobrancas');
         _cobrancas = await r.json();
-        renderCobrancas();
+        renderLista();
     } catch(e) {
         showToast('Erro ao carregar cobranças', 'error');
     }
 }
 
-function renderCobrancas() {
-    const filtro = document.getElementById('filtroStatus').value;
-    const busca  = (document.getElementById('buscaPlaca').value || '').toUpperCase().trim();
-    const lista  = document.getElementById('listaCobrancas');
+function renderLista() {
+    const busca      = (document.getElementById('buscaPlaca').value||'').toLowerCase().trim();
+    const soPend     = document.getElementById('soPendentes').checked;
+    const container  = document.getElementById('listaContratos');
 
-    let totalPendentes = 0, totalRecebido = 0, totalAReceber = 0;
+    let totLoc=0, totPend=0, totRec=0, totAReceber=0;
 
     let html = '';
     for (const loc of _cobrancas) {
-        // filtro por placa
-        if (busca && !loc.placa.toUpperCase().includes(busca)) continue;
+        // filtro busca
+        if (busca && !loc.placa.toLowerCase().includes(busca) &&
+            !loc.cliente.toLowerCase().includes(busca) &&
+            !loc.veiculo.toLowerCase().includes(busca)) continue;
 
-        const semFiltradas = filtro === 'todos' ? loc.semanas
-            : loc.semanas.filter(s => s.status === filtro);
-        if (!semFiltradas.length && filtro !== 'todos') continue;
+        const pendentes = loc.semanas.filter(s=>s.status==='pendente').length;
+        if (soPend && pendentes === 0) continue;
 
-        const pendentes = loc.semanas.filter(s => s.status === 'pendente').length;
-        totalPendentes += pendentes;
-        totalRecebido  += loc.total_pago;
-        totalAReceber  += loc.semanas.filter(s => s.status === 'pendente')
-                             .reduce((acc, s) => acc + s.valor_previsto, 0);
+        totLoc++;
+        totPend     += pendentes;
+        totRec      += loc.total_pago;
+        totAReceber += loc.semanas.filter(s=>s.status==='pendente')
+                           .reduce((a,s)=>a+s.valor_previsto,0);
+
+        const aberto = _abertos.has(loc.locacao_id);
 
         html += `
-        <div class="card" style="overflow:hidden;">
-            <div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;">
-                <div>
-                    <div style="color:#fff;font-weight:700;font-size:1rem;">${loc.veiculo}</div>
-                    <div style="color:#bfdbfe;font-size:0.82rem;margin-top:2px;"><i class="fas fa-user" style="margin-right:4px;"></i>${loc.cliente}</div>
+        <div class="contrato-card">
+            <div class="contrato-header" onclick="toggleContrato(${loc.locacao_id})">
+                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-weight:700;font-size:0.97rem;color:#0f172a;">${loc.placa} — ${loc.veiculo.split('—')[1]||''}</div>
+                        <div style="font-size:0.8rem;color:#64748b;margin-top:2px;"><i class="fas fa-user" style="margin-right:4px;opacity:0.6;"></i>${loc.cliente}</div>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <span style="font-size:0.78rem;color:#475569;background:#f1f5f9;padding:3px 10px;border-radius:6px;">Desde ${fmtDFull(loc.data_inicio)}</span>
+                        <span style="font-size:0.78rem;color:#475569;background:#f1f5f9;padding:3px 10px;border-radius:6px;">${fmtR(loc.diaria)}/dia · ${fmtR(loc.valor_semanal)}/sem</span>
+                    </div>
                 </div>
-                <div style="display:flex;gap:16px;align-items:center;">
-                    <div style="text-align:center;">
-                        <div style="color:#bfdbfe;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;">Diária</div>
-                        <div style="color:#fff;font-weight:700;">${fmtR(loc.diaria)}</div>
-                    </div>
-                    <div style="text-align:center;">
-                        <div style="color:#bfdbfe;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;">Semanal</div>
-                        <div style="color:#fff;font-weight:700;">${fmtR(loc.valor_semanal)}</div>
-                    </div>
-                    <div style="text-align:center;">
-                        <div style="color:#bfdbfe;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;">Desde</div>
-                        <div style="color:#fff;font-weight:700;">${fmtD(loc.data_inicio)}</div>
-                    </div>
-                    ${pendentes > 0 ? `<span style="background:#ef4444;color:#fff;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">${pendentes} pendente${pendentes>1?'s':''}</span>` : `<span style="background:#16a34a;color:#fff;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Em dia</span>`}
+                <div style="display:flex;align-items:center;gap:10px;">
+                    ${pendentes > 0
+                        ? `<span style="background:#fef3c7;color:#d97706;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;white-space:nowrap;">${pendentes} pendente${pendentes>1?'s':''} · ${fmtR(loc.semanas.filter(s=>s.status==='pendente').reduce((a,s)=>a+s.valor_previsto,0))}</span>`
+                        : `<span style="background:#dcfce7;color:#16a34a;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">Em dia ✓</span>`
+                    }
+                    <i class="fas fa-chevron-${aberto?'up':'down'}" style="color:#94a3b8;font-size:0.85rem;transition:transform 0.2s;"></i>
                 </div>
             </div>
 
-            <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-                    <thead>
-                        <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
-                            <th style="padding:10px 14px;text-align:left;color:#64748b;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;">Semana</th>
-                            <th style="padding:10px 14px;text-align:left;color:#64748b;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;">Período</th>
-                            <th style="padding:10px 14px;text-align:right;color:#64748b;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;">Previsto</th>
-                            <th style="padding:10px 14px;text-align:right;color:#64748b;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;">Desconto</th>
-                            <th style="padding:10px 14px;text-align:right;color:#64748b;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;">Recebido</th>
-                            <th style="padding:10px 14px;text-align:center;color:#64748b;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;">Status</th>
-                            <th style="padding:10px 14px;text-align:center;color:#64748b;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;">Recebimento</th>
-                            <th style="padding:10px 14px;text-align:center;color:#64748b;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;">Ação</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${semFiltradas.map(s => `
-                        <tr style="border-bottom:1px solid #f1f5f9;" id="row-${loc.locacao_id}-${s.numero}">
-                            <td style="padding:10px 14px;font-weight:600;color:#0f172a;">#${s.numero}</td>
-                            <td style="padding:10px 14px;color:#475569;">${fmtD(s.data_inicio)} a ${fmtD(s.data_fim)} <span style="color:#94a3b8;font-size:0.75rem;">(${s.dias}d)</span></td>
-                            <td style="padding:10px 14px;text-align:right;font-weight:600;">${fmtR(s.valor_previsto)}</td>
-                            <td style="padding:10px 14px;text-align:right;color:${s.desconto ? '#ef4444' : '#94a3b8'};">
-                                ${s.desconto ? `<span title="${s.justificativa_desconto||''}">${fmtR(s.desconto)} ⓘ</span>` : '-'}
-                            </td>
-                            <td style="padding:10px 14px;text-align:right;font-weight:600;color:${s.status==='pago'?'#16a34a':'#94a3b8'};">
-                                ${s.status === 'pago' ? fmtR(s.valor_pago) : '-'}
-                            </td>
-                            <td style="padding:10px 14px;text-align:center;">
-                                ${s.status === 'pago'
-                                    ? '<span style="background:#dcfce7;color:#16a34a;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Pago</span>'
-                                    : '<span style="background:#fef3c7;color:#d97706;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Pendente</span>'}
-                            </td>
-                            <td style="padding:10px 14px;text-align:center;color:#64748b;font-size:0.82rem;">${fmtD(s.data_pagamento)}</td>
-                            <td style="padding:10px 14px;text-align:center;">
-                                ${s.status === 'pendente'
-                                    ? `<button class="btn btn-sm btn-primary" onclick='abrirModalPag(${JSON.stringify(loc)}, ${JSON.stringify(s)})' style="font-size:0.75rem;padding:4px 10px;"><i class="fas fa-check"></i> Dar Baixa</button>`
-                                    : `<button class="btn btn-sm" onclick="cancelarPagamento(${s.pagamento_id}, ${loc.locacao_id}, ${s.numero})" style="background:#fee2e2;color:#ef4444;border:none;font-size:0.75rem;padding:4px 10px;" title="Desfazer pagamento"><i class="fas fa-undo"></i></button>`
-                                }
-                            </td>
-                        </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
+            ${aberto ? `
+            <div style="border-top:1px solid #f1f5f9;">
+                <!-- Resumo rápido -->
+                <div style="display:flex;gap:20px;padding:10px 20px 0;flex-wrap:wrap;">
+                    <span style="font-size:0.78rem;color:#16a34a;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>${loc.semanas.filter(s=>s.status==='pago').length} semana${loc.semanas.filter(s=>s.status==='pago').length!==1?'s':''} paga${loc.semanas.filter(s=>s.status==='pago').length!==1?'s':''} · ${fmtR(loc.total_pago)}</span>
+                    <span style="font-size:0.78rem;color:#d97706;font-weight:600;"><i class="fas fa-clock" style="margin-right:4px;"></i>${pendentes} pendente${pendentes!==1?'s':''} · ${fmtR(loc.semanas.filter(s=>s.status==='pendente').reduce((a,s)=>a+s.valor_previsto,0))}</span>
+                </div>
+                <div class="semanas-grid">
+                    ${loc.semanas.map(s => {
+                        const isHoje = s.data_inicio <= hoje() && hoje() <= s.data_fim;
+                        const pago   = s.status === 'pago';
+                        return `
+                        <div class="semana-chip ${pago?'pago':'pendente'}${isHoje?' atual':''}"
+                             onclick="${pago ? '' : `abrirModalPag(${JSON.stringify(loc).replace(/"/g,"'")}, ${JSON.stringify(s).replace(/"/g,"'")})`}"
+                             title="${pago ? 'Recebido em '+fmtDFull(s.data_pagamento) : 'Clique para registrar recebimento'}">
+                            ${pago ? `<button class="chip-undo" onclick="event.stopPropagation();cancelarPagamento(${s.pagamento_id},${loc.locacao_id},${s.numero})" title="Desfazer"><i class="fas fa-undo"></i></button>` : ''}
+                            <div class="chip-num" style="color:${pago?'#16a34a':'#92400e'};">Semana #${s.numero}${isHoje?' · atual':''}</div>
+                            <div class="chip-periodo" style="color:${pago?'#475569':'#78350f'};">${fmtD(s.data_inicio)} a ${fmtD(s.data_fim)} <span style="opacity:0.6;">(${s.dias}d)</span></div>
+                            <div class="chip-valor" style="color:${pago?'#15803d':'#92400e'};">${fmtR(pago ? s.valor_pago : s.valor_previsto)}</div>
+                            ${pago
+                                ? `<span class="chip-badge" style="background:#dcfce7;color:#16a34a;">✓ Pago ${fmtDFull(s.data_pagamento)}</span>${s.desconto ? `<div style="font-size:0.68rem;color:#ef4444;margin-top:4px;">Desc. ${fmtR(s.desconto)}</div>` : ''}`
+                                : `<span class="chip-badge" style="background:#fde68a;color:#92400e;">Pendente</span><button class="chip-dar-baixa" onclick="event.stopPropagation();abrirModalPagStr('${loc.locacao_id}','${s.numero}')">✓ Dar Baixa</button>`
+                            }
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>` : ''}
         </div>`;
     }
 
     if (!html) {
         html = `<div style="text-align:center;padding:60px;color:#94a3b8;">
-            <i class="fas fa-check-circle" style="font-size:3rem;color:#16a34a;margin-bottom:16px;display:block;"></i>
-            <p style="font-size:1rem;">Nenhum resultado para o filtro selecionado.</p>
+            <i class="fas fa-search" style="font-size:3rem;margin-bottom:16px;display:block;"></i>
+            <p>Nenhum contrato encontrado.</p>
         </div>`;
     }
 
-    lista.innerHTML = html;
+    container.innerHTML = html;
 
-    document.getElementById('kpiLocacoes').textContent  = _cobrancas.length;
-    document.getElementById('kpiPendentes').textContent = totalPendentes;
-    document.getElementById('kpiRecebido').textContent  = fmtR(totalRecebido);
-    document.getElementById('kpiAReceber').textContent  = fmtR(totalAReceber);
+    document.getElementById('kpiLocacoes').textContent   = totLoc;
+    document.getElementById('kpiPendentes').textContent  = totPend;
+    document.getElementById('kpiRecebido').textContent   = fmtR(totRec);
+    document.getElementById('kpiAReceber').textContent   = fmtR(totAReceber);
+}
+
+function toggleContrato(locacao_id) {
+    if (_abertos.has(locacao_id)) _abertos.delete(locacao_id);
+    else _abertos.add(locacao_id);
+    renderLista();
+}
+
+// Permite chamar de dentro do template literal sem JSON complexo
+function abrirModalPagStr(locacao_id, semana_num) {
+    const loc = _cobrancas.find(l => String(l.locacao_id) === String(locacao_id));
+    const sem = loc?.semanas.find(s => String(s.numero) === String(semana_num));
+    if (loc && sem) abrirModalPag(loc, sem);
 }
 
 function abrirModalPag(loc, semana) {
     _pagAtual = { loc, semana };
 
     document.getElementById('modalPagTitulo').textContent =
-        `Registrar Recebimento — Semana #${semana.numero}`;
+        `Semana #${semana.numero} — ${loc.placa}`;
+    document.getElementById('modalPagSubtitulo').textContent = loc.cliente;
 
-    document.getElementById('modalPagInfo').innerHTML =
-        `<strong>${loc.veiculo}</strong><br>
-         <span style="color:#64748b;">${loc.cliente}</span><br>
-         <span>Período: ${fmtD(semana.data_inicio)} a ${fmtD(semana.data_fim)} (${semana.dias} dias)</span>`;
+    document.getElementById('modalPagInfo').innerHTML = `
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <div><span style="font-size:0.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Período</span><br>
+                 <strong style="font-size:0.88rem;">${fmtDFull(semana.data_inicio)} a ${fmtDFull(semana.data_fim)}</strong>
+                 <span style="color:#94a3b8;font-size:0.8rem;"> (${semana.dias} dias)</span></div>
+            <div><span style="font-size:0.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Veículo</span><br>
+                 <strong style="font-size:0.88rem;">${loc.veiculo}</strong></div>
+        </div>`;
 
     document.getElementById('valorPrevDisplay').textContent = fmtR(semana.valor_previsto);
     document.getElementById('pagDesconto').value = '0';
     document.getElementById('pagJustificativa').value = '';
     document.getElementById('pagObservacoes').value = '';
-    document.getElementById('pagDataPagamento').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pagDataPagamento').value = hoje();
     document.getElementById('grupoJustificativa').style.display = 'none';
     calcularValorPagar();
 
@@ -269,10 +323,8 @@ function fecharModalPag() {
 function calcularValorPagar() {
     const prev = parseFloat(_pagAtual.semana?.valor_previsto || 0);
     const desc = parseFloat(document.getElementById('pagDesconto').value) || 0;
-    const apagar = Math.max(0, prev - desc);
-    document.getElementById('valorPagarDisplay').textContent = fmtR(apagar);
-    const showJust = desc > 0;
-    document.getElementById('grupoJustificativa').style.display = showJust ? 'block' : 'none';
+    document.getElementById('valorPagarDisplay').textContent = fmtR(Math.max(0, prev - desc));
+    document.getElementById('grupoJustificativa').style.display = desc > 0 ? 'block' : 'none';
 }
 
 async function confirmarPagamento() {
@@ -302,41 +354,36 @@ async function confirmarPagamento() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                locacao_id: loc.locacao_id,
-                semana_numero: semana.numero,
-                valor_previsto: semana.valor_previsto,
-                desconto,
+                locacao_id: loc.locacao_id, semana_numero: semana.numero,
+                valor_previsto: semana.valor_previsto, desconto,
                 justificativa_desconto: just || null,
-                data_pagamento: data_pag,
-                observacoes: obs || null,
+                data_pagamento: data_pag, observacoes: obs || null
             })
         });
         const d = await r.json();
         if (!r.ok) { showToast(d.error || 'Erro ao registrar', 'error'); return; }
-
         fecharModalPag();
-        showToast(`Semana #${semana.numero} registrada — ${fmtR(d.valor_pago)}`, 'success');
+        showToast(`Semana #${semana.numero} recebida — ${fmtR(d.valor_pago)}`, 'success');
         await carregarCobrancas();
     } catch(e) {
         showToast('Erro ao salvar pagamento', 'error');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check"></i> Registrar Recebimento';
+        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Recebimento';
     }
 }
 
 async function cancelarPagamento(pagamento_id, locacao_id, semana_num) {
     abrirModal('Desfazer Pagamento', `
-        <div style="text-align:center;padding:20px 0;">
-            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#f59e0b;margin-bottom:16px;display:block;"></i>
-            <p>Deseja desfazer o pagamento da <strong>Semana #${semana_num}</strong>?</p>
-            <p style="color:#64748b;font-size:0.85rem;margin-top:8px;">O status voltará para Pendente.</p>
-            <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
-                <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+        <div style="text-align:center;padding:16px 0;">
+            <i class="fas fa-exclamation-triangle" style="font-size:40px;color:#f59e0b;margin-bottom:12px;display:block;"></i>
+            <p>Desfazer o pagamento da <strong>Semana #${semana_num}</strong>?</p>
+            <p style="color:#64748b;font-size:0.83rem;margin-top:6px;">O status voltará para Pendente.</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;">
+                <button class="btn" onclick="fecharModal()" style="background:#f1f5f9;color:#64748b;">Cancelar</button>
                 <button class="btn btn-danger" onclick="executarCancelamento(${pagamento_id})">Desfazer</button>
             </div>
-        </div>
-    `);
+        </div>`);
 }
 
 async function executarCancelamento(pagamento_id) {
@@ -347,7 +394,7 @@ async function executarCancelamento(pagamento_id) {
         showToast('Pagamento desfeito', 'warning');
         await carregarCobrancas();
     } catch(e) {
-        showToast('Erro ao desfazer pagamento', 'error');
+        showToast('Erro ao desfazer', 'error');
     }
 }
 
