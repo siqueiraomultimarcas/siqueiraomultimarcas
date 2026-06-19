@@ -2055,27 +2055,34 @@ def get_locacao(id):
 def add_locacao():
     data = request.json
     import json as _json
-    dias = (datetime.strptime(data['data_fim'], '%Y-%m-%d') -
-            datetime.strptime(data['data_inicio'], '%Y-%m-%d')).days + 1
-    total = dias * float(data.get('diaria', 0))
+    try:
+        data_fim  = data.get('data_fim') or None
+        diaria    = float(data.get('diaria') or 0)
+        total     = None
+        if data_fim:
+            dias  = (datetime.strptime(data_fim, '%Y-%m-%d') -
+                     datetime.strptime(data['data_inicio'], '%Y-%m-%d')).days + 1
+            total = dias * diaria
 
-    fotos_saida = data.get('fotos_saida')
-    if fotos_saida and isinstance(fotos_saida, list):
-        fotos_saida = _json.dumps(fotos_saida)
+        fotos_saida = data.get('fotos_saida')
+        if fotos_saida and isinstance(fotos_saida, list):
+            fotos_saida = _json.dumps(fotos_saida)
 
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida, status, checklist, fotos_saida, observacoes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ''', (data['veiculo_id'], data['cliente_id'], data['data_inicio'], data['data_fim'],
-          data['diaria'], total, data.get('km_saida'), data.get('status', 'ativa'),
-          data.get('checklist'), fotos_saida, data.get('observacoes')))
-    cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (data['veiculo_id'],))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({'success': True})
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute('''
+            INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida, status, checklist, fotos_saida, observacoes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (data['veiculo_id'], data['cliente_id'], data['data_inicio'], data_fim,
+              diaria or None, total, data.get('km_saida') or None, data.get('status', 'ativa'),
+              data.get('checklist'), fotos_saida, data.get('observacoes')))
+        cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (data['veiculo_id'],))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': f'Erro ao salvar locação: {str(e)}'}), 500
 
 
 @app.route('/api/locacoes/<int:id>', methods=['PUT'])
