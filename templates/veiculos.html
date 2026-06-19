@@ -519,7 +519,7 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
                 <label>Combustível</label>
                 <select class="form-control" name="combustivel">
                     <option value="">Selecione</option>
-                    ${['Gasolina','Álcool','Flex','Diesel','GNV','Elétrico','Híbrido'].map(c =>
+                    ${['Gasolina','Álcool','Flex','Flex / GNV','Diesel','GNV','Elétrico','Híbrido'].map(c =>
                         `<option value="${c}" ${_optSel((v ? v.combustivel : d.combustivel), c)}>${c}</option>`
                     ).join('')}
                 </select>
