@@ -172,7 +172,31 @@
             <input type="text" id="mObs" class="form-control" placeholder="Opcional...">
         </div>
 
-        <div class="modal-footer">
+        <!-- ── Seção Asaas ── -->
+        <div style="border:1px solid #bfdbfe;border-radius:10px;padding:14px;margin-top:14px;background:#eff6ff;">
+            <div style="font-size:.78rem;font-weight:700;color:#1d4ed8;margin-bottom:10px;">
+                <i class="fas fa-bolt" style="margin-right:5px;"></i> Cobrar via Asaas (PIX / Boleto)
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <button id="btnAsaasPix"
+                        onclick="selecionarTipoAsaas('PIX')"
+                        style="flex:1;padding:8px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.78rem;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-qrcode"></i> PIX
+                </button>
+                <button id="btnAsaasBoleto"
+                        onclick="selecionarTipoAsaas('BOLETO')"
+                        style="flex:1;padding:8px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.78rem;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-barcode"></i> Boleto
+                </button>
+            </div>
+            <button id="btnGerarAsaas" onclick="gerarCobrancaAsaas()"
+                    style="width:100%;padding:9px;border-radius:8px;border:none;background:#1d4ed8;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">
+                <i class="fas fa-paper-plane" style="margin-right:6px;"></i> Gerar Cobrança Asaas
+            </button>
+            <div id="asaasResultado" style="display:none;margin-top:12px;"></div>
+        </div>
+
+        <div class="modal-footer" style="margin-top:14px;">
             <button class="btn btn-secondary" onclick="fecharModalPag()">Cancelar</button>
             <button class="btn btn-primary" onclick="confirmarPagamento()" style="background:#16a34a;">
                 <i class="fas fa-check"></i> Confirmar Recebimento
@@ -476,9 +500,13 @@ function renderHistorico(loc) {
         const periodo = `${fmtDate(p.data_inicio)} a ${fmtDate(p.data_fim)}`;
         const dias    = p.dias || 0;
         const desc    = p.desconto > 0 ? ` <span style="color:#f59e0b;font-size:.7rem;">(desc. ${fmtR(p.desconto)})</span>` : '';
+        const asaasBadge = p.asaas_id
+            ? `<a href="#" onclick="verificarStatusAsaas('${p.asaas_id}', this); return false;"
+                  style="font-size:.65rem;padding:2px 6px;border-radius:4px;background:#eff6ff;color:#1d4ed8;text-decoration:none;font-weight:600;white-space:nowrap;">
+                  <i class="fas fa-bolt"></i> Asaas</a>` : '';
         return `<div class="hist-item">
             <div>
-                <div class="hist-period">${periodo}</div>
+                <div class="hist-period">${periodo} ${asaasBadge}</div>
                 <div class="hist-dias">${dias} dia${dias===1?'':'s'} · pago em ${fmtDate(p.data_pagamento)}</div>
             </div>
             <div class="hist-val">${fmtR(p.valor_pago)}${desc}</div>
@@ -520,7 +548,19 @@ function abrirModalPag(lid) {
     const dias   = d2 - d1 + 1;
     const valPrev= Math.round(loc.diaria * dias * 100) / 100;
 
-    _modalCtx = { locacaoId: lid, diaria: loc.diaria, d_ini: d1iso, d_fim: d2iso, dias, valorPrev: valPrev };
+    _modalCtx = {
+        locacaoId:   lid,
+        diaria:      loc.diaria,
+        d_ini:       d1iso,
+        d_fim:       d2iso,
+        dias,
+        valorPrev:   valPrev,
+        clienteNome: loc.cliente,
+        clienteCpf:  loc.cliente_cpf  || '',
+        clienteTel:  loc.cliente_telefone || '',
+        clienteEmail:loc.cliente_email || '',
+        placa:       loc.placa,
+    };
 
     document.getElementById('modalResumo').innerHTML =
         `<strong>${loc.placa}</strong> — ${loc.cliente}<br>
@@ -545,6 +585,121 @@ function fecharModalPag(evt) {
     if (evt && evt.target !== document.getElementById('modalOverlay')) return;
     document.getElementById('modalOverlay').classList.remove('show');
     _modalCtx = null;
+}
+
+// ─── Asaas ───────────────────────────────────────────────────────────────────
+let _asaasTipo = 'PIX';
+
+function selecionarTipoAsaas(tipo) {
+    _asaasTipo = tipo;
+    const ativo   = { border:'2px solid #3b82f6', background:'#3b82f6', color:'#fff' };
+    const inativo = { border:'2px solid #e2e8f0', background:'#f8fafc', color:'#64748b' };
+    Object.assign(document.getElementById('btnAsaasPix').style,   tipo==='PIX'    ? ativo : inativo);
+    Object.assign(document.getElementById('btnAsaasBoleto').style, tipo==='BOLETO' ? ativo : inativo);
+}
+
+async function gerarCobrancaAsaas() {
+    if (!_modalCtx) return;
+    const desc  = parseFloat(document.getElementById('mDesconto').value) || 0;
+    const valor = Math.round((_modalCtx.valorPrev - desc) * 100) / 100;
+    if (valor <= 0) { showToast('Valor inválido para cobrança', 'warning'); return; }
+
+    const venc = document.getElementById('mDataPag').value || new Date().toISOString().slice(0,10);
+    const descricao = `Locação ${_modalCtx.placa} — ${_modalCtx.dias} dia(s)`;
+
+    const btn = document.getElementById('btnGerarAsaas');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+    try {
+        const r = await fetch('/api/asaas/gerar-cobranca', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                cpf:              _modalCtx.clienteCpf,
+                nome:             _modalCtx.clienteNome,
+                email:            _modalCtx.clienteEmail,
+                telefone:         _modalCtx.clienteTel,
+                billing_type:     _asaasTipo,
+                valor,
+                data_vencimento:  venc,
+                descricao,
+            })
+        });
+        const data = await r.json();
+        if (!r.ok) { showToast(data.error || 'Erro ao gerar cobrança', 'error'); return; }
+
+        _modalCtx.asaasId   = data.asaas_id;
+        _modalCtx.asaasLink = data.invoice_url;
+
+        const div = document.getElementById('asaasResultado');
+        div.style.display = 'block';
+
+        if (_asaasTipo === 'PIX' && data.pix_qrcode) {
+            div.innerHTML = `
+                <div style="text-align:center;">
+                    <img src="data:image/png;base64,${data.pix_qrcode}"
+                         style="width:180px;height:180px;border-radius:8px;border:1px solid #e2e8f0;">
+                    <div style="margin-top:8px;">
+                        <button onclick="copiarPix('${data.pix_payload}')"
+                                style="width:100%;padding:8px;border-radius:6px;border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:700;cursor:pointer;">
+                            <i class="fas fa-copy"></i> Copiar código PIX
+                        </button>
+                    </div>
+                    ${data.invoice_url ? `<a href="${data.invoice_url}" target="_blank"
+                        style="display:block;margin-top:6px;font-size:.72rem;color:#3b82f6;text-decoration:none;">
+                        <i class="fas fa-external-link-alt"></i> Ver página de pagamento</a>` : ''}
+                    <div style="margin-top:6px;font-size:.68rem;color:#16a34a;font-weight:600;">
+                        <i class="fas fa-check-circle"></i> Cobrança gerada! ID: ${data.asaas_id}
+                    </div>
+                </div>`;
+        } else {
+            const link = data.bank_slip_url || data.invoice_url;
+            div.innerHTML = `
+                <div style="text-align:center;">
+                    <a href="${link}" target="_blank"
+                       style="display:block;padding:10px;border-radius:8px;background:#1d4ed8;color:#fff;text-decoration:none;font-size:.82rem;font-weight:700;">
+                        <i class="fas fa-file-invoice"></i> Abrir Boleto
+                    </a>
+                    <button onclick="navigator.clipboard.writeText('${link}').then(()=>showToast('Link copiado!','success'))"
+                            style="width:100%;margin-top:6px;padding:8px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;color:#374151;font-size:.75rem;cursor:pointer;">
+                        <i class="fas fa-copy"></i> Copiar link do boleto
+                    </button>
+                    <div style="margin-top:6px;font-size:.68rem;color:#16a34a;font-weight:600;">
+                        <i class="fas fa-check-circle"></i> Cobrança gerada! ID: ${data.asaas_id}
+                    </div>
+                </div>`;
+        }
+        showToast(`Cobrança ${_asaasTipo} gerada com sucesso!`, 'success');
+    } catch(e) {
+        showToast('Erro de conexão com Asaas', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;"></i> Gerar Cobrança Asaas';
+    }
+}
+
+function copiarPix(payload) {
+    navigator.clipboard.writeText(payload)
+        .then(() => showToast('Código PIX copiado!', 'success'))
+        .catch(() => showToast('Não foi possível copiar', 'error'));
+}
+
+async function verificarStatusAsaas(asaasId, el) {
+    el.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const r = await fetch('/api/asaas/status/' + asaasId);
+        const d = await r.json();
+        if (r.ok) {
+            el.innerHTML = `<i class="fas fa-bolt"></i> ${d.label}`;
+            el.style.background = d.cor + '22';
+            el.style.color      = d.cor;
+            el.style.border     = `1px solid ${d.cor}44`;
+        } else {
+            el.innerHTML = '<i class="fas fa-bolt"></i> Asaas';
+        }
+    } catch(e) {
+        el.innerHTML = '<i class="fas fa-bolt"></i> Asaas';
+    }
 }
 
 function onDescontoChange() {

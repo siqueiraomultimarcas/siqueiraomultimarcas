@@ -183,6 +183,9 @@ def init_db():
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS codigo_fipe TEXT")
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS referencia_fipe TEXT")
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS valor_compra NUMERIC(12,2)")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_id TEXT")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_link TEXT")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_status TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS numero_auto TEXT")
     for col, tipo in [('cep','TEXT'), ('bairro','TEXT'), ('nome_fantasia','TEXT'), ('data_fundacao','DATE'), ('situacao_receita','TEXT'), ('responsavel_principal','TEXT')]:
         cur.execute(f"ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS {col} {tipo}")
@@ -272,6 +275,105 @@ def init_db():
     cur.close()
     conn.close()
     print('Banco de dados inicializado com sucesso!')
+
+# ==================== ASAAS ====================
+
+ASAAS_BASE = 'https://api.asaas.com/v3'
+
+def _asaas_req(method, path, data=None):
+    token = os.environ.get('ASAAS_TOKEN', '')
+    headers = {'access_token': token, 'Content-Type': 'application/json', 'User-Agent': 'SiqueiraoSystem/1.0'}
+    resp = requests.request(method, ASAAS_BASE + path, headers=headers, json=data, timeout=15)
+    try:
+        return resp.json(), resp.status_code
+    except Exception:
+        return {}, resp.status_code
+
+def _asaas_get_or_create_customer(cpf, nome, email='', telefone=''):
+    cpf_clean = re.sub(r'\D', '', cpf or '')
+    if not cpf_clean:
+        return None, 'CPF do cliente não informado'
+    result, status = _asaas_req('GET', f'/customers?cpfCnpj={cpf_clean}&limit=1')
+    if status == 200 and result.get('data'):
+        return result['data'][0]['id'], None
+    payload = {'name': nome, 'cpfCnpj': cpf_clean}
+    if email:    payload['email']       = email
+    if telefone: payload['mobilePhone'] = re.sub(r'\D', '', telefone)
+    result, status = _asaas_req('POST', '/customers', payload)
+    if status in (200, 201) and result.get('id'):
+        return result['id'], None
+    errs = result.get('errors', [{}])
+    return None, errs[0].get('description', 'Erro ao criar cliente no Asaas')
+
+@app.route('/api/asaas/gerar-cobranca', methods=['POST'])
+@login_required
+def asaas_gerar_cobranca():
+    data      = request.json
+    cpf       = data.get('cpf', '')
+    nome      = data.get('nome', '')
+    email     = data.get('email', '')
+    telefone  = data.get('telefone', '')
+    billing   = data.get('billing_type', 'PIX')   # PIX ou BOLETO
+    valor     = float(data.get('valor') or 0)
+    due_date  = data.get('data_vencimento')        # YYYY-MM-DD
+    descricao = data.get('descricao', 'Locação de veículo — Siqueirão Multimarcas')
+
+    if valor <= 0 or not due_date:
+        return jsonify({'error': 'Valor ou data de vencimento inválidos'}), 400
+
+    customer_id, err = _asaas_get_or_create_customer(cpf, nome, email, telefone)
+    if err:
+        return jsonify({'error': err}), 500
+
+    charge, status = _asaas_req('POST', '/payments', {
+        'customer':    customer_id,
+        'billingType': billing,
+        'dueDate':     due_date,
+        'value':       round(valor, 2),
+        'description': descricao,
+    })
+    if status not in (200, 201):
+        errs = charge.get('errors', [{}])
+        return jsonify({'error': errs[0].get('description', 'Erro ao criar cobrança no Asaas')}), 500
+
+    result = {
+        'asaas_id':    charge.get('id'),
+        'invoice_url': charge.get('invoiceUrl', ''),
+        'status':      charge.get('status', ''),
+        'bank_slip_url': charge.get('bankSlipUrl', ''),
+    }
+    if billing == 'PIX':
+        pix, _ = _asaas_req('GET', f'/payments/{charge["id"]}/pixQrCode')
+        result['pix_qrcode']  = pix.get('encodedImage', '')
+        result['pix_payload'] = pix.get('payload', '')
+
+    return jsonify(result)
+
+@app.route('/api/asaas/status/<asaas_id>', methods=['GET'])
+@login_required
+def asaas_check_status(asaas_id):
+    charge, status = _asaas_req('GET', f'/payments/{asaas_id}')
+    if status != 200:
+        return jsonify({'error': 'Cobrança não encontrada'}), 404
+    label_map = {
+        'PENDING':    ('Aguardando', '#f59e0b'),
+        'RECEIVED':   ('Recebido',   '#16a34a'),
+        'CONFIRMED':  ('Confirmado', '#16a34a'),
+        'OVERDUE':    ('Vencido',    '#dc2626'),
+        'REFUNDED':   ('Estornado',  '#6b7280'),
+        'CANCELLED':  ('Cancelado',  '#6b7280'),
+    }
+    st = charge.get('status', '')
+    lbl, cor = label_map.get(st, (st, '#64748b'))
+    return jsonify({
+        'status':      st,
+        'label':       lbl,
+        'cor':         cor,
+        'invoice_url': charge.get('invoiceUrl', ''),
+        'bank_slip_url': charge.get('bankSlipUrl', ''),
+        'value':       charge.get('value'),
+        'due_date':    charge.get('dueDate'),
+    })
 
 # ==================== PWA ====================
 
@@ -712,7 +814,8 @@ def get_cobrancas():
     cur.execute('''
         SELECT l.id, l.data_inicio, l.data_fim, l.diaria,
                v.placa, v.marca, v.modelo,
-               c.nome AS cliente_nome
+               c.nome AS cliente_nome, c.cpf AS cliente_cpf,
+               c.telefone AS cliente_telefone, c.email AS cliente_email
         FROM locacoes l
         JOIN veiculos v ON v.id = l.veiculo_id
         JOIN clientes c ON c.id = l.cliente_id
@@ -728,7 +831,8 @@ def get_cobrancas():
         cur.execute(f'''
             SELECT id, locacao_id, semana_numero, data_inicio, data_fim,
                    valor_previsto, valor_pago, desconto,
-                   justificativa_desconto, status, data_pagamento, observacoes
+                   justificativa_desconto, status, data_pagamento, observacoes,
+                   asaas_id, asaas_link, asaas_status
             FROM pagamentos_locacao
             WHERE locacao_id IN ({ph})
             ORDER BY locacao_id, data_inicio
@@ -749,6 +853,9 @@ def get_cobrancas():
                 'status':               p['status'],
                 'data_pagamento':       str(p['data_pagamento']) if p['data_pagamento'] else None,
                 'observacoes':          p['observacoes'],
+                'asaas_id':             p.get('asaas_id'),
+                'asaas_link':           p.get('asaas_link'),
+                'asaas_status':         p.get('asaas_status'),
             })
 
     cur.close()
@@ -765,17 +872,20 @@ def get_cobrancas():
         total_pago = sum(p['valor_pago'] for p in pagamentos)
 
         result.append({
-            'locacao_id':    loc['id'],
-            'placa':         loc['placa'],
-            'veiculo':       f"{loc['placa']} — {loc['marca']} {loc['modelo']}",
-            'cliente':       loc['cliente_nome'],
-            'data_inicio':   str(loc['data_inicio']),
-            'data_fim':      str(loc['data_fim']) if loc['data_fim'] else None,
-            'diaria':        diaria,
-            'valor_semanal': round(diaria * 7, 2),
-            'pagamentos':    pagamentos,
-            'total_pago':    total_pago,
-            'n_pagamentos':  len(pagamentos),
+            'locacao_id':        loc['id'],
+            'placa':             loc['placa'],
+            'veiculo':           f"{loc['placa']} — {loc['marca']} {loc['modelo']}",
+            'cliente':           loc['cliente_nome'],
+            'cliente_cpf':       loc.get('cliente_cpf', ''),
+            'cliente_telefone':  loc.get('cliente_telefone', ''),
+            'cliente_email':     loc.get('cliente_email', ''),
+            'data_inicio':       str(loc['data_inicio']),
+            'data_fim':          str(loc['data_fim']) if loc['data_fim'] else None,
+            'diaria':            diaria,
+            'valor_semanal':     round(diaria * 7, 2),
+            'pagamentos':        pagamentos,
+            'total_pago':        total_pago,
+            'n_pagamentos':      len(pagamentos),
         })
 
     return jsonify(result)
