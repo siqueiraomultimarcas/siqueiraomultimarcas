@@ -353,6 +353,8 @@
         if (dataInicio && dataFim) {
             const dias = Math.ceil((new Date(dataFim) - new Date(dataInicio)) / 86400000) + 1;
             document.getElementById('totalCalculado').textContent = formatCurrency(dias > 0 ? dias * diaria : 0);
+        } else {
+            document.getElementById('totalCalculado').textContent = '—';
         }
     }
 
