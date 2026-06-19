@@ -310,7 +310,15 @@ def _asaas_get_or_create_customer(cpf, nome, email='', telefone=''):
         return None, 'CPF do cliente não informado'
     result, status = _asaas_req('GET', f'/customers?cpfCnpj={cpf_clean}&limit=1')
     if status == 200 and result.get('data'):
-        return result['data'][0]['id'], None
+        existing = result['data'][0]
+        cust_id  = existing['id']
+        # Atualiza email/telefone se o cliente já existia sem eles
+        update = {}
+        if email    and not existing.get('email'):       update['email']       = email
+        if telefone and not existing.get('mobilePhone'): update['mobilePhone'] = re.sub(r'\D', '', telefone)
+        if update:
+            _asaas_req('PUT', f'/customers/{cust_id}', update)
+        return cust_id, None
     payload = {'name': nome, 'cpfCnpj': cpf_clean}
     if email:    payload['email']       = email
     if telefone: payload['mobilePhone'] = re.sub(r'\D', '', telefone)

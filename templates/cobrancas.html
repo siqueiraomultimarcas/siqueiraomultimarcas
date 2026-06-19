@@ -682,12 +682,38 @@ function _lerParcelas() {
     }));
 }
 
+function _btnCompartilhar(link, ctx) {
+    if (!link || !ctx) return '';
+    const tel   = (ctx.clienteTel || '').replace(/\D/g,'');
+    const msg   = encodeURIComponent(`Olá ${ctx.clienteNome}, segue o link para pagamento da locação (${ctx.placa}):\n${link}`);
+    const waUrl = tel ? `https://wa.me/55${tel}?text=${msg}` : `https://wa.me/?text=${msg}`;
+    const emailHref = ctx.clienteEmail
+        ? `mailto:${ctx.clienteEmail}?subject=Cobrança Locação ${ctx.placa}&body=${encodeURIComponent(`Olá ${ctx.clienteNome},\n\nSegue o link para pagamento:\n${link}`)}`
+        : '';
+    return `<div style="display:flex;gap:6px;margin-top:4px;">
+        <a href="${waUrl}" target="_blank"
+           style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;">
+            <i class="fab fa-whatsapp" style="font-size:.95rem;"></i> WhatsApp
+        </a>
+        ${emailHref ? `<a href="${emailHref}"
+           style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:7px;border-radius:6px;background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;font-size:.75rem;font-weight:700;text-decoration:none;">
+            <i class="fas fa-envelope"></i> E-mail
+        </a>` : ''}
+    </div>`;
+}
+
 function confirmarGerarAsaas() {
     if (!_modalCtx) return;
     const desc     = parseFloat(document.getElementById('mDesconto').value) || 0;
     const parcelas = _lerParcelas();
     const totalVal = parcelas.reduce((s, p) => s + p.valor, 0);
     if (totalVal <= 0) { showToast('Valor inválido para cobrança', 'warning'); return; }
+    // Asaas exige mínimo R$ 5,00 por parcela
+    const menorParcela = Math.min(...parcelas.map(p => p.valor));
+    if (menorParcela < 5) {
+        showToast(`Valor mínimo por cobrança no Asaas é R$ 5,00. Use "Baixa Manual" para valores menores.`, 'warning', 7000);
+        return;
+    }
     const cpfFmt  = (_modalCtx.clienteCpf || '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') || 'Não informado';
     const tipo    = _asaasTipo === 'PIX' ? '<i class="fas fa-qrcode"></i> PIX' : '<i class="fas fa-barcode"></i> Boleto';
     const n       = parcelas.length;
@@ -775,10 +801,10 @@ async function gerarCobrancaAsaas() {
                     <img src="data:image/png;base64,${p.pix_qrcode}"
                          style="width:160px;height:160px;border-radius:8px;border:1px solid #e2e8f0;display:block;margin:0 auto 8px;">
                     <button onclick="copiarPix('${p.pix_payload||''}')"
-                            style="width:100%;padding:8px;border-radius:6px;border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:700;cursor:pointer;margin-bottom:4px;">
+                            style="width:100%;padding:8px;border-radius:6px;border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:700;cursor:pointer;margin-bottom:6px;">
                         <i class="fas fa-copy"></i> Copiar código PIX
                     </button>
-                    ${p.invoice_url?`<a href="${p.invoice_url}" target="_blank" style="font-size:.72rem;color:#3b82f6;"><i class="fas fa-external-link-alt"></i> Ver página</a>`:''}
+                    ${_btnCompartilhar(p.invoice_url || p.bank_slip_url || '', _modalCtx)}
                 </div>`;
             } else {
                 const link = p.bank_slip_url || p.invoice_url || '';
@@ -789,9 +815,10 @@ async function gerarCobrancaAsaas() {
                         <i class="fas fa-file-invoice"></i> Abrir Boleto ${n>1?`(${i+1}/${n})`:''}
                     </a>
                     <button onclick="navigator.clipboard.writeText('${link}').then(()=>showToast('Link copiado!','success'))"
-                            style="width:100%;padding:7px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;color:#374151;font-size:.75rem;cursor:pointer;">
+                            style="width:100%;padding:7px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;color:#374151;font-size:.75rem;cursor:pointer;margin-bottom:6px;">
                         <i class="fas fa-copy"></i> Copiar link
                     </button>
+                    ${_btnCompartilhar(link, _modalCtx)}
                 </div>`;
             }
         }).join('') + `<div style="text-align:center;margin-top:8px;font-size:.72rem;color:#16a34a;font-weight:600;">
