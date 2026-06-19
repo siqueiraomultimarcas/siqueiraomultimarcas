@@ -1347,10 +1347,20 @@ def add_manutencao():
           _int_or_none(data.get('fornecedor_id')),
           data.get('itens_json') or None))
 
-    km = _int_or_none(data.get('km_manutencao'))
     vid = _int_or_none(data.get('veiculo_id'))
-    if km and vid:
-        cur.execute('UPDATE veiculos SET km_atual = %s WHERE id = %s', (km, vid))
+    if vid:
+        cur.execute('''
+            UPDATE veiculos SET km_atual = (
+                SELECT km_manutencao FROM manutencoes
+                WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
+                ORDER BY data_manutencao DESC, id DESC LIMIT 1
+            )
+            WHERE id = %s AND (
+                SELECT km_manutencao FROM manutencoes
+                WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
+                ORDER BY data_manutencao DESC, id DESC LIMIT 1
+            ) IS NOT NULL
+        ''', (vid, vid, vid))
 
     conn.commit()
     cur.close()
@@ -1413,10 +1423,20 @@ def update_manutencao(id):
           data.get('itens_json') or None,
           id))
 
-    km = _int_or_none(data.get('km_manutencao'))
     vid = _int_or_none(data.get('veiculo_id'))
-    if km and vid:
-        cur.execute('UPDATE veiculos SET km_atual = %s WHERE id = %s', (km, vid))
+    if vid:
+        cur.execute('''
+            UPDATE veiculos SET km_atual = (
+                SELECT km_manutencao FROM manutencoes
+                WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
+                ORDER BY data_manutencao DESC, id DESC LIMIT 1
+            )
+            WHERE id = %s AND (
+                SELECT km_manutencao FROM manutencoes
+                WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
+                ORDER BY data_manutencao DESC, id DESC LIMIT 1
+            ) IS NOT NULL
+        ''', (vid, vid, vid))
 
     conn.commit()
     cur.close()
