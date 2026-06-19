@@ -189,7 +189,7 @@
                     <i class="fas fa-barcode"></i> Boleto
                 </button>
             </div>
-            <button id="btnGerarAsaas" onclick="gerarCobrancaAsaas()"
+            <button id="btnGerarAsaas" onclick="confirmarGerarAsaas()"
                     style="width:100%;padding:9px;border-radius:8px;border:none;background:#1d4ed8;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">
                 <i class="fas fa-paper-plane" style="margin-right:6px;"></i> Gerar Cobrança Asaas
             </button>
@@ -596,6 +596,63 @@ function selecionarTipoAsaas(tipo) {
     const inativo = { border:'2px solid #e2e8f0', background:'#f8fafc', color:'#64748b' };
     Object.assign(document.getElementById('btnAsaasPix').style,   tipo==='PIX'    ? ativo : inativo);
     Object.assign(document.getElementById('btnAsaasBoleto').style, tipo==='BOLETO' ? ativo : inativo);
+}
+
+function confirmarGerarAsaas() {
+    if (!_modalCtx) return;
+    const desc  = parseFloat(document.getElementById('mDesconto').value) || 0;
+    const valor = Math.round((_modalCtx.valorPrev - desc) * 100) / 100;
+    if (valor <= 0) { showToast('Valor inválido para cobrança', 'warning'); return; }
+
+    const venc    = document.getElementById('mDataPag').value || new Date().toISOString().slice(0,10);
+    const fmtVenc = venc ? venc.split('-').reverse().join('/') : '—';
+    const tipo    = _asaasTipo === 'PIX' ? '🟩 PIX' : '🟦 Boleto Bancário';
+    const cpfFmt  = _modalCtx.clienteCpf
+        ? _modalCtx.clienteCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+        : 'Não informado';
+
+    abrirModal('Confirmar Geração de Cobrança', `
+        <div style="padding:4px 0;">
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;margin-bottom:16px;">
+                <div style="font-size:.72rem;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">
+                    <i class="fas fa-file-invoice-dollar"></i> Resumo da Cobrança
+                </div>
+                <table style="width:100%;font-size:.82rem;border-collapse:collapse;">
+                    <tr><td style="color:#64748b;padding:4px 0;width:40%;">Cliente</td>
+                        <td style="font-weight:700;color:#0f172a;">${_modalCtx.clienteNome}</td></tr>
+                    <tr><td style="color:#64748b;padding:4px 0;">CPF</td>
+                        <td style="color:#0f172a;">${cpfFmt}</td></tr>
+                    <tr><td style="color:#64748b;padding:4px 0;">Veículo</td>
+                        <td style="color:#0f172a;">${_modalCtx.placa}</td></tr>
+                    <tr><td style="color:#64748b;padding:4px 0;">Período</td>
+                        <td style="color:#0f172a;">${_modalCtx.dias} dia(s)</td></tr>
+                    <tr><td style="color:#64748b;padding:4px 0;">Vencimento</td>
+                        <td style="color:#0f172a;">${fmtVenc}</td></tr>
+                    <tr><td style="color:#64748b;padding:4px 0;">Tipo</td>
+                        <td style="font-weight:600;">${tipo}</td></tr>
+                    <tr style="border-top:1px solid #bbf7d0;">
+                        <td style="color:#64748b;padding:8px 0 0;">Valor</td>
+                        <td style="font-size:1.1rem;font-weight:800;color:#15803d;padding-top:8px;">
+                            ${fmtR(valor)}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <p style="font-size:.78rem;color:#64748b;margin-bottom:16px;text-align:center;">
+                Uma cobrança será criada no Asaas e o link enviado poderá ser pago pelo cliente.
+            </p>
+            <div style="display:flex;gap:10px;">
+                <button class="btn" onclick="fecharModal()"
+                        style="flex:1;background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;">
+                    Cancelar
+                </button>
+                <button class="btn" onclick="fecharModal(); gerarCobrancaAsaas();"
+                        style="flex:1;background:#1d4ed8;color:#fff;font-weight:700;">
+                    <i class="fas fa-paper-plane"></i> Confirmar e Gerar
+                </button>
+            </div>
+        </div>
+    `);
 }
 
 async function gerarCobrancaAsaas() {
