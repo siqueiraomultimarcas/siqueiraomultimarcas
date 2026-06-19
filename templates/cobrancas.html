@@ -728,12 +728,6 @@ function confirmarGerarAsaas() {
 
 async function gerarCobrancaAsaas() {
     if (!_modalCtx) return;
-    const desc  = parseFloat(document.getElementById('mDesconto').value) || 0;
-    const valor = Math.round((_modalCtx.valorPrev - desc) * 100) / 100;
-    if (valor <= 0) { showToast('Valor inválido para cobrança', 'warning'); return; }
-
-    const venc = document.getElementById('mDataPag').value || new Date().toISOString().slice(0,10);
-    const descricao = `Locação ${_modalCtx.placa} — ${_modalCtx.dias} dia(s)`;
 
     const btn = document.getElementById('btnGerarAsaas');
     btn.disabled = true;
@@ -741,6 +735,8 @@ async function gerarCobrancaAsaas() {
 
     const parcelas = _lerParcelas();
     const desc     = parseFloat(document.getElementById('mDesconto').value) || 0;
+    const totalVal = parcelas.reduce((s, p) => s + p.valor, 0);
+    if (totalVal <= 0) { showToast('Valor inválido para cobrança', 'warning'); btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane"></i> Gerar Cobrança'; return; }
 
     try {
         const r = await fetch('/api/cobrar-asaas', {
