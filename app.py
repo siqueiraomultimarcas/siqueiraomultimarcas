@@ -1832,6 +1832,30 @@ def update_locacao(id):
     return jsonify({'success': True})
 
 
+@app.route('/api/locacoes/<int:id>', methods=['DELETE'])
+@login_required
+def delete_locacao(id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute('SELECT veiculo_id, status FROM locacoes WHERE id=%s', (id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Locação não encontrada'}), 404
+        veiculo_id, status_loc = row
+        if status_loc == 'ativa' and veiculo_id:
+            cur.execute("UPDATE veiculos SET status='disponivel' WHERE id=%s", (veiculo_id,))
+        cur.execute('DELETE FROM locacoes WHERE id=%s', (id,))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+
 @app.route('/api/locacoes/<int:id>/devolver', methods=['PUT'])
 @login_required
 def devolver_locacao(id):
