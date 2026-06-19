@@ -85,7 +85,8 @@
                     <th>Combustível</th>
                     <th>Categoria</th>
                     <th>Diária</th>
-                    <th>FIPE</th>
+                    <th>Compra</th>
+                    <th>FIPE / Variação</th>
                     <th>Km</th>
                     <th>Status</th>
                     <th style="text-align:center;">CRLV</th>
@@ -342,7 +343,7 @@ function renderizarVeiculos(lista) {
     document.getElementById('countFrotaBadge').textContent = lista.length;
     const tbody = document.getElementById('tabelaVeiculos');
     if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:48px 20px;">
+        tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:48px 20px;">
     <i class="fas fa-car" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
     <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhum veículo encontrado</div>
     <div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou cadastre um novo veículo</div>
@@ -362,7 +363,21 @@ function renderizarVeiculos(lista) {
             <td>${v.combustivel || '-'}</td>
             <td>${v.categoria || '-'}</td>
             <td>${formatCurrency(v.diaria)}</td>
-            <td>${v.valor_fipe ? `<span style="color:#059669;font-weight:700;font-size:0.82rem;">${formatCurrency(v.valor_fipe)}</span>${v.referencia_fipe ? `<br><span style="font-size:0.65rem;color:#94a3b8;">${v.referencia_fipe}</span>` : ''}` : '<span style="color:#cbd5e1;font-size:0.78rem;">—</span>'}</td>
+            <td>${v.valor_compra ? `<span style="font-weight:600;font-size:0.82rem;color:#0f172a;">${formatCurrency(v.valor_compra)}</span>` : '<span style="color:#cbd5e1;font-size:0.78rem;">—</span>'}</td>
+            <td>${(() => {
+                if (!v.valor_fipe) return '<span style="color:#cbd5e1;font-size:0.78rem;">—</span>';
+                let html = `<span style="font-weight:700;font-size:0.82rem;color:#0f172a;">${formatCurrency(v.valor_fipe)}</span>`;
+                if (v.referencia_fipe) html += `<br><span style="font-size:0.65rem;color:#94a3b8;">${v.referencia_fipe}</span>`;
+                if (v.valor_compra && v.valor_compra > 0) {
+                    const pct = ((v.valor_fipe - v.valor_compra) / v.valor_compra) * 100;
+                    const positivo = pct >= 0;
+                    const cor = positivo ? '#15803d' : '#dc2626';
+                    const bg  = positivo ? '#f0fdf4' : '#fef2f2';
+                    const seta = positivo ? '▲' : '▼';
+                    html += `<br><span style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:4px;font-size:0.68rem;font-weight:700;background:${bg};color:${cor};">${seta} ${Math.abs(pct).toFixed(1)}%</span>`;
+                }
+                return html;
+            })()}</td>
             <td>${(v.km_atual || 0).toLocaleString()} km</td>
             <td>${getStatusBadge(v.status)}</td>
             <td style="text-align:center;">
@@ -528,6 +543,12 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
 
         <div class="grid-3">
             <div class="form-group">
+                <label>Valor Compra (R$)</label>
+                <input type="number" class="form-control" name="valor_compra"
+                       value="${v ? (v.valor_compra||'') : ''}" step="0.01" min="0"
+                       placeholder="Valor pago na compra">
+            </div>
+            <div class="form-group">
                 <label>Valor Diária (R$)</label>
                 <input type="number" class="form-control" name="diaria"
                        value="${v ? v.diaria : ''}" step="0.01" min="0">
@@ -537,6 +558,8 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
                 <input type="number" class="form-control" name="km_atual"
                        value="${v ? v.km_atual : '0'}" min="0">
             </div>
+        </div>
+        <div class="grid-3">
             <div class="form-group">
                 <label>Status</label>
                 <select class="form-control" name="status">
@@ -619,10 +642,11 @@ async function salvarVeiculo(id) {
     const fd   = new FormData(form);
     const data = Object.fromEntries(fd);
 
-    if (data.diaria)        data.diaria        = parseFloat(data.diaria) || 0;
-    if (data.ano)           data.ano           = parseInt(data.ano)      || null;
+    if (data.diaria)        data.diaria        = parseFloat(data.diaria)       || 0;
+    if (data.valor_compra)  data.valor_compra  = parseFloat(data.valor_compra) || null;
+    if (data.ano)           data.ano           = parseInt(data.ano)            || null;
     if (data.ano_fabricacao)data.ano_fabricacao= parseInt(data.ano_fabricacao) || null;
-    if (data.km_atual)      data.km_atual      = parseInt(data.km_atual) || 0;
+    if (data.km_atual)      data.km_atual      = parseInt(data.km_atual)       || 0;
 
     const inputFoto = document.getElementById('input-foto');
     const novaFoto  = inputFoto?.files?.[0];
