@@ -208,15 +208,20 @@
 
         <div id="asaasResultado" style="display:none;margin-top:14px;"></div>
 
-        <div class="modal-footer" style="margin-top:14px;flex-wrap:wrap;gap:8px;">
-            <button class="btn btn-secondary" onclick="fecharModalPag()" style="flex:1;min-width:90px;">Cancelar</button>
-            <button id="btnBaixaManual" class="btn" onclick="baixaManual()"
-                    style="flex:1;min-width:120px;background:#16a34a;color:#fff;font-weight:700;">
-                <i class="fas fa-check-circle"></i> Baixa Manual
-            </button>
-            <button id="btnGerarAsaas" class="btn" onclick="confirmarGerarAsaas()"
-                    style="flex:1;min-width:130px;background:#1d4ed8;color:#fff;font-weight:700;">
-                <i class="fas fa-paper-plane"></i> Gerar Cobrança
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:8px;">
+                <button id="btnBaixaManual" class="btn" onclick="abrirConfirmBaixaManual()"
+                        style="flex:1;padding:11px;background:#16a34a;color:#fff;font-weight:700;border-radius:8px;border:none;cursor:pointer;font-size:.85rem;">
+                    <i class="fas fa-check-circle"></i> Baixa Manual
+                </button>
+                <button id="btnGerarAsaas" class="btn" onclick="confirmarGerarAsaas()"
+                        style="flex:1;padding:11px;background:#1d4ed8;color:#fff;font-weight:700;border-radius:8px;border:none;cursor:pointer;font-size:.85rem;">
+                    <i class="fas fa-paper-plane"></i> Gerar Cobrança
+                </button>
+            </div>
+            <button onclick="fecharModalPag()"
+                    style="width:100%;padding:9px;background:#f1f5f9;color:#64748b;font-weight:600;border-radius:8px;border:1px solid #e2e8f0;cursor:pointer;font-size:.82rem;">
+                Cancelar
             </button>
         </div>
     </div>
@@ -929,35 +934,75 @@ async function recarregarContrato(lid) {
 }
 
 // ─── Baixa Manual (pagamento fora do Asaas) ──────────────────────────────────
-async function baixaManual() {
+function abrirConfirmBaixaManual() {
     if (!_modalCtx) return;
     const desc = parseFloat(document.getElementById('mDesconto').value) || 0;
     const just = document.getElementById('mJustificativa')?.value?.trim() || '';
-    if (desc > 0 && !just) {
-        showToast('Informe a justificativa do desconto', 'warning');
-        return;
-    }
+    if (desc > 0 && !just) { showToast('Informe a justificativa do desconto', 'warning'); return; }
     const parcelas = _lerParcelas();
     const totalVal = parcelas.reduce((s, p) => s + p.valor, 0);
     if (totalVal <= 0) { showToast('Valor inválido', 'warning'); return; }
 
-    const btn = document.getElementById('btnBaixaManual');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    const hoje = new Date().toISOString().slice(0,10);
+    const periodo = `${_modalCtx.d_ini.split('-').reverse().join('/')} a ${_modalCtx.d_fim.split('-').reverse().join('/')}`;
 
-    const lid = _modalCtx.locacaoId;
+    abrirModal('Confirmar Baixa Manual', `
+        <div style="text-align:center;margin-bottom:16px;">
+            <i class="fas fa-check-circle" style="font-size:2.5rem;color:#16a34a;"></i>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.83rem;color:#0f172a;">
+            <strong>${_modalCtx.placa}</strong> — ${_modalCtx.clienteNome}<br>
+            Período: <strong>${periodo}</strong><br>
+            Valor: <strong style="color:#16a34a;">${fmtR(totalVal)}</strong>${desc > 0 ? ` <span style="color:#f59e0b;">(desc. ${fmtR(desc)})</span>` : ''}
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="font-size:.78rem;font-weight:700;color:#374151;display:block;margin-bottom:6px;">
+                <i class="fas fa-calendar-check" style="color:#16a34a;margin-right:4px;"></i>Data do Pagamento *
+            </label>
+            <input type="date" id="inputDataPagBaixa" class="form-control"
+                   value="${hoje}" style="font-size:.9rem;font-weight:600;">
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Observação (opcional)</label>
+            <input type="text" id="inputObsBaixa" class="form-control"
+                   placeholder="Ex: Pago em dinheiro, transferência PIX..." style="font-size:.83rem;">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px;">
+            <button class="btn" onclick="fecharModal()"
+                    style="flex:1;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;">Cancelar</button>
+            <button class="btn" onclick="executarBaixaManual()"
+                    style="flex:1;background:#16a34a;color:#fff;font-weight:700;">
+                <i class="fas fa-check"></i> Confirmar Baixa
+            </button>
+        </div>
+    `);
+}
+
+async function executarBaixaManual() {
+    const dataPag = document.getElementById('inputDataPagBaixa')?.value;
+    const obs     = document.getElementById('inputObsBaixa')?.value?.trim() || '';
+    if (!dataPag) { showToast('Informe a data do pagamento', 'warning'); return; }
+
+    const desc = parseFloat(document.getElementById('mDesconto')?.value) || 0;
+    const just = document.getElementById('mJustificativa')?.value?.trim() || '';
+    const lid  = _modalCtx?.locacaoId;
+    const dIni = _modalCtx?.d_ini;
+    const dFim = _modalCtx?.d_fim;
+
+    fecharModal();
+
     try {
         const r = await fetch('/api/cobrancas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 locacao_id:             lid,
-                data_inicio:            _modalCtx.d_ini,
-                data_fim:               _modalCtx.d_fim,
+                data_inicio:            dIni,
+                data_fim:               dFim,
                 desconto:               desc,
                 justificativa_desconto: just,
-                data_pagamento:         new Date().toISOString().slice(0,10),
-                observacoes:            'Baixa manual — pagamento externo ao Asaas',
+                data_pagamento:         dataPag,
+                observacoes:            obs || 'Baixa manual — pagamento externo ao Asaas',
             })
         });
         const data = await r.json();
@@ -969,9 +1014,6 @@ async function baixaManual() {
         showToast('Baixa registrada com sucesso!', 'success');
     } catch(e) {
         showToast('Erro ao registrar baixa', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check-circle"></i> Baixa Manual';
     }
 }
 
