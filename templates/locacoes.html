@@ -143,12 +143,25 @@
         } catch { return '<span style="color:#9ca3af;">-</span>'; }
     }
 
+    // Reduz URL Cloudinary para miniatura 80x60 sem alterar o original
+    function thumbUrl(url) {
+        if (!url || !url.includes('/upload/')) return url;
+        return url.replace('/upload/', '/upload/c_fill,w_80,h_60,q_auto,f_auto/');
+    }
+
     function renderizarFotos(fotos) {
         if (!fotos) return '<span style="color:#9ca3af;">-</span>';
         try {
             const lista = typeof fotos === 'string' ? JSON.parse(fotos) : fotos;
             if (!lista || lista.length === 0) return '<span style="color:#9ca3af;">-</span>';
-            return '<div class="fotos-grid">' + lista.map(f => '<img src="' + f + '" onclick="verFoto(\'' + f + '\')" title="Clique para ampliar">').join('') + '</div>';
+            // Mostra só a primeira foto como miniatura + badge com total
+            const resto = lista.length > 1 ? `<span style="font-size:.7rem;font-weight:600;color:#64748b;margin-left:4px;">+${lista.length - 1}</span>` : '';
+            return `<div style="display:flex;align-items:center;gap:4px;">
+                <img src="${thumbUrl(lista[0])}" loading="lazy"
+                     onclick="verFoto('${lista[0]}')" title="Clique para ampliar"
+                     style="width:48px;height:36px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid #e2e8f0;">
+                ${resto}
+            </div>`;
         } catch { return '<span style="color:#9ca3af;">-</span>'; }
     }
 
