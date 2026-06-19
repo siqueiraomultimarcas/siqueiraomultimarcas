@@ -90,7 +90,12 @@ def row_to_dict(cursor):
     return {c: _serialize_val(v) for c, v in zip(cols, row)} if row else None
 
 
+_db_initialized = False
+
 def init_db():
+    global _db_initialized
+    if _db_initialized:
+        return
     conn = get_conn()
     cur = conn.cursor()
 
@@ -283,6 +288,7 @@ def init_db():
     conn.commit()
     cur.close()
     conn.close()
+    _db_initialized = True
     print('Banco de dados inicializado com sucesso!')
 
 # ==================== ASAAS ====================
