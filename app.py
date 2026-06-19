@@ -186,6 +186,8 @@ def init_db():
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_id TEXT")
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_link TEXT")
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_status TEXT")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS parcela_num INTEGER DEFAULT 1")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS total_parcelas INTEGER DEFAULT 1")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS numero_auto TEXT")
     for col, tipo in [('cep','TEXT'), ('bairro','TEXT'), ('nome_fantasia','TEXT'), ('data_fundacao','DATE'), ('situacao_receita','TEXT'), ('responsavel_principal','TEXT')]:
         cur.execute(f"ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS {col} {tipo}")
@@ -832,7 +834,7 @@ def get_cobrancas():
             SELECT id, locacao_id, semana_numero, data_inicio, data_fim,
                    valor_previsto, valor_pago, desconto,
                    justificativa_desconto, status, data_pagamento, observacoes,
-                   asaas_id, asaas_link, asaas_status
+                   asaas_id, asaas_link, asaas_status, parcela_num, total_parcelas
             FROM pagamentos_locacao
             WHERE locacao_id IN ({ph})
             ORDER BY locacao_id, data_inicio
@@ -856,6 +858,8 @@ def get_cobrancas():
                 'asaas_id':             p.get('asaas_id'),
                 'asaas_link':           p.get('asaas_link'),
                 'asaas_status':         p.get('asaas_status'),
+                'parcela_num':          p.get('parcela_num') or 1,
+                'total_parcelas':       p.get('total_parcelas') or 1,
             })
 
     cur.close()
@@ -962,7 +966,7 @@ def cobrar_asaas():
     d_fim      = data.get('data_fim')
     desconto   = float(data.get('desconto') or 0)
     billing    = data.get('billing_type', 'PIX')
-    due_date   = data.get('data_vencimento') or str(_date.today())
+    parcelas   = data.get('parcelas')   # lista [{data_vencimento, valor}, ...] ou None
 
     if not d_ini or not d_fim:
         return jsonify({'error': 'Informe data de início e fim do período'}), 400
@@ -972,7 +976,6 @@ def cobrar_asaas():
     conn = get_conn()
     cur  = conn.cursor()
 
-    # Busca locação + dados do cliente
     cur.execute('''
         SELECT l.diaria, c.nome, c.cpf, c.telefone, c.email, v.placa, v.marca, v.modelo
         FROM locacoes l
@@ -988,12 +991,13 @@ def cobrar_asaas():
     diaria, cli_nome, cli_cpf, cli_tel, cli_email, placa, marca, modelo = row
     diaria = float(diaria or 0)
 
-    # Verifica sobreposição com períodos já registrados
+    # Verifica sobreposição (ignorando registros com mesmo período — são parcelas)
     cur.execute('''
         SELECT id, data_inicio, data_fim FROM pagamentos_locacao
         WHERE locacao_id = %s AND status IN ('pago','pendente')
           AND data_inicio <= %s AND data_fim >= %s
-    ''', (locacao_id, d_fim, d_ini))
+          AND NOT (data_inicio = %s AND data_fim = %s)
+    ''', (locacao_id, d_fim, d_ini, d_ini, d_fim))
     overlap = cur.fetchone()
     if overlap:
         cur.close(); conn.close()
@@ -1001,56 +1005,80 @@ def cobrar_asaas():
 
     dias       = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days + 1
     valor_prev = round(diaria * dias, 2)
-    valor_pago = round(valor_prev - max(0, desconto), 2)
+    valor_total = round(valor_prev - max(0, desconto), 2)
+    desc_base  = f'Locação {placa} {marca} {modelo} — {dias} dia(s) ({d_ini} a {d_fim})'
 
-    # Cria cliente no Asaas (ou localiza existente)
     customer_id, err = _asaas_get_or_create_customer(cli_cpf, cli_nome, cli_email or '', cli_tel or '')
     if err:
         cur.close(); conn.close()
         return jsonify({'error': f'Asaas: {err}'}), 500
 
-    descricao = f'Locação {placa} {marca} {modelo} — {dias} dia(s) ({d_ini} a {d_fim})'
-    charge, status_code = _asaas_req('POST', '/payments', {
-        'customer':    customer_id,
-        'billingType': billing,
-        'dueDate':     due_date,
-        'value':       round(valor_pago, 2),
-        'description': descricao,
-    })
-    if status_code not in (200, 201):
-        cur.close(); conn.close()
-        errs = charge.get('errors', [{}])
-        return jsonify({'error': errs[0].get('description', 'Erro ao criar cobrança no Asaas')}), 500
-
-    asaas_id   = charge.get('id')
-    asaas_link = charge.get('invoiceUrl', '')
-
-    # Número sequencial
     cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
-    semana_num = cur.fetchone()[0]
+    next_seq = cur.fetchone()[0]
 
-    cur.execute('''
-        INSERT INTO pagamentos_locacao
-            (locacao_id, semana_numero, data_inicio, data_fim,
-             valor_previsto, valor_pago, desconto, status,
-             asaas_id, asaas_link, asaas_status)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,'pendente',%s,%s,'PENDING')
-        RETURNING id
-    ''', (locacao_id, semana_num, d_ini, d_fim,
-          valor_prev, valor_pago, max(0, desconto),
-          asaas_id, asaas_link))
-    new_id = cur.fetchone()[0]
+    # Monta lista de cobranças a criar
+    if parcelas and len(parcelas) > 1:
+        n = len(parcelas)
+        itens = []
+        for i, p in enumerate(parcelas):
+            itens.append({
+                'due_date':    p.get('data_vencimento') or str(_date.today()),
+                'valor':       round(float(p.get('valor') or 0), 2),
+                'parcela_num': i + 1,
+                'total':       n,
+                'descricao':   f'{desc_base} — Parcela {i+1}/{n}',
+            })
+    else:
+        due_date = (parcelas[0].get('data_vencimento') if parcelas else None) or data.get('data_vencimento') or str(_date.today())
+        itens = [{'due_date': due_date, 'valor': valor_total,
+                  'parcela_num': 1, 'total': 1, 'descricao': desc_base}]
+
+    resultados = []
+    for idx, item in enumerate(itens):
+        charge, sc = _asaas_req('POST', '/payments', {
+            'customer':    customer_id,
+            'billingType': billing,
+            'dueDate':     item['due_date'],
+            'value':       item['valor'],
+            'description': item['descricao'],
+        })
+        if sc not in (200, 201):
+            conn.rollback(); cur.close(); conn.close()
+            errs = charge.get('errors', [{}])
+            return jsonify({'error': f"Parcela {item['parcela_num']}: {errs[0].get('description','Erro Asaas')}"}), 500
+
+        asaas_id   = charge.get('id')
+        asaas_link = charge.get('invoiceUrl', '')
+        seq        = next_seq + idx
+
+        cur.execute('''
+            INSERT INTO pagamentos_locacao
+                (locacao_id, semana_numero, data_inicio, data_fim,
+                 valor_previsto, valor_pago, desconto, status,
+                 asaas_id, asaas_link, asaas_status,
+                 parcela_num, total_parcelas)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,'pendente',%s,%s,'PENDING',%s,%s)
+            RETURNING id
+        ''', (locacao_id, seq, d_ini, d_fim,
+              round(valor_prev / len(itens), 2), item['valor'],
+              round(max(0, desconto) / len(itens), 2),
+              asaas_id, asaas_link,
+              item['parcela_num'], item['total']))
+        new_id = cur.fetchone()[0]
+
+        r = {'id': new_id, 'asaas_id': asaas_id, 'invoice_url': asaas_link,
+             'bank_slip_url': charge.get('bankSlipUrl', ''),
+             'parcela_num': item['parcela_num'], 'total': item['total'],
+             'valor': item['valor']}
+        if billing == 'PIX':
+            pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
+            r['pix_qrcode']  = pix.get('encodedImage', '')
+            r['pix_payload'] = pix.get('payload', '')
+        resultados.append(r)
+
     conn.commit()
-
-    result = {'success': True, 'id': new_id, 'asaas_id': asaas_id,
-              'invoice_url': asaas_link, 'bank_slip_url': charge.get('bankSlipUrl', '')}
-    if billing == 'PIX':
-        pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
-        result['pix_qrcode']  = pix.get('encodedImage', '')
-        result['pix_payload'] = pix.get('payload', '')
-
     cur.close(); conn.close()
-    return jsonify(result)
+    return jsonify({'success': True, 'parcelas': resultados})
 
 
 @app.route('/api/cobrancas/<int:pagamento_id>/verificar', methods=['PUT'])

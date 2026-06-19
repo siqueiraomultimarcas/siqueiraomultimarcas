@@ -181,10 +181,30 @@
             <label style="font-size:.78rem;font-weight:600;color:#ef4444;">Justificativa do Desconto *</label>
             <input type="text" id="mJustificativa" class="form-control" placeholder="Motivo do desconto...">
         </div>
-        <div class="form-group" style="margin-bottom:0;">
-            <label style="font-size:.78rem;font-weight:600;color:#374151;">Vencimento</label>
-            <input type="date" id="mDataPag" class="form-control">
+        <!-- Toggle parcelamento -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <label style="font-size:.78rem;font-weight:600;color:#374151;white-space:nowrap;">Parcelamento</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+                <button id="btnParcUnico" onclick="setParcelas(1)"
+                        style="padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">
+                    À vista
+                </button>
+                <button id="btnParcMulti" onclick="setParcelas(2)"
+                        style="padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;">
+                    Parcelar
+                </button>
+                <select id="selNParcelas" onchange="setParcelas(parseInt(this.value))"
+                        style="display:none;padding:5px 8px;border-radius:6px;border:1px solid #bfdbfe;font-size:.78rem;background:#eff6ff;color:#1d4ed8;font-weight:700;">
+                    <option value="2">2x</option><option value="3">3x</option>
+                    <option value="4">4x</option><option value="5">5x</option>
+                    <option value="6">6x</option><option value="8">8x</option>
+                    <option value="10">10x</option><option value="12">12x</option>
+                </select>
+            </div>
         </div>
+
+        <!-- Linhas de parcela (1 = à vista, N = parcelado) -->
+        <div id="parcelasWrap"></div>
 
         <div id="asaasResultado" style="display:none;margin-top:14px;"></div>
 
@@ -499,6 +519,8 @@ function renderHistorico(loc) {
         const dias    = p.dias || 0;
         const desc    = p.desconto > 0 ? ` <span style="color:#f59e0b;font-size:.7rem;">(desc. ${fmtR(p.desconto)})</span>` : '';
         const isPago    = p.status === 'pago';
+        const parcelaTag = (p.total_parcelas > 1)
+            ? `<span style="font-size:.65rem;padding:1px 5px;border-radius:4px;background:#f1f5f9;color:#475569;font-weight:600;">${p.parcela_num}/${p.total_parcelas}</span> ` : '';
         const statusBadge = isPago
             ? `<span style="font-size:.65rem;padding:2px 7px;border-radius:4px;background:#dcfce7;color:#15803d;font-weight:700;">
                    <i class="fas fa-check-circle"></i> Pago</span>`
@@ -512,7 +534,7 @@ function renderHistorico(loc) {
         const dataPag = isPago ? ` · pago em ${fmtDate(p.data_pagamento)}` : '';
         return `<div class="hist-item">
             <div style="flex:1;min-width:0;">
-                <div class="hist-period">${periodo}</div>
+                <div class="hist-period">${parcelaTag}${periodo}</div>
                 <div class="hist-dias" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px;">
                     ${dias} dia${dias===1?'':'s'}${dataPag}
                     ${statusBadge} ${verificarBtn}
@@ -581,12 +603,10 @@ function abrirModalPag(lid) {
     document.getElementById('mDesconto').value  = '0';
     document.getElementById('mJustWrap').style.display = 'none';
     document.getElementById('mJustificativa').value    = '';
-    document.getElementById('mObs').value              = '';
+    document.getElementById('asaasResultado').style.display = 'none';
+    document.getElementById('asaasResultado').innerHTML     = '';
 
-    const hoje = new Date();
-    document.getElementById('mDataPag').value =
-        `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
-
+    setParcelas(1);  // reset para à vista
     document.getElementById('modalOverlay').classList.add('show');
 }
 
@@ -597,7 +617,46 @@ function fecharModalPag(evt) {
 }
 
 // ─── Asaas ───────────────────────────────────────────────────────────────────
-let _asaasTipo = 'PIX';
+let _asaasTipo    = 'PIX';
+let _nParcelas    = 1;
+
+function setParcelas(n) {
+    _nParcelas = n;
+    const ativoStyle  = 'border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;';
+    const inaStyle    = 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;';
+    document.getElementById('btnParcUnico').style.cssText = (n === 1 ? ativoStyle : inaStyle) + 'padding:5px 12px;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnParcMulti').style.cssText = (n > 1  ? ativoStyle : inaStyle) + 'padding:5px 12px;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;';
+    const sel = document.getElementById('selNParcelas');
+    sel.style.display = n > 1 ? 'inline-block' : 'none';
+    if (n > 1) sel.value = n;
+    _renderLinhasParcelas(n);
+}
+
+function _renderLinhasParcelas(n) {
+    const wrap = document.getElementById('parcelasWrap');
+    const desc   = parseFloat(document.getElementById('mDesconto').value) || 0;
+    const total  = Math.max(0, (_modalCtx ? _modalCtx.valorPrev : 0) - desc);
+    const parcVal = n > 1 ? Math.round(total / n * 100) / 100 : total;
+
+    const hoje = new Date();
+    const pad  = v => String(v).padStart(2,'0');
+
+    wrap.innerHTML = Array.from({length: n}, (_, i) => {
+        // Sugere datas com 30 dias de intervalo a partir de hoje
+        const dt = new Date(hoje);
+        dt.setDate(dt.getDate() + i * 30);
+        const dtStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+        const label = n === 1 ? 'Vencimento' : `Parcela ${i+1}/${n}`;
+        return `
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <label style="font-size:.75rem;font-weight:600;color:#374151;white-space:nowrap;min-width:80px;">${label}</label>
+            <input type="date" class="form-control parc-data" data-idx="${i}" value="${dtStr}"
+                   style="flex:1;">
+            <input type="number" class="form-control parc-valor" data-idx="${i}" value="${parcVal.toFixed(2)}"
+                   step="0.01" min="0" style="width:100px;text-align:right;font-weight:700;">
+        </div>`;
+    }).join('');
+}
 
 function selecionarTipoAsaas(tipo) {
     _asaasTipo = tipo;
@@ -607,15 +666,35 @@ function selecionarTipoAsaas(tipo) {
     Object.assign(document.getElementById('btnAsaasBoleto').style, tipo==='BOLETO' ? ativo : inativo);
 }
 
+function _lerParcelas() {
+    return Array.from(document.querySelectorAll('.parc-data')).map((el, i) => ({
+        data_vencimento: el.value,
+        valor: parseFloat(document.querySelectorAll('.parc-valor')[i]?.value) || 0,
+    }));
+}
+
 function confirmarGerarAsaas() {
     if (!_modalCtx) return;
-    const desc  = parseFloat(document.getElementById('mDesconto').value) || 0;
-    const valor = Math.round((_modalCtx.valorPrev - desc) * 100) / 100;
-    if (valor <= 0) { showToast('Valor inválido para cobrança', 'warning'); return; }
-    const venc    = document.getElementById('mDataPag').value || new Date().toISOString().slice(0,10);
-    const fmtVenc = venc.split('-').reverse().join('/');
+    const desc     = parseFloat(document.getElementById('mDesconto').value) || 0;
+    const parcelas = _lerParcelas();
+    const totalVal = parcelas.reduce((s, p) => s + p.valor, 0);
+    if (totalVal <= 0) { showToast('Valor inválido para cobrança', 'warning'); return; }
     const cpfFmt  = (_modalCtx.clienteCpf || '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') || 'Não informado';
     const tipo    = _asaasTipo === 'PIX' ? '<i class="fas fa-qrcode"></i> PIX' : '<i class="fas fa-barcode"></i> Boleto';
+    const n       = parcelas.length;
+
+    const parcelasHtml = n === 1
+        ? `<tr><td style="color:#64748b;padding:3px 0;">Vencimento</td>
+               <td style="color:#0f172a;">${parcelas[0].data_vencimento.split('-').reverse().join('/')}</td></tr>
+           <tr style="border-top:1px solid #bfdbfe;">
+               <td style="color:#64748b;padding:8px 0 0;">Valor</td>
+               <td style="font-size:1.1rem;font-weight:800;color:#1d4ed8;padding-top:8px;">${fmtR(parcelas[0].valor)}</td></tr>`
+        : `<tr style="border-top:1px solid #bfdbfe;"><td colspan="2" style="padding:8px 0 4px;">
+               <div style="font-size:.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">${n} parcelas — Total ${fmtR(totalVal)}</div>
+               ${parcelas.map((p,i)=>`<div style="display:flex;justify-content:space-between;font-size:.8rem;padding:2px 0;">
+                   <span style="color:#64748b;">Parcela ${i+1}/${n} · ${p.data_vencimento.split('-').reverse().join('/')}</span>
+                   <span style="font-weight:700;color:#1d4ed8;">${fmtR(p.valor)}</span></div>`).join('')}
+           </td></tr>`;
 
     abrirModal('Confirmar Cobrança', `
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px;margin-bottom:16px;">
@@ -631,14 +710,9 @@ function confirmarGerarAsaas() {
                     <td style="color:#0f172a;">${_modalCtx.placa}</td></tr>
                 <tr><td style="color:#64748b;padding:3px 0;">Período</td>
                     <td style="color:#0f172a;">${_modalCtx.dias} dia(s)</td></tr>
-                <tr><td style="color:#64748b;padding:3px 0;">Vencimento</td>
-                    <td style="color:#0f172a;">${fmtVenc}</td></tr>
                 <tr><td style="color:#64748b;padding:3px 0;">Tipo</td>
                     <td style="font-weight:600;color:#1d4ed8;">${tipo}</td></tr>
-                <tr style="border-top:1px solid #bfdbfe;">
-                    <td style="color:#64748b;padding:8px 0 0;">Valor</td>
-                    <td style="font-size:1.1rem;font-weight:800;color:#1d4ed8;padding-top:8px;">${fmtR(valor)}</td>
-                </tr>
+                ${parcelasHtml}
             </table>
         </div>
         <div style="display:flex;gap:10px;">
@@ -665,16 +739,19 @@ async function gerarCobrancaAsaas() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
 
+    const parcelas = _lerParcelas();
+    const desc     = parseFloat(document.getElementById('mDesconto').value) || 0;
+
     try {
         const r = await fetch('/api/cobrar-asaas', {
             method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({
-                locacao_id:      _modalCtx.locacaoId,
-                data_inicio:     _modalCtx.d_ini,
-                data_fim:        _modalCtx.d_fim,
-                desconto:        desc,
-                billing_type:    _asaasTipo,
-                data_vencimento: venc,
+                locacao_id:   _modalCtx.locacaoId,
+                data_inicio:  _modalCtx.d_ini,
+                data_fim:     _modalCtx.d_fim,
+                desconto:     desc,
+                billing_type: _asaasTipo,
+                parcelas:     parcelas,
             })
         });
         const data = await r.json();
@@ -682,46 +759,43 @@ async function gerarCobrancaAsaas() {
 
         const div = document.getElementById('asaasResultado');
         div.style.display = 'block';
+        const itens = data.parcelas || [];
+        const n     = itens.length;
 
-        if (_asaasTipo === 'PIX' && data.pix_qrcode) {
-            const payload = data.pix_payload || '';
-            div.innerHTML = `
-                <div style="text-align:center;padding:8px 0;">
-                    <img src="data:image/png;base64,${data.pix_qrcode}"
-                         style="width:180px;height:180px;border-radius:8px;border:1px solid #e2e8f0;display:block;margin:0 auto 10px;">
-                    <button onclick="copiarPix('${payload}')"
-                            style="width:100%;padding:9px;border-radius:6px;border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;font-size:.82rem;font-weight:700;cursor:pointer;margin-bottom:6px;">
+        div.innerHTML = itens.map((p, i) => {
+            const label = n > 1 ? `<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtR(p.valor)}</div>` : '';
+            if (_asaasTipo === 'PIX' && p.pix_qrcode) {
+                return `<div style="text-align:center;padding:8px 0;${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:12px;':''}">
+                    ${label}
+                    <img src="data:image/png;base64,${p.pix_qrcode}"
+                         style="width:160px;height:160px;border-radius:8px;border:1px solid #e2e8f0;display:block;margin:0 auto 8px;">
+                    <button onclick="copiarPix('${p.pix_payload||''}')"
+                            style="width:100%;padding:8px;border-radius:6px;border:1px solid #3b82f6;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:700;cursor:pointer;margin-bottom:4px;">
                         <i class="fas fa-copy"></i> Copiar código PIX
                     </button>
-                    ${data.invoice_url ? `<a href="${data.invoice_url}" target="_blank"
-                        style="display:block;font-size:.75rem;color:#3b82f6;text-decoration:none;">
-                        <i class="fas fa-external-link-alt"></i> Abrir página de pagamento</a>` : ''}
-                    <div style="margin-top:8px;font-size:.72rem;color:#16a34a;font-weight:600;">
-                        <i class="fas fa-check-circle"></i> Cobrança gerada e salva — aguardando pagamento
-                    </div>
+                    ${p.invoice_url?`<a href="${p.invoice_url}" target="_blank" style="font-size:.72rem;color:#3b82f6;"><i class="fas fa-external-link-alt"></i> Ver página</a>`:''}
                 </div>`;
-        } else {
-            const link = data.bank_slip_url || data.invoice_url;
-            div.innerHTML = `
-                <div style="text-align:center;padding:8px 0;">
+            } else {
+                const link = p.bank_slip_url || p.invoice_url || '';
+                return `<div style="padding:8px 0;${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:8px;':''}">
+                    ${label}
                     <a href="${link}" target="_blank"
-                       style="display:block;padding:10px;border-radius:8px;background:#1d4ed8;color:#fff;text-decoration:none;font-size:.85rem;font-weight:700;margin-bottom:8px;">
-                        <i class="fas fa-file-invoice"></i> Abrir Boleto
+                       style="display:block;padding:9px;border-radius:8px;background:#1d4ed8;color:#fff;text-decoration:none;font-size:.82rem;font-weight:700;text-align:center;margin-bottom:6px;">
+                        <i class="fas fa-file-invoice"></i> Abrir Boleto ${n>1?`(${i+1}/${n})`:''}
                     </a>
                     <button onclick="navigator.clipboard.writeText('${link}').then(()=>showToast('Link copiado!','success'))"
-                            style="width:100%;padding:8px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;color:#374151;font-size:.78rem;cursor:pointer;">
-                        <i class="fas fa-copy"></i> Copiar link do boleto
+                            style="width:100%;padding:7px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;color:#374151;font-size:.75rem;cursor:pointer;">
+                        <i class="fas fa-copy"></i> Copiar link
                     </button>
-                    <div style="margin-top:8px;font-size:.72rem;color:#16a34a;font-weight:600;">
-                        <i class="fas fa-check-circle"></i> Cobrança gerada e salva — aguardando pagamento
-                    </div>
                 </div>`;
-        }
+            }
+        }).join('') + `<div style="text-align:center;margin-top:8px;font-size:.72rem;color:#16a34a;font-weight:600;">
+            <i class="fas fa-check-circle"></i> ${n === 1 ? 'Cobrança gerada' : `${n} cobranças geradas`} — aguardando pagamento
+        </div>`;
 
-        // Recarrega o contrato para refletir os dias pendentes no calendário
         const lid = _modalCtx.locacaoId;
         await recarregarContrato(lid);
-        showToast(`Cobrança ${_asaasTipo} gerada com sucesso!`, 'success');
+        showToast(n > 1 ? `${n} parcelas geradas no Asaas!` : `Cobrança ${_asaasTipo} gerada!`, 'success');
     } catch(e) {
         showToast('Erro de conexão com Asaas', 'error');
     } finally {
@@ -762,6 +836,7 @@ async function verificarPagamento(pagId, locId) {
 function onDescontoChange() {
     const desc = parseFloat(document.getElementById('mDesconto').value) || 0;
     document.getElementById('mJustWrap').style.display = desc > 0 ? 'block' : 'none';
+    _renderLinhasParcelas(_nParcelas);
 }
 
 async function confirmarPagamento() {
