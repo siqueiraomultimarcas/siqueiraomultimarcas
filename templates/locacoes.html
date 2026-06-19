@@ -292,7 +292,7 @@
             '</div>' +
             '<div class="grid-2">' +
                 '<div class="form-group"><label>Data Início *</label><input type="date" class="form-control" name="data_inicio" id="dataInicio" value="' + (isEdit ? locacao.data_inicio : '') + '" required onchange="calcularTotal()"></div>' +
-                '<div class="form-group"><label>Data Fim *</label><input type="date" class="form-control" name="data_fim" id="dataFim" value="' + (isEdit ? locacao.data_fim : '') + '" required onchange="calcularTotal()"></div>' +
+                '<div class="form-group"><label>Data Fim <span style="font-size:0.7rem;color:#94a3b8;font-weight:400">(opcional)</span></label><input type="date" class="form-control" name="data_fim" id="dataFim" value="' + (isEdit ? (locacao.data_fim || '') : '') + '" onchange="calcularTotal()"></div>' +
             '</div>' +
             '<div class="grid-3">' +
                 '<div class="form-group"><label>Valor Diária (R$)</label><input type="number" class="form-control" name="diaria" id="diariaLoc" value="' + (isEdit ? locacao.diaria : '') + '" step="0.01" min="0" oninput="sincDiaria()"></div>' +
@@ -302,7 +302,7 @@
             '<div class="form-group"><label>Total Calculado</label><div id="totalCalculado" style="font-size:1.5rem;font-weight:bold;color:#2563eb;">' + (isEdit ? formatCurrency(locacao.total) : 'R$ 0,00') + '</div></div>' +
             '<div class="form-group"><label>Checklist de Entrega</label>' + checklistHtml + '</div>' +
             '<div class="form-group">' +
-                '<label>Fotos do Estado do Veículo' + (isEdit ? '' : ' (mín. 6 obrigatórias)') + '</label>' +
+                '<label>Fotos do Estado do Veículo</label>' +
                 fotosExistentes +
                 '<div class="foto-upload-area" onclick="document.getElementById(\'inputFotosLocacao\').click()">' +
                     '<i class="fas fa-camera" style="font-size:2rem;color:#9ca3af;"></i><br><span style="color:#6b7280;">Clique para selecionar fotos</span>' +
@@ -366,10 +366,13 @@
         if (data.diaria) data.diaria = parseFloat(data.diaria);
         if (data.km_saida) data.km_saida = parseInt(data.km_saida);
 
-        if (!data.veiculo_id || !data.cliente_id || !data.data_inicio || !data.data_fim) {
-            showToast('Preencha todos os campos obrigatórios', 'warning');
+        if (!data.veiculo_id || !data.cliente_id || !data.data_inicio) {
+            showToast('Preencha veículo, cliente e data de início', 'warning');
             return;
         }
+
+        // data_fim é opcional — envia null se vazio
+        if (!data.data_fim) data.data_fim = null;
 
         const checklist = [];
         document.querySelectorAll('.checklist-item input[type="checkbox"]').forEach(cb => {
@@ -378,12 +381,11 @@
         data.checklist = JSON.stringify(checklist);
 
         const diaria = parseFloat(data.diaria) || 0;
-        const dias = Math.ceil((new Date(data.data_fim) - new Date(data.data_inicio)) / 86400000) + 1;
-        data.total = dias > 0 ? dias * diaria : 0;
-
-        if (!id && fotosFilesParaUpload.length < 6) {
-            showToast('Adicione pelo menos 6 fotos do estado do veículo!', 'warning');
-            return;
+        if (data.data_fim) {
+            const dias = Math.ceil((new Date(data.data_fim) - new Date(data.data_inicio)) / 86400000) + 1;
+            data.total = dias > 0 ? dias * diaria : 0;
+        } else {
+            data.total = null;
         }
 
         let fotosUrls = [];

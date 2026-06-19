@@ -1787,34 +1787,46 @@ def update_locacao(id):
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute('SELECT veiculo_id, status FROM locacoes WHERE id = %s', (id,))
-    locacao = cur.fetchone()
-    if not locacao:
-        cur.close()
-        conn.close()
-        return jsonify({'error': 'Locação não encontrada'}), 404
+    try:
+        cur.execute('SELECT veiculo_id, status FROM locacoes WHERE id = %s', (id,))
+        locacao = cur.fetchone()
+        if not locacao:
+            cur.close(); conn.close()
+            return jsonify({'error': 'Locação não encontrada'}), 404
 
-    veiculo_antigo, status_antigo = locacao
+        veiculo_antigo, status_antigo = locacao
 
-    import json as _json
-    fotos_saida = data.get('fotos_saida')
-    if fotos_saida and isinstance(fotos_saida, list):
-        fotos_saida = _json.dumps(fotos_saida)
+        import json as _json
+        fotos_saida = data.get('fotos_saida')
+        if fotos_saida and isinstance(fotos_saida, list):
+            fotos_saida = _json.dumps(fotos_saida)
 
-    cur.execute('''
-        UPDATE locacoes SET veiculo_id=%s, cliente_id=%s, data_inicio=%s, data_fim=%s,
-        diaria=%s, total=%s, km_saida=%s, checklist=%s, fotos_saida=%s, observacoes=%s WHERE id=%s
-    ''', (data.get('veiculo_id'), data.get('cliente_id'), data.get('data_inicio'),
-          data.get('data_fim'), data.get('diaria'), data.get('total'),
-          data.get('km_saida'), data.get('checklist'),
-          fotos_saida, data.get('observacoes'), id))
+        # data_fim é opcional — converte string vazia para None
+        data_fim = data.get('data_fim') or None
+        total    = data.get('total')
+        if total == '' or total is None:
+            total = None
 
-    veiculo_novo = data.get('veiculo_id')
-    if veiculo_antigo != veiculo_novo and status_antigo == 'ativa':
-        cur.execute("UPDATE veiculos SET status = 'disponivel' WHERE id = %s", (veiculo_antigo,))
-        cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (veiculo_novo,))
+        cur.execute('''
+            UPDATE locacoes SET veiculo_id=%s, cliente_id=%s, data_inicio=%s, data_fim=%s,
+            diaria=%s, total=%s, km_saida=%s, checklist=%s, fotos_saida=%s, observacoes=%s
+            WHERE id=%s
+        ''', (data.get('veiculo_id'), data.get('cliente_id'), data.get('data_inicio'),
+              data_fim, data.get('diaria'), total,
+              data.get('km_saida') or None, data.get('checklist'),
+              fotos_saida, data.get('observacoes'), id))
 
-    conn.commit()
+        veiculo_novo = data.get('veiculo_id')
+        if veiculo_antigo != veiculo_novo and status_antigo == 'ativa':
+            cur.execute("UPDATE veiculos SET status = 'disponivel' WHERE id = %s", (veiculo_antigo,))
+            cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (veiculo_novo,))
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        cur.close(); conn.close()
+        return jsonify({'error': f'Erro ao atualizar locação: {str(e)}'}), 500
+
     cur.close()
     conn.close()
     return jsonify({'success': True})
