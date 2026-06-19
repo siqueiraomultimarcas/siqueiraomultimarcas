@@ -953,6 +953,143 @@ def registrar_pagamento():
     conn.close()
     return jsonify({'success': True, 'id': new_id, 'valor_pago': valor_pago, 'valor_previsto': valor_prev, 'dias': dias})
 
+@app.route('/api/cobrar-asaas', methods=['POST'])
+@login_required
+def cobrar_asaas():
+    data       = request.json
+    locacao_id = int(data.get('locacao_id'))
+    d_ini      = data.get('data_inicio')
+    d_fim      = data.get('data_fim')
+    desconto   = float(data.get('desconto') or 0)
+    billing    = data.get('billing_type', 'PIX')
+    due_date   = data.get('data_vencimento') or str(_date.today())
+
+    if not d_ini or not d_fim:
+        return jsonify({'error': 'Informe data de início e fim do período'}), 400
+    if d_fim < d_ini:
+        return jsonify({'error': 'Data fim deve ser igual ou posterior à data início'}), 400
+
+    conn = get_conn()
+    cur  = conn.cursor()
+
+    # Busca locação + dados do cliente
+    cur.execute('''
+        SELECT l.diaria, c.nome, c.cpf, c.telefone, c.email, v.placa, v.marca, v.modelo
+        FROM locacoes l
+        JOIN clientes c ON c.id = l.cliente_id
+        JOIN veiculos v ON v.id = l.veiculo_id
+        WHERE l.id = %s
+    ''', (locacao_id,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Locação não encontrada'}), 404
+
+    diaria, cli_nome, cli_cpf, cli_tel, cli_email, placa, marca, modelo = row
+    diaria = float(diaria or 0)
+
+    # Verifica sobreposição com períodos já registrados
+    cur.execute('''
+        SELECT id, data_inicio, data_fim FROM pagamentos_locacao
+        WHERE locacao_id = %s AND status IN ('pago','pendente')
+          AND data_inicio <= %s AND data_fim >= %s
+    ''', (locacao_id, d_fim, d_ini))
+    overlap = cur.fetchone()
+    if overlap:
+        cur.close(); conn.close()
+        return jsonify({'error': f'Período sobrepõe cobrança já registrada ({overlap[1]} a {overlap[2]})'}), 400
+
+    dias       = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days + 1
+    valor_prev = round(diaria * dias, 2)
+    valor_pago = round(valor_prev - max(0, desconto), 2)
+
+    # Cria cliente no Asaas (ou localiza existente)
+    customer_id, err = _asaas_get_or_create_customer(cli_cpf, cli_nome, cli_email or '', cli_tel or '')
+    if err:
+        cur.close(); conn.close()
+        return jsonify({'error': f'Asaas: {err}'}), 500
+
+    descricao = f'Locação {placa} {marca} {modelo} — {dias} dia(s) ({d_ini} a {d_fim})'
+    charge, status_code = _asaas_req('POST', '/payments', {
+        'customer':    customer_id,
+        'billingType': billing,
+        'dueDate':     due_date,
+        'value':       round(valor_pago, 2),
+        'description': descricao,
+    })
+    if status_code not in (200, 201):
+        cur.close(); conn.close()
+        errs = charge.get('errors', [{}])
+        return jsonify({'error': errs[0].get('description', 'Erro ao criar cobrança no Asaas')}), 500
+
+    asaas_id   = charge.get('id')
+    asaas_link = charge.get('invoiceUrl', '')
+
+    # Número sequencial
+    cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
+    semana_num = cur.fetchone()[0]
+
+    cur.execute('''
+        INSERT INTO pagamentos_locacao
+            (locacao_id, semana_numero, data_inicio, data_fim,
+             valor_previsto, valor_pago, desconto, status,
+             asaas_id, asaas_link, asaas_status)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,'pendente',%s,%s,'PENDING')
+        RETURNING id
+    ''', (locacao_id, semana_num, d_ini, d_fim,
+          valor_prev, valor_pago, max(0, desconto),
+          asaas_id, asaas_link))
+    new_id = cur.fetchone()[0]
+    conn.commit()
+
+    result = {'success': True, 'id': new_id, 'asaas_id': asaas_id,
+              'invoice_url': asaas_link, 'bank_slip_url': charge.get('bankSlipUrl', '')}
+    if billing == 'PIX':
+        pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
+        result['pix_qrcode']  = pix.get('encodedImage', '')
+        result['pix_payload'] = pix.get('payload', '')
+
+    cur.close(); conn.close()
+    return jsonify(result)
+
+
+@app.route('/api/cobrancas/<int:pagamento_id>/verificar', methods=['PUT'])
+@login_required
+def verificar_pagamento(pagamento_id):
+    conn = get_conn()
+    cur  = conn.cursor()
+    cur.execute('SELECT asaas_id FROM pagamentos_locacao WHERE id=%s', (pagamento_id,))
+    row = cur.fetchone()
+    if not row or not row[0]:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Cobrança Asaas não encontrada para este pagamento'}), 404
+
+    asaas_id = row[0]
+    charge, status_code = _asaas_req('GET', f'/payments/{asaas_id}')
+    if status_code != 200:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Cobrança não encontrada no Asaas'}), 404
+
+    st = charge.get('status', '')
+    if st in ('RECEIVED', 'CONFIRMED'):
+        cur.execute('''
+            UPDATE pagamentos_locacao
+               SET status='pago', asaas_status=%s, data_pagamento=%s
+             WHERE id=%s
+        ''', (st, _date.today(), pagamento_id))
+        conn.commit()
+        cur.close(); conn.close()
+        return jsonify({'status': 'pago', 'asaas_status': st, 'label': 'Pago', 'cor': '#16a34a'})
+
+    label_map = {'PENDING': ('Aguardando', '#f59e0b'), 'OVERDUE': ('Vencido', '#dc2626'),
+                 'CANCELLED': ('Cancelado', '#6b7280')}
+    lbl, cor = label_map.get(st, (st, '#64748b'))
+    cur.execute('UPDATE pagamentos_locacao SET asaas_status=%s WHERE id=%s', (st, pagamento_id))
+    conn.commit()
+    cur.close(); conn.close()
+    return jsonify({'status': 'pendente', 'asaas_status': st, 'label': lbl, 'cor': cor})
+
+
 @app.route('/api/cobrancas/<int:pagamento_id>', methods=['DELETE'])
 @login_required
 def cancelar_pagamento(pagamento_id):
