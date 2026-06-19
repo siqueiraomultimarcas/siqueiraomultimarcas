@@ -208,10 +208,14 @@
 
         <div id="asaasResultado" style="display:none;margin-top:14px;"></div>
 
-        <div class="modal-footer" style="margin-top:14px;">
-            <button class="btn btn-secondary" onclick="fecharModalPag()">Cancelar</button>
+        <div class="modal-footer" style="margin-top:14px;flex-wrap:wrap;gap:8px;">
+            <button class="btn btn-secondary" onclick="fecharModalPag()" style="flex:1;min-width:90px;">Cancelar</button>
+            <button id="btnBaixaManual" class="btn" onclick="baixaManual()"
+                    style="flex:1;min-width:120px;background:#16a34a;color:#fff;font-weight:700;">
+                <i class="fas fa-check-circle"></i> Baixa Manual
+            </button>
             <button id="btnGerarAsaas" class="btn" onclick="confirmarGerarAsaas()"
-                    style="background:#1d4ed8;color:#fff;font-weight:700;">
+                    style="flex:1;min-width:130px;background:#1d4ed8;color:#fff;font-weight:700;">
                 <i class="fas fa-paper-plane"></i> Gerar Cobrança
             </button>
         </div>
@@ -921,6 +925,53 @@ async function recarregarContrato(lid) {
         filtrar();
     } catch(e) {
         showToast('Erro ao recarregar dados.', 'error');
+    }
+}
+
+// ─── Baixa Manual (pagamento fora do Asaas) ──────────────────────────────────
+async function baixaManual() {
+    if (!_modalCtx) return;
+    const desc = parseFloat(document.getElementById('mDesconto').value) || 0;
+    const just = document.getElementById('mJustificativa')?.value?.trim() || '';
+    if (desc > 0 && !just) {
+        showToast('Informe a justificativa do desconto', 'warning');
+        return;
+    }
+    const parcelas = _lerParcelas();
+    const totalVal = parcelas.reduce((s, p) => s + p.valor, 0);
+    if (totalVal <= 0) { showToast('Valor inválido', 'warning'); return; }
+
+    const btn = document.getElementById('btnBaixaManual');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+    const lid = _modalCtx.locacaoId;
+    try {
+        const r = await fetch('/api/cobrancas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                locacao_id:             lid,
+                data_inicio:            _modalCtx.d_ini,
+                data_fim:               _modalCtx.d_fim,
+                desconto:               desc,
+                justificativa_desconto: just,
+                data_pagamento:         new Date().toISOString().slice(0,10),
+                observacoes:            'Baixa manual — pagamento externo ao Asaas',
+            })
+        });
+        const data = await r.json();
+        if (!r.ok) { showToast(data.error || 'Erro ao registrar baixa', 'error'); return; }
+
+        document.getElementById('modalOverlay').classList.remove('show');
+        _modalCtx = null;
+        await recarregarContrato(lid);
+        showToast('Baixa registrada com sucesso!', 'success');
+    } catch(e) {
+        showToast('Erro ao registrar baixa', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check-circle"></i> Baixa Manual';
     }
 }
 
