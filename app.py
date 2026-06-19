@@ -72,15 +72,22 @@ def get_conn():
     return psycopg2.connect(url)
 
 
+def _serialize_val(v):
+    if isinstance(v, datetime):
+        return v.isoformat()
+    if isinstance(v, _date):
+        return v.isoformat()
+    return v
+
 def rows_to_dict(cursor):
     cols = [d[0] for d in cursor.description]
-    return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    return [{c: _serialize_val(v) for c, v in zip(cols, row)} for row in cursor.fetchall()]
 
 
 def row_to_dict(cursor):
     cols = [d[0] for d in cursor.description]
     row = cursor.fetchone()
-    return dict(zip(cols, row)) if row else None
+    return {c: _serialize_val(v) for c, v in zip(cols, row)} if row else None
 
 
 def init_db():
