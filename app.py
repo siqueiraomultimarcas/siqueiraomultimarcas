@@ -201,6 +201,7 @@ def init_db():
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS parcela_num INTEGER DEFAULT 1")
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS total_parcelas INTEGER DEFAULT 1")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS numero_auto TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS data_pagamento DATE")
     for col, tipo in [('cep','TEXT'), ('bairro','TEXT'), ('nome_fantasia','TEXT'), ('data_fundacao','DATE'), ('situacao_receita','TEXT'), ('responsavel_principal','TEXT')]:
         cur.execute(f"ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS {col} {tipo}")
     for col, tipo in [('numero_pedido','TEXT'), ('fornecedor_id','INTEGER'), ('itens_json','TEXT')]:
@@ -282,6 +283,20 @@ def init_db():
             observacoes TEXT,
             data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE (locacao_id, semana_numero)
+        )
+    ''')
+
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS cobrancas_avulsas (
+            id SERIAL PRIMARY KEY,
+            cliente_id INTEGER REFERENCES clientes(id),
+            descricao TEXT NOT NULL,
+            valor NUMERIC(10,2) NOT NULL,
+            data_vencimento DATE,
+            status TEXT DEFAULT 'pendente',
+            data_recebimento DATE,
+            observacoes TEXT,
+            data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
@@ -2312,11 +2327,12 @@ def update_multa(id):
     cur = conn.cursor()
     cur.execute('''
         UPDATE multas SET veiculo_id=%s, motorista_id=%s, data_infracao=%s, descricao=%s,
-        valor=%s, local_infracao=%s, pontos=%s, status=%s, observacoes=%s, numero_auto=%s WHERE id=%s
+        valor=%s, local_infracao=%s, pontos=%s, status=%s, observacoes=%s, numero_auto=%s,
+        data_pagamento=%s WHERE id=%s
     ''', (data.get('veiculo_id'), data.get('motorista_id'), data.get('data_infracao'),
           data.get('descricao'), data.get('valor'), data.get('local_infracao'),
           data.get('pontos'), data.get('status'), data.get('observacoes'),
-          data.get('numero_auto'), id))
+          data.get('numero_auto'), data.get('data_pagamento'), id))
     conn.commit()
     cur.close()
     conn.close()
@@ -2389,6 +2405,60 @@ def buscar_multas_online():
         return jsonify({'success': False, 'error': 'Tempo de conexão com SERPRO excedido. Tente novamente.'}), 504
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+_APIBRASIL_ESTADOS = ['MG','AL','PB','GO','MS','RR','PE','MA','TO','PA','PI','AM','SC','SE','PR']
+
+def _apibrasil_consultar_estado(url_base, token, estado, placa, renavam):
+    try:
+        resp = requests.post(
+            f'{url_base}/multas/{estado.lower()}',
+            json={'placa': placa, 'renavam': renavam, 'token': token},
+            timeout=20
+        )
+        resultado = resp.json()
+        lista = resultado if isinstance(resultado, list) else resultado.get('multas', resultado.get('data', []))
+        if not isinstance(lista, list):
+            return []
+        for m in lista:
+            m['_estado'] = estado
+        return lista
+    except Exception:
+        return []
+
+@app.route('/api/consultar-multas-apibrasil', methods=['POST'])
+@login_required
+def consultar_multas_apibrasil():
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    url_base = os.environ.get('APIBRASIL_MULTAS_URL', '').rstrip('/')
+    token    = os.environ.get('APIBRASIL_MULTAS_TOKEN', '')
+
+    if not url_base or not token:
+        return jsonify({'error': 'APIBrasil não configurada. Adicione APIBRASIL_MULTAS_URL e APIBRASIL_MULTAS_TOKEN nas variáveis de ambiente do Railway.'}), 503
+
+    body    = request.json
+    placa   = re.sub(r'[^A-Z0-9]', '', (body.get('placa') or '').upper())
+    renavam = re.sub(r'\D', '', body.get('renavam') or '')
+    estado  = (body.get('estado') or '').upper()
+
+    if not placa:
+        return jsonify({'error': 'Placa não informada'}), 400
+
+    estados = [estado] if estado else _APIBRASIL_ESTADOS
+
+    try:
+        multas_lista = []
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            futuros = {ex.submit(_apibrasil_consultar_estado, url_base, token, uf, placa, renavam): uf for uf in estados}
+            for fut in as_completed(futuros):
+                multas_lista.extend(fut.result())
+        return jsonify({'success': True, 'multas': multas_lista, 'total': len(multas_lista), 'estados_consultados': len(estados)})
+    except requests.exceptions.ConnectionError:
+        return jsonify({'error': f'Não foi possível conectar ao servidor APIBrasil ({url_base}).'}), 503
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ==================== API FORNECEDORES ====================
 
@@ -3063,6 +3133,134 @@ def fipe_preco(marca, modelo, ano):
     except Exception as e:
         return jsonify({'error': str(e)}), 503
 
+
+# ==================== CONTAS A RECEBER ====================
+
+@app.route('/contas-receber')
+@login_required
+def contas_receber_page():
+    return render_template('contas_receber.html')
+
+@app.route('/api/contas-receber')
+@login_required
+def get_contas_receber():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT tipo, id, cliente, cliente_cpf, cliente_telefone, descricao, valor,
+               data_recebimento, data_vencimento, status, data_cadastro
+        FROM (
+            SELECT
+                'contrato'::text AS tipo, pl.id,
+                c.nome AS cliente, COALESCE(c.cpf,'') AS cliente_cpf,
+                COALESCE(c.telefone,'') AS cliente_telefone,
+                (v.placa || ' — ' || v.marca || ' ' || v.modelo) AS descricao,
+                COALESCE(pl.valor_pago, pl.valor_previsto) AS valor,
+                pl.data_pagamento AS data_recebimento,
+                pl.data_fim AS data_vencimento,
+                pl.status, pl.data_cadastro
+            FROM pagamentos_locacao pl
+            JOIN locacoes l ON l.id = pl.locacao_id
+            JOIN veiculos v ON v.id = l.veiculo_id
+            JOIN clientes c ON c.id = l.cliente_id
+            UNION ALL
+            SELECT
+                'multa'::text AS tipo, m.id,
+                COALESCE(c.nome,'Sem motorista') AS cliente,
+                COALESCE(c.cpf,'') AS cliente_cpf, COALESCE(c.telefone,'') AS cliente_telefone,
+                ('Multa: ' || m.descricao) AS descricao,
+                m.valor, m.data_pagamento AS data_recebimento,
+                m.data_infracao AS data_vencimento,
+                m.status, m.data_infracao::timestamp AS data_cadastro
+            FROM multas m
+            LEFT JOIN clientes c ON m.motorista_id = c.id
+            UNION ALL
+            SELECT
+                'avulsa'::text AS tipo, ca.id,
+                COALESCE(c.nome,'Sem cliente') AS cliente,
+                COALESCE(c.cpf,'') AS cliente_cpf, COALESCE(c.telefone,'') AS cliente_telefone,
+                ca.descricao, ca.valor,
+                ca.data_recebimento, ca.data_vencimento,
+                ca.status, ca.data_cadastro
+            FROM cobrancas_avulsas ca
+            LEFT JOIN clientes c ON ca.cliente_id = c.id
+        ) sub
+        ORDER BY data_cadastro DESC NULLS LAST
+    ''')
+    result = rows_to_dict(cur)
+    cur.close()
+    conn.close()
+    return jsonify(result)
+
+@app.route('/api/cobrancas-avulsas', methods=['POST'])
+@login_required
+def create_cobranca_avulsa():
+    data = request.json
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO cobrancas_avulsas (cliente_id, descricao, valor, data_vencimento, status, observacoes)
+        VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+    ''', (data.get('cliente_id'), data.get('descricao'), float(data.get('valor') or 0),
+          data.get('data_vencimento'), data.get('status', 'pendente'), data.get('observacoes')))
+    new_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True, 'id': new_id})
+
+@app.route('/api/cobrancas-avulsas/<int:id>', methods=['PUT'])
+@login_required
+def update_cobranca_avulsa(id):
+    data = request.json
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('''
+        UPDATE cobrancas_avulsas
+        SET cliente_id=%s, descricao=%s, valor=%s, data_vencimento=%s,
+            status=%s, data_recebimento=%s, observacoes=%s
+        WHERE id=%s
+    ''', (data.get('cliente_id'), data.get('descricao'), float(data.get('valor') or 0),
+          data.get('data_vencimento'), data.get('status'), data.get('data_recebimento'),
+          data.get('observacoes'), id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/cobrancas-avulsas/<int:id>', methods=['DELETE'])
+@login_required
+def delete_cobranca_avulsa(id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('DELETE FROM cobrancas_avulsas WHERE id=%s', (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/contas-receber/baixa', methods=['PUT'])
+@login_required
+def baixa_contas_receber():
+    data = request.json
+    tipo = data.get('tipo')
+    rid  = data.get('id')
+    data_rec = data.get('data_recebimento') or str(_date.today())
+    conn = get_conn()
+    cur = conn.cursor()
+    if tipo == 'contrato':
+        cur.execute('UPDATE pagamentos_locacao SET status=%s, data_pagamento=%s WHERE id=%s',
+                    ('pago', data_rec, rid))
+    elif tipo == 'multa':
+        cur.execute('UPDATE multas SET status=%s, data_pagamento=%s WHERE id=%s',
+                    ('pago', data_rec, rid))
+    elif tipo == 'avulsa':
+        cur.execute('UPDATE cobrancas_avulsas SET status=%s, data_recebimento=%s WHERE id=%s',
+                    ('recebido', data_rec, rid))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})
 
 # Roda migrations no cold start do Vercel (e também localmente via __main__)
 try:

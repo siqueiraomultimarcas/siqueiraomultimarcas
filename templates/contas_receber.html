@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+{% block title %}Contas a Receber - Locadora{% endblock %}
+{% block content %}
+
+<style>
+.kpi-grid  { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
+.kpi-card  { position:relative; background:#fff; border-radius:12px; padding:18px 20px;
+             box-shadow:0 1px 4px rgba(0,0,0,.08); overflow:hidden; }
+.kpi-card .kpi-label    { font-size:.65rem; font-weight:700; text-transform:uppercase;
+                          letter-spacing:.07em; color:#64748b; margin-bottom:4px; }
+.kpi-card .kpi-value    { font-size:1.5rem; font-weight:700; color:#0f172a; }
+.kpi-card .kpi-icon-bg  { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
+.kpi-card.blue  .kpi-value { color:#2563eb; } .kpi-card.blue  .kpi-icon-bg { color:#2563eb; }
+.kpi-card.green .kpi-value { color:#16a34a; } .kpi-card.green .kpi-icon-bg { color:#16a34a; }
+.kpi-card.amber .kpi-value { color:#d97706; } .kpi-card.amber .kpi-icon-bg { color:#d97706; }
+.kpi-card.red   .kpi-value { color:#dc2626; } .kpi-card.red   .kpi-icon-bg { color:#dc2626; }
+
+/* filter tabs */
+.tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.tab-btn { padding:6px 16px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
+           font-size:.78rem; font-weight:600; cursor:pointer; color:#64748b; transition:all .15s; }
+.tab-btn:hover   { border-color:#2563eb; color:#2563eb; }
+.tab-btn.active  { background:#2563eb; border-color:#2563eb; color:#fff; }
+
+/* badge tipo */
+.badge-tipo { display:inline-block; font-size:.65rem; font-weight:700; padding:2px 8px;
+              border-radius:20px; text-transform:uppercase; letter-spacing:.04em; }
+.badge-tipo.contrato { background:#dbeafe; color:#1d4ed8; }
+.badge-tipo.multa    { background:#fee2e2; color:#b91c1c; }
+.badge-tipo.avulsa   { background:#f0fdf4; color:#15803d; }
+
+/* badge status */
+.badge-status { display:inline-block; font-size:.65rem; font-weight:700; padding:2px 9px;
+                border-radius:20px; }
+.badge-status.pendente  { background:#fef3c7; color:#92400e; }
+.badge-status.pago,
+.badge-status.recebido  { background:#dcfce7; color:#15803d; }
+
+/* ações */
+.btn-baixa { background:#10b981; color:#fff; border:none; border-radius:7px;
+             padding:5px 12px; font-size:.75rem; font-weight:600; cursor:pointer; }
+.btn-baixa:hover { background:#059669; }
+.btn-del   { background:none; border:none; color:#ef4444; cursor:pointer;
+             padding:5px 8px; border-radius:6px; font-size:.78rem; }
+.btn-del:hover { background:#fee2e2; }
+.btn-edit  { background:none; border:1px solid #e2e8f0; color:#64748b; cursor:pointer;
+             padding:5px 8px; border-radius:6px; font-size:.78rem; }
+.btn-edit:hover { background:#f1f5f9; }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-money-bill-wave"></i> Contas a Receber</h1>
+        <p style="font-size:.8rem;color:#94a3b8;margin-top:2px;">
+            Contratos, multas e cobranças avulsas em um único painel
+        </p>
+    </div>
+    <button class="btn btn-primary" onclick="abrirModalAvulsa()">
+        <i class="fas fa-plus"></i> Nova Cobrança Avulsa
+    </button>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid" style="margin-bottom:20px;">
+    <div class="kpi-card blue">
+        <div class="kpi-label">Total Pendente</div>
+        <div class="kpi-value" id="kpiPendente" style="font-size:1.1rem">R$ 0,00</div>
+        <i class="fas fa-clock kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card green">
+        <div class="kpi-label">Recebido Este Mês</div>
+        <div class="kpi-value" id="kpiRecebidoMes" style="font-size:1.1rem">R$ 0,00</div>
+        <i class="fas fa-check-circle kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card amber">
+        <div class="kpi-label">Qtd Pendente</div>
+        <div class="kpi-value" id="kpiQtdPendente">0</div>
+        <i class="fas fa-list kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card red">
+        <div class="kpi-label">Vencidos</div>
+        <div class="kpi-value" id="kpiVencidos">0</div>
+        <i class="fas fa-exclamation-triangle kpi-icon-bg"></i>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card" style="padding:14px 18px;margin-bottom:14px;">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <div class="tabs" id="tabsStatus">
+            <button class="tab-btn active" data-status="todos" onclick="setTab(this,'status')">Todos</button>
+            <button class="tab-btn" data-status="pendente" onclick="setTab(this,'status')">Pendente</button>
+            <button class="tab-btn" data-status="recebido" onclick="setTab(this,'status')">Recebido</button>
+        </div>
+        <div class="tabs" id="tabsTipo">
+            <button class="tab-btn active" data-tipo="todos" onclick="setTab(this,'tipo')">Todos</button>
+            <button class="tab-btn" data-tipo="contrato" onclick="setTab(this,'tipo')">Contratos</button>
+            <button class="tab-btn" data-tipo="multa" onclick="setTab(this,'tipo')">Multas</button>
+            <button class="tab-btn" data-tipo="avulsa" onclick="setTab(this,'tipo')">Avulsas</button>
+        </div>
+        <input type="text" id="busca" class="form-control" placeholder="Buscar cliente ou descrição..."
+               oninput="renderizar()" style="max-width:260px;">
+        <button class="btn" onclick="carregarDados()" style="margin-left:auto;">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Tabela -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Cliente</th>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Vencimento</th>
+                    <th>Status</th>
+                    <th>Recebido em</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela">
+                <tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Baixa Manual -->
+<div id="modalBaixa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+        <div style="font-size:1.1rem;font-weight:700;color:#0f172a;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-check-circle" style="color:#10b981;"></i> Dar Baixa
+        </div>
+        <div id="resumoBaixa" style="background:#f1f5f9;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.82rem;color:#374151;"></div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Data do Recebimento</label>
+            <input type="date" id="dataBaixaInput" class="form-control">
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button class="btn" onclick="fecharModalBaixa()" style="background:#6b7280;color:#fff;">Cancelar</button>
+            <button class="btn" onclick="confirmarBaixa()" style="background:#10b981;color:#fff;font-weight:600;">
+                <i class="fas fa-check"></i> Confirmar Baixa
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Cobrança Avulsa / Editar -->
+<div id="modalAvulsa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;">
+        <div style="font-size:1.1rem;font-weight:700;color:#0f172a;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-bolt" style="color:#2563eb;"></i>
+            <span id="tituloModalAvulsa">Nova Cobrança Avulsa</span>
+        </div>
+        <input type="hidden" id="avulsaId">
+        <div style="display:grid;gap:12px;">
+            <div>
+                <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Cliente</label>
+                <select id="avulsaCliente" class="form-control">
+                    <option value="">Selecione o cliente...</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Descrição *</label>
+                <input type="text" id="avulsaDescricao" class="form-control" placeholder="Ex: Taxa de limpeza, Dano ao veículo...">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                    <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Valor (R$) *</label>
+                    <input type="number" id="avulsaValor" class="form-control" placeholder="0,00" step="0.01" min="0">
+                </div>
+                <div>
+                    <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Vencimento</label>
+                    <input type="date" id="avulsaVencimento" class="form-control">
+                </div>
+            </div>
+            <div>
+                <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Observações</label>
+                <textarea id="avulsaObs" class="form-control" rows="2" placeholder="Opcional"></textarea>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+            <button class="btn" onclick="fecharModalAvulsa()" style="background:#6b7280;color:#fff;">Cancelar</button>
+            <button class="btn btn-primary" onclick="salvarAvulsa()">
+                <i class="fas fa-save"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let dados = [];
+let filtroStatus = 'todos';
+let filtroTipo   = 'todos';
+let pendenteBaixa = null;  // {tipo, id, descricao, valor}
+
+const hoje = new Date().toISOString().split('T')[0];
+
+// ── Carregamento ──────────────────────────────────────────────────────────────
+async function carregarDados() {
+    try {
+        const r = await fetch('/api/contas-receber');
+        dados = await r.json();
+        calcularKPIs();
+        renderizar();
+        await carregarClientes();
+    } catch (e) {
+        showToast('Erro ao carregar dados', 'error');
+    }
+}
+
+async function carregarClientes() {
+    try {
+        const r = await fetch('/api/clientes');
+        const clientes = await r.json();
+        const sel = document.getElementById('avulsaCliente');
+        const atual = sel.value;
+        sel.innerHTML = '<option value="">Selecione o cliente...</option>';
+        clientes.forEach(c => {
+            sel.innerHTML += `<option value="${c.id}">${c.nome}${c.cpf ? ' — ' + c.cpf : ''}</option>`;
+        });
+        if (atual) sel.value = atual;
+    } catch {}
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+function calcularKPIs() {
+    const mesAtual = hoje.slice(0, 7);
+    let pendente = 0, recebidoMes = 0, qtdPendente = 0, vencidos = 0;
+    dados.forEach(d => {
+        const isPago = d.status === 'pago' || d.status === 'recebido';
+        if (!isPago) {
+            pendente += parseFloat(d.valor || 0);
+            qtdPendente++;
+            if (d.data_vencimento && d.data_vencimento < hoje) vencidos++;
+        } else if (d.data_recebimento && d.data_recebimento.slice(0,7) === mesAtual) {
+            recebidoMes += parseFloat(d.valor || 0);
+        }
+    });
+    document.getElementById('kpiPendente').textContent    = fmtCurrency(pendente);
+    document.getElementById('kpiRecebidoMes').textContent = fmtCurrency(recebidoMes);
+    document.getElementById('kpiQtdPendente').textContent = qtdPendente;
+    document.getElementById('kpiVencidos').textContent    = vencidos;
+}
+
+// ── Filtros e tabs ────────────────────────────────────────────────────────────
+function setTab(btn, group) {
+    document.querySelectorAll(`#tabs${group === 'status' ? 'Status' : 'Tipo'} .tab-btn`)
+            .forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (group === 'status') filtroStatus = btn.dataset.status;
+    else                    filtroTipo   = btn.dataset.tipo;
+    renderizar();
+}
+
+// ── Renderização ──────────────────────────────────────────────────────────────
+function renderizar() {
+    const busca = document.getElementById('busca').value.toLowerCase();
+    const lista = dados.filter(d => {
+        const isPago = d.status === 'pago' || d.status === 'recebido';
+        if (filtroStatus === 'pendente' && isPago)   return false;
+        if (filtroStatus === 'recebido' && !isPago)  return false;
+        if (filtroTipo !== 'todos' && d.tipo !== filtroTipo) return false;
+        if (busca && !(d.cliente||'').toLowerCase().includes(busca) &&
+                     !(d.descricao||'').toLowerCase().includes(busca)) return false;
+        return true;
+    });
+
+    const tbody = document.getElementById('tabela');
+    if (!lista.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px;color:#94a3b8;">
+            <i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:12px;"></i>
+            Nenhum registro encontrado
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = lista.map(d => {
+        const isPago = d.status === 'pago' || d.status === 'recebido';
+        const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
+        const statusLabel = isPago ? (d.tipo === 'avulsa' ? 'recebido' : 'pago') : 'pendente';
+        return `
+        <tr${vencido ? ' style="background:#fff7ed;"' : ''}>
+            <td><span class="badge-tipo ${d.tipo}">${tipoLabel(d.tipo)}</span></td>
+            <td style="font-weight:600;font-size:.85rem;">${d.cliente || '—'}</td>
+            <td style="font-size:.82rem;color:#374151;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${d.descricao||''}">${d.descricao || '—'}</td>
+            <td style="font-weight:700;color:#0f172a;">${fmtCurrency(d.valor)}</td>
+            <td style="font-size:.82rem;${vencido ? 'color:#dc2626;font-weight:700;' : ''}">${fmtDate(d.data_vencimento)}${vencido ? ' ⚠' : ''}</td>
+            <td><span class="badge-status ${statusLabel}">${statusLabel}</span></td>
+            <td style="font-size:.82rem;color:#64748b;">${fmtDate(d.data_recebimento) || '—'}</td>
+            <td>
+                ${!isPago ? `<button class="btn-baixa" onclick="abrirBaixa('${d.tipo}',${d.id},'${(d.descricao||'').replace(/'/g,"\\'")}',${parseFloat(d.valor||0)})">
+                    <i class="fas fa-check"></i> Baixa
+                </button>` : ''}
+                ${d.tipo === 'avulsa' ? `
+                <button class="btn-edit" onclick="editarAvulsa(${d.id})" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-del" onclick="excluirAvulsa(${d.id})" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                </button>` : ''}
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ── Modal Baixa ───────────────────────────────────────────────────────────────
+function abrirBaixa(tipo, id, descricao, valor) {
+    pendenteBaixa = { tipo, id };
+    document.getElementById('resumoBaixa').innerHTML =
+        `<strong>${descricao}</strong><br>Valor: <strong>${fmtCurrency(valor)}</strong>`;
+    document.getElementById('dataBaixaInput').value = hoje;
+    document.getElementById('modalBaixa').style.display = 'flex';
+}
+
+function fecharModalBaixa() {
+    document.getElementById('modalBaixa').style.display = 'none';
+    pendenteBaixa = null;
+}
+
+async function confirmarBaixa() {
+    if (!pendenteBaixa) return;
+    const dataRec = document.getElementById('dataBaixaInput').value;
+    try {
+        const r = await fetch('/api/contas-receber/baixa', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...pendenteBaixa, data_recebimento: dataRec })
+        });
+        if (r.ok) {
+            fecharModalBaixa();
+            showToast('Baixa registrada com sucesso!', 'success');
+            carregarDados();
+        } else {
+            showToast('Erro ao registrar baixa', 'error');
+        }
+    } catch { showToast('Erro de conexão', 'error'); }
+}
+
+// ── Modal Cobrança Avulsa ─────────────────────────────────────────────────────
+function abrirModalAvulsa() {
+    document.getElementById('avulsaId').value        = '';
+    document.getElementById('avulsaCliente').value   = '';
+    document.getElementById('avulsaDescricao').value = '';
+    document.getElementById('avulsaValor').value     = '';
+    document.getElementById('avulsaVencimento').value = '';
+    document.getElementById('avulsaObs').value       = '';
+    document.getElementById('tituloModalAvulsa').textContent = 'Nova Cobrança Avulsa';
+    document.getElementById('modalAvulsa').style.display = 'flex';
+}
+
+function fecharModalAvulsa() {
+    document.getElementById('modalAvulsa').style.display = 'none';
+}
+
+async function editarAvulsa(id) {
+    const item = dados.find(d => d.tipo === 'avulsa' && d.id === id);
+    if (!item) return;
+    await carregarClientes();
+    document.getElementById('avulsaId').value         = id;
+    document.getElementById('avulsaDescricao').value  = item.descricao || '';
+    document.getElementById('avulsaValor').value      = item.valor || '';
+    document.getElementById('avulsaVencimento').value = item.data_vencimento || '';
+    document.getElementById('avulsaObs').value        = '';
+    document.getElementById('tituloModalAvulsa').textContent = 'Editar Cobrança Avulsa';
+    document.getElementById('modalAvulsa').style.display = 'flex';
+}
+
+async function salvarAvulsa() {
+    const descricao = document.getElementById('avulsaDescricao').value.trim();
+    const valor     = parseFloat(document.getElementById('avulsaValor').value);
+    if (!descricao || !valor || valor <= 0) {
+        showToast('Descrição e valor são obrigatórios', 'warning');
+        return;
+    }
+    const id         = document.getElementById('avulsaId').value;
+    const payload = {
+        cliente_id:     document.getElementById('avulsaCliente').value || null,
+        descricao,
+        valor,
+        data_vencimento: document.getElementById('avulsaVencimento').value || null,
+        observacoes:    document.getElementById('avulsaObs').value || null,
+    };
+    try {
+        const url    = id ? `/api/cobrancas-avulsas/${id}` : '/api/cobrancas-avulsas';
+        const method = id ? 'PUT' : 'POST';
+        const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        if (r.ok) {
+            fecharModalAvulsa();
+            showToast(id ? 'Cobrança atualizada!' : 'Cobrança criada!', 'success');
+            carregarDados();
+        } else {
+            showToast('Erro ao salvar cobrança', 'error');
+        }
+    } catch { showToast('Erro de conexão', 'error'); }
+}
+
+async function excluirAvulsa(id) {
+    abrirModal('Excluir Cobrança', `
+        <div style="text-align:center;padding:20px 0">
+            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
+            <p style="margin-bottom:20px;">Deseja excluir esta cobrança avulsa?</p>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+                <button class="btn btn-danger" onclick="confirmarExcluirAvulsa(${id})">Excluir</button>
+            </div>
+        </div>`);
+}
+
+async function confirmarExcluirAvulsa(id) {
+    try {
+        const r = await fetch(`/api/cobrancas-avulsas/${id}`, { method: 'DELETE' });
+        if (r.ok) {
+            fecharModal();
+            showToast('Cobrança excluída', 'success');
+            carregarDados();
+        } else {
+            showToast('Erro ao excluir', 'error');
+        }
+    } catch { showToast('Erro de conexão', 'error'); }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmtCurrency(v) {
+    return 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+}
+function fmtDate(s) {
+    if (!s) return '';
+    const [y,m,d] = s.slice(0,10).split('-');
+    return `${d}/${m}/${y}`;
+}
+function tipoLabel(t) {
+    return t === 'contrato' ? 'Contrato' : t === 'multa' ? 'Multa' : 'Avulsa';
+}
+
+window.addEventListener('load', carregarDados);
+</script>
+{% endblock %}
