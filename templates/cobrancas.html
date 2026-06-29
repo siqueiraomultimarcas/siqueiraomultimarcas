@@ -406,7 +406,6 @@ function renderCalendario(loc) {
         const onclick = disabled ? '' : `onclick="selecionarDia(${lid},${dia})"`;
         const title = isPaid     ? 'Cobrança paga' :
                       isPendente ? 'Aguardando pagamento' :
-                      isFuture   ? 'Data futura' :
                       isBeforeContract ? 'Antes do início do contrato' : '';
 
         grid += `<div class="${cls}" ${onclick} title="${title}">${dia}</div>`;
