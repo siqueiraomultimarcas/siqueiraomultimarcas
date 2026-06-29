@@ -380,21 +380,21 @@ let dados = [];
 let filtroStatus = 'todos';
 let filtroTipo   = 'todos';
 let pendenteBaixa = null;
-let _histCtx = null;
 
 const hoje = new Date().toISOString().split('T')[0];
 
 // ── Carregamento ──────────────────────────────────────────────────────────────
 async function carregarDados() {
     try {
-        const [r, rp] = await Promise.all([
-            fetch('/api/contas-receber'),
-            fetch('/api/projecao-cobrancas'),
-        ]);
+        // contas-receber PRIMEIRO — ele chama gerar_periodos_pendentes() internamente
+        const r = await fetch('/api/contas-receber');
         dados = await r.json();
         calcularKPIs();
         renderizar();
         await carregarClientes();
+
+        // projecao DEPOIS — agora os períodos já foram gerados
+        const rp = await fetch('/api/projecao-cobrancas');
         if (rp.ok) {
             const proj = await rp.json();
             document.getElementById('kpiVenceHoje').textContent   = fmtCurrency(proj.vence_hoje);
