@@ -78,13 +78,13 @@
             <thead>
                 <tr>
                     <th>Foto</th>
-                    <th>Placa</th>
-                    <th>Marca / Modelo</th>
-                    <th>Ano</th>
-                    <th>Cor</th>
-                    <th>Combustível</th>
-                    <th>Categoria</th>
-                    <th>Diária</th>
+                    <th onclick="sortBy('placa')" style="cursor:pointer;user-select:none;">Placa <span id="sort_placa"></span></th>
+                    <th onclick="sortBy('marca')" style="cursor:pointer;user-select:none;">Marca / Modelo <span id="sort_marca"></span></th>
+                    <th onclick="sortBy('ano')" style="cursor:pointer;user-select:none;">Ano <span id="sort_ano"></span></th>
+                    <th onclick="sortBy('cor')" style="cursor:pointer;user-select:none;">Cor <span id="sort_cor"></span></th>
+                    <th onclick="sortBy('combustivel')" style="cursor:pointer;user-select:none;">Combustível <span id="sort_combustivel"></span></th>
+                    <th onclick="sortBy('categoria')" style="cursor:pointer;user-select:none;">Categoria <span id="sort_categoria"></span></th>
+                    <th onclick="sortBy('diaria')" style="cursor:pointer;user-select:none;">Diária <span id="sort_diaria"></span></th>
                     <th>Compra</th>
                     <th>FIPE / Variação</th>
                     <th>Km</th>
@@ -311,6 +311,31 @@
 <script>
 let veiculos = [];
 let dadosCRLV = {};
+let _sortCol = null, _sortAsc = true;
+
+function sortBy(col) {
+    if (_sortCol === col) _sortAsc = !_sortAsc;
+    else { _sortCol = col; _sortAsc = true; }
+    // atualiza setas
+    ['placa','marca','ano','cor','combustivel','categoria','diaria'].forEach(c => {
+        const el = document.getElementById('sort_' + c);
+        if (el) el.textContent = c === _sortCol ? (_sortAsc ? ' ↑' : ' ↓') : '';
+    });
+    filtrarVeiculos();
+}
+
+function _sortLista(lista) {
+    if (!_sortCol) return lista;
+    return [...lista].sort((a, b) => {
+        let va = a[_sortCol] ?? '', vb = b[_sortCol] ?? '';
+        if (typeof va === 'number' || !isNaN(va)) {
+            va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+            return _sortAsc ? va - vb : vb - va;
+        }
+        va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+        return _sortAsc ? va.localeCompare(vb, 'pt-BR') : vb.localeCompare(va, 'pt-BR');
+    });
+}
 
 /* ---------- CARREGAR DADOS ---------- */
 async function carregarVeiculos() {
@@ -412,7 +437,7 @@ function filtrarVeiculos() {
         (status === 'todos'    || v.status === status) &&
         (categoria === 'todos' || v.categoria === categoria)
     );
-    renderizarVeiculos(filtrados);
+    renderizarVeiculos(_sortLista(filtrados));
 }
 
 /* ---------- MODAL VEÍCULO ---------- */
