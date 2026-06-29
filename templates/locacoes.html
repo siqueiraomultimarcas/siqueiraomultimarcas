@@ -368,6 +368,25 @@
             } catch {}
         }
 
+        const _freq = isEdit ? (locacao.frequencia_cobranca || 'avulso') : 'avulso';
+        const _freqOpts = [
+            {v:'avulso',   l:'Avulso (manual)'},
+            {v:'semanal',  l:'Semanal (7 dias)'},
+            {v:'quinzenal',l:'Quinzenal (15 dias)'},
+            {v:'mensal',   l:'Mensal (30 dias)'}
+        ];
+        const freqBtnsHtml = _freqOpts.map(function(o) {
+            const a = _freq === o.v;
+            const border = a ? '#2563eb' : '#e2e8f0';
+            const bg     = a ? '#eff6ff' : '#f8fafc';
+            const color  = a ? '#1d4ed8' : '#64748b';
+            return '<button type="button" data-freq="' + o.v + '" onclick="setFreqLoc(\'' + o.v + '\')" '
+                 + 'style="padding:6px 14px;border-radius:8px;border:2px solid ' + border
+                 + ';background:' + bg + ';color:' + color
+                 + ';font-size:.78rem;font-weight:600;cursor:pointer;">'
+                 + o.l + '</button>';
+        }).join('');
+
         const content = '<form id="formLocacao">' +
             '<div class="grid-2">' +
                 '<div class="form-group"><label>Veículo *</label><select class="form-control" name="veiculo_id" id="selectVeiculo" required onchange="atualizarDiaria()">' + optVeic + '</select></div>' +
@@ -380,16 +399,7 @@
             '<div class="form-group">' +
                 '<label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Frequência de Cobrança</label>' +
                 '<input type="hidden" name="frequencia_cobranca" id="freqCobranca" value="' + (isEdit ? (locacao.frequencia_cobranca || 'avulso') : 'avulso') + '">' +
-                '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="freqBtns">' +
-                    (function() {
-                        const freq = isEdit ? (locacao.frequencia_cobranca || 'avulso') : 'avulso';
-                        const opts = [{v:'avulso',l:'Avulso (manual)'},{v:'semanal',l:'Semanal (7 dias)'},{v:'quinzenal',l:'Quinzenal (15 dias)'},{v:'mensal',l:'Mensal (30 dias)'}];
-                        return opts.map(o => {
-                            const a = freq === o.v;
-                            return '<button type="button" data-freq="' + o.v + '" onclick="setFreqLoc(\'' + o.v + '\')" style="padding:6px 14px;border-radius:8px;border:2px solid ' + (a?'#2563eb':'#e2e8f0') + ';background:' + (a?'#eff6ff':'#f8fafc') + ';color:' + (a?'#1d4ed8':'#64748b') + ';font-size:.78rem;font-weight:600;cursor:pointer;">' + o.l + '</button>';
-                        }).join('');
-                    })() +
-                '</div>' +
+                '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="freqBtns">' + freqBtnsHtml + '</div>' +
             '</div>' +
             '<div class="grid-3">' +
                 '<div class="form-group"><label>Valor Diária (R$)</label><input type="number" class="form-control" name="diaria" id="diariaLoc" value="' + (isEdit ? locacao.diaria : '') + '" step="0.01" min="0" oninput="sincDiaria()"></div>' +
@@ -466,7 +476,9 @@
     }
 
     async function salvarLocacao(id) {
+      try {
         const form = document.getElementById('formLocacao');
+        if (!form) { showToast('Formulário não encontrado', 'error'); return; }
         const formData = new FormData(form);
         const data = Object.fromEntries(formData);
 
@@ -485,7 +497,8 @@
 
         const checklist = [];
         document.querySelectorAll('.checklist-item input[type="checkbox"]').forEach(cb => {
-            checklist.push({ id: cb.value, label: cb.nextElementSibling.textContent, checked: cb.checked });
+            const lbl = cb.nextElementSibling;
+            checklist.push({ id: cb.value, label: lbl ? lbl.textContent : cb.value, checked: cb.checked });
         });
         data.checklist = JSON.stringify(checklist);
 
@@ -538,8 +551,11 @@
                 showToast('Erro: ' + (err.error || 'Falha ao salvar'), 'error');
             }
         } catch (error) {
-            showToast('Erro ao salvar locação', 'error');
+            showToast('Erro ao salvar: ' + (error.message || error), 'error');
         }
+      } catch (outer) {
+          showToast('Erro inesperado: ' + (outer.message || outer), 'error');
+      }
     }
 
     function editarLocacao(id) {
