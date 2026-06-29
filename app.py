@@ -2356,7 +2356,8 @@ def importar_multa_pdf():
     lines = [l.strip() for l in text.splitlines()]
 
     def after_label(label_re, value_re=None, default=''):
-        """Retorna o valor na linha seguinte ao label (ou na mesma linha após o label)."""
+        """Retorna valor na linha seguinte ao label (ou na mesma linha após o label).
+        Varre até 6 linhas seguintes sem break prematuro."""
         for i, line in enumerate(lines):
             if not re.search(label_re, line, re.IGNORECASE):
                 continue
@@ -2368,8 +2369,8 @@ def importar_multa_pdf():
                 m = re.search(value_re, rest, re.IGNORECASE)
                 if m:
                     return m.group(0).strip()
-            # Busca nas próximas linhas
-            for j in range(i + 1, min(i + 5, len(lines))):
+            # Busca nas próximas linhas — sem break, varre todas as 6
+            for j in range(i + 1, min(i + 7, len(lines))):
                 v = lines[j].strip()
                 if not v:
                     continue
@@ -2378,7 +2379,6 @@ def importar_multa_pdf():
                 m = re.search(value_re, v, re.IGNORECASE)
                 if m:
                     return m.group(0).strip()
-                break  # próxima linha não bate com value_re: label sem valor esperado aqui
         return default
 
     def to_iso(d):
@@ -2388,23 +2388,19 @@ def importar_multa_pdf():
             return f'{p[2]}-{p[1]}-{p[0]}'
         except: return ''
 
-    # AIT: linha que contém "AIT)" ou "Número do AIT"
+    # AIT: linha que contém "AIT)"
     ait = after_label(r'IDENTIFICA\w*\s+DO\s+AUTO.*AIT\)', value_re=r'[A-Z0-9]{5,}')
     tipo = 'nic' if ait.upper().startswith('NIC') else 'multa'
 
+    # Placa: linha exatamente "PLACA"
     placa = after_label(r'^\s*PLACA\s*$', value_re=r'[A-Z0-9]{7}')
-
-    # DATA da infração: linha exatamente "DATA" (não "DATA DA NOTIFICAÇÃO" ou "DATA LIMITE")
-    data_inf = after_label(r'^\s*DATA\s*$', value_re=r'\d{2}/\d{2}/\d{4}')
 
     hora = after_label(r'^\s*HORA\s*$', value_re=r'\d{2}:\d{2}')
 
     local = after_label(r'LOCAL\s+DA\s+INFRA\w+')
 
-    # VALOR: busca "R$ 260,32" na mesma ou próxima linha
-    valor_raw = after_label(r'VALOR\s+DA\s+MULTA', value_re=r'R\$\s*[\d.,]+')
-    if not valor_raw:
-        valor_raw = after_label(r'VALOR\s+DA\s+MULTA', value_re=r'[\d.,]+')
+    # VALOR: busca número após "VALOR DA MULTA" na mesma ou próxima linha
+    valor_raw = after_label(r'VALOR\s+DA\s+MULTA', value_re=r'[\d]+[.,][\d]+')
     valor_num = re.search(r'[\d.,]+', valor_raw) if valor_raw else None
     valor = valor_num.group(0).replace('.', '').replace(',', '.') if valor_num else ''
 
@@ -2422,24 +2418,24 @@ def importar_multa_pdf():
                 descricao_lines.append(line)
     descricao = ' '.join(descricao_lines)
 
-    # RENAINF: linha exatamente "NÚMERO RENAINF" (não "MULTA ORIGINAL")
-    renainf = after_label(r'RENAINF\s*$', value_re=r'\d{8,}')
+    # RENAINF: ignora a linha "NÚMERO RENAINF MULTA ORIGINAL"
+    renainf = after_label(r'^.*RENAINF(?!\s+MULTA)\s*$', value_re=r'\d{7,}')
 
     dt_limite = after_label(r'DATA\s+LIMITE.*DEFESA', value_re=r'\d{2}/\d{2}/\d{4}')
+    # DATA DA NOTIFICAÇÃO DA AUTUAÇÃO = "Data da Infração" no sistema
     dt_notif  = after_label(r'DATA\s+DA\s+NOTIFICA\w+\s+DA\s+AUTUA', value_re=r'\d{2}/\d{2}/\d{4}')
 
     return jsonify({
         'tipo_notificacao':   tipo,
         'numero_auto':        ait,
         'placa':              placa,
-        'data_infracao':      to_iso(data_inf),
+        'data_infracao':      to_iso(dt_notif),   # notificação = infração no sistema
         'hora_infracao':      hora,
         'local_infracao':     local,
         'valor':              valor,
         'descricao':          descricao,
         'numero_renainf':     renainf,
         'data_limite_defesa': to_iso(dt_limite),
-        'data_notificacao':   to_iso(dt_notif),
         '_debug':             text[:3000],
     })
 
