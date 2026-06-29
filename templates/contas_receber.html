@@ -1444,7 +1444,14 @@ function toggleLocMenu(e, id) {
     const menu = document.getElementById('locmenu_' + id);
     const isOpen = menu && menu.style.display !== 'none';
     closeLocMenus();
-    if (menu && !isOpen) menu.style.display = 'block';
+    if (menu && !isOpen) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        menu.style.position = 'fixed';
+        menu.style.top  = (rect.bottom + 4) + 'px';
+        menu.style.left = 'auto';
+        menu.style.right = (window.innerWidth - rect.right) + 'px';
+        menu.style.display = 'block';
+    }
 }
 function closeLocMenus() {
     document.querySelectorAll('.loc-menu').forEach(m => m.style.display = 'none');
