@@ -740,6 +740,60 @@
     }
     document.addEventListener('DOMContentLoaded', aplicarMascaras);
 
+    /* ── Ordenação de colunas (data-sortable) ───────────────── */
+    function makeSortable(tableEl) {
+        if (!tableEl || tableEl._sortable) return;
+        tableEl._sortable = true;
+        let _sc = -1, _sd = 1;
+        const ths = Array.from(tableEl.querySelectorAll('thead th'));
+        ths.forEach((th, ci) => {
+            if (!th.textContent.trim()) return;
+            th.style.cursor = 'pointer';
+            th.style.userSelect = 'none';
+            th.title = 'Clique para ordenar';
+            th.addEventListener('click', () => {
+                if (_sc === ci) _sd = -_sd; else { _sc = ci; _sd = 1; }
+                ths.forEach(t => { const s = t.querySelector('.sort-ind'); if (s) s.remove(); });
+                const sp = document.createElement('span');
+                sp.className = 'sort-ind';
+                sp.style.cssText = 'font-size:.6rem;color:#2563eb;opacity:.8;margin-left:3px;';
+                sp.textContent = _sd === 1 ? '▲' : '▼';
+                th.appendChild(sp);
+                const tbody = tableEl.querySelector('tbody');
+                obs.disconnect();
+                Array.from(tbody.querySelectorAll('tr'))
+                    .sort((a, b) => {
+                        const ta = (a.cells[ci]?.textContent || '').trim().replace(/[▲▼]/g, '');
+                        const tb = (b.cells[ci]?.textContent || '').trim().replace(/[▲▼]/g, '');
+                        if (/^R\$\s?[\d.]+,\d+$/.test(ta) && /^R\$\s?[\d.]+,\d+$/.test(tb)) {
+                            const na = parseFloat(ta.replace(/[R$\s.]/g, '').replace(',', '.'));
+                            const nb = parseFloat(tb.replace(/[R$\s.]/g, '').replace(',', '.'));
+                            return (na - nb) * _sd;
+                        }
+                        const mda = ta.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                        const mdb = tb.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                        if (mda && mdb)
+                            return (new Date(`${mda[3]}-${mda[2]}-${mda[1]}`) - new Date(`${mdb[3]}-${mdb[2]}-${mdb[1]}`)) * _sd;
+                        const na = parseFloat(ta.replace(',', '.'));
+                        const nb = parseFloat(tb.replace(',', '.'));
+                        if (!isNaN(na) && !isNaN(nb) && ta !== '' && tb !== '') return (na - nb) * _sd;
+                        return ta.localeCompare(tb, 'pt-BR') * _sd;
+                    })
+                    .forEach(r => tbody.appendChild(r));
+                obs.observe(tbody, { childList: true });
+            });
+        });
+        const tbody = tableEl.querySelector('tbody');
+        const obs = new MutationObserver(() => {
+            tableEl.querySelectorAll('.sort-ind').forEach(s => s.remove());
+            _sc = -1; _sd = 1;
+        });
+        if (tbody) obs.observe(tbody, { childList: true });
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('table[data-sortable]').forEach(makeSortable);
+    });
+
     /* ── Bottom nav "Mais" ──────────────────────────────────── */
     function abrirMais() {
         document.getElementById('maisOverlay').classList.add('open');
