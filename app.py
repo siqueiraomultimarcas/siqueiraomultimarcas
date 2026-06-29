@@ -2471,9 +2471,10 @@ def add_multa():
     cur.execute('''
         INSERT INTO multas (veiculo_id, motorista_id, data_infracao, descricao, valor, local_infracao, pontos, status, observacoes, numero_auto, tipo_notificacao, data_limite_defesa, numero_renainf, hora_infracao)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ''', (data.get('veiculo_id'), data.get('motorista_id'), data.get('data_infracao'),
-          data.get('descricao'), data.get('valor'), data.get('local_infracao'),
-          data.get('pontos'), data.get('status', 'pendente'), data.get('observacoes'),
+    ''', (data.get('veiculo_id') or None, data.get('motorista_id') or None,
+          data.get('data_infracao'), data.get('descricao'), data.get('valor'),
+          data.get('local_infracao'), data.get('pontos') or None,
+          data.get('status', 'pendente'), data.get('observacoes'),
           data.get('numero_auto'), data.get('tipo_notificacao', 'multa'),
           data.get('data_limite_defesa') or None, data.get('numero_renainf') or None,
           data.get('hora_infracao') or None))
