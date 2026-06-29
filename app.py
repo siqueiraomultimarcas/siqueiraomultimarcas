@@ -2399,24 +2399,34 @@ def importar_multa_pdf():
     hora_m = re.search(r'\b(\d{2}:\d{2})\b', text)
     hora = hora_m.group(1) if hora_m else ''
 
-    # LOCAL: pode ser "CURITIBA-PR" (cidade-UF) ou "BR476 KM 95,250" (rodovia)
-    # Tenta CIDADE-UF primeiro; senão, pega próxima linha e limpa prefixos numéricos/org
+    # LOCAL: vários formatos possíveis — tenta em ordem de especificidade
     local_raw = after_label(r'LOCAL\s+DA\s+INFRA\w+')
-    city_uf = re.search(r'\b([A-ZÁÉÍÓÚÃÕÀÂÊÎÔÛÇ][A-ZÁÉÍÓÚÃÕÀÂÊÎÔÛÇ\s]+-[A-Z]{2})\b', local_raw) if local_raw else None
-    if city_uf:
-        local = city_uf.group(1).strip()
-    else:
-        # Remove código numérico e nome do órgão que aparecem antes do endereço real
-        local = re.sub(r'^[\d\s]+[A-Z][A-Z\s]+(?:TRANSP|TURA|NACION|ESTRUT)\w*\s*', '', local_raw or '').strip()
-        if not local:
-            local = local_raw or ''
+    local = ''
+    if local_raw:
+        # 1. CIDADE-UF (ex: CURITIBA-PR)
+        m = re.search(r'\b([A-ZÁÉÍÓÚÃÕÀÂÊÎÔÛÇ][A-ZÁÉÍÓÚÃÕÀÂÊÎÔÛÇ ]*-[A-Z]{2})\b', local_raw)
+        if m:
+            local = m.group(1).strip()
+        else:
+            # 2. Rodovia federal/estadual (ex: BR476, PR092)
+            m2 = re.search(r'\b((?:BR|PR|SP|MG|RS|SC|BA|RJ|GO|MT|MS|TO|CE|PE|MA|PI)\d+\b.*)', local_raw, re.IGNORECASE)
+            if m2:
+                local = m2.group(1).strip()
+            else:
+                # 3. Keyword de logradouro (SITIO, AEROPORTO, AV, RUA, ROD...)
+                m3 = re.search(r'\b((?:SITIO|AEROPORTO|TERMINAL|AV|RUA|ROD|RODOV|ESTRADA|PRACA|VIADUTO)\b.*)', local_raw, re.IGNORECASE)
+                if m3:
+                    local = m3.group(1).strip()
+                else:
+                    # 4. Fallback: remove prefixo numérico de código de órgão
+                    local = re.sub(r'^\d+\s+', '', local_raw).strip()
 
-    # VALOR: próxima linha após "VALOR DA MULTA" tem "5002 0 R$ 260,32"
+    # VALOR: próxima linha após "VALOR DA MULTA"
     valor_raw = after_label(r'VALOR\s+DA\s+MULTA', value_re=r'[\d]+[.,][\d]+')
     valor_num = re.search(r'[\d.,]+', valor_raw) if valor_raw else None
     valor = valor_num.group(0).replace('.', '').replace(',', '.') if valor_num else ''
 
-    # DESCRIÇÃO: acumula linhas, pula artefatos de coluna misturada (DATA LIMITE, Não se aplica)
+    # DESCRIÇÃO: linhas "DATA LIMITE ... INFRATOR <descrição>" têm a desc na segunda parte
     descricao_lines = []
     in_desc = False
     for line in lines:
@@ -2426,7 +2436,16 @@ def importar_multa_pdf():
         if in_desc:
             if re.search(r'MEDI\w+\s+REALIZADA|VALOR\s+CONSIDERADO', line, re.IGNORECASE):
                 break
-            if line and not re.search(r'^DATA LIMITE|^N[ãa]o se aplica', line, re.IGNORECASE):
+            # Pula linhas vazias, "Não se aplica" e datas soltas
+            if not line or re.search(r'^N[ãa]o\s+se\s+aplica|\b\d{2}/\d{2}/\d{4}\b$', line, re.IGNORECASE):
+                continue
+            # Linha "DATA LIMITE PARA ... INFRATOR <desc>" — extrai só a parte da descrição
+            dl = re.search(r'^DATA\s+LIMITE\s+PARA\s+.+?(?:INFRATOR|PRÉVIA)\s+(.+)', line, re.IGNORECASE)
+            if dl:
+                resto = dl.group(1).strip()
+                if resto:
+                    descricao_lines.append(resto)
+            elif not re.search(r'^DATA\s+LIMITE', line, re.IGNORECASE):
                 descricao_lines.append(line)
     descricao = ' '.join(descricao_lines)
 
