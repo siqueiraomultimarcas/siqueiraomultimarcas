@@ -14,50 +14,22 @@
 .kpi-card.green .kpi-value { color:#16a34a; } .kpi-card.green .kpi-icon-bg { color:#16a34a; }
 .kpi-card.amber .kpi-value { color:#d97706; } .kpi-card.amber .kpi-icon-bg { color:#d97706; }
 .kpi-card.red   .kpi-value { color:#dc2626; } .kpi-card.red   .kpi-icon-bg { color:#dc2626; }
-
-/* filter tabs */
 .tabs { display:flex; gap:6px; flex-wrap:wrap; }
 .tab-btn { padding:6px 16px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
            font-size:.78rem; font-weight:600; cursor:pointer; color:#64748b; transition:all .15s; }
-.tab-btn:hover   { border-color:#2563eb; color:#2563eb; }
-.tab-btn.active  { background:#2563eb; border-color:#2563eb; color:#fff; }
-
-/* badge tipo — neutros, contexto por forma/texto */
-.badge-tipo { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 8px;
-              border-radius:4px; text-transform:uppercase; letter-spacing:.04em; }
-.badge-tipo.contrato { background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; }
-.badge-tipo.multa    { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
-.badge-tipo.avulsa   { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
-
-/* badge status — apenas pago tem cor positiva */
+.tab-btn:hover  { border-color:#2563eb; color:#2563eb; }
+.tab-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; }
 .badge-status { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 9px;
                 border-radius:4px; border:1px solid transparent; }
-.badge-status.pendente  { background:#f9fafb; color:#6b7280; border-color:#e5e7eb; }
+.badge-status.pendente { background:#f9fafb; color:#6b7280; border-color:#e5e7eb; }
 .badge-status.pago,
-.badge-status.recebido  { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
-
-/* ações */
-.btn-baixa { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; border-radius:6px;
-             padding:4px 8px; font-size:.72rem; font-weight:600; cursor:pointer; }
-.btn-baixa:hover { background:#dcfce7; }
-.btn-del   { background:none; border:1px solid transparent; color:#94a3b8; cursor:pointer;
-             padding:4px 7px; border-radius:6px; font-size:.72rem; }
-.btn-del:hover { background:#fef2f2; color:#ef4444; border-color:#fecaca; }
-.btn-edit  { background:none; border:1px solid #e2e8f0; color:#94a3b8; cursor:pointer;
-             padding:4px 7px; border-radius:6px; font-size:.72rem; }
-.btn-edit:hover { background:#f1f5f9; color:#374151; }
-
-/* linha de grupo de cliente */
-.grupo-row:hover td { background:#f8fafc; }
-.grupo-row td { transition: background .12s; }
+.badge-status.recebido { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
 </style>
 
 <div class="page-header">
     <div>
         <h1><i class="fas fa-money-bill-wave"></i> Contas a Receber</h1>
-        <p style="font-size:.8rem;color:#94a3b8;margin-top:2px;">
-            Contratos, multas e cobranças avulsas em um único painel
-        </p>
+        <p style="font-size:.8rem;color:#94a3b8;margin-top:2px;">Contratos, multas e cobranças avulsas</p>
     </div>
     <button class="btn btn-primary" onclick="abrirModalAvulsa()">
         <i class="fas fa-plus"></i> Nova Cobrança Avulsa
@@ -112,15 +84,15 @@
 <div class="card" style="padding:14px 18px;margin-bottom:14px;">
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <div class="tabs" id="tabsStatus">
-            <button class="tab-btn active" data-status="todos" onclick="setTab(this,'status')">Todos</button>
-            <button class="tab-btn" data-status="pendente" onclick="setTab(this,'status')">Pendente</button>
-            <button class="tab-btn" data-status="recebido" onclick="setTab(this,'status')">Recebido</button>
+            <button class="tab-btn active" data-status="todos"    onclick="setTab(this,'status')">Todos</button>
+            <button class="tab-btn"        data-status="pendente" onclick="setTab(this,'status')">Pendente</button>
+            <button class="tab-btn"        data-status="recebido" onclick="setTab(this,'status')">Recebido</button>
         </div>
         <div class="tabs" id="tabsTipo">
-            <button class="tab-btn active" data-tipo="todos" onclick="setTab(this,'tipo')">Todos</button>
-            <button class="tab-btn" data-tipo="contrato" onclick="setTab(this,'tipo')">Contratos</button>
-            <button class="tab-btn" data-tipo="multa" onclick="setTab(this,'tipo')">Multas</button>
-            <button class="tab-btn" data-tipo="avulsa" onclick="setTab(this,'tipo')">Avulsas</button>
+            <button class="tab-btn active" data-tipo="todos"     onclick="setTab(this,'tipo')">Todos</button>
+            <button class="tab-btn"        data-tipo="contrato"  onclick="setTab(this,'tipo')">Contratos</button>
+            <button class="tab-btn"        data-tipo="multa"     onclick="setTab(this,'tipo')">Multas</button>
+            <button class="tab-btn"        data-tipo="avulsa"    onclick="setTab(this,'tipo')">Avulsas</button>
         </div>
         <select id="filtroCliente" class="form-control" onchange="renderizar()" style="max-width:220px;">
             <option value="">Todos os clientes</option>
@@ -133,22 +105,95 @@
     </div>
 </div>
 
-<!-- Tabela -->
-<div class="card">
+<!-- ── Card Contratos ── -->
+<div class="card" id="card-contratos" style="margin-bottom:16px;">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h3 class="card-title" style="margin:0;">
+            <i class="fas fa-file-contract"></i> Contratos
+            <span id="badge-contratos" class="badge badge-info" style="font-size:.7rem;margin-left:6px;">0</span>
+        </h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span id="sum-contratos-pend"></span>
+            <span id="sum-contratos-rec"></span>
+            <button id="btnBaixaSelC" onclick="baixaSelecionadosCard()" style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:.72rem;font-weight:600;cursor:pointer;">
+                <i class="fas fa-check"></i> <span id="lblBaixaSelC">Dar Baixa</span>
+            </button>
+            <button id="btnAsaasSelC" onclick="asaasSelecionadosCard()" style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #ddd6fe;background:#f5f3ff;color:#7c3aed;font-size:.72rem;font-weight:600;cursor:pointer;">
+                <i class="fas fa-bolt"></i> <span id="lblAsaasSelC">Asaas</span>
+            </button>
+            <button id="btnExcluirSelC" onclick="excluirSelecionadosCard()" style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;font-size:.72rem;font-weight:600;cursor:pointer;">
+                <i class="fas fa-trash"></i> <span id="lblExcluirSelC">Excluir</span>
+            </button>
+        </div>
+    </div>
     <div class="table-container">
         <table data-sortable>
             <thead>
                 <tr>
-                    <th>Cliente</th>
-                    <th>Entradas</th>
-                    <th>Próx. Vencimento</th>
-                    <th>Pendente</th>
-                    <th>Recebido</th>
-                    <th></th>
+                    <th style="width:32px;text-align:center;">
+                        <input type="checkbox" id="chkAllC" onchange="selecionarTodosCard(this)"
+                               style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;" title="Selecionar todos">
+                    </th>
+                    <th>Cliente</th><th>Placa</th><th>Descrição</th><th>Valor</th>
+                    <th>Vencimento</th><th>Status</th><th>Recebido em</th><th>Ações</th>
                 </tr>
             </thead>
-            <tbody id="tabela">
-                <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</td></tr>
+            <tbody id="tabela-contratos">
+                <tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ── Card Multas ── -->
+<div class="card" id="card-multas" style="margin-bottom:16px;">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h3 class="card-title" style="margin:0;">
+            <i class="fas fa-exclamation-triangle" style="color:#dc2626;"></i> Multas
+            <span id="badge-multas" class="badge badge-info" style="font-size:.7rem;margin-left:6px;">0</span>
+        </h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span id="sum-multas-pend"></span>
+            <span id="sum-multas-rec"></span>
+        </div>
+    </div>
+    <div class="table-container">
+        <table data-sortable>
+            <thead>
+                <tr>
+                    <th>Cliente</th><th>Placa</th><th>Descrição</th><th>Valor</th>
+                    <th>Vencimento</th><th>Status</th><th>Recebido em</th><th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-multas">
+                <tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ── Card Avulsas ── -->
+<div class="card" id="card-avulsas">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <h3 class="card-title" style="margin:0;">
+            <i class="fas fa-bolt" style="color:#16a34a;"></i> Avulsas
+            <span id="badge-avulsas" class="badge badge-info" style="font-size:.7rem;margin-left:6px;">0</span>
+        </h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span id="sum-avulsas-pend"></span>
+            <span id="sum-avulsas-rec"></span>
+        </div>
+    </div>
+    <div class="table-container">
+        <table data-sortable>
+            <thead>
+                <tr>
+                    <th>Cliente</th><th>Descrição</th><th>Valor</th>
+                    <th>Vencimento</th><th>Status</th><th>Recebido em</th><th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-avulsas">
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</td></tr>
             </tbody>
         </table>
     </div>
@@ -174,8 +219,7 @@
             <label style="font-size:.78rem;font-weight:600;color:#ef4444;display:block;margin-bottom:6px;">
                 <i class="fas fa-exclamation-circle"></i> Justificativa do Desconto *
             </label>
-            <input type="text" id="baixaJustificativa" class="form-control"
-                   placeholder="Ex: Veículo ficou 2 dias na oficina">
+            <input type="text" id="baixaJustificativa" class="form-control" placeholder="Ex: Veículo ficou 2 dias na oficina">
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button class="btn" onclick="fecharModalBaixa()" style="background:#6b7280;color:#fff;">Cancelar</button>
@@ -186,50 +230,15 @@
     </div>
 </div>
 
-<!-- Modal Histórico por Cliente — full screen -->
-<div id="modalHistorico" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:flex-start;justify-content:center;padding:24px;">
-    <div style="background:#fff;border-radius:16px;padding:28px 32px;width:100%;max-width:900px;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;height:calc(100vh - 48px);">
-        <!-- Header -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-shrink:0;">
-            <div style="font-size:1.1rem;font-weight:700;color:#0f172a;">
-                <i class="fas fa-user-clock" style="color:#2563eb;margin-right:8px;"></i>
-                <span id="tituloHistorico">Histórico do Cliente</span>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;">
-                <button onclick="imprimirHistorico()"
-                        style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:none;background:#dc2626;color:#fff;font-size:.78rem;font-weight:700;cursor:pointer;">
-                    <i class="fas fa-file-pdf"></i> Exportar PDF
-                </button>
-                <button onclick="document.getElementById('modalHistorico').style.display='none'"
-                        style="background:none;border:none;font-size:1.3rem;color:#94a3b8;cursor:pointer;padding:4px 8px;">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-        <!-- KPIs -->
-        <div id="resumoHistorico" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;flex-shrink:0;"></div>
-        <!-- Tabela com scroll apenas se necessário -->
-        <div id="corpoHistorico" style="flex:1;overflow-y:auto;overflow-x:auto;"></div>
-    </div>
-</div>
-
-<!-- Área de impressão (invisível em tela, visível no PDF) -->
+<!-- Área de impressão -->
 <div id="printArea" style="display:none;"></div>
 <style>
 @media print {
     body > * { display: none !important; }
     #printArea { display: block !important; font-family: Arial, sans-serif; padding: 20px; }
-    #printArea .print-kpi { display: inline-block; width: 30%; text-align: center;
-                             border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
     #printArea table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12px; }
     #printArea th { background: #f1f5f9; padding: 8px; text-align: left; border-bottom: 2px solid #e2e8f0; }
     #printArea td { padding: 7px 8px; border-bottom: 1px solid #e2e8f0; }
-    #printArea .badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
-    #printArea .badge-contrato { background:#dbeafe; color:#1d4ed8; }
-    #printArea .badge-multa    { background:#fee2e2; color:#b91c1c; }
-    #printArea .badge-avulsa   { background:#f0fdf4; color:#15803d; }
-    #printArea .badge-pago     { background:#dcfce7; color:#15803d; }
-    #printArea .badge-pendente { background:#fef3c7; color:#92400e; }
 }
 </style>
 
@@ -241,7 +250,6 @@
         </div>
         <div id="resumoAsaasContrato" style="background:#f1f5f9;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#374151;margin-bottom:14px;"></div>
         <input type="hidden" id="asaasContratoPagId">
-        <!-- PIX / Boleto -->
         <div style="display:flex;gap:8px;margin-bottom:12px;">
             <button id="btnACPix" onclick="acSetTipo('PIX')"
                     style="flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">
@@ -252,7 +260,6 @@
                 <i class="fas fa-barcode"></i> Boleto
             </button>
         </div>
-        <!-- Parcelamento -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
             <span style="font-size:.78rem;font-weight:600;color:#374151;white-space:nowrap;">Parcelamento:</span>
             <button id="btnACP1" onclick="acSetParcelas(1)"
@@ -282,7 +289,7 @@
     </div>
 </div>
 
-<!-- Modal Nova Cobrança Avulsa / Editar -->
+<!-- Modal Nova Cobrança Avulsa -->
 <div id="modalAvulsa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
     <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;">
         <div style="font-size:1.1rem;font-weight:700;color:#0f172a;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
@@ -293,9 +300,7 @@
         <div style="display:grid;gap:12px;">
             <div>
                 <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Cliente</label>
-                <select id="avulsaCliente" class="form-control">
-                    <option value="">Selecione o cliente...</option>
-                </select>
+                <select id="avulsaCliente" class="form-control"><option value="">Selecione o cliente...</option></select>
             </div>
             <div>
                 <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Descrição *</label>
@@ -316,13 +321,8 @@
                 <textarea id="avulsaObs" class="form-control" rows="2" placeholder="Opcional"></textarea>
             </div>
         </div>
-
-        <!-- Seção Asaas (toggle) -->
         <div id="avulsaAsaasWrap" style="display:none;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px;">
-            <div style="font-size:.82rem;font-weight:700;color:#1d4ed8;margin-bottom:10px;">
-                <i class="fas fa-bolt"></i> Cobrar via Asaas
-            </div>
-            <!-- PIX / Boleto -->
+            <div style="font-size:.82rem;font-weight:700;color:#1d4ed8;margin-bottom:10px;"><i class="fas fa-bolt"></i> Cobrar via Asaas</div>
             <div style="display:flex;gap:8px;margin-bottom:12px;">
                 <button id="btnAvPix" onclick="avulsaSetTipo('PIX')"
                         style="flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">
@@ -333,7 +333,6 @@
                     <i class="fas fa-barcode"></i> Boleto
                 </button>
             </div>
-            <!-- Parcelamento -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
                 <span style="font-size:.78rem;font-weight:600;color:#374151;white-space:nowrap;">Parcelamento:</span>
                 <button id="btnAvP1" onclick="avulsaSetParcelas(1)"
@@ -355,10 +354,9 @@
             <div id="avulsaParcelasWrap"></div>
             <div id="avulsaAsaasResultado" style="display:none;margin-top:12px;"></div>
         </div>
-
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
             <button class="btn" onclick="fecharModalAvulsa()" style="background:#6b7280;color:#fff;">Cancelar</button>
-            <button class="btn" onclick="salvarAvulsa()" id="btnSalvarAvulsa" style="background:#2563eb;color:#fff;">
+            <button class="btn" onclick="salvarAvulsa()" style="background:#2563eb;color:#fff;">
                 <i class="fas fa-save"></i> Salvar Pendente
             </button>
             <button class="btn" onclick="toggleAvulsaAsaas()" id="btnToggleAsaas" style="background:#7c3aed;color:#fff;">
@@ -376,20 +374,18 @@ let dados = [];
 let filtroStatus = 'todos';
 let filtroTipo   = 'todos';
 let pendenteBaixa = null;
+let _periodosSelecionados = [];
 
 const hoje = new Date().toISOString().split('T')[0];
 
 // ── Carregamento ──────────────────────────────────────────────────────────────
 async function carregarDados() {
     try {
-        // contas-receber PRIMEIRO — ele chama gerar_periodos_pendentes() internamente
         const r = await fetch('/api/contas-receber');
         dados = await r.json();
         calcularKPIs();
         renderizar();
         await carregarClientes();
-
-        // projecao DEPOIS — agora os períodos já foram gerados
         const rp = await fetch('/api/projecao-cobrancas');
         if (rp.ok) {
             const proj = await rp.json();
@@ -397,51 +393,40 @@ async function carregarDados() {
             document.getElementById('kpiVenceSemana').textContent = fmtCurrency(proj.vence_semana);
             document.getElementById('kpiProjecaoMes').textContent = fmtCurrency(proj.projecao_mes);
         }
-    } catch (e) {
-        showToast('Erro ao carregar dados', 'error');
-    }
+    } catch { showToast('Erro ao carregar dados', 'error'); }
 }
 
 async function carregarClientes() {
     try {
         const r = await fetch('/api/clientes');
         const clientes = await r.json();
-
-        // Popula filtro de cliente
         const fc = document.getElementById('filtroCliente');
         const fcAtual = fc.value;
         fc.innerHTML = '<option value="">Todos os clientes</option>';
-        clientes.forEach(c => {
-            fc.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
-        });
+        clientes.forEach(c => { fc.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
         if (fcAtual) fc.value = fcAtual;
-
-        // Popula select do modal avulsa
         const sel = document.getElementById('avulsaCliente');
         const atual = sel.value;
         sel.innerHTML = '<option value="">Selecione o cliente...</option>';
-        clientes.forEach(c => {
-            sel.innerHTML += `<option value="${c.id}">${c.nome}${c.cpf ? ' — ' + c.cpf : ''}</option>`;
-        });
+        clientes.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.nome}${c.cpf?' — '+c.cpf:''}</option>`; });
         if (atual) sel.value = atual;
     } catch {}
 }
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 function calcularKPIs() {
-    const mesAtual = hoje.slice(0, 7);
-    let pendente = 0, recebidoMes = 0, qtdPendente = 0, vencidos = 0, descontosMes = 0;
+    const mesAtual = hoje.slice(0,7);
+    let pendente=0, recebidoMes=0, qtdPendente=0, vencidos=0, descontosMes=0;
     dados.forEach(d => {
-        const isPago = d.status === 'pago' || d.status === 'recebido';
+        const isPago = d.status==='pago'||d.status==='recebido';
         if (!isPago) {
-            pendente += parseFloat(d.valor || 0);
-            qtdPendente++;
+            pendente += parseFloat(d.valor||0); qtdPendente++;
             if (d.data_vencimento && d.data_vencimento < hoje) vencidos++;
         } else {
-            if (d.data_recebimento && d.data_recebimento.slice(0,7) === mesAtual)
-                recebidoMes += parseFloat(d.valor || 0);
-            if (d.data_recebimento && d.data_recebimento.slice(0,7) === mesAtual && parseFloat(d.desconto||0) > 0)
-                descontosMes += parseFloat(d.desconto || 0);
+            if (d.data_recebimento && d.data_recebimento.slice(0,7)===mesAtual)
+                recebidoMes += parseFloat(d.valor||0);
+            if (d.data_recebimento && d.data_recebimento.slice(0,7)===mesAtual && parseFloat(d.desconto||0)>0)
+                descontosMes += parseFloat(d.desconto||0);
         }
     });
     document.getElementById('kpiPendente').textContent    = fmtCurrency(pendente);
@@ -451,293 +436,171 @@ function calcularKPIs() {
     document.getElementById('kpiDescontos').textContent   = fmtCurrency(descontosMes);
 }
 
-// ── Filtros e tabs ────────────────────────────────────────────────────────────
+// ── Filtros ───────────────────────────────────────────────────────────────────
 function setTab(btn, group) {
-    document.querySelectorAll(`#tabs${group === 'status' ? 'Status' : 'Tipo'} .tab-btn`)
-            .forEach(b => b.classList.remove('active'));
+    document.querySelectorAll(`#tabs${group==='status'?'Status':'Tipo'} .tab-btn`).forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    if (group === 'status') filtroStatus = btn.dataset.status;
-    else                    filtroTipo   = btn.dataset.tipo;
+    if (group==='status') filtroStatus=btn.dataset.status;
+    else                  filtroTipo=btn.dataset.tipo;
     renderizar();
 }
 
-// ── Renderização (agrupada por cliente — acordeão inline) ─────────────────────
+// ── Renderização ──────────────────────────────────────────────────────────────
 function renderizar() {
     const busca     = document.getElementById('busca').value.toLowerCase();
     const cliFilter = document.getElementById('filtroCliente').value;
 
     const lista = dados.filter(d => {
-        const isPago = d.status === 'pago' || d.status === 'recebido';
-        if (filtroStatus === 'pendente' && isPago)   return false;
-        if (filtroStatus === 'recebido' && !isPago)  return false;
-        if (filtroTipo !== 'todos' && d.tipo !== filtroTipo) return false;
-        if (cliFilter && String(d.cliente_id) !== cliFilter) return false;
+        const isPago = d.status==='pago'||d.status==='recebido';
+        if (filtroStatus==='pendente' && isPago)  return false;
+        if (filtroStatus==='recebido' && !isPago) return false;
+        if (filtroTipo!=='todos' && d.tipo!==filtroTipo) return false;
+        if (cliFilter && String(d.cliente_id)!==cliFilter) return false;
         if (busca && !(d.cliente||'').toLowerCase().includes(busca) &&
-                     !(d.descricao||'').toLowerCase().includes(busca)) return false;
+                     !(d.descricao||'').toLowerCase().includes(busca) &&
+                     !(d.placa||'').toLowerCase().includes(busca)) return false;
         return true;
     });
 
-    const tbody = document.getElementById('tabela');
-    if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:48px;color:#94a3b8;">
-            <i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:12px;"></i>
-            Nenhum registro encontrado
-        </td></tr>`;
-        return;
-    }
+    document.getElementById('card-contratos').style.display = (filtroTipo==='todos'||filtroTipo==='contrato') ? '' : 'none';
+    document.getElementById('card-multas').style.display    = (filtroTipo==='todos'||filtroTipo==='multa')    ? '' : 'none';
+    document.getElementById('card-avulsas').style.display   = (filtroTipo==='todos'||filtroTipo==='avulsa')   ? '' : 'none';
 
-    const grupos = {};
-    lista.forEach(d => {
-        const key = (d.tipo || '') + '_' + (d.cliente_id != null ? 'id_' + d.cliente_id : 'nome_' + (d.cliente || ''));
-        if (!grupos[key]) grupos[key] = { clienteId: d.cliente_id, cliente: d.cliente || 'Sem cliente', tipo: d.tipo, itens: [] };
-        grupos[key].itens.push(d);
-    });
+    renderTableContratos(lista.filter(d=>d.tipo==='contrato'));
+    renderTableMultas(lista.filter(d=>d.tipo==='multa'));
+    renderTableAvulsas(lista.filter(d=>d.tipo==='avulsa'));
+}
 
-    const thS = s => `<th style="padding:6px 10px;font-size:.65rem;text-transform:uppercase;color:#64748b;background:#f1f5f9;font-weight:700;white-space:nowrap;">${s}</th>`;
+function _setSumRow(lista, pendEl, recEl) {
+    const tp = lista.filter(d=>d.status!=='pago'&&d.status!=='recebido').reduce((s,d)=>s+parseFloat(d.valor||0),0);
+    const tr = lista.filter(d=>d.status==='pago'||d.status==='recebido').reduce((s,d)=>s+parseFloat(d.valor||0),0);
+    document.getElementById(pendEl).innerHTML = tp>0 ? `<span style="color:#d97706;font-weight:700;margin-right:12px;">Pendente: ${fmtCurrency(tp)}</span>` : '';
+    document.getElementById(recEl).innerHTML  = tr>0 ? `<span style="color:#16a34a;font-weight:700;">Recebido: ${fmtCurrency(tr)}</span>` : '';
+}
 
-    // Ordenar: contratos primeiro, avulsas depois, multas por último
-    const ordemTipo = { contrato: 0, avulsa: 1, multa: 2 };
-    const gruposOrdenados = Object.values(grupos).sort((a, b) => (ordemTipo[a.tipo]||0) - (ordemTipo[b.tipo]||0));
-
-    const secaoLabel = { contrato: 'Contratos', avulsa: 'Avulsas', multa: 'Multas' };
-    let ultimoTipo = null;
-
-    tbody.innerHTML = gruposOrdenados.map((g, idx) => {
-        const secHeader = (filtroTipo === 'todos' && g.tipo !== ultimoTipo)
-            ? (() => { ultimoTipo = g.tipo; return `<tr><td colspan="6" style="padding:10px 12px 4px;font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;background:#f8fafc;border-top:2px solid #e2e8f0;">${secaoLabel[g.tipo]||g.tipo}</td></tr>`; })()
-            : '';
-
-        const pendentes = g.itens.filter(d => d.status !== 'pago' && d.status !== 'recebido');
-        const pagas     = g.itens.filter(d => d.status === 'pago' || d.status === 'recebido');
-        const vencidos  = pendentes.filter(d => d.data_vencimento && d.data_vencimento < hoje);
-        const totalPend = pendentes.reduce((s,d) => s + parseFloat(d.valor||0), 0);
-        const totalRec  = pagas.reduce((s,d) => s + parseFloat(d.valor||0), 0);
-        const proxVenc  = pendentes.filter(d => d.data_vencimento).map(d => d.data_vencimento).sort()[0];
-        const hasVenc   = vencidos.length > 0;
-        const cidStr    = g.clienteId != null ? g.clienteId : 'null';
-        const cliEsc    = (g.cliente||'').replace(/'/g,"\\'");
-
-        const subLinhas = g.itens.map(d => {
-            const isPago  = d.status === 'pago' || d.status === 'recebido';
-            const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
-            const stLabel = isPago ? (d.tipo === 'avulsa' ? 'recebido' : 'pago') : 'pendente';
-            const desc    = (d.descricao||'').replace(/'/g,"\\'");
-            return `<tr>
-                <td style="padding:7px 10px;width:32px;text-align:center;">
-                    ${d.tipo === 'contrato' ? `<input type="checkbox" class="chk-periodo" data-id="${d.id}" onchange="atualizarBtnExcluir(${idx})" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">` : ''}
-                </td>
-                <td style="padding:7px 10px;"><span class="badge-tipo ${d.tipo}">${tipoLabel(d.tipo)}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
-                <td style="padding:7px 10px;font-size:.8rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
-                <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
-                <td style="padding:7px 10px;"><span class="badge-status ${stLabel}">${stLabel}</span></td>
-                <td style="padding:7px 10px;font-size:.78rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
-                <td style="padding:7px 10px;text-align:center;">
-                    <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
-                        <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_${d.tipo}_${d.id}')" title="Ações">⋯</button>
-                        <div id="locmenu_cr_${d.tipo}_${d.id}" class="loc-menu" style="display:none;right:0;">
-                            ${!isPago ? `<button onclick="closeLocMenus();abrirBaixaConCtx(${cidStr},'${cliEsc}','${d.tipo}',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>` : ''}
-                            ${!isPago && d.tipo === 'contrato' ? `<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
-                            ${!isPago && d.tipo === 'multa' ? `<button onclick="closeLocMenus();abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
-                            ${d.tipo === 'contrato' ? `<button class="danger" onclick="closeLocMenus();excluirPeriodoConCtx(${cidStr},'${cliEsc}',${d.id})"><i class="fas fa-trash"></i> Excluir</button>` : ''}
-                            ${d.tipo === 'multa' ? `<button class="danger" onclick="closeLocMenus();excluirMultaCR(${d.id})"><i class="fas fa-trash"></i> Excluir</button>` : ''}
-                            ${d.tipo === 'avulsa' ? `<button onclick="closeLocMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button><button class="danger" onclick="closeLocMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>` : ''}
-                        </div>
-                    </div>
-                </td>
-            </tr>`;
-        }).join('');
-
-        return `
-        <tr class="grupo-row" onclick="toggleGrupo(${idx})" style="cursor:pointer;${hasVenc ? 'border-left:3px solid #fca5a5;' : 'border-left:3px solid transparent;'}">
-            <td>
-                <div style="font-weight:700;font-size:.88rem;color:#0f172a;">${g.cliente}</div>
-                <div style="font-size:.72rem;color:#94a3b8;margin-top:2px;">${g.itens.length} entrada${g.itens.length>1?'s':''}</div>
-            </td>
-            <td>
-                ${vencidos.length>0 ? `<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:2px 8px;font-size:.7rem;font-weight:600;">${vencidos.length} atrasad${vencidos.length>1?'os':'o'}</span>` : ''}
-                ${(pendentes.length-vencidos.length)>0 ? `<span style="background:#fefce8;color:#ca8a04;border:1px solid #fde68a;border-radius:4px;padding:2px 8px;font-size:.7rem;font-weight:600;margin-left:${vencidos.length>0?'4px':'0'};">${pendentes.length-vencidos.length} pendente${(pendentes.length-vencidos.length)>1?'s':''}</span>` : ''}
-                ${pagas.length>0 ? `<span style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;font-size:.7rem;font-weight:600;margin-left:${pendentes.length>0?'4px':'0'};">${pagas.length} paga${pagas.length>1?'s':''}</span>` : ''}
-            </td>
-            <td style="font-size:.82rem;${hasVenc ? 'color:#dc2626;font-weight:700;' : 'color:#374151;'}">
-                ${proxVenc ? fmtDate(proxVenc) + (hasVenc ? ' ⚠' : '') : '—'}
-            </td>
-            <td style="font-weight:700;color:${totalPend>0 ? '#d97706' : '#94a3b8'};">${totalPend>0 ? fmtCurrency(totalPend) : '—'}</td>
-            <td style="font-weight:700;color:${totalRec>0 ? '#16a34a' : '#94a3b8'};">${totalRec>0 ? fmtCurrency(totalRec) : '—'}</td>
-            <td style="color:#94a3b8;text-align:right;padding-right:12px;">
-                <i class="fas fa-chevron-right" id="chev_${idx}" style="transition:transform .2s;"></i>
-            </td>
-        </tr>
-        <tr id="det_${idx}" class="detail-row" data-cid="${g.clienteId ?? ''}" style="display:none;">
-            <td colspan="6" style="padding:0;">
-                <div style="border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background:#f9fafb;border-bottom:1px solid #f1f5f9;">
-                        <div style="display:flex;gap:20px;font-size:.75rem;color:#6b7280;flex-wrap:wrap;">
-                            <span>Recebido: <strong style="color:#16a34a;">${fmtCurrency(totalRec)}</strong></span>
-                            <span>Pendente: <strong style="color:${totalPend > 0 ? '#92400e' : '#6b7280'};">${fmtCurrency(totalPend)}</strong></span>
-                            <span>Total: <strong style="color:#374151;">${fmtCurrency(totalPend + totalRec)}</strong></span>
-                        </div>
-                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                            <button id="btnBaixaSel_${idx}" onclick="baixaSelecionados(${idx})"
-                                style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
-                                <i class="fas fa-check"></i> <span id="lblBaixaSel_${idx}">Dar Baixa</span>
-                            </button>
-                            <button id="btnAsaasSel_${idx}" onclick="asaasSelecionados(${idx})"
-                                style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #ddd6fe;background:#f5f3ff;color:#7c3aed;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
-                                <i class="fas fa-bolt"></i> <span id="lblAsaasSel_${idx}">Asaas</span>
-                            </button>
-                            <button id="btnExcluirSel_${idx}" onclick="excluirSelecionados(${idx})"
-                                style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
-                                <i class="fas fa-trash"></i> <span id="lblExcluirSel_${idx}">Excluir</span>
-                            </button>
-                            <button onclick="exportarPdfCliente(${cidStr},'${cliEsc}')"
-                                style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
-                                <i class="fas fa-file-pdf"></i> PDF
-                            </button>
-                        </div>
-                    </div>
-                    <div style="overflow-x:auto;">
-                        <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
-                            <thead><tr style="border-bottom:1px solid #e2e8f0;">
-                                <th style="padding:6px 10px;background:#f1f5f9;width:32px;text-align:center;"><input type="checkbox" onchange="selecionarTodos(${idx},this)" title="Selecionar todos" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;"></th>
-                                ${thS('Tipo')}${thS('Placa')}${thS('Descrição')}${thS('Valor')}${thS('Vencimento')}${thS('Status')}${thS('Recebido em')}${thS('Ações')}
-                            </tr></thead>
-                            <tbody>${subLinhas || '<tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Sem registros</td></tr>'}</tbody>
-                        </table>
+function renderTableContratos(lista) {
+    document.getElementById('badge-contratos').textContent = lista.length;
+    _setSumRow(lista, 'sum-contratos-pend', 'sum-contratos-rec');
+    const tbody = document.getElementById('tabela-contratos');
+    if (!lista.length) { tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8;">Nenhum contrato encontrado</td></tr>'; return; }
+    tbody.innerHTML = lista.map(d => {
+        const isPago  = d.status==='pago'||d.status==='recebido';
+        const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
+        const desc    = (d.descricao||'').replace(/'/g,"\\'");
+        const cliEsc  = (d.cliente||'').replace(/'/g,"\\'");
+        return `<tr>
+            <td style="width:32px;text-align:center;"><input type="checkbox" class="chk-contrato" data-id="${d.id}" onchange="atualizarBtnCardContratos()" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;"></td>
+            <td style="font-size:.85rem;">${d.cliente||'—'}</td>
+            <td style="font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
+            <td style="font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+            <td style="font-weight:700;">${fmtCurrency(d.valor)}</td>
+            <td style="font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
+            <td><span class="badge-status ${isPago?'pago':'pendente'}">${isPago?'pago':'pendente'}</span></td>
+            <td style="font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
+            <td style="text-align:center;">
+                <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
+                    <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_contrato_${d.id}')" title="Ações">⋯</button>
+                    <div id="locmenu_cr_contrato_${d.id}" class="loc-menu" style="display:none;">
+                        ${!isPago ? `<button onclick="closeLocMenus();abrirBaixa('contrato',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>` : ''}
+                        ${!isPago ? `<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
+                        <button class="danger" onclick="closeLocMenus();excluirPeriodo(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
                     </div>
                 </div>
             </td>
         </tr>`;
     }).join('');
-
-    // Ativa sort nas sub-tabelas do acordeão
-    if (typeof makeSortable === 'function')
-        tbody.querySelectorAll('.detail-row table').forEach(t => makeSortable(t));
 }
 
-// ── Acordeão ──────────────────────────────────────────────────────────────────
-function toggleGrupo(idx) {
-    const det  = document.getElementById('det_' + idx);
-    const chev = document.getElementById('chev_' + idx);
-    if (!det) return;
-    const isOpen = det.style.display !== 'none';
-    det.style.display = isOpen ? 'none' : 'table-row';
-    if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+function renderTableMultas(lista) {
+    document.getElementById('badge-multas').textContent = lista.length;
+    _setSumRow(lista, 'sum-multas-pend', 'sum-multas-rec');
+    const tbody = document.getElementById('tabela-multas');
+    if (!lista.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;">Nenhuma multa encontrada</td></tr>'; return; }
+    tbody.innerHTML = lista.map(d => {
+        const isPago  = d.status==='pago'||d.status==='recebido';
+        const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
+        const desc    = (d.descricao||'').replace(/'/g,"\\'");
+        const cliEsc  = (d.cliente||'').replace(/'/g,"\\'");
+        return `<tr>
+            <td style="font-size:.85rem;">${d.cliente||'Sem motorista'}</td>
+            <td style="font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
+            <td style="font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+            <td style="font-weight:700;">${fmtCurrency(d.valor)}</td>
+            <td style="font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
+            <td><span class="badge-status ${isPago?'pago':'pendente'}">${isPago?'pago':'pendente'}</span></td>
+            <td style="font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
+            <td style="text-align:center;">
+                <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
+                    <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_multa_${d.id}')" title="Ações">⋯</button>
+                    <div id="locmenu_cr_multa_${d.id}" class="loc-menu" style="display:none;">
+                        ${!isPago ? `<button onclick="closeLocMenus();abrirBaixa('multa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>` : ''}
+                        ${!isPago ? `<button onclick="closeLocMenus();abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
+                        <button class="danger" onclick="closeLocMenus();excluirMultaCR(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
+                    </div>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
 }
 
-function reabrirDetalhe(clienteId) {
-    if (clienteId == null) return;
-    const det = document.querySelector(`.detail-row[data-cid="${clienteId}"]`);
-    if (det && det.style.display === 'none') toggleGrupo(det.id.replace('det_', ''));
+function renderTableAvulsas(lista) {
+    document.getElementById('badge-avulsas').textContent = lista.length;
+    _setSumRow(lista, 'sum-avulsas-pend', 'sum-avulsas-rec');
+    const tbody = document.getElementById('tabela-avulsas');
+    if (!lista.length) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">Nenhuma cobrança avulsa encontrada</td></tr>'; return; }
+    tbody.innerHTML = lista.map(d => {
+        const isPago  = d.status==='pago'||d.status==='recebido';
+        const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
+        const desc    = (d.descricao||'').replace(/'/g,"\\'");
+        const cliEsc  = (d.cliente||'').replace(/'/g,"\\'");
+        return `<tr>
+            <td style="font-size:.85rem;">${d.cliente||'—'}</td>
+            <td style="font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+            <td style="font-weight:700;">${fmtCurrency(d.valor)}</td>
+            <td style="font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
+            <td><span class="badge-status ${isPago?'recebido':'pendente'}">${isPago?'recebido':'pendente'}</span></td>
+            <td style="font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
+            <td style="text-align:center;">
+                <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
+                    <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_avulsa_${d.id}')" title="Ações">⋯</button>
+                    <div id="locmenu_cr_avulsa_${d.id}" class="loc-menu" style="display:none;">
+                        ${!isPago ? `<button onclick="closeLocMenus();abrirBaixa('avulsa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>` : ''}
+                        <button onclick="closeLocMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button>
+                        <button class="danger" onclick="closeLocMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
+                    </div>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
 }
 
-function _setHistCtxByCliente(clienteId, clienteNome) {
-    const registros = dados.filter(d =>
-        clienteId != null ? String(d.cliente_id) === String(clienteId)
-                          : (d.cliente || 'Sem cliente') === clienteNome
-    );
-    const total    = registros.reduce((s,d) => s + parseFloat(d.valor||0), 0);
-    const recebido = registros.filter(d => d.status === 'pago' || d.status === 'recebido')
-                              .reduce((s,d) => s + parseFloat(d.valor||0), 0);
-    _histCtx = { clienteId, clienteNome, registros, recebido, pendente: total - recebido, total };
+// ── Seleção em massa — Contratos ──────────────────────────────────────────────
+function selecionarTodosCard(el) {
+    document.querySelectorAll('.chk-contrato').forEach(c => c.checked = el.checked);
+    atualizarBtnCardContratos();
 }
 
-function abrirBaixaConCtx(clienteId, clienteNome, tipo, id, desc, valor) {
-    _setHistCtxByCliente(clienteId, clienteNome);
-    abrirBaixa(tipo, id, desc, valor);
-}
-
-function excluirPeriodoConCtx(clienteId, clienteNome, id) {
-    _setHistCtxByCliente(clienteId, clienteNome);
-    excluirPeriodo(id);
-}
-
-function exportarPdfCliente(clienteId, clienteNome) {
-    _setHistCtxByCliente(clienteId, clienteNome);
-    imprimirHistorico();
-}
-
-// ── Exclusão em massa ─────────────────────────────────────────────────────────
-let _periodosSelecionados = [];
-let _excluirSelecionadosCid = null;
-
-function selecionarTodos(idx, el) {
-    const det = document.getElementById('det_' + idx);
-    if (!det) return;
-    det.querySelectorAll('.chk-periodo').forEach(c => c.checked = el.checked);
-    atualizarBtnExcluir(idx);
-}
-
-function atualizarBtnExcluir(idx) {
-    const det = document.getElementById('det_' + idx);
-    if (!det) return;
-    const n = det.querySelectorAll('.chk-periodo:checked').length;
+function atualizarBtnCardContratos() {
+    const n = document.querySelectorAll('.chk-contrato:checked').length;
     const show = n > 0 ? 'flex' : 'none';
-    const btnEx = document.getElementById('btnExcluirSel_' + idx);
-    const btnBx = document.getElementById('btnBaixaSel_' + idx);
-    const btnAs = document.getElementById('btnAsaasSel_' + idx);
-    if (btnEx) { btnEx.style.display = show; document.getElementById('lblExcluirSel_' + idx).textContent = `Excluir (${n})`; }
-    if (btnBx) { btnBx.style.display = show; document.getElementById('lblBaixaSel_' + idx).textContent = `Dar Baixa (${n})`; }
-    if (btnAs) { btnAs.style.display = show; document.getElementById('lblAsaasSel_' + idx).textContent = `Asaas (${n})`; }
-}
-
-function excluirSelecionados(idx) {
-    const det = document.getElementById('det_' + idx);
-    if (!det) return;
-    _periodosSelecionados = Array.from(det.querySelectorAll('.chk-periodo:checked')).map(c => parseInt(c.dataset.id));
-    if (!_periodosSelecionados.length) return;
-    const cid = det.dataset.cid;
-    _excluirSelecionadosCid = cid !== '' && !isNaN(parseInt(cid)) ? parseInt(cid) : null;
-    const n = _periodosSelecionados.length;
-    abrirModal('Excluir Períodos Selecionados', `
-        <div style="text-align:center;padding:20px 0">
-            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
-            <p style="margin-bottom:8px;font-weight:600;">Excluir ${n} período${n !== 1 ? 's' : ''} selecionado${n !== 1 ? 's' : ''}?</p>
-            <p style="font-size:.8rem;color:#64748b;margin-bottom:20px;">Esta ação não pode ser desfeita.</p>
-            <div style="display:flex;gap:10px;justify-content:center;">
-                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
-                <button class="btn btn-danger" onclick="confirmarExcluirSelecionados()">
-                    <i class="fas fa-trash"></i> Excluir
-                </button>
-            </div>
-        </div>`);
-}
-
-async function confirmarExcluirSelecionados() {
-    const ids = [..._periodosSelecionados];
-    const cid = _excluirSelecionadosCid;
-    fecharModal();
-    let erros = 0;
-    for (const id of ids) {
-        try {
-            const r = await fetch(`/api/cobrancas/${id}`, { method: 'DELETE' });
-            if (!r.ok) erros++;
-        } catch { erros++; }
+    document.getElementById('btnBaixaSelC').style.display   = show;
+    document.getElementById('btnAsaasSelC').style.display   = show;
+    document.getElementById('btnExcluirSelC').style.display = show;
+    if (n > 0) {
+        document.getElementById('lblBaixaSelC').textContent   = `Dar Baixa (${n})`;
+        document.getElementById('lblAsaasSelC').textContent   = `Asaas (${n})`;
+        document.getElementById('lblExcluirSelC').textContent = `Excluir (${n})`;
     }
-    _periodosSelecionados = [];
-    _excluirSelecionadosCid = null;
-    if (erros > 0) showToast(`${ids.length - erros} excluído${ids.length - erros !== 1 ? 's' : ''}, ${erros} com erro`, 'warning');
-    else showToast(`${ids.length} período${ids.length !== 1 ? 's' : ''} excluído${ids.length !== 1 ? 's' : ''} com sucesso`, 'success');
-    await carregarDados();
-    if (cid != null) reabrirDetalhe(cid);
 }
 
-// ── Baixa em massa ────────────────────────────────────────────────────────────
-function baixaSelecionados(idx) {
-    const det = document.getElementById('det_' + idx);
-    if (!det) return;
-    _periodosSelecionados = Array.from(det.querySelectorAll('.chk-periodo:checked')).map(c => parseInt(c.dataset.id));
+function baixaSelecionadosCard() {
+    _periodosSelecionados = Array.from(document.querySelectorAll('.chk-contrato:checked')).map(c => parseInt(c.dataset.id));
     if (!_periodosSelecionados.length) return;
-    const cid = det.dataset.cid;
-    _excluirSelecionadosCid = cid !== '' && !isNaN(parseInt(cid)) ? parseInt(cid) : null;
     const n = _periodosSelecionados.length;
-    const hoje = new Date().toISOString().split('T')[0];
     abrirModal('Dar Baixa em Massa', `
         <div style="padding:4px 0">
-            <p style="margin-bottom:16px;color:#374151;">Confirmar recebimento de <strong>${n} período${n !== 1 ? 's' : ''}</strong>?</p>
-            <div class="form-group">
-                <label>Data de Recebimento</label>
+            <p style="margin-bottom:16px;color:#374151;">Confirmar recebimento de <strong>${n} período${n!==1?'s':''}</strong>?</p>
+            <div class="form-group"><label>Data de Recebimento</label>
                 <input type="date" id="baixaMassaData" class="form-control" value="${hoje}">
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
@@ -749,43 +612,13 @@ function baixaSelecionados(idx) {
         </div>`);
 }
 
-async function confirmarBaixaSelecionados() {
-    const ids = [..._periodosSelecionados];
-    const cid = _excluirSelecionadosCid;
-    const dataRec = document.getElementById('baixaMassaData').value;
-    fecharModal();
-    let erros = 0;
-    for (const id of ids) {
-        try {
-            const r = await fetch('/api/contas-receber/baixa', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tipo: 'contrato', id, data_recebimento: dataRec, desconto: 0 })
-            });
-            if (!r.ok) erros++;
-        } catch { erros++; }
-    }
-    _periodosSelecionados = [];
-    _excluirSelecionadosCid = null;
-    if (erros > 0) showToast(`${ids.length - erros} baixas registradas, ${erros} com erro`, 'warning');
-    else showToast(`${ids.length} baixa${ids.length !== 1 ? 's' : ''} registrada${ids.length !== 1 ? 's' : ''} com sucesso`, 'success');
-    await carregarDados();
-    if (cid != null) reabrirDetalhe(cid);
-}
-
-// ── Asaas em massa ────────────────────────────────────────────────────────────
-function asaasSelecionados(idx) {
-    const det = document.getElementById('det_' + idx);
-    if (!det) return;
-    _periodosSelecionados = Array.from(det.querySelectorAll('.chk-periodo:checked')).map(c => parseInt(c.dataset.id));
+function asaasSelecionadosCard() {
+    _periodosSelecionados = Array.from(document.querySelectorAll('.chk-contrato:checked')).map(c => parseInt(c.dataset.id));
     if (!_periodosSelecionados.length) return;
-    const cid = det.dataset.cid;
-    _excluirSelecionadosCid = cid !== '' && !isNaN(parseInt(cid)) ? parseInt(cid) : null;
     const n = _periodosSelecionados.length;
     abrirModal('Cobrar via Asaas', `
         <div style="padding:4px 0">
-            <p style="margin-bottom:8px;color:#374151;">Gerar cobranças <strong>PIX</strong> no Asaas para <strong>${n} período${n !== 1 ? 's' : ''}</strong>?</p>
-            <p style="font-size:.8rem;color:#64748b;margin-bottom:20px;">Cada período receberá uma cobrança individual.</p>
+            <p style="margin-bottom:8px;color:#374151;">Gerar cobranças <strong>PIX</strong> para <strong>${n} período${n!==1?'s':''}</strong>?</p>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
                 <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
                 <button class="btn" onclick="confirmarAsaasSelecionados()" style="background:#7c3aed;color:#fff;font-weight:600;">
@@ -795,40 +628,70 @@ function asaasSelecionados(idx) {
         </div>`);
 }
 
-async function confirmarAsaasSelecionados() {
+function excluirSelecionadosCard() {
+    _periodosSelecionados = Array.from(document.querySelectorAll('.chk-contrato:checked')).map(c => parseInt(c.dataset.id));
+    if (!_periodosSelecionados.length) return;
+    const n = _periodosSelecionados.length;
+    abrirModal('Excluir Períodos', `
+        <div style="text-align:center;padding:20px 0">
+            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
+            <p style="margin-bottom:8px;font-weight:600;">Excluir ${n} período${n!==1?'s':''} selecionado${n!==1?'s':''}?</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+                <button class="btn btn-danger" onclick="confirmarExcluirSelecionados()"><i class="fas fa-trash"></i> Excluir</button>
+            </div>
+        </div>`);
+}
+
+async function confirmarExcluirSelecionados() {
     const ids = [..._periodosSelecionados];
-    const cid = _excluirSelecionadosCid;
-    fecharModal();
-    let erros = 0;
+    fecharModal(); let erros=0;
+    for (const id of ids) {
+        try { const r=await fetch(`/api/cobrancas/${id}`,{method:'DELETE'}); if(!r.ok) erros++; } catch { erros++; }
+    }
+    _periodosSelecionados=[];
+    showToast(erros>0?`${ids.length-erros} excluídos, ${erros} com erro`:`${ids.length} período${ids.length!==1?'s':''} excluído${ids.length!==1?'s':''}`,erros>0?'warning':'success');
+    carregarDados();
+}
+
+async function confirmarBaixaSelecionados() {
+    const ids=[..._periodosSelecionados];
+    const dataRec=document.getElementById('baixaMassaData').value;
+    fecharModal(); let erros=0;
     for (const id of ids) {
         try {
-            const item = dados.find(d => d.id === id && d.tipo === 'contrato');
-            if (!item) { erros++; continue; }
-            const r = await fetch('/api/cobrar-asaas-contrato-pendente', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    pagamento_id: id,
-                    billing_type: 'PIX',
-                    parcelas: [{ valor: parseFloat(item.valor || 0), data_vencimento: item.data_vencimento || new Date().toISOString().split('T')[0] }]
-                })
-            });
-            if (!r.ok) erros++;
+            const r=await fetch('/api/contas-receber/baixa',{method:'PUT',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({tipo:'contrato',id,data_recebimento:dataRec,desconto:0})});
+            if(!r.ok) erros++;
         } catch { erros++; }
     }
-    _periodosSelecionados = [];
-    _excluirSelecionadosCid = null;
-    if (erros > 0) showToast(`${ids.length - erros} cobrança${ids.length - erros !== 1 ? 's' : ''} gerada${ids.length - erros !== 1 ? 's' : ''}, ${erros} com erro`, 'warning');
-    else showToast(`${ids.length} cobrança${ids.length !== 1 ? 's' : ''} gerada${ids.length !== 1 ? 's' : ''} com sucesso`, 'success');
-    await carregarDados();
-    if (cid != null) reabrirDetalhe(cid);
+    _periodosSelecionados=[];
+    showToast(erros>0?`${ids.length-erros} baixas, ${erros} com erro`:`${ids.length} baixa${ids.length!==1?'s':''} registrada${ids.length!==1?'s':''}`,erros>0?'warning':'success');
+    carregarDados();
+}
+
+async function confirmarAsaasSelecionados() {
+    const ids=[..._periodosSelecionados];
+    fecharModal(); let erros=0;
+    for (const id of ids) {
+        try {
+            const item=dados.find(d=>d.id===id&&d.tipo==='contrato');
+            if(!item){erros++;continue;}
+            const r=await fetch('/api/cobrar-asaas-contrato-pendente',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({pagamento_id:id,billing_type:'PIX',
+                    parcelas:[{valor:parseFloat(item.valor||0),data_vencimento:item.data_vencimento||hoje}]})});
+            if(!r.ok) erros++;
+        } catch { erros++; }
+    }
+    _periodosSelecionados=[];
+    showToast(erros>0?`${ids.length-erros} cobranças geradas, ${erros} com erro`:`${ids.length} cobrança${ids.length!==1?'s':''} gerada${ids.length!==1?'s':''}`,erros>0?'warning':'success');
+    carregarDados();
 }
 
 // ── Modal Baixa ───────────────────────────────────────────────────────────────
 function abrirBaixa(tipo, id, descricao, valor) {
-    pendenteBaixa = { tipo, id };
-    document.getElementById('resumoBaixa').innerHTML =
-        `<strong>${descricao}</strong><br>Valor: <strong>${fmtCurrency(valor)}</strong>`;
+    pendenteBaixa = {tipo, id};
+    document.getElementById('resumoBaixa').innerHTML = `<strong>${descricao}</strong><br>Valor: <strong>${fmtCurrency(valor)}</strong>`;
     document.getElementById('dataBaixaInput').value = hoje;
     document.getElementById('baixaDesconto').value = '0';
     document.getElementById('baixaJustificativa').value = '';
@@ -844,117 +707,122 @@ function fecharModalBaixa() {
 async function confirmarBaixa() {
     if (!pendenteBaixa) return;
     const dataRec  = document.getElementById('dataBaixaInput').value;
-    const desconto = parseFloat(document.getElementById('baixaDesconto').value || 0);
+    const desconto = parseFloat(document.getElementById('baixaDesconto').value||0);
     const justific = document.getElementById('baixaJustificativa').value.trim();
-    if (desconto > 0 && !justific) {
-        showToast('Informe a justificativa do desconto', 'warning');
-        return;
-    }
+    if (desconto>0 && !justific) { showToast('Informe a justificativa do desconto','warning'); return; }
     try {
-        const r = await fetch('/api/contas-receber/baixa', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                ...pendenteBaixa,
-                data_recebimento: dataRec,
-                desconto,
-                justificativa_desconto: justific || null
-            })
-        });
+        const r = await fetch('/api/contas-receber/baixa',{method:'PUT',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({...pendenteBaixa,data_recebimento:dataRec,desconto,justificativa_desconto:justific||null})});
         if (r.ok) {
             fecharModalBaixa();
-            const msg = desconto > 0
-                ? `Baixa registrada com desconto de ${fmtCurrency(desconto)}!`
-                : 'Baixa registrada com sucesso!';
-            showToast(msg, 'success');
-            const cidAntes = _histCtx?.clienteId;
-            await carregarDados();
-            if (cidAntes != null) reabrirDetalhe(cidAntes);
-        } else {
-            showToast('Erro ao registrar baixa', 'error');
-        }
-    } catch { showToast('Erro de conexão', 'error'); }
+            showToast(desconto>0?`Baixa com desconto de ${fmtCurrency(desconto)}!`:'Baixa registrada!','success');
+            carregarDados();
+        } else showToast('Erro ao registrar baixa','error');
+    } catch { showToast('Erro de conexão','error'); }
+}
+
+// ── Excluir Período (contrato) ────────────────────────────────────────────────
+function excluirPeriodo(id) {
+    abrirModal('Excluir Período',`
+        <div style="text-align:center;padding:20px 0">
+            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
+            <p style="margin-bottom:8px;">Excluir este período da cobrança?</p>
+            <p style="font-size:.8rem;color:#64748b;margin-bottom:20px;">Use quando o cliente devolveu o veículo antecipado.</p>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+                <button class="btn btn-danger" onclick="confirmarExcluirPeriodo(${id})"><i class="fas fa-trash"></i> Excluir</button>
+            </div>
+        </div>`);
+}
+
+async function confirmarExcluirPeriodo(id) {
+    try {
+        const r=await fetch(`/api/cobrancas/${id}`,{method:'DELETE'});
+        if(r.ok){fecharModal();showToast('Período excluído','success');carregarDados();}
+        else showToast('Erro ao excluir','error');
+    } catch { showToast('Erro de conexão','error'); }
+}
+
+// ── Excluir Multa ─────────────────────────────────────────────────────────────
+async function excluirMultaCR(id) {
+    confirmarAcao('Excluir Multa','Excluir esta multa permanentemente?',async()=>{
+        const r=await fetch(`/api/multas/${id}`,{method:'DELETE'});
+        if(r.ok){showToast('Multa excluída','success');carregarDados();}
+        else showToast('Erro ao excluir multa','error');
+    });
 }
 
 // ── Modal Cobrança Avulsa ─────────────────────────────────────────────────────
-let _avTipo = 'PIX';
-let _avNParcelas = 1;
+let _avTipo='PIX', _avNParcelas=1;
 
 function abrirModalAvulsa() {
-    document.getElementById('avulsaId').value        = '';
-    document.getElementById('avulsaCliente').value   = '';
-    document.getElementById('avulsaDescricao').value = '';
-    document.getElementById('avulsaValor').value     = '';
-    document.getElementById('avulsaVencimento').value = '';
-    document.getElementById('avulsaObs').value       = '';
-    document.getElementById('tituloModalAvulsa').textContent = 'Nova Cobrança Avulsa';
+    document.getElementById('avulsaId').value='';
+    document.getElementById('avulsaCliente').value='';
+    document.getElementById('avulsaDescricao').value='';
+    document.getElementById('avulsaValor').value='';
+    document.getElementById('avulsaVencimento').value='';
+    document.getElementById('avulsaObs').value='';
+    document.getElementById('tituloModalAvulsa').textContent='Nova Cobrança Avulsa';
     _fecharAsaasAvulsaSection();
-    document.getElementById('modalAvulsa').style.display = 'flex';
+    document.getElementById('modalAvulsa').style.display='flex';
 }
 
 function fecharModalAvulsa() {
-    document.getElementById('modalAvulsa').style.display = 'none';
+    document.getElementById('modalAvulsa').style.display='none';
     _fecharAsaasAvulsaSection();
 }
 
 function _fecharAsaasAvulsaSection() {
-    document.getElementById('avulsaAsaasWrap').style.display = 'none';
-    document.getElementById('avulsaAsaasResultado').style.display = 'none';
-    document.getElementById('avulsaAsaasResultado').innerHTML = '';
-    document.getElementById('btnGerarAsaas').style.display = 'none';
-    document.getElementById('btnToggleAsaas').style.display = '';
-    _avTipo = 'PIX';
-    _avNParcelas = 1;
+    document.getElementById('avulsaAsaasWrap').style.display='none';
+    document.getElementById('avulsaAsaasResultado').style.display='none';
+    document.getElementById('avulsaAsaasResultado').innerHTML='';
+    document.getElementById('btnGerarAsaas').style.display='none';
+    document.getElementById('btnToggleAsaas').style.display='';
+    _avTipo='PIX'; _avNParcelas=1;
 }
 
 function toggleAvulsaAsaas() {
-    const wrap = document.getElementById('avulsaAsaasWrap');
-    const isOpen = wrap.style.display !== 'none';
-    if (isOpen) {
-        _fecharAsaasAvulsaSection();
-    } else {
-        wrap.style.display = 'block';
-        document.getElementById('btnGerarAsaas').style.display = '';
-        document.getElementById('btnToggleAsaas').style.display = 'none';
-        avulsaSetTipo('PIX');
-        avulsaSetParcelas(1);
+    const wrap=document.getElementById('avulsaAsaasWrap');
+    if(wrap.style.display!=='none'){_fecharAsaasAvulsaSection();}
+    else{
+        wrap.style.display='block';
+        document.getElementById('btnGerarAsaas').style.display='';
+        document.getElementById('btnToggleAsaas').style.display='none';
+        avulsaSetTipo('PIX'); avulsaSetParcelas(1);
     }
 }
 
 function avulsaSetTipo(tipo) {
-    _avTipo = tipo;
-    const ativo   = 'border:2px solid #3b82f6;background:#3b82f6;color:#fff;';
-    const inativo = 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;';
-    document.getElementById('btnAvPix').style.cssText    = (tipo === 'PIX'              ? ativo : inativo) + 'flex:1;padding:9px;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;';
-    document.getElementById('btnAvBoleto').style.cssText = (tipo === 'BOLETO_BANCARIO'  ? ativo : inativo) + 'flex:1;padding:9px;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;';
+    _avTipo=tipo;
+    const a='flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
+    const i='flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnAvPix').style.cssText    = tipo==='PIX'?a:i;
+    document.getElementById('btnAvBoleto').style.cssText = tipo==='BOLETO_BANCARIO'?a:i;
 }
 
 function avulsaSetParcelas(n) {
-    _avNParcelas = n;
-    const ativoS  = 'padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;';
-    const inaS    = 'padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;';
-    document.getElementById('btnAvP1').style.cssText = n === 1 ? ativoS : inaS;
-    document.getElementById('btnAvPn').style.cssText = n > 1  ? ativoS : inaS;
-    const sel = document.getElementById('selAvParcelas');
-    sel.style.display = n > 1 ? 'inline-block' : 'none';
-    if (n > 1) sel.value = n;
+    _avNParcelas=n;
+    const aS='padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;';
+    const iS='padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnAvP1').style.cssText=n===1?aS:iS;
+    document.getElementById('btnAvPn').style.cssText=n>1?aS:iS;
+    const sel=document.getElementById('selAvParcelas');
+    sel.style.display=n>1?'inline-block':'none';
+    if(n>1) sel.value=n;
     _avulsaRenderParcelas(n);
 }
 
-function _avulsaRecalcParcelas() {
-    if (_avNParcelas > 1) _avulsaRenderParcelas(_avNParcelas);
-}
+function _avulsaRecalcParcelas(){if(_avNParcelas>1)_avulsaRenderParcelas(_avNParcelas);}
 
 function _avulsaRenderParcelas(n) {
-    const wrap  = document.getElementById('avulsaParcelasWrap');
-    const total = parseFloat(document.getElementById('avulsaValor').value) || 0;
-    const parc  = n > 1 ? Math.round(total / n * 100) / 100 : total;
-    const hoje  = new Date();
-    const pad   = v => String(v).padStart(2,'0');
-    wrap.innerHTML = Array.from({length: n}, (_, i) => {
-        const dt = new Date(hoje); dt.setDate(dt.getDate() + i * 30);
-        const dtStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
-        const label = n === 1 ? 'Vencimento' : `Parcela ${i+1}/${n}`;
+    const wrap=document.getElementById('avulsaParcelasWrap');
+    const total=parseFloat(document.getElementById('avulsaValor').value)||0;
+    const parc=n>1?Math.round(total/n*100)/100:total;
+    const hoje2=new Date(); const pad=v=>String(v).padStart(2,'0');
+    wrap.innerHTML=Array.from({length:n},(_,i)=>{
+        const dt=new Date(hoje2); dt.setDate(dt.getDate()+i*30);
+        const dtStr=`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+        const label=n===1?'Vencimento':`Parcela ${i+1}/${n}`;
         return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px;">
             <label style="font-size:.75rem;font-weight:600;color:#374151;white-space:nowrap;min-width:80px;">${label}</label>
             <input type="date" class="form-control av-parc-data" data-idx="${i}" value="${dtStr}" style="flex:1;">
@@ -963,134 +831,93 @@ function _avulsaRenderParcelas(n) {
     }).join('');
 }
 
-function _avulsaLerParcelas() {
-    return Array.from(document.querySelectorAll('.av-parc-data')).map((el, i) => ({
-        data_vencimento: el.value,
-        valor: parseFloat(document.querySelectorAll('.av-parc-valor')[i]?.value) || 0,
+function _avulsaLerParcelas(){
+    return Array.from(document.querySelectorAll('.av-parc-data')).map((el,i)=>({
+        data_vencimento:el.value,
+        valor:parseFloat(document.querySelectorAll('.av-parc-valor')[i]?.value)||0
     }));
 }
 
 async function confirmarAsaasAvulsa() {
-    const descricao   = document.getElementById('avulsaDescricao').value.trim();
-    const valor       = parseFloat(document.getElementById('avulsaValor').value);
-    const cliente_id  = document.getElementById('avulsaCliente').value;
-    const observacoes = document.getElementById('avulsaObs').value || null;
-
-    if (!descricao || !valor || valor <= 0) { showToast('Descrição e valor são obrigatórios', 'warning'); return; }
-    if (!cliente_id) { showToast('Selecione um cliente para cobrar via Asaas', 'warning'); return; }
-
-    const parcelas = _avulsaLerParcelas();
-    const menorParcela = Math.min(...parcelas.map(p => p.valor));
-    if (menorParcela < 5) { showToast('Valor mínimo por parcela no Asaas é R$ 5,00', 'warning', 6000); return; }
-
-    document.getElementById('btnGerarAsaas').disabled = true;
-    document.getElementById('btnGerarAsaas').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde...';
-
+    const descricao=document.getElementById('avulsaDescricao').value.trim();
+    const valor=parseFloat(document.getElementById('avulsaValor').value);
+    const cliente_id=document.getElementById('avulsaCliente').value;
+    const observacoes=document.getElementById('avulsaObs').value||null;
+    if(!descricao||!valor||valor<=0){showToast('Descrição e valor são obrigatórios','warning');return;}
+    if(!cliente_id){showToast('Selecione um cliente para cobrar via Asaas','warning');return;}
+    const parcelas=_avulsaLerParcelas();
+    if(Math.min(...parcelas.map(p=>p.valor))<5){showToast('Valor mínimo por parcela no Asaas é R$ 5,00','warning',6000);return;}
+    const btn=document.getElementById('btnGerarAsaas');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Aguarde...';
     try {
-        const r = await fetch('/api/cobrar-asaas-avulsa', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ cliente_id, descricao, valor, billing_type: _avTipo,
-                                   parcelas, observacoes })
-        });
-        const data = await r.json();
-        if (!r.ok) { showToast(data.error || 'Erro ao gerar cobrança', 'error'); return; }
-
-        const div = document.getElementById('avulsaAsaasResultado');
-        div.style.display = 'block';
-        const itens = data.parcelas || [];
-        const n = itens.length;
-        const clienteNome  = data.cliente_nome  || '';
-        const clienteTel   = data.cliente_tel   || '';
-        const clienteEmail = data.cliente_email || '';
-
-        div.innerHTML = itens.map((p, i) => {
-            const label = n > 1 ? `<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtCurrency(p.valor)}</div>` : '';
-            const tel = clienteTel.replace(/\D/g,'');
-            const msg = encodeURIComponent(`Olá ${clienteNome}, segue o link de pagamento:\n${p.invoice_url}`);
-            const wa  = tel ? `https://wa.me/55${tel}?text=${msg}` : `https://wa.me/?text=${msg}`;
-            const emailHref = clienteEmail
-                ? `mailto:${clienteEmail}?subject=Cobrança&body=${encodeURIComponent(`Olá ${clienteNome},\n\nLink para pagamento:\n${p.invoice_url}`)}`
-                : '';
-
-            if (_avTipo === 'PIX' && p.pix_qrcode) {
+        const r=await fetch('/api/cobrar-asaas-avulsa',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({cliente_id,descricao,valor,billing_type:_avTipo,parcelas,observacoes})});
+        const data=await r.json();
+        if(!r.ok){showToast(data.error||'Erro ao gerar cobrança','error');return;}
+        const div=document.getElementById('avulsaAsaasResultado');
+        div.style.display='block';
+        const itens=data.parcelas||[]; const n=itens.length;
+        const cliNome=data.cliente_nome||''; const cliTel=data.cliente_tel||''; const cliEmail=data.cliente_email||'';
+        div.innerHTML=itens.map((p,i)=>{
+            const label=n>1?`<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtCurrency(p.valor)}</div>`:'';
+            const tel=cliTel.replace(/\D/g,'');
+            const msg=encodeURIComponent(`Olá ${cliNome}, segue o link de pagamento:\n${p.invoice_url}`);
+            const wa=tel?`https://wa.me/55${tel}?text=${msg}`:`https://wa.me/?text=${msg}`;
+            const emailHref=cliEmail?`mailto:${cliEmail}?subject=Cobrança&body=${encodeURIComponent(`Olá ${cliNome},\n\nLink:\n${p.invoice_url}`)}`:'';
+            if(_avTipo==='PIX'&&p.pix_qrcode){
                 return `<div style="text-align:center;padding:8px 0;${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:12px;':''}">
-                    ${label}
-                    <img src="data:image/png;base64,${p.pix_qrcode}" style="width:160px;height:160px;border-radius:8px;border:1px solid #e2e8f0;">
-                    <div style="font-size:.7rem;color:#64748b;margin-top:6px;word-break:break-all;background:#f8fafc;padding:6px 8px;border-radius:6px;">${p.pix_payload||''}</div>
+                    ${label}<img src="data:image/png;base64,${p.pix_qrcode}" style="width:160px;height:160px;border-radius:8px;border:1px solid #e2e8f0;">
+                    <div style="font-size:.7rem;color:#64748b;margin-top:6px;word-break:break-all;background:#f8fafc;padding:6px;border-radius:6px;">${p.pix_payload||''}</div>
                     <div style="display:flex;gap:6px;margin-top:6px;">
                         <a href="${wa}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
-                        ${emailHref ? `<a href="${emailHref}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fas fa-envelope"></i> E-mail</a>` : ''}
+                        ${emailHref?`<a href="${emailHref}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fas fa-envelope"></i> E-mail</a>`:''}
                     </div>
                 </div>`;
             } else {
-                const bsUrl = p.bank_slip_url || p.invoice_url;
                 return `<div style="padding:8px 0;${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:12px;':''}">
-                    ${label}
-                    <a href="${bsUrl}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#1d4ed8;color:#fff;border-radius:8px;text-decoration:none;font-size:.82rem;font-weight:700;margin-bottom:6px;">
-                        <i class="fas fa-barcode"></i> Abrir Boleto
-                    </a>
-                    <div style="display:flex;gap:6px;">
-                        <a href="${wa}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
-                        ${emailHref ? `<a href="${emailHref}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fas fa-envelope"></i> E-mail</a>` : ''}
-                    </div>
+                    ${label}<a href="${p.bank_slip_url||p.invoice_url}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#1d4ed8;color:#fff;border-radius:8px;text-decoration:none;font-size:.82rem;font-weight:700;margin-bottom:6px;"><i class="fas fa-barcode"></i> Abrir Boleto</a>
+                    <a href="${wa}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
                 </div>`;
             }
         }).join('');
-
-        showToast(n > 1 ? `${n} cobranças geradas no Asaas!` : `Cobrança ${_avTipo === 'PIX' ? 'PIX' : 'Boleto'} gerada!`, 'success');
+        showToast(n>1?`${n} cobranças geradas!`:`Cobrança ${_avTipo==='PIX'?'PIX':'Boleto'} gerada!`,'success');
         carregarDados();
-    } catch { showToast('Erro de conexão', 'error'); }
-    finally {
-        document.getElementById('btnGerarAsaas').disabled = false;
-        document.getElementById('btnGerarAsaas').innerHTML = '<i class="fas fa-paper-plane"></i> Gerar Cobrança';
-    }
+    } catch { showToast('Erro de conexão','error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane"></i> Gerar Cobrança'; }
 }
 
 async function editarAvulsa(id) {
-    const item = dados.find(d => d.tipo === 'avulsa' && d.id === id);
-    if (!item) return;
+    const item=dados.find(d=>d.tipo==='avulsa'&&d.id===id);
+    if(!item) return;
     await carregarClientes();
-    document.getElementById('avulsaId').value         = id;
-    document.getElementById('avulsaDescricao').value  = item.descricao || '';
-    document.getElementById('avulsaValor').value      = item.valor || '';
-    document.getElementById('avulsaVencimento').value = item.data_vencimento || '';
-    document.getElementById('avulsaObs').value        = '';
-    document.getElementById('tituloModalAvulsa').textContent = 'Editar Cobrança Avulsa';
-    document.getElementById('modalAvulsa').style.display = 'flex';
+    document.getElementById('avulsaId').value=id;
+    document.getElementById('avulsaDescricao').value=item.descricao||'';
+    document.getElementById('avulsaValor').value=item.valor||'';
+    document.getElementById('avulsaVencimento').value=item.data_vencimento||'';
+    document.getElementById('avulsaObs').value='';
+    document.getElementById('tituloModalAvulsa').textContent='Editar Cobrança Avulsa';
+    document.getElementById('modalAvulsa').style.display='flex';
 }
 
 async function salvarAvulsa() {
-    const descricao = document.getElementById('avulsaDescricao').value.trim();
-    const valor     = parseFloat(document.getElementById('avulsaValor').value);
-    if (!descricao || !valor || valor <= 0) {
-        showToast('Descrição e valor são obrigatórios', 'warning');
-        return;
-    }
-    const id         = document.getElementById('avulsaId').value;
-    const payload = {
-        cliente_id:     document.getElementById('avulsaCliente').value || null,
-        descricao,
-        valor,
-        data_vencimento: document.getElementById('avulsaVencimento').value || null,
-        observacoes:    document.getElementById('avulsaObs').value || null,
-    };
+    const descricao=document.getElementById('avulsaDescricao').value.trim();
+    const valor=parseFloat(document.getElementById('avulsaValor').value);
+    if(!descricao||!valor||valor<=0){showToast('Descrição e valor são obrigatórios','warning');return;}
+    const id=document.getElementById('avulsaId').value;
+    const payload={cliente_id:document.getElementById('avulsaCliente').value||null,descricao,valor,
+        data_vencimento:document.getElementById('avulsaVencimento').value||null,
+        observacoes:document.getElementById('avulsaObs').value||null};
     try {
-        const url    = id ? `/api/cobrancas-avulsas/${id}` : '/api/cobrancas-avulsas';
-        const method = id ? 'PUT' : 'POST';
-        const r = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-        if (r.ok) {
-            fecharModalAvulsa();
-            showToast(id ? 'Cobrança atualizada!' : 'Cobrança criada!', 'success');
-            carregarDados();
-        } else {
-            showToast('Erro ao salvar cobrança', 'error');
-        }
-    } catch { showToast('Erro de conexão', 'error'); }
+        const url=id?`/api/cobrancas-avulsas/${id}`:'/api/cobrancas-avulsas';
+        const method=id?'PUT':'POST';
+        const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        if(r.ok){fecharModalAvulsa();showToast(id?'Cobrança atualizada!':'Cobrança criada!','success');carregarDados();}
+        else showToast('Erro ao salvar cobrança','error');
+    } catch { showToast('Erro de conexão','error'); }
 }
 
 async function excluirAvulsa(id) {
-    abrirModal('Excluir Cobrança', `
+    abrirModal('Excluir Cobrança',`
         <div style="text-align:center;padding:20px 0">
             <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
             <p style="margin-bottom:20px;">Deseja excluir esta cobrança avulsa?</p>
@@ -1103,215 +930,57 @@ async function excluirAvulsa(id) {
 
 async function confirmarExcluirAvulsa(id) {
     try {
-        const r = await fetch(`/api/cobrancas-avulsas/${id}`, { method: 'DELETE' });
-        if (r.ok) {
-            fecharModal();
-            showToast('Cobrança excluída', 'success');
-            carregarDados();
-        } else {
-            showToast('Erro ao excluir', 'error');
-        }
-    } catch { showToast('Erro de conexão', 'error'); }
-}
-
-// ── Excluir período de contrato (devolução antecipada) ────────────────────────
-function excluirPeriodo(id) {
-    abrirModal('Excluir Período', `
-        <div style="text-align:center;padding:20px 0">
-            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
-            <p style="margin-bottom:8px;">Excluir este período da cobrança?</p>
-            <p style="font-size:.8rem;color:#64748b;margin-bottom:20px;">Use quando o cliente devolveu o veículo antecipado e a semana não deve ser cobrada.</p>
-            <div style="display:flex;gap:10px;justify-content:center;">
-                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
-                <button class="btn btn-danger" onclick="confirmarExcluirPeriodo(${id})">
-                    <i class="fas fa-trash"></i> Excluir
-                </button>
-            </div>
-        </div>`);
-}
-
-async function confirmarExcluirPeriodo(id) {
-    try {
-        const r = await fetch(`/api/cobrancas/${id}`, { method: 'DELETE' });
-        if (r.ok) {
-            fecharModal();
-            showToast('Período excluído com sucesso', 'success');
-            const cidAntes = _histCtx?.clienteId;
-            await carregarDados();
-            if (cidAntes != null) reabrirDetalhe(cidAntes);
-        } else {
-            showToast('Erro ao excluir período', 'error');
-        }
-    } catch { showToast('Erro de conexão', 'error'); }
+        const r=await fetch(`/api/cobrancas-avulsas/${id}`,{method:'DELETE'});
+        if(r.ok){fecharModal();showToast('Cobrança excluída','success');carregarDados();}
+        else showToast('Erro ao excluir','error');
+    } catch { showToast('Erro de conexão','error'); }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fmtCurrency(v) {
-    return 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-}
-function fmtDate(s) {
-    if (!s) return '';
-    const [y,m,d] = s.slice(0,10).split('-');
-    return `${d}/${m}/${y}`;
-}
-function tipoLabel(t) {
-    return t === 'contrato' ? 'Contrato' : t === 'multa' ? 'Multa' : 'Avulsa';
-}
-
-// ── Histórico por Cliente ─────────────────────────────────────────────────────
-let _histCtx = null;  // { clienteNome, registros, recebido, pendente, total }
-
-function imprimirHistorico() {
-    if (!_histCtx) return;
-    const { clienteNome, registros, recebido, pendente, total } = _histCtx;
-    const linhas = registros.map(d => {
-        const isPago = d.status === 'pago' || d.status === 'recebido';
-        const statusLabel = isPago ? (d.tipo === 'avulsa' ? 'recebido' : 'pago') : 'pendente';
-        return `<tr>
-            <td><span class="badge badge-${d.tipo}">${tipoLabel(d.tipo)}</span></td>
-            <td>${d.descricao||'—'}</td>
-            <td style="font-weight:bold;">${fmtCurrency(d.valor)}</td>
-            <td>${fmtDate(d.data_vencimento)||'—'}</td>
-            <td><span class="badge badge-${statusLabel}">${statusLabel}</span></td>
-            <td>${fmtDate(d.data_recebimento)||'—'}</td>
-        </tr>`;
-    }).join('');
-
-    document.getElementById('printArea').innerHTML = `
-        <h2 style="margin-bottom:4px;color:#0f172a;">Histórico Financeiro — ${clienteNome}</h2>
-        <p style="color:#64748b;font-size:12px;margin-bottom:16px;">Emitido em ${new Date().toLocaleDateString('pt-BR')}</p>
-        <div style="display:flex;gap:16px;margin-bottom:20px;">
-            <div class="print-kpi"><div style="color:#16a34a;font-size:11px;font-weight:bold;margin-bottom:4px;">RECEBIDO</div><div style="font-size:18px;font-weight:bold;color:#16a34a;">${fmtCurrency(recebido)}</div></div>
-            <div class="print-kpi"><div style="color:#d97706;font-size:11px;font-weight:bold;margin-bottom:4px;">PENDENTE</div><div style="font-size:18px;font-weight:bold;color:#d97706;">${fmtCurrency(pendente)}</div></div>
-            <div class="print-kpi"><div style="color:#0f172a;font-size:11px;font-weight:bold;margin-bottom:4px;">TOTAL</div><div style="font-size:18px;font-weight:bold;color:#0f172a;">${fmtCurrency(total)}</div></div>
-        </div>
-        <table>
-            <thead><tr>
-                <th>Tipo</th><th>Descrição</th><th>Valor</th>
-                <th>Vencimento</th><th>Status</th><th>Recebido em</th>
-            </tr></thead>
-            <tbody>${linhas}</tbody>
-        </table>`;
-    window.print();
-}
-
-function abrirHistoricoCliente(clienteId, clienteNome) {
-    const registros = dados.filter(d =>
-        clienteId != null ? String(d.cliente_id) === String(clienteId)
-                          : (d.cliente || 'Sem cliente') === clienteNome
-    );
-    const total    = registros.reduce((s,d) => s + parseFloat(d.valor||0), 0);
-    const recebido = registros.filter(d => d.status === 'pago' || d.status === 'recebido')
-                              .reduce((s,d) => s + parseFloat(d.valor||0), 0);
-    const pendente = total - recebido;
-    _histCtx = { clienteId, clienteNome, registros, recebido, pendente, total };
-
-    document.getElementById('tituloHistorico').textContent = clienteNome;
-    document.getElementById('resumoHistorico').innerHTML = `
-        <div style="background:#f0fdf4;border-radius:10px;padding:10px 14px;text-align:center;">
-            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#16a34a;margin-bottom:4px;">Recebido</div>
-            <div style="font-size:1.1rem;font-weight:700;color:#16a34a;">${fmtCurrency(recebido)}</div>
-        </div>
-        <div style="background:#fffbeb;border-radius:10px;padding:10px 14px;text-align:center;">
-            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#d97706;margin-bottom:4px;">Pendente</div>
-            <div style="font-size:1.1rem;font-weight:700;color:#d97706;">${fmtCurrency(pendente)}</div>
-        </div>
-        <div style="background:#f1f5f9;border-radius:10px;padding:10px 14px;text-align:center;">
-            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#475569;margin-bottom:4px;">Total</div>
-            <div style="font-size:1.1rem;font-weight:700;color:#0f172a;">${fmtCurrency(total)}</div>
-        </div>`;
-
-    const th = s => `<th style="padding:8px 6px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;">${s}</th>`;
-    const linhas = registros.map(d => {
-        const isPago  = d.status === 'pago' || d.status === 'recebido';
-        const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
-        const stLabel = isPago ? (d.tipo === 'avulsa' ? 'recebido' : 'pago') : 'pendente';
-        const desc    = (d.descricao||'').replace(/'/g,"\\'");
-        const cliN    = (clienteNome||'').replace(/'/g,"\\'");
-        return `<tr${vencido ? ' style="background:#fff7ed;"' : ''}>
-            <td>${tipoLabel(d.tipo) ? `<span class="badge-tipo ${d.tipo}">${tipoLabel(d.tipo)}</span>` : '—'}</td>
-            <td style="font-size:.82rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
-            <td style="font-weight:700;">${fmtCurrency(d.valor)}</td>
-            <td style="font-size:.82rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
-            <td><span class="badge-status ${stLabel}">${stLabel}</span></td>
-            <td style="font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
-            <td style="white-space:nowrap;text-align:right;">
-                ${!isPago ? `<button class="btn-baixa" onclick="abrirBaixa('${d.tipo}',${d.id},'${desc}',${parseFloat(d.valor||0)})" title="Dar Baixa" style="font-size:.72rem;padding:4px 8px;"><i class="fas fa-check"></i></button>` : ''}
-                ${!isPago && d.tipo === 'contrato' ? `<button onclick="abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliN}')" title="Cobrar via Asaas"
-                    style="background:#7c3aed;color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;font-weight:600;cursor:pointer;margin-left:3px;">
-                    <i class="fas fa-bolt"></i></button>` : ''}
-                ${!isPago && d.tipo === 'multa' ? `<button onclick="abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliN}')" title="Cobrar via Asaas"
-                    style="background:#7c3aed;color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;font-weight:600;cursor:pointer;margin-left:3px;">
-                    <i class="fas fa-bolt"></i></button>` : ''}
-                ${d.tipo === 'contrato' ? `<button class="btn-del" onclick="excluirPeriodo(${d.id})" title="Excluir período (devolução antecipada)" style="font-size:.72rem;padding:4px 7px;margin-left:3px;"><i class="fas fa-trash"></i></button>` : ''}
-                ${d.tipo === 'multa' ? `<button class="btn-del" onclick="excluirMultaCR(${d.id})" title="Excluir multa" style="font-size:.72rem;padding:4px 7px;margin-left:3px;"><i class="fas fa-trash"></i></button>` : ''}
-                ${d.tipo === 'avulsa' ? `<button class="btn-edit" onclick="editarAvulsa(${d.id})" title="Editar" style="font-size:.72rem;padding:4px 7px;"><i class="fas fa-edit"></i></button>
-                <button class="btn-del" onclick="excluirAvulsa(${d.id})" title="Excluir" style="font-size:.72rem;padding:4px 7px;margin-left:3px;"><i class="fas fa-trash"></i></button>` : ''}
-            </td>
-        </tr>`;
-    }).join('');
-
-    document.getElementById('corpoHistorico').innerHTML = `
-        <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
-            <thead><tr style="border-bottom:2px solid #e2e8f0;">
-                ${th('Tipo')}${th('Descrição')}${th('Valor')}${th('Vencimento')}${th('Status')}${th('Recebido em')}${th('Ações')}
-            </tr></thead>
-            <tbody>${linhas || '<tr><td colspan="7" style="text-align:center;padding:20px;color:#94a3b8;">Sem registros</td></tr>'}</tbody>
-        </table>`;
-    const _modTbl = document.querySelector('#corpoHistorico table');
-    if (_modTbl && typeof makeSortable === 'function') makeSortable(_modTbl);
-
-    document.getElementById('modalHistorico').style.display = 'flex';
-}
+function fmtCurrency(v){return 'R$ '+parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+function fmtDate(s){if(!s)return '';const[y,m,d]=s.slice(0,10).split('-');return `${d}/${m}/${y}`;}
 
 // ── Asaas para Contratos Pendentes ────────────────────────────────────────────
-let _acTipo = 'PIX';
-let _acNParcelas = 1;
-let _acValorTotal = 0;
+let _acTipo='PIX', _acNParcelas=1, _acValorTotal=0;
 
-function abrirAsaasContrato(pagId, valor, descricao, cliente) {
-    document.getElementById('asaasContratoPagId').value = pagId;
-    _acValorTotal = valor;
-    _acTipo = 'PIX';
-    _acNParcelas = 1;
-    document.getElementById('resumoAsaasContrato').innerHTML =
-        `<strong>${cliente}</strong><br>${descricao}<br>Valor: <strong>${fmtCurrency(valor)}</strong>`;
-    document.getElementById('acAsaasResultado').style.display = 'none';
-    document.getElementById('acAsaasResultado').innerHTML = '';
-    acSetTipo('PIX');
-    acSetParcelas(1);
-    document.getElementById('modalAsaasContrato').style.display = 'flex';
+function abrirAsaasContrato(pagId,valor,descricao,cliente) {
+    document.getElementById('asaasContratoPagId').value=pagId;
+    _acValorTotal=valor; _acTipo='PIX'; _acNParcelas=1;
+    document.getElementById('resumoAsaasContrato').innerHTML=`<strong>${cliente}</strong><br>${descricao}<br>Valor: <strong>${fmtCurrency(valor)}</strong>`;
+    document.getElementById('acAsaasResultado').style.display='none';
+    document.getElementById('acAsaasResultado').innerHTML='';
+    acSetTipo('PIX'); acSetParcelas(1);
+    document.getElementById('modalAsaasContrato').style.display='flex';
 }
 
 function acSetTipo(tipo) {
-    _acTipo = tipo;
-    const ativo   = 'flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
-    const inativo = 'flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;';
-    document.getElementById('btnACPix').style.cssText    = tipo === 'PIX'             ? ativo : inativo;
-    document.getElementById('btnACBoleto').style.cssText = tipo === 'BOLETO_BANCARIO' ? ativo : inativo;
+    _acTipo=tipo;
+    const a='flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
+    const i='flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnACPix').style.cssText    = tipo==='PIX'?a:i;
+    document.getElementById('btnACBoleto').style.cssText = tipo==='BOLETO_BANCARIO'?a:i;
 }
 
 function acSetParcelas(n) {
-    _acNParcelas = n;
-    const ativoS  = 'padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;';
-    const inaS    = 'padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;';
-    document.getElementById('btnACP1').style.cssText = n === 1 ? ativoS : inaS;
-    document.getElementById('btnACPn').style.cssText = n > 1  ? ativoS : inaS;
-    const sel = document.getElementById('selACParcelas');
-    sel.style.display = n > 1 ? 'inline-block' : 'none';
-    if (n > 1) sel.value = n;
+    _acNParcelas=n;
+    const aS='padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;';
+    const iS='padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnACP1').style.cssText=n===1?aS:iS;
+    document.getElementById('btnACPn').style.cssText=n>1?aS:iS;
+    const sel=document.getElementById('selACParcelas');
+    sel.style.display=n>1?'inline-block':'none';
+    if(n>1) sel.value=n;
     _acRenderParcelas(n);
 }
 
 function _acRenderParcelas(n) {
-    const wrap = document.getElementById('acParcelasWrap');
-    const parc = n > 1 ? Math.round(_acValorTotal / n * 100) / 100 : _acValorTotal;
-    const pad  = v => String(v).padStart(2,'0');
-    const hojeD = new Date();
-    wrap.innerHTML = Array.from({length: n}, (_, i) => {
-        const dt = new Date(hojeD); dt.setDate(dt.getDate() + i * 30);
-        const dtStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
-        const label = n === 1 ? 'Vencimento' : `Parcela ${i+1}/${n}`;
+    const wrap=document.getElementById('acParcelasWrap');
+    const parc=n>1?Math.round(_acValorTotal/n*100)/100:_acValorTotal;
+    const pad=v=>String(v).padStart(2,'0'); const hojeD=new Date();
+    wrap.innerHTML=Array.from({length:n},(_,i)=>{
+        const dt=new Date(hojeD); dt.setDate(dt.getDate()+i*30);
+        const dtStr=`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+        const label=n===1?'Vencimento':`Parcela ${i+1}/${n}`;
         return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px;">
             <label style="font-size:.75rem;font-weight:600;color:#374151;white-space:nowrap;min-width:80px;">${label}</label>
             <input type="date" class="form-control ac-parc-data" value="${dtStr}" style="flex:1;">
@@ -1321,81 +990,52 @@ function _acRenderParcelas(n) {
 }
 
 async function confirmarAsaasContrato() {
-    const pagId    = document.getElementById('asaasContratoPagId').value;
-    const parcelas = Array.from(document.querySelectorAll('.ac-parc-data')).map((el,i) => ({
-        data_vencimento: el.value,
-        valor: parseFloat(document.querySelectorAll('.ac-parc-valor')[i]?.value) || 0,
-    }));
-    const menor = Math.min(...parcelas.map(p => p.valor));
-    if (menor < 5) { showToast('Valor mínimo por parcela no Asaas é R$ 5,00', 'warning', 6000); return; }
-
-    const btn = document.getElementById('btnGerarAsaasContrato');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde...';
-
+    const pagId=document.getElementById('asaasContratoPagId').value;
+    const parcelas=Array.from(document.querySelectorAll('.ac-parc-data')).map((el,i)=>({
+        data_vencimento:el.value,valor:parseFloat(document.querySelectorAll('.ac-parc-valor')[i]?.value)||0}));
+    if(Math.min(...parcelas.map(p=>p.valor))<5){showToast('Valor mínimo por parcela no Asaas é R$ 5,00','warning',6000);return;}
+    const btn=document.getElementById('btnGerarAsaasContrato');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Aguarde...';
     try {
-        const r = await fetch('/api/cobrar-asaas-contrato-pendente', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ pagamento_id: parseInt(pagId), billing_type: _acTipo, parcelas })
-        });
-        const data = await r.json();
-        if (!r.ok) { showToast(data.error || 'Erro ao gerar cobrança', 'error'); return; }
-
-        const div = document.getElementById('acAsaasResultado');
-        div.style.display = 'block';
-        const itens = data.parcelas || [];
-        const n = itens.length;
-        div.innerHTML = itens.map(p => {
-            const tel = (data.cliente_tel||'').replace(/\D/g,'');
-            const msg = encodeURIComponent(`Olá ${data.cliente_nome}, segue o link de pagamento:\n${p.invoice_url}`);
-            const wa  = tel ? `https://wa.me/55${tel}?text=${msg}` : `https://wa.me/?text=${msg}`;
-            const label = n > 1 ? `<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtCurrency(p.valor)}</div>` : '';
-            if (_acTipo === 'PIX' && p.pix_qrcode) {
+        const r=await fetch('/api/cobrar-asaas-contrato-pendente',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({pagamento_id:parseInt(pagId),billing_type:_acTipo,parcelas})});
+        const data=await r.json();
+        if(!r.ok){showToast(data.error||'Erro ao gerar cobrança','error');return;}
+        const div=document.getElementById('acAsaasResultado');
+        div.style.display='block';
+        const itens=data.parcelas||[]; const n=itens.length;
+        div.innerHTML=itens.map(p=>{
+            const tel=(data.cliente_tel||'').replace(/\D/g,'');
+            const msg=encodeURIComponent(`Olá ${data.cliente_nome}, segue o link de pagamento:\n${p.invoice_url}`);
+            const wa=tel?`https://wa.me/55${tel}?text=${msg}`:`https://wa.me/?text=${msg}`;
+            const label=n>1?`<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtCurrency(p.valor)}</div>`:'';
+            if(_acTipo==='PIX'&&p.pix_qrcode){
                 return `<div style="text-align:center;${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:10px;padding-bottom:10px;':''}">
-                    ${label}
-                    <img src="data:image/png;base64,${p.pix_qrcode}" style="width:160px;height:160px;border-radius:8px;border:1px solid #e2e8f0;">
+                    ${label}<img src="data:image/png;base64,${p.pix_qrcode}" style="width:160px;height:160px;border-radius:8px;border:1px solid #e2e8f0;">
                     <div style="font-size:.68rem;color:#64748b;margin-top:5px;word-break:break-all;background:#f8fafc;padding:5px;border-radius:5px;">${p.pix_payload||''}</div>
                     <a href="${wa}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
                 </div>`;
             } else {
                 return `<div style="${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:10px;padding-bottom:10px;':''}">
-                    ${label}
-                    <a href="${p.bank_slip_url||p.invoice_url}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:#1d4ed8;color:#fff;border-radius:7px;text-decoration:none;font-size:.82rem;font-weight:700;margin-bottom:6px;"><i class="fas fa-barcode"></i> Abrir Boleto</a>
+                    ${label}<a href="${p.bank_slip_url||p.invoice_url}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:#1d4ed8;color:#fff;border-radius:7px;text-decoration:none;font-size:.82rem;font-weight:700;margin-bottom:6px;"><i class="fas fa-barcode"></i> Abrir Boleto</a>
                     <a href="${wa}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:5px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
                 </div>`;
             }
         }).join('');
-
-        showToast(n > 1 ? `${n} cobranças geradas!` : `Cobrança ${_acTipo === 'PIX' ? 'PIX' : 'Boleto'} gerada!`, 'success');
+        showToast(n>1?`${n} cobranças geradas!`:`Cobrança ${_acTipo==='PIX'?'PIX':'Boleto'} gerada!`,'success');
         carregarDados();
-    } catch { showToast('Erro de conexão', 'error'); }
-    finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Gerar Cobrança';
-    }
+    } catch { showToast('Erro de conexão','error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane"></i> Gerar Cobrança'; }
 }
 
-window.addEventListener('load', carregarDados);
+// ── ASAAS Multa ───────────────────────────────────────────────────────────────
+let _amMultaId=null, _amTipo='PIX', _amValor=0;
 
-/* ── Excluir Multa de Contas a Receber ───────────────────────── */
-async function excluirMultaCR(id) {
-    confirmarAcao('Excluir Multa', 'Excluir esta multa permanentemente?', async () => {
-        const r = await fetch(`/api/multas/${id}`, { method: 'DELETE' });
-        if (r.ok) { showToast('Multa excluída', 'success'); carregarDados(); }
-        else showToast('Erro ao excluir multa', 'error');
-    });
-}
-
-/* ── ASAAS Multa ──────────────────────────────────────────────── */
-let _amMultaId = null, _amTipo = 'PIX', _amValor = 0;
-function abrirAsaasMulta(multaId, valor, descricao, cliente) {
-    _amMultaId = multaId;
-    _amValor   = valor;
-    _amTipo    = 'PIX';
-    const hoje = new Date(); const pad = v => String(v).padStart(2,'0');
-    const venc = `${hoje.getFullYear()}-${pad(hoje.getMonth()+1)}-${pad(hoje.getDate())}`;
-    abrirModal('Cobrar via ASAAS — Multa', `
+function abrirAsaasMulta(multaId,valor,descricao,cliente) {
+    _amMultaId=multaId; _amValor=valor; _amTipo='PIX';
+    const hoje2=new Date(); const pad=v=>String(v).padStart(2,'0');
+    const venc=`${hoje2.getFullYear()}-${pad(hoje2.getMonth()+1)}-${pad(hoje2.getDate())}`;
+    abrirModal('Cobrar via ASAAS — Multa',`
         <p style="font-size:.85rem;color:#374151;margin-bottom:14px;"><strong>${cliente}</strong><br>${descricao}<br>Valor: <strong>R$ ${parseFloat(valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></p>
         <div style="display:flex;gap:8px;margin-bottom:14px;">
             <button id="btnAMPix" onclick="_amSetTipo('PIX')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">PIX</button>
@@ -1406,59 +1046,60 @@ function abrirAsaasMulta(multaId, valor, descricao, cliente) {
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
             <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
             <button class="btn btn-primary" id="btnGerarAM" onclick="confirmarAsaasMulta()"><i class="fas fa-bolt"></i> Gerar Cobrança</button>
-        </div>
-    `);
-}
-function _amSetTipo(t) {
-    _amTipo = t;
-    const a = 'flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
-    const i = 'flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;';
-    document.getElementById('btnAMPix').style.cssText    = t === 'PIX'             ? a : i;
-    document.getElementById('btnAMBoleto').style.cssText = t === 'BOLETO_BANCARIO' ? a : i;
-}
-async function confirmarAsaasMulta() {
-    const btn = document.getElementById('btnGerarAM');
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde...';
-    const venc = document.getElementById('amVencimento').value;
-    try {
-        const r = await fetch('/api/cobrar-asaas-multa', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({multa_id: _amMultaId, billing_type: _amTipo, data_vencimento: venc})
-        });
-        const d = await r.json();
-        if (!r.ok) { showToast(d.error || 'Erro ao gerar cobrança', 'error'); btn.disabled=false; btn.innerHTML='<i class="fas fa-bolt"></i> Gerar Cobrança'; return; }
-        const div = document.getElementById('amResultado');
-        div.style.display = 'block';
-        let html = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;font-size:.82rem;">
-            <p style="color:#16a34a;font-weight:700;margin-bottom:8px;"><i class="fas fa-check-circle"></i> Cobrança gerada!</p>`;
-        if (d.invoice_url) html += `<a href="${d.invoice_url}" target="_blank" class="btn btn-primary" style="margin-bottom:8px;display:inline-block;font-size:.78rem;">Abrir link de pagamento</a><br>`;
-        if (d.pix_code) html += `<p style="word-break:break-all;font-size:.72rem;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:6px;margin-top:6px;">${d.pix_code}</p>`;
-        html += '</div>';
-        div.innerHTML = html;
-        btn.innerHTML = '<i class="fas fa-check"></i> Gerado';
-        carregarDados();
-    } catch { showToast('Erro ao conectar com ASAAS', 'error'); btn.disabled=false; btn.innerHTML='<i class="fas fa-bolt"></i> Gerar Cobrança'; }
+        </div>`);
 }
 
+function _amSetTipo(t) {
+    _amTipo=t;
+    const a='flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
+    const i='flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnAMPix').style.cssText    = t==='PIX'?a:i;
+    document.getElementById('btnAMBoleto').style.cssText = t==='BOLETO_BANCARIO'?a:i;
+}
+
+async function confirmarAsaasMulta() {
+    const btn=document.getElementById('btnGerarAM');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Aguarde...';
+    const venc=document.getElementById('amVencimento').value;
+    try {
+        const r=await fetch('/api/cobrar-asaas-multa',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({multa_id:_amMultaId,billing_type:_amTipo,data_vencimento:venc})});
+        const d=await r.json();
+        if(!r.ok){showToast(d.error||'Erro ao gerar cobrança','error');btn.disabled=false;btn.innerHTML='<i class="fas fa-bolt"></i> Gerar Cobrança';return;}
+        const div=document.getElementById('amResultado');
+        div.style.display='block';
+        let html=`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;font-size:.82rem;">
+            <p style="color:#16a34a;font-weight:700;margin-bottom:8px;"><i class="fas fa-check-circle"></i> Cobrança gerada!</p>`;
+        if(d.invoice_url) html+=`<a href="${d.invoice_url}" target="_blank" class="btn btn-primary" style="margin-bottom:8px;display:inline-block;font-size:.78rem;">Abrir link de pagamento</a><br>`;
+        if(d.pix_code) html+=`<p style="word-break:break-all;font-size:.72rem;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:6px;margin-top:6px;">${d.pix_code}</p>`;
+        html+='</div>';
+        div.innerHTML=html;
+        btn.innerHTML='<i class="fas fa-check"></i> Gerado';
+        carregarDados();
+    } catch { showToast('Erro ao conectar com ASAAS','error');btn.disabled=false;btn.innerHTML='<i class="fas fa-bolt"></i> Gerar Cobrança'; }
+}
+
+// ── Menus de ação ─────────────────────────────────────────────────────────────
 function toggleLocMenu(e, id) {
     e.stopPropagation();
-    const menu = document.getElementById('locmenu_' + id);
-    const isOpen = menu && menu.style.display !== 'none';
+    const menu=document.getElementById('locmenu_'+id);
+    const isOpen=menu&&menu.style.display!=='none';
     closeLocMenus();
-    if (menu && !isOpen) {
-        const rect = e.currentTarget.getBoundingClientRect();
-        menu.style.position = 'fixed';
-        menu.style.top  = (rect.bottom + 4) + 'px';
-        menu.style.left = 'auto';
-        menu.style.right = (window.innerWidth - rect.right) + 'px';
-        menu.style.display = 'block';
+    if(menu&&!isOpen){
+        const rect=e.currentTarget.getBoundingClientRect();
+        menu.style.position='fixed';
+        menu.style.top=(rect.bottom+4)+'px';
+        menu.style.left='auto';
+        menu.style.right=(window.innerWidth-rect.right)+'px';
+        menu.style.display='block';
     }
 }
-function closeLocMenus() {
-    document.querySelectorAll('.loc-menu').forEach(m => m.style.display = 'none');
-}
-document.addEventListener('click', closeLocMenus);
+function closeLocMenus(){document.querySelectorAll('.loc-menu').forEach(m=>m.style.display='none');}
+document.addEventListener('click',closeLocMenus);
+
+window.addEventListener('load', carregarDados);
 </script>
+
 <style>
 .loc-menu-btn { background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:3px 9px;font-size:.95rem;cursor:pointer;color:#475569;letter-spacing:2px;line-height:1; }
 .loc-menu-btn:hover { background:#e2e8f0; }
