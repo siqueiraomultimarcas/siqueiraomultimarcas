@@ -152,23 +152,52 @@
     </div>
 </div>
 
-<!-- Modal Histórico por Cliente -->
-<div id="modalHistorico" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-            <div style="font-size:1.05rem;font-weight:700;color:#0f172a;">
+<!-- Modal Histórico por Cliente — full screen -->
+<div id="modalHistorico" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:flex-start;justify-content:center;padding:24px;">
+    <div style="background:#fff;border-radius:16px;padding:28px 32px;width:100%;max-width:900px;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;height:calc(100vh - 48px);">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-shrink:0;">
+            <div style="font-size:1.1rem;font-weight:700;color:#0f172a;">
                 <i class="fas fa-user-clock" style="color:#2563eb;margin-right:8px;"></i>
                 <span id="tituloHistorico">Histórico do Cliente</span>
             </div>
-            <button onclick="document.getElementById('modalHistorico').style.display='none'"
-                    style="background:none;border:none;font-size:1.2rem;color:#94a3b8;cursor:pointer;">
-                <i class="fas fa-times"></i>
-            </button>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button onclick="imprimirHistorico()"
+                        style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:none;background:#dc2626;color:#fff;font-size:.78rem;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-file-pdf"></i> Exportar PDF
+                </button>
+                <button onclick="document.getElementById('modalHistorico').style.display='none'"
+                        style="background:none;border:none;font-size:1.3rem;color:#94a3b8;cursor:pointer;padding:4px 8px;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
-        <div id="resumoHistorico" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;"></div>
-        <div id="corpoHistorico"></div>
+        <!-- KPIs -->
+        <div id="resumoHistorico" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;flex-shrink:0;"></div>
+        <!-- Tabela com scroll apenas se necessário -->
+        <div id="corpoHistorico" style="flex:1;overflow-y:auto;"></div>
     </div>
 </div>
+
+<!-- Área de impressão (invisível em tela, visível no PDF) -->
+<div id="printArea" style="display:none;"></div>
+<style>
+@media print {
+    body > * { display: none !important; }
+    #printArea { display: block !important; font-family: Arial, sans-serif; padding: 20px; }
+    #printArea .print-kpi { display: inline-block; width: 30%; text-align: center;
+                             border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+    #printArea table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12px; }
+    #printArea th { background: #f1f5f9; padding: 8px; text-align: left; border-bottom: 2px solid #e2e8f0; }
+    #printArea td { padding: 7px 8px; border-bottom: 1px solid #e2e8f0; }
+    #printArea .badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
+    #printArea .badge-contrato { background:#dbeafe; color:#1d4ed8; }
+    #printArea .badge-multa    { background:#fee2e2; color:#b91c1c; }
+    #printArea .badge-avulsa   { background:#f0fdf4; color:#15803d; }
+    #printArea .badge-pago     { background:#dcfce7; color:#15803d; }
+    #printArea .badge-pendente { background:#fef3c7; color:#92400e; }
+}
+</style>
 
 <!-- Modal Asaas para Contratos Pendentes -->
 <div id="modalAsaasContrato" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
@@ -726,12 +755,49 @@ function tipoLabel(t) {
 }
 
 // ── Histórico por Cliente ─────────────────────────────────────────────────────
+let _histCtx = null;  // { clienteNome, registros, recebido, pendente, total }
+
+function imprimirHistorico() {
+    if (!_histCtx) return;
+    const { clienteNome, registros, recebido, pendente, total } = _histCtx;
+    const linhas = registros.map(d => {
+        const isPago = d.status === 'pago' || d.status === 'recebido';
+        const statusLabel = isPago ? (d.tipo === 'avulsa' ? 'recebido' : 'pago') : 'pendente';
+        return `<tr>
+            <td><span class="badge badge-${d.tipo}">${tipoLabel(d.tipo)}</span></td>
+            <td>${d.descricao||'—'}</td>
+            <td style="font-weight:bold;">${fmtCurrency(d.valor)}</td>
+            <td>${fmtDate(d.data_vencimento)||'—'}</td>
+            <td><span class="badge badge-${statusLabel}">${statusLabel}</span></td>
+            <td>${fmtDate(d.data_recebimento)||'—'}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('printArea').innerHTML = `
+        <h2 style="margin-bottom:4px;color:#0f172a;">Histórico Financeiro — ${clienteNome}</h2>
+        <p style="color:#64748b;font-size:12px;margin-bottom:16px;">Emitido em ${new Date().toLocaleDateString('pt-BR')}</p>
+        <div style="display:flex;gap:16px;margin-bottom:20px;">
+            <div class="print-kpi"><div style="color:#16a34a;font-size:11px;font-weight:bold;margin-bottom:4px;">RECEBIDO</div><div style="font-size:18px;font-weight:bold;color:#16a34a;">${fmtCurrency(recebido)}</div></div>
+            <div class="print-kpi"><div style="color:#d97706;font-size:11px;font-weight:bold;margin-bottom:4px;">PENDENTE</div><div style="font-size:18px;font-weight:bold;color:#d97706;">${fmtCurrency(pendente)}</div></div>
+            <div class="print-kpi"><div style="color:#0f172a;font-size:11px;font-weight:bold;margin-bottom:4px;">TOTAL</div><div style="font-size:18px;font-weight:bold;color:#0f172a;">${fmtCurrency(total)}</div></div>
+        </div>
+        <table>
+            <thead><tr>
+                <th>Tipo</th><th>Descrição</th><th>Valor</th>
+                <th>Vencimento</th><th>Status</th><th>Recebido em</th>
+            </tr></thead>
+            <tbody>${linhas}</tbody>
+        </table>`;
+    window.print();
+}
+
 function abrirHistoricoCliente(clienteId, clienteNome) {
     const registros = dados.filter(d => String(d.cliente_id) === String(clienteId));
     const total     = registros.reduce((s,d) => s + parseFloat(d.valor||0), 0);
     const recebido  = registros.filter(d => d.status === 'pago' || d.status === 'recebido')
                                .reduce((s,d) => s + parseFloat(d.valor||0), 0);
     const pendente  = total - recebido;
+    _histCtx = { clienteNome, registros, recebido, pendente, total };
 
     document.getElementById('tituloHistorico').textContent = clienteNome;
     document.getElementById('resumoHistorico').innerHTML = `
