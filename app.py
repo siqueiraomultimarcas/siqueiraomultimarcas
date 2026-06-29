@@ -2095,6 +2095,39 @@ def get_locacao(id):
     return jsonify(result)
 
 
+def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria):
+    """Gera pagamentos pendentes do período atual até 31/dez do ano vigente."""
+    freq_dias = {'semanal': 7, 'quinzenal': 15, 'mensal': 30}
+    n_dias = freq_dias.get(freq)
+    if not n_dias:
+        return
+    hoje = _date.today()
+    fim_ano = _date(hoje.year, 12, 31)
+    diaria_f = float(diaria or 0)
+    if isinstance(data_inicio, str):
+        data_inicio = _date.fromisoformat(data_inicio)
+    # avança até o primeiro período que ainda não terminou
+    periodo_ini = data_inicio
+    while periodo_ini + timedelta(days=n_dias - 1) < hoje:
+        periodo_ini += timedelta(days=n_dias)
+    while periodo_ini <= fim_ano:
+        periodo_fim = min(periodo_ini + timedelta(days=n_dias - 1), fim_ano)
+        cur.execute('''SELECT COUNT(*) FROM pagamentos_locacao
+                       WHERE locacao_id=%s AND data_inicio <= %s AND data_fim >= %s''',
+                    (locacao_id, periodo_fim, periodo_ini))
+        if cur.fetchone()[0] == 0:
+            dias = (periodo_fim - periodo_ini).days + 1
+            valor_prev = round(diaria_f * dias, 2)
+            cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
+            seq = cur.fetchone()[0]
+            cur.execute('''INSERT INTO pagamentos_locacao
+                               (locacao_id, semana_numero, data_inicio, data_fim,
+                                valor_previsto, valor_pago, desconto, status)
+                           VALUES (%s,%s,%s,%s,%s,0,0,'pendente')''',
+                        (locacao_id, seq, periodo_ini, periodo_fim, valor_prev))
+        periodo_ini = periodo_fim + timedelta(days=1)
+
+
 @app.route('/api/locacoes', methods=['POST'])
 @login_required
 def add_locacao():
@@ -2118,11 +2151,14 @@ def add_locacao():
         cur = conn.cursor()
         cur.execute('''
             INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida, status, checklist, fotos_saida, observacoes, frequencia_cobranca)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
         ''', (data['veiculo_id'], data['cliente_id'], data['data_inicio'], data_fim,
               diaria or None, total, data.get('km_saida') or None, data.get('status', 'ativa'),
               data.get('checklist'), fotos_saida, data.get('observacoes'), freq))
+        new_id = cur.fetchone()[0]
         cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (data['veiculo_id'],))
+        if freq in ('semanal', 'quinzenal', 'mensal') and not data_fim:
+            _gerar_periodos_futuros(cur, new_id, data['data_inicio'], freq, diaria)
         conn.commit()
         cur.close()
         conn.close()
@@ -2173,6 +2209,10 @@ def update_locacao(id):
         if veiculo_antigo != veiculo_novo and status_antigo == 'ativa':
             cur.execute("UPDATE veiculos SET status = 'disponivel' WHERE id = %s", (veiculo_antigo,))
             cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (veiculo_novo,))
+
+        freq_edit = data.get('frequencia_cobranca') or 'avulso'
+        if freq_edit in ('semanal', 'quinzenal', 'mensal') and not data_fim:
+            _gerar_periodos_futuros(cur, id, data.get('data_inicio'), freq_edit, data.get('diaria'))
 
         conn.commit()
     except Exception as e:
