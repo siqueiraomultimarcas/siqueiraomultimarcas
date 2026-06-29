@@ -529,6 +529,7 @@ function renderizar() {
                             ${!isPago && d.tipo === 'contrato' ? `<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
                             ${!isPago && d.tipo === 'multa' ? `<button onclick="closeLocMenus();abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
                             ${d.tipo === 'contrato' ? `<button class="danger" onclick="closeLocMenus();excluirPeriodoConCtx(${cidStr},'${cliEsc}',${d.id})"><i class="fas fa-trash"></i> Excluir</button>` : ''}
+                            ${d.tipo === 'multa' ? `<button class="danger" onclick="closeLocMenus();excluirMultaCR(${d.id})"><i class="fas fa-trash"></i> Excluir</button>` : ''}
                             ${d.tipo === 'avulsa' ? `<button onclick="closeLocMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button><button class="danger" onclick="closeLocMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>` : ''}
                         </div>
                     </div>
@@ -1227,7 +1228,11 @@ function abrirHistoricoCliente(clienteId, clienteNome) {
                 ${!isPago && d.tipo === 'contrato' ? `<button onclick="abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliN}')" title="Cobrar via Asaas"
                     style="background:#7c3aed;color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;font-weight:600;cursor:pointer;margin-left:3px;">
                     <i class="fas fa-bolt"></i></button>` : ''}
+                ${!isPago && d.tipo === 'multa' ? `<button onclick="abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliN}')" title="Cobrar via Asaas"
+                    style="background:#7c3aed;color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;font-weight:600;cursor:pointer;margin-left:3px;">
+                    <i class="fas fa-bolt"></i></button>` : ''}
                 ${d.tipo === 'contrato' ? `<button class="btn-del" onclick="excluirPeriodo(${d.id})" title="Excluir período (devolução antecipada)" style="font-size:.72rem;padding:4px 7px;margin-left:3px;"><i class="fas fa-trash"></i></button>` : ''}
+                ${d.tipo === 'multa' ? `<button class="btn-del" onclick="excluirMultaCR(${d.id})" title="Excluir multa" style="font-size:.72rem;padding:4px 7px;margin-left:3px;"><i class="fas fa-trash"></i></button>` : ''}
                 ${d.tipo === 'avulsa' ? `<button class="btn-edit" onclick="editarAvulsa(${d.id})" title="Editar" style="font-size:.72rem;padding:4px 7px;"><i class="fas fa-edit"></i></button>
                 <button class="btn-del" onclick="excluirAvulsa(${d.id})" title="Excluir" style="font-size:.72rem;padding:4px 7px;margin-left:3px;"><i class="fas fa-trash"></i></button>` : ''}
             </td>
@@ -1360,6 +1365,15 @@ async function confirmarAsaasContrato() {
 }
 
 window.addEventListener('load', carregarDados);
+
+/* ── Excluir Multa de Contas a Receber ───────────────────────── */
+async function excluirMultaCR(id) {
+    confirmarAcao('Excluir Multa', 'Excluir esta multa permanentemente?', async () => {
+        const r = await fetch(`/api/multas/${id}`, { method: 'DELETE' });
+        if (r.ok) { showToast('Multa excluída', 'success'); carregarDados(); }
+        else showToast('Erro ao excluir multa', 'error');
+    });
+}
 
 /* ── ASAAS Multa ──────────────────────────────────────────────── */
 let _amMultaId = null, _amTipo = 'PIX', _amValor = 0;
