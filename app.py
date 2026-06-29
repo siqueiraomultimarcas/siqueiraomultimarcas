@@ -1168,7 +1168,7 @@ def verificar_pagamento(pagamento_id):
 def cancelar_pagamento(pagamento_id):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('DELETE FROM pagamentos_locacao WHERE id=%s', (pagamento_id,))
+    cur.execute("UPDATE pagamentos_locacao SET status='cancelado' WHERE id=%s", (pagamento_id,))
     conn.commit()
     cur.close()
     conn.close()
@@ -3387,6 +3387,7 @@ def get_contas_receber():
             JOIN locacoes l ON l.id = pl.locacao_id
             JOIN veiculos v ON v.id = l.veiculo_id
             JOIN clientes c ON c.id = l.cliente_id
+            WHERE pl.status != 'cancelado'
             UNION ALL
             SELECT
                 'multa'::text AS tipo, m.id,
