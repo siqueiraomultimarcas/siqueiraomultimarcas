@@ -373,18 +373,32 @@ let filtroStatus = 'todos';
 let filtroTipo   = 'todos';
 let pendenteBaixa = null;
 let _periodosSelecionados = [];
+let _obsCache = {};
 
 const hoje = new Date().toISOString().split('T')[0];
 
+// Encode seguro para atributos HTML — evita XSS via interpolação
+const _esc = s => (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function limparFiltros() {
+    document.getElementById('busca').value = '';
+    document.getElementById('filtroCliente').value = '';
+    document.querySelectorAll('#tabsStatus .tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+    document.querySelectorAll('#tabsTipo .tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+    filtroStatus='todos'; filtroTipo='todos';
+    renderizar();
+}
+
 // ── Observações ───────────────────────────────────────────────────────────────
 let _obsAtual = { tipo: null, id: null };
-function abrirObservacao(tipo, id, textoAtual) {
+function abrirObservacao(tipo, id) {
+    const textoAtual = _obsCache[`${tipo}_${id}`] || '';
     _obsAtual = { tipo, id };
     abrirModal('Observação', `
         <div>
             <p style="font-size:.82rem;color:#64748b;margin-bottom:10px;">Anotação interna — visível apenas no sistema.</p>
             <textarea id="txtObservacao" class="form-control" rows="5" placeholder="Ex: Cliente ficou de pagar semana que vem..."
-                style="width:100%;resize:vertical;font-size:.85rem;">${textoAtual||''}</textarea>
+                style="width:100%;resize:vertical;font-size:.85rem;">${_esc(textoAtual)}</textarea>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
                 <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
                 <button class="btn btn-primary" onclick="salvarObservacao()"><i class="fas fa-save"></i> Salvar</button>
@@ -480,6 +494,10 @@ function renderizar() {
     const busca     = document.getElementById('busca').value.toLowerCase();
     const cliFilter = document.getElementById('filtroCliente').value;
 
+    // rebuild obs cache para evitar XSS via onclick
+    _obsCache = {};
+    dados.forEach(d => { if (d.observacao) _obsCache[`${d.tipo}_${d.id}`] = d.observacao; });
+
     const lista = dados.filter(d => {
         const isPago = d.status==='pago'||d.status==='recebido';
         if (filtroStatus==='pendente' && isPago)  return false;
@@ -496,9 +514,9 @@ function renderizar() {
     document.getElementById('card-multas').style.display    = (filtroTipo==='todos'||filtroTipo==='multa')    ? '' : 'none';
     document.getElementById('card-avulsas').style.display   = (filtroTipo==='todos'||filtroTipo==='avulsa')   ? '' : 'none';
 
-    renderTableContratos(lista.filter(d=>d.tipo==='contrato'));
-    renderTableMultas(lista.filter(d=>d.tipo==='multa'));
-    renderTableAvulsas(lista.filter(d=>d.tipo==='avulsa'));
+    renderTableContratos(lista.filter(d=>d.tipo==='contrato'), busca);
+    renderTableMultas(lista.filter(d=>d.tipo==='multa'), busca);
+    renderTableAvulsas(lista.filter(d=>d.tipo==='avulsa'), busca);
 }
 
 function _setSumRow(lista, pendEl, recEl) {
@@ -537,36 +555,52 @@ function _badgesGrupo(s) {
 
 const _thS = s=>`<th style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:#64748b;background:#f8fafc;font-weight:700;white-space:nowrap;">${s}</th>`;
 
-function renderTableContratos(lista) {
+function renderTableContratos(lista, busca) {
     document.getElementById('badge-contratos').textContent = lista.length;
     _setSumRow(lista, 'sum-contratos-pend', 'sum-contratos-rec');
     const tbody = document.getElementById('tabela-contratos');
-    if (!lista.length) { tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8;">Nenhum contrato encontrado</td></tr>'; return; }
-    const grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||''), d=>d.cliente||'—');
+    if (!lista.length) {
+        tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8;">
+            <div style="font-size:2rem;margin-bottom:8px;">📋</div>
+            Nenhum contrato encontrado
+            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
+        </td></tr>`;
+        return;
+    }
+    let grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||''), d=>d.cliente||'—');
+    // vencidos primeiro, depois por pendente decrescente
+    grupos.sort((a,b)=>{
+        const sa=_grupoSummary(a), sb=_grupoSummary(b);
+        if (sa.hasVenc!==sb.hasVenc) return sa.hasVenc?-1:1;
+        return sb.totalPend-sa.totalPend;
+    });
     tbody.innerHTML = grupos.map((g,idx)=>{
         const gId='cg_'+idx; const s=_grupoSummary(g);
+        const autoExpand = !!(busca && busca.length>0);
+        const tel=(g.itens[0]?.cliente_telefone||'').replace(/\D/g,'');
+        const waMsg=encodeURIComponent(`Olá ${g.cliente}, você possui ${fmtCurrency(s.totalPend)} pendente com o Siqueirão Multimarcas.`);
+        const hasObsGrupo=g.itens.some(d=>_obsCache[`contrato_${d.id}`]);
         const subRows = g.itens.map(d=>{
             const isPago=d.status==='pago'||d.status==='recebido';
             const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
             const desc=(d.descricao||'').replace(/'/g,"\\'");
             const cliEsc=(d.cliente||'').replace(/'/g,"\\'");
-            const obsEsc=(d.observacao||'').replace(/'/g,"\\'").replace(/\n/g,' ');
-            const hasObs=!!(d.observacao&&d.observacao.trim());
+            const hasObs=!!_obsCache[`contrato_${d.id}`];
             return `<tr style="background:#fafbfc;">
                 <td style="padding:7px 10px;width:32px;text-align:center;"><input type="checkbox" class="chk-contrato" data-id="${d.id}" onchange="atualizarBtnCardContratos()" style="cursor:pointer;width:14px;height:14px;accent-color:#2563eb;"></td>
                 <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
-                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
                 <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
                 <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
                 <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':'pendente'}">${isPago?'pago':'pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${obsEsc}" style="color:#f59e0b;cursor:help;font-size:.9rem;">💬</span>`:''}</td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['contrato_'+d.id])}" style="color:#f59e0b;cursor:help;font-size:.9rem;">💬</span>`:''}</td>
                 <td style="padding:7px 10px;text-align:center;">
                     <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
                         <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_contrato_${d.id}')" title="Ações">⋯</button>
                         <div id="locmenu_cr_contrato_${d.id}" class="loc-menu" style="display:none;">
                             ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('contrato',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
                             ${!isPago?`<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>`:''}
-                            <button onclick="closeLocMenus();abrirObservacao('contrato',${d.id},'${obsEsc}')"><i class="fas fa-sticky-note"></i> Observação</button>
+                            <button onclick="closeLocMenus();abrirObservacao('contrato',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
                             <button class="danger" onclick="closeLocMenus();excluirPeriodo(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
                         </div>
                     </div>
@@ -582,21 +616,22 @@ function renderTableContratos(lista) {
                             <input type="checkbox" id="chkG_${gId}" onchange="selecionarGrupo('${gId}',this)" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">
                         </div>
                         <div>
-                            <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${g.cliente}</div>
-                            <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} entrada${g.itens.length>1?'s':''}</div>
+                            <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${_esc(g.cliente)}${hasObsGrupo?' <span title="Grupo tem observações" style="font-size:.85rem;">💬</span>':''}</div>
+                            <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} período${g.itens.length>1?'s':''}</div>
                         </div>
                         <div>${_badgesGrupo(s)}</div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:20px;">
+                    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
                         ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
                         ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d97706;">${fmtCurrency(s.totalPend)}</div></div>`:''}
                         ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
+                        ${tel&&s.totalPend>0?`<a href="https://wa.me/55${tel}?text=${waMsg}" target="_blank" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;background:#25d366;color:#fff;border-radius:6px;padding:5px 10px;font-size:.75rem;font-weight:600;text-decoration:none;"><i class="fab fa-whatsapp"></i> Cobrar</a>`:''}
                         <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
                     </div>
                 </div>
             </td>
         </tr>
-        <tr id="det_${gId}" style="display:none;">
+        <tr id="det_${gId}" style="display:${autoExpand?'table-row':'none'};">
             <td colspan="9" style="padding:0;">
                 <div style="border-top:1px solid #e2e8f0;">
                     <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
@@ -610,37 +645,54 @@ function renderTableContratos(lista) {
             </td>
         </tr>`;
     }).join('');
+    // atualizar chevrons para grupos auto-expandidos
+    if (busca) grupos.forEach((_,idx)=>{ const c=document.getElementById('chev_cg_'+idx); if(c) c.style.transform='rotate(90deg)'; });
 }
 
-function renderTableMultas(lista) {
+function renderTableMultas(lista, busca) {
     document.getElementById('badge-multas').textContent = lista.length;
     _setSumRow(lista, 'sum-multas-pend', 'sum-multas-rec');
     const tbody = document.getElementById('tabela-multas');
-    if (!lista.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;">Nenhuma multa encontrada</td></tr>'; return; }
-    const grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||'sem'), d=>d.cliente||'Sem motorista');
+    if (!lista.length) {
+        tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;">
+            <div style="font-size:2rem;margin-bottom:8px;">🚫</div>
+            Nenhuma multa encontrada
+            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
+        </td></tr>`;
+        return;
+    }
+    let grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||'sem'), d=>d.cliente||'Sem motorista');
+    grupos.sort((a,b)=>{
+        const sa=_grupoSummary(a), sb=_grupoSummary(b);
+        if (sa.hasVenc!==sb.hasVenc) return sa.hasVenc?-1:1;
+        return sb.totalPend-sa.totalPend;
+    });
     tbody.innerHTML = grupos.map((g,idx)=>{
         const gId='mg_'+idx; const s=_grupoSummary(g);
+        const autoExpand = !!(busca && busca.length>0);
+        const tel=(g.itens[0]?.cliente_telefone||'').replace(/\D/g,'');
+        const waMsg=encodeURIComponent(`Olá ${g.cliente}, você possui ${fmtCurrency(s.totalPend)} em multas pendentes com o Siqueirão Multimarcas.`);
+        const hasObsGrupo=g.itens.some(d=>_obsCache[`multa_${d.id}`]);
         const subRows = g.itens.map(d=>{
             const isPago=d.status==='pago'||d.status==='recebido';
             const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
             const desc=(d.descricao||'').replace(/'/g,"\\'");
             const cliEsc=(d.cliente||'').replace(/'/g,"\\'");
-            const obsEsc=(d.observacao||'').replace(/'/g,"\\'").replace(/\n/g,' ');
-            const hasObs=!!(d.observacao&&d.observacao.trim());
+            const hasObs=!!_obsCache[`multa_${d.id}`];
             return `<tr style="background:#fafbfc;">
                 <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
-                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
                 <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
                 <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
                 <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':'pendente'}">${isPago?'pago':'pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${obsEsc}" style="color:#f59e0b;cursor:help;font-size:.9rem;">💬</span>`:''}</td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['multa_'+d.id])}" style="color:#f59e0b;cursor:help;font-size:.9rem;">💬</span>`:''}</td>
                 <td style="padding:7px 10px;text-align:center;">
                     <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
                         <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_multa_${d.id}')" title="Ações">⋯</button>
                         <div id="locmenu_cr_multa_${d.id}" class="loc-menu" style="display:none;">
                             ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('multa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
                             ${!isPago?`<button onclick="closeLocMenus();abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>`:''}
-                            <button onclick="closeLocMenus();abrirObservacao('multa',${d.id},'${obsEsc}')"><i class="fas fa-sticky-note"></i> Observação</button>
+                            <button onclick="closeLocMenus();abrirObservacao('multa',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
                             <button class="danger" onclick="closeLocMenus();excluirMultaCR(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
                         </div>
                     </div>
@@ -653,21 +705,22 @@ function renderTableMultas(lista) {
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                         <div>
-                            <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${g.cliente}</div>
+                            <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${_esc(g.cliente)}${hasObsGrupo?' <span title="Grupo tem observações" style="font-size:.85rem;">💬</span>':''}</div>
                             <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} multa${g.itens.length>1?'s':''}</div>
                         </div>
                         <div>${_badgesGrupo(s)}</div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:20px;">
+                    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
                         ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
                         ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d97706;">${fmtCurrency(s.totalPend)}</div></div>`:''}
                         ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
+                        ${tel&&s.totalPend>0?`<a href="https://wa.me/55${tel}?text=${waMsg}" target="_blank" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;background:#25d366;color:#fff;border-radius:6px;padding:5px 10px;font-size:.75rem;font-weight:600;text-decoration:none;"><i class="fab fa-whatsapp"></i> Cobrar</a>`:''}
                         <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
                     </div>
                 </div>
             </td>
         </tr>
-        <tr id="det_${gId}" style="display:none;">
+        <tr id="det_${gId}" style="display:${autoExpand?'table-row':'none'};">
             <td colspan="8" style="padding:0;">
                 <div style="border-top:1px solid #e2e8f0;">
                     <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
@@ -680,35 +733,51 @@ function renderTableMultas(lista) {
             </td>
         </tr>`;
     }).join('');
+    if (busca) grupos.forEach((_,idx)=>{ const c=document.getElementById('chev_mg_'+idx); if(c) c.style.transform='rotate(90deg)'; });
 }
 
-function renderTableAvulsas(lista) {
+function renderTableAvulsas(lista, busca) {
     document.getElementById('badge-avulsas').textContent = lista.length;
     _setSumRow(lista, 'sum-avulsas-pend', 'sum-avulsas-rec');
     const tbody = document.getElementById('tabela-avulsas');
-    if (!lista.length) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">Nenhuma cobrança avulsa encontrada</td></tr>'; return; }
-    const grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||'sem'), d=>d.cliente||'—');
+    if (!lista.length) {
+        tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">
+            <div style="font-size:2rem;margin-bottom:8px;">💳</div>
+            Nenhuma cobrança avulsa encontrada
+            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
+        </td></tr>`;
+        return;
+    }
+    let grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||'sem'), d=>d.cliente||'—');
+    grupos.sort((a,b)=>{
+        const sa=_grupoSummary(a), sb=_grupoSummary(b);
+        if (sa.hasVenc!==sb.hasVenc) return sa.hasVenc?-1:1;
+        return sb.totalPend-sa.totalPend;
+    });
     tbody.innerHTML = grupos.map((g,idx)=>{
         const gId='ag_'+idx; const s=_grupoSummary(g);
+        const autoExpand = !!(busca && busca.length>0);
+        const tel=(g.itens[0]?.cliente_telefone||'').replace(/\D/g,'');
+        const waMsg=encodeURIComponent(`Olá ${g.cliente}, você possui ${fmtCurrency(s.totalPend)} em cobranças pendentes com o Siqueirão Multimarcas.`);
+        const hasObsGrupo=g.itens.some(d=>_obsCache[`avulsa_${d.id}`]);
         const subRows = g.itens.map(d=>{
             const isPago=d.status==='pago'||d.status==='recebido';
             const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
             const desc=(d.descricao||'').replace(/'/g,"\\'");
-            const obsEsc=(d.observacao||'').replace(/'/g,"\\'").replace(/\n/g,' ');
-            const hasObs=!!(d.observacao&&d.observacao.trim());
+            const hasObs=!!_obsCache[`avulsa_${d.id}`];
             return `<tr style="background:#fafbfc;">
-                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
                 <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
                 <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
                 <td style="padding:7px 10px;"><span class="badge-status ${isPago?'recebido':'pendente'}">${isPago?'recebido':'pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${obsEsc}" style="color:#f59e0b;cursor:help;font-size:.9rem;">💬</span>`:''}</td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['avulsa_'+d.id])}" style="color:#f59e0b;cursor:help;font-size:.9rem;">💬</span>`:''}</td>
                 <td style="padding:7px 10px;text-align:center;">
                     <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
                         <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_avulsa_${d.id}')" title="Ações">⋯</button>
                         <div id="locmenu_cr_avulsa_${d.id}" class="loc-menu" style="display:none;">
                             ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('avulsa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
                             <button onclick="closeLocMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button>
-                            <button onclick="closeLocMenus();abrirObservacao('avulsa',${d.id},'${obsEsc}')"><i class="fas fa-sticky-note"></i> Observação</button>
+                            <button onclick="closeLocMenus();abrirObservacao('avulsa',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
                             <button class="danger" onclick="closeLocMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
                         </div>
                     </div>
@@ -721,21 +790,22 @@ function renderTableAvulsas(lista) {
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                         <div>
-                            <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${g.cliente}</div>
+                            <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${_esc(g.cliente)}${hasObsGrupo?' <span title="Grupo tem observações" style="font-size:.85rem;">💬</span>':''}</div>
                             <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} cobrança${g.itens.length>1?'s':''}</div>
                         </div>
                         <div>${_badgesGrupo(s)}</div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:20px;">
+                    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
                         ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
                         ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d97706;">${fmtCurrency(s.totalPend)}</div></div>`:''}
                         ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
+                        ${tel&&s.totalPend>0?`<a href="https://wa.me/55${tel}?text=${waMsg}" target="_blank" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;background:#25d366;color:#fff;border-radius:6px;padding:5px 10px;font-size:.75rem;font-weight:600;text-decoration:none;"><i class="fab fa-whatsapp"></i> Cobrar</a>`:''}
                         <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
                     </div>
                 </div>
             </td>
         </tr>
-        <tr id="det_${gId}" style="display:none;">
+        <tr id="det_${gId}" style="display:${autoExpand?'table-row':'none'};">
             <td colspan="7" style="padding:0;">
                 <div style="border-top:1px solid #e2e8f0;">
                     <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
@@ -748,6 +818,7 @@ function renderTableAvulsas(lista) {
             </td>
         </tr>`;
     }).join('');
+    if (busca) grupos.forEach((_,idx)=>{ const c=document.getElementById('chev_ag_'+idx); if(c) c.style.transform='rotate(90deg)'; });
 }
 
 // ── Seleção em massa — Contratos ──────────────────────────────────────────────
