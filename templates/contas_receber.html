@@ -527,6 +527,7 @@ function renderizar() {
                     ${d.tipo === 'contrato' ? `<input type="checkbox" class="chk-periodo" data-id="${d.id}" onchange="atualizarBtnExcluir(${idx})" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">` : ''}
                 </td>
                 <td style="padding:7px 10px;"><span class="badge-tipo ${d.tipo}">${tipoLabel(d.tipo)}</span></td>
+                <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
                 <td style="padding:7px 10px;font-size:.8rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
                 <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
                 <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
@@ -600,9 +601,9 @@ function renderizar() {
                         <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
                             <thead><tr style="border-bottom:1px solid #e2e8f0;">
                                 <th style="padding:6px 10px;background:#f1f5f9;width:32px;text-align:center;"><input type="checkbox" onchange="selecionarTodos(${idx},this)" title="Selecionar todos" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;"></th>
-                                ${thS('Tipo')}${thS('Descrição')}${thS('Valor')}${thS('Vencimento')}${thS('Status')}${thS('Recebido em')}${thS('Ações')}
+                                ${thS('Tipo')}${thS('Placa')}${thS('Descrição')}${thS('Valor')}${thS('Vencimento')}${thS('Status')}${thS('Recebido em')}${thS('Ações')}
                             </tr></thead>
-                            <tbody>${subLinhas || '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Sem registros</td></tr>'}</tbody>
+                            <tbody>${subLinhas || '<tr><td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">Sem registros</td></tr>'}</tbody>
                         </table>
                     </div>
                 </div>

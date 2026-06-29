@@ -3611,7 +3611,7 @@ def get_contas_receber():
                descricao, valor, desconto, justificativa_desconto,
                data_recebimento, data_vencimento,
                status, data_cadastro, cliente_id, locacao_id,
-               data_inicio_period, data_fim_period
+               data_inicio_period, data_fim_period, placa
         FROM (
             SELECT
                 'contrato'::text AS tipo, pl.id,
@@ -3629,7 +3629,8 @@ def get_contas_receber():
                 l.cliente_id AS cliente_id,
                 pl.locacao_id AS locacao_id,
                 pl.data_inicio AS data_inicio_period,
-                pl.data_fim AS data_fim_period
+                pl.data_fim AS data_fim_period,
+                v.placa AS placa
             FROM pagamentos_locacao pl
             JOIN locacoes l ON l.id = pl.locacao_id
             JOIN veiculos v ON v.id = l.veiculo_id
@@ -3651,9 +3652,11 @@ def get_contas_receber():
                 m.motorista_id AS cliente_id,
                 NULL::int AS locacao_id,
                 NULL::date AS data_inicio_period,
-                NULL::date AS data_fim_period
+                NULL::date AS data_fim_period,
+                ve.placa AS placa
             FROM multas m
             LEFT JOIN clientes c ON m.motorista_id = c.id
+            LEFT JOIN veiculos ve ON m.veiculo_id = ve.id
             UNION ALL
             SELECT
                 'avulsa'::text AS tipo, ca.id,
@@ -3669,7 +3672,8 @@ def get_contas_receber():
                 ca.cliente_id AS cliente_id,
                 NULL::int AS locacao_id,
                 NULL::date AS data_inicio_period,
-                NULL::date AS data_fim_period
+                NULL::date AS data_fim_period,
+                NULL::text AS placa
             FROM cobrancas_avulsas ca
             LEFT JOIN clientes c ON ca.cliente_id = c.id
         ) sub
