@@ -465,7 +465,7 @@ function setTab(btn, group) {
     renderizar();
 }
 
-// ── Renderização (agrupada por cliente) ───────────────────────────────────────
+// ── Renderização (agrupada por cliente — acordeão inline) ─────────────────────
 function renderizar() {
     const busca     = document.getElementById('busca').value.toLowerCase();
     const cliFilter = document.getElementById('filtroCliente').value;
@@ -490,7 +490,6 @@ function renderizar() {
         return;
     }
 
-    // Agrupar por cliente (usa cliente_id quando disponível, senão nome)
     const grupos = {};
     lista.forEach(d => {
         const key = d.cliente_id != null ? 'id_' + d.cliente_id : 'nome_' + (d.cliente || '');
@@ -498,7 +497,9 @@ function renderizar() {
         grupos[key].itens.push(d);
     });
 
-    tbody.innerHTML = Object.values(grupos).map(g => {
+    const thS = s => `<th style="padding:6px 10px;font-size:.65rem;text-transform:uppercase;color:#64748b;background:#f1f5f9;font-weight:700;white-space:nowrap;">${s}</th>`;
+
+    tbody.innerHTML = Object.values(grupos).map((g, idx) => {
         const pendentes = g.itens.filter(d => d.status !== 'pago' && d.status !== 'recebido');
         const pagas     = g.itens.filter(d => d.status === 'pago' || d.status === 'recebido');
         const vencidos  = pendentes.filter(d => d.data_vencimento && d.data_vencimento < hoje);
@@ -506,11 +507,33 @@ function renderizar() {
         const totalRec  = pagas.reduce((s,d) => s + parseFloat(d.valor||0), 0);
         const proxVenc  = pendentes.filter(d => d.data_vencimento).map(d => d.data_vencimento).sort()[0];
         const hasVenc   = vencidos.length > 0;
+        const cidStr    = g.clienteId != null ? g.clienteId : 'null';
         const cliEsc    = (g.cliente||'').replace(/'/g,"\\'");
-        const clickArg  = (g.clienteId != null ? g.clienteId : 'null') + ",'" + cliEsc + "'";
 
-        return `<tr class="grupo-row" onclick="abrirHistoricoCliente(${clickArg})"
-                    style="cursor:pointer;${hasVenc ? 'background:#fff7ed;' : ''}">
+        const subLinhas = g.itens.map(d => {
+            const isPago  = d.status === 'pago' || d.status === 'recebido';
+            const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
+            const stLabel = isPago ? (d.tipo === 'avulsa' ? 'recebido' : 'pago') : 'pendente';
+            const desc    = (d.descricao||'').replace(/'/g,"\\'");
+            return `<tr style="${vencido ? 'background:#fff7ed;' : ''}">
+                <td style="padding:7px 10px;"><span class="badge-tipo ${d.tipo}">${tipoLabel(d.tipo)}</span></td>
+                <td style="padding:7px 10px;font-size:.8rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+                <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
+                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
+                <td style="padding:7px 10px;"><span class="badge-status ${stLabel}">${stLabel}</span></td>
+                <td style="padding:7px 10px;font-size:.78rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
+                <td style="padding:7px 10px;white-space:nowrap;text-align:right;">
+                    ${!isPago ? `<button class="btn-baixa" onclick="abrirBaixaConCtx(${cidStr},'${cliEsc}','${d.tipo}',${d.id},'${desc}',${parseFloat(d.valor||0)})" title="Dar Baixa" style="font-size:.72rem;padding:4px 8px;"><i class="fas fa-check"></i></button>` : ''}
+                    ${!isPago && d.tipo === 'contrato' ? `<button onclick="abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')" title="Cobrar via Asaas" style="background:#7c3aed;color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;font-weight:600;cursor:pointer;margin-left:3px;"><i class="fas fa-bolt"></i></button>` : ''}
+                    ${d.tipo === 'contrato' ? `<button class="btn-del" onclick="excluirPeriodoConCtx(${cidStr},'${cliEsc}',${d.id})" title="Excluir período (devolução antecipada)" style="font-size:.72rem;padding:4px 7px;margin-left:3px;"><i class="fas fa-trash"></i></button>` : ''}
+                    ${d.tipo === 'avulsa' ? `<button class="btn-edit" onclick="editarAvulsa(${d.id})" title="Editar" style="font-size:.72rem;padding:4px 7px;"><i class="fas fa-edit"></i></button>
+                    <button class="btn-del" onclick="excluirAvulsa(${d.id})" title="Excluir" style="font-size:.72rem;padding:4px 7px;margin-left:3px;"><i class="fas fa-trash"></i></button>` : ''}
+                </td>
+            </tr>`;
+        }).join('');
+
+        return `
+        <tr class="grupo-row" onclick="toggleGrupo(${idx})" style="cursor:pointer;${hasVenc ? 'background:#fff7ed;' : ''}">
             <td>
                 <div style="font-weight:700;font-size:.88rem;color:#0f172a;">${g.cliente}</div>
                 <div style="font-size:.72rem;color:#94a3b8;margin-top:2px;">${g.itens.length} entrada${g.itens.length>1?'s':''}</div>
@@ -524,9 +547,78 @@ function renderizar() {
             </td>
             <td style="font-weight:700;color:${totalPend>0 ? '#d97706' : '#94a3b8'};">${totalPend>0 ? fmtCurrency(totalPend) : '—'}</td>
             <td style="font-weight:700;color:${totalRec>0 ? '#16a34a' : '#94a3b8'};">${totalRec>0 ? fmtCurrency(totalRec) : '—'}</td>
-            <td style="color:#94a3b8;text-align:right;padding-right:12px;"><i class="fas fa-chevron-right"></i></td>
+            <td style="color:#94a3b8;text-align:right;padding-right:12px;">
+                <i class="fas fa-chevron-right" id="chev_${idx}" style="transition:transform .2s;"></i>
+            </td>
+        </tr>
+        <tr id="det_${idx}" class="detail-row" data-cid="${g.clienteId ?? ''}" style="display:none;">
+            <td colspan="6" style="padding:0;">
+                <div style="border-top:2px solid #3b82f6;border-bottom:2px solid #e2e8f0;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 16px;background:#eff6ff;border-bottom:1px solid #dbeafe;">
+                        <div style="display:flex;gap:16px;font-size:.75rem;font-weight:600;flex-wrap:wrap;">
+                            <span style="color:#16a34a;"><i class="fas fa-check"></i> Recebido: ${fmtCurrency(totalRec)}</span>
+                            <span style="color:#d97706;"><i class="fas fa-clock"></i> Pendente: ${fmtCurrency(totalPend)}</span>
+                            <span style="color:#475569;">Total: ${fmtCurrency(totalPend + totalRec)}</span>
+                        </div>
+                        <button onclick="exportarPdfCliente(${cidStr},'${cliEsc}')"
+                            style="display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:7px;border:none;background:#dc2626;color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;flex-shrink:0;">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+                            <thead><tr style="border-bottom:1px solid #e2e8f0;">
+                                ${thS('Tipo')}${thS('Descrição')}${thS('Valor')}${thS('Vencimento')}${thS('Status')}${thS('Recebido em')}${thS('')}
+                            </tr></thead>
+                            <tbody>${subLinhas || '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Sem registros</td></tr>'}</tbody>
+                        </table>
+                    </div>
+                </div>
+            </td>
         </tr>`;
     }).join('');
+}
+
+// ── Acordeão ──────────────────────────────────────────────────────────────────
+function toggleGrupo(idx) {
+    const det  = document.getElementById('det_' + idx);
+    const chev = document.getElementById('chev_' + idx);
+    if (!det) return;
+    const isOpen = det.style.display !== 'none';
+    det.style.display = isOpen ? 'none' : 'table-row';
+    if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+}
+
+function reabrirDetalhe(clienteId) {
+    if (clienteId == null) return;
+    const det = document.querySelector(`.detail-row[data-cid="${clienteId}"]`);
+    if (det && det.style.display === 'none') toggleGrupo(det.id.replace('det_', ''));
+}
+
+function _setHistCtxByCliente(clienteId, clienteNome) {
+    const registros = dados.filter(d =>
+        clienteId != null ? String(d.cliente_id) === String(clienteId)
+                          : (d.cliente || 'Sem cliente') === clienteNome
+    );
+    const total    = registros.reduce((s,d) => s + parseFloat(d.valor||0), 0);
+    const recebido = registros.filter(d => d.status === 'pago' || d.status === 'recebido')
+                              .reduce((s,d) => s + parseFloat(d.valor||0), 0);
+    _histCtx = { clienteId, clienteNome, registros, recebido, pendente: total - recebido, total };
+}
+
+function abrirBaixaConCtx(clienteId, clienteNome, tipo, id, desc, valor) {
+    _setHistCtxByCliente(clienteId, clienteNome);
+    abrirBaixa(tipo, id, desc, valor);
+}
+
+function excluirPeriodoConCtx(clienteId, clienteNome, id) {
+    _setHistCtxByCliente(clienteId, clienteNome);
+    excluirPeriodo(id);
+}
+
+function exportarPdfCliente(clienteId, clienteNome) {
+    _setHistCtxByCliente(clienteId, clienteNome);
+    imprimirHistorico();
 }
 
 // ── Modal Baixa ───────────────────────────────────────────────────────────────
@@ -572,10 +664,9 @@ async function confirmarBaixa() {
                 ? `Baixa registrada com desconto de ${fmtCurrency(desconto)}!`
                 : 'Baixa registrada com sucesso!';
             showToast(msg, 'success');
-            const ctxAntes = _histCtx;
+            const cidAntes = _histCtx?.clienteId;
             await carregarDados();
-            // Reabre o modal do cliente se estava aberto
-            if (ctxAntes) abrirHistoricoCliente(ctxAntes.clienteId, ctxAntes.clienteNome);
+            if (cidAntes != null) reabrirDetalhe(cidAntes);
         } else {
             showToast('Erro ao registrar baixa', 'error');
         }
@@ -842,9 +933,9 @@ async function confirmarExcluirPeriodo(id) {
         if (r.ok) {
             fecharModal();
             showToast('Período excluído com sucesso', 'success');
-            const ctxAntes = _histCtx;
+            const cidAntes = _histCtx?.clienteId;
             await carregarDados();
-            if (ctxAntes) abrirHistoricoCliente(ctxAntes.clienteId, ctxAntes.clienteNome);
+            if (cidAntes != null) reabrirDetalhe(cidAntes);
         } else {
             showToast('Erro ao excluir período', 'error');
         }
