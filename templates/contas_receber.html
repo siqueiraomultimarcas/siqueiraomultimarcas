@@ -82,6 +82,11 @@
         <div class="kpi-value" id="kpiVencidos">0</div>
         <i class="fas fa-exclamation-triangle kpi-icon-bg"></i>
     </div>
+    <div class="kpi-card" style="border-left:4px solid #7c3aed;">
+        <div class="kpi-label" style="color:#7c3aed;">Descontos no Mês</div>
+        <div class="kpi-value" id="kpiDescontos" style="color:#7c3aed;font-size:1.1rem;">R$ 0,00</div>
+        <i class="fas fa-tag kpi-icon-bg" style="color:#7c3aed;"></i>
+    </div>
 </div>
 
 <!-- Filtros -->
@@ -119,6 +124,7 @@
                     <th>Cliente</th>
                     <th>Descrição</th>
                     <th>Valor</th>
+                    <th>Desconto</th>
                     <th>Vencimento</th>
                     <th>Status</th>
                     <th>Recebido em</th>
@@ -126,7 +132,7 @@
                 </tr>
             </thead>
             <tbody id="tabela">
-                <tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</td></tr>
+                <tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</td></tr>
             </tbody>
         </table>
     </div>
@@ -139,9 +145,21 @@
             <i class="fas fa-check-circle" style="color:#10b981;"></i> Dar Baixa
         </div>
         <div id="resumoBaixa" style="background:#f1f5f9;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.82rem;color:#374151;"></div>
-        <div style="margin-bottom:14px;">
+        <div style="margin-bottom:12px;">
             <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Data do Recebimento</label>
             <input type="date" id="dataBaixaInput" class="form-control">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Desconto (R$)</label>
+            <input type="number" id="baixaDesconto" class="form-control" value="0" min="0" step="0.01"
+                   oninput="document.getElementById('baixaJustWrap').style.display=parseFloat(this.value||0)>0?'block':'none'">
+        </div>
+        <div id="baixaJustWrap" style="display:none;margin-bottom:14px;">
+            <label style="font-size:.78rem;font-weight:600;color:#ef4444;display:block;margin-bottom:6px;">
+                <i class="fas fa-exclamation-circle"></i> Justificativa do Desconto *
+            </label>
+            <input type="text" id="baixaJustificativa" class="form-control"
+                   placeholder="Ex: Veículo ficou 2 dias na oficina">
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button class="btn" onclick="fecharModalBaixa()" style="background:#6b7280;color:#fff;">Cancelar</button>
@@ -386,21 +404,25 @@ async function carregarClientes() {
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 function calcularKPIs() {
     const mesAtual = hoje.slice(0, 7);
-    let pendente = 0, recebidoMes = 0, qtdPendente = 0, vencidos = 0;
+    let pendente = 0, recebidoMes = 0, qtdPendente = 0, vencidos = 0, descontosMes = 0;
     dados.forEach(d => {
         const isPago = d.status === 'pago' || d.status === 'recebido';
         if (!isPago) {
             pendente += parseFloat(d.valor || 0);
             qtdPendente++;
             if (d.data_vencimento && d.data_vencimento < hoje) vencidos++;
-        } else if (d.data_recebimento && d.data_recebimento.slice(0,7) === mesAtual) {
-            recebidoMes += parseFloat(d.valor || 0);
+        } else {
+            if (d.data_recebimento && d.data_recebimento.slice(0,7) === mesAtual)
+                recebidoMes += parseFloat(d.valor || 0);
+            if (d.data_recebimento && d.data_recebimento.slice(0,7) === mesAtual && parseFloat(d.desconto||0) > 0)
+                descontosMes += parseFloat(d.desconto || 0);
         }
     });
     document.getElementById('kpiPendente').textContent    = fmtCurrency(pendente);
     document.getElementById('kpiRecebidoMes').textContent = fmtCurrency(recebidoMes);
     document.getElementById('kpiQtdPendente').textContent = qtdPendente;
     document.getElementById('kpiVencidos').textContent    = vencidos;
+    document.getElementById('kpiDescontos').textContent   = fmtCurrency(descontosMes);
 }
 
 // ── Filtros e tabs ────────────────────────────────────────────────────────────
@@ -430,7 +452,7 @@ function renderizar() {
 
     const tbody = document.getElementById('tabela');
     if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px;color:#94a3b8;">
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px;color:#94a3b8;">
             <i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:12px;"></i>
             Nenhum registro encontrado
         </td></tr>`;
@@ -451,6 +473,9 @@ function renderizar() {
             </td>
             <td style="font-size:.82rem;color:#374151;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${d.descricao||''}">${d.descricao || '—'}</td>
             <td style="font-weight:700;color:#0f172a;">${fmtCurrency(d.valor)}</td>
+            <td style="font-size:.82rem;${parseFloat(d.desconto||0)>0?'color:#7c3aed;font-weight:700;':'color:#94a3b8;'}">
+                ${parseFloat(d.desconto||0)>0 ? '- '+fmtCurrency(d.desconto) : '—'}
+            </td>
             <td style="font-size:.82rem;${vencido ? 'color:#dc2626;font-weight:700;' : ''}">${fmtDate(d.data_vencimento)}${vencido ? ' ⚠' : ''}</td>
             <td><span class="badge-status ${statusLabel}">${statusLabel}</span></td>
             <td style="font-size:.82rem;color:#64748b;">${fmtDate(d.data_recebimento) || '—'}</td>
@@ -476,6 +501,9 @@ function abrirBaixa(tipo, id, descricao, valor) {
     document.getElementById('resumoBaixa').innerHTML =
         `<strong>${descricao}</strong><br>Valor: <strong>${fmtCurrency(valor)}</strong>`;
     document.getElementById('dataBaixaInput').value = hoje;
+    document.getElementById('baixaDesconto').value = '0';
+    document.getElementById('baixaJustificativa').value = '';
+    document.getElementById('baixaJustWrap').style.display = 'none';
     document.getElementById('modalBaixa').style.display = 'flex';
 }
 
@@ -486,16 +514,30 @@ function fecharModalBaixa() {
 
 async function confirmarBaixa() {
     if (!pendenteBaixa) return;
-    const dataRec = document.getElementById('dataBaixaInput').value;
+    const dataRec  = document.getElementById('dataBaixaInput').value;
+    const desconto = parseFloat(document.getElementById('baixaDesconto').value || 0);
+    const justific = document.getElementById('baixaJustificativa').value.trim();
+    if (desconto > 0 && !justific) {
+        showToast('Informe a justificativa do desconto', 'warning');
+        return;
+    }
     try {
         const r = await fetch('/api/contas-receber/baixa', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...pendenteBaixa, data_recebimento: dataRec })
+            body: JSON.stringify({
+                ...pendenteBaixa,
+                data_recebimento: dataRec,
+                desconto,
+                justificativa_desconto: justific || null
+            })
         });
         if (r.ok) {
             fecharModalBaixa();
-            showToast('Baixa registrada com sucesso!', 'success');
+            const msg = desconto > 0
+                ? `Baixa registrada com desconto de ${fmtCurrency(desconto)}!`
+                : 'Baixa registrada com sucesso!';
+            showToast(msg, 'success');
             carregarDados();
         } else {
             showToast('Erro ao registrar baixa', 'error');

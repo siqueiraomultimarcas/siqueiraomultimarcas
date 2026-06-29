@@ -302,6 +302,10 @@ def init_db():
     cur.execute("ALTER TABLE cobrancas_avulsas ADD COLUMN IF NOT EXISTS asaas_id TEXT")
     cur.execute("ALTER TABLE cobrancas_avulsas ADD COLUMN IF NOT EXISTS asaas_link TEXT")
     cur.execute("ALTER TABLE cobrancas_avulsas ADD COLUMN IF NOT EXISTS asaas_status TEXT")
+    cur.execute("ALTER TABLE cobrancas_avulsas ADD COLUMN IF NOT EXISTS desconto NUMERIC(10,2) DEFAULT 0")
+    cur.execute("ALTER TABLE cobrancas_avulsas ADD COLUMN IF NOT EXISTS justificativa_desconto TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS desconto NUMERIC(10,2) DEFAULT 0")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS justificativa_desconto TEXT")
 
     conn.commit()
     cur.close()
@@ -3152,7 +3156,8 @@ def get_contas_receber():
     cur = conn.cursor()
     cur.execute('''
         SELECT tipo, id, cliente, cliente_cpf, cliente_telefone, cliente_email,
-               descricao, valor, data_recebimento, data_vencimento,
+               descricao, valor, desconto, justificativa_desconto,
+               data_recebimento, data_vencimento,
                status, data_cadastro, cliente_id, locacao_id,
                data_inicio_period, data_fim_period
         FROM (
@@ -3164,6 +3169,8 @@ def get_contas_receber():
                 (v.placa || ' — ' || v.marca || ' ' || v.modelo) AS descricao,
                 CASE WHEN pl.status = 'pago' THEN COALESCE(pl.valor_pago,0)
                      ELSE COALESCE(pl.valor_previsto,0) END AS valor,
+                COALESCE(pl.desconto,0) AS desconto,
+                pl.justificativa_desconto,
                 pl.data_pagamento AS data_recebimento,
                 pl.data_fim AS data_vencimento,
                 pl.status, pl.data_cadastro,
@@ -3183,7 +3190,9 @@ def get_contas_receber():
                 COALESCE(c.telefone,'') AS cliente_telefone,
                 COALESCE(c.email,'') AS cliente_email,
                 ('Multa: ' || m.descricao) AS descricao,
-                m.valor, m.data_pagamento AS data_recebimento,
+                m.valor, COALESCE(m.desconto,0) AS desconto,
+                m.justificativa_desconto,
+                m.data_pagamento AS data_recebimento,
                 m.data_infracao AS data_vencimento,
                 m.status, m.data_infracao::timestamp AS data_cadastro,
                 m.motorista_id AS cliente_id,
@@ -3200,6 +3209,8 @@ def get_contas_receber():
                 COALESCE(c.telefone,'') AS cliente_telefone,
                 COALESCE(c.email,'') AS cliente_email,
                 ca.descricao, ca.valor,
+                COALESCE(ca.desconto,0) AS desconto,
+                ca.justificativa_desconto,
                 ca.data_recebimento, ca.data_vencimento,
                 ca.status, ca.data_cadastro,
                 ca.cliente_id AS cliente_id,
@@ -3468,21 +3479,32 @@ def cobrar_asaas_contrato_pendente():
 @app.route('/api/contas-receber/baixa', methods=['PUT'])
 @login_required
 def baixa_contas_receber():
-    data = request.json
-    tipo = data.get('tipo')
-    rid  = data.get('id')
-    data_rec = data.get('data_recebimento') or str(_date.today())
+    data       = request.json
+    tipo       = data.get('tipo')
+    rid        = data.get('id')
+    data_rec   = data.get('data_recebimento') or str(_date.today())
+    desconto   = float(data.get('desconto') or 0)
+    justific   = data.get('justificativa_desconto') or ''
     conn = get_conn()
-    cur = conn.cursor()
+    cur  = conn.cursor()
     if tipo == 'contrato':
-        cur.execute('UPDATE pagamentos_locacao SET status=%s, data_pagamento=%s WHERE id=%s',
-                    ('pago', data_rec, rid))
+        cur.execute('SELECT valor_previsto FROM pagamentos_locacao WHERE id=%s', (rid,))
+        row = cur.fetchone()
+        val_prev   = float(row[0] or 0) if row else 0
+        valor_pago = max(0, round(val_prev - desconto, 2))
+        cur.execute('''UPDATE pagamentos_locacao
+                       SET status='pago', data_pagamento=%s,
+                           valor_pago=%s, desconto=%s, justificativa_desconto=%s
+                       WHERE id=%s''',
+                    (data_rec, valor_pago, desconto, justific, rid))
     elif tipo == 'multa':
-        cur.execute('UPDATE multas SET status=%s, data_pagamento=%s WHERE id=%s',
-                    ('pago', data_rec, rid))
+        cur.execute('''UPDATE multas SET status='pago', data_pagamento=%s,
+                           desconto=%s, justificativa_desconto=%s WHERE id=%s''',
+                    (data_rec, desconto, justific, rid))
     elif tipo == 'avulsa':
-        cur.execute('UPDATE cobrancas_avulsas SET status=%s, data_recebimento=%s WHERE id=%s',
-                    ('recebido', data_rec, rid))
+        cur.execute('''UPDATE cobrancas_avulsas SET status='recebido', data_recebimento=%s,
+                           desconto=%s, justificativa_desconto=%s WHERE id=%s''',
+                    (data_rec, desconto, justific, rid))
     conn.commit()
     cur.close()
     conn.close()
