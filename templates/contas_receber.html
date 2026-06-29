@@ -521,12 +521,16 @@ function renderizar() {
                 <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
                 <td style="padding:7px 10px;"><span class="badge-status ${stLabel}">${stLabel}</span></td>
                 <td style="padding:7px 10px;font-size:.78rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
-                <td style="padding:7px 10px;white-space:nowrap;text-align:right;">
-                    ${!isPago ? `<button class="btn-baixa" onclick="abrirBaixaConCtx(${cidStr},'${cliEsc}','${d.tipo}',${d.id},'${desc}',${parseFloat(d.valor||0)})" title="Dar Baixa" style="font-size:.72rem;padding:4px 8px;"><i class="fas fa-check"></i></button>` : ''}
-                    ${!isPago && d.tipo === 'contrato' ? `<button onclick="abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')" title="Cobrar via Asaas" style="background:#7c3aed;color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:.72rem;font-weight:600;cursor:pointer;margin-left:3px;"><i class="fas fa-bolt"></i></button>` : ''}
-                    ${d.tipo === 'contrato' ? `<button class="btn-del" onclick="excluirPeriodoConCtx(${cidStr},'${cliEsc}',${d.id})" title="Excluir período (devolução antecipada)" style="font-size:.72rem;padding:4px 7px;margin-left:3px;"><i class="fas fa-trash"></i></button>` : ''}
-                    ${d.tipo === 'avulsa' ? `<button class="btn-edit" onclick="editarAvulsa(${d.id})" title="Editar" style="font-size:.72rem;padding:4px 7px;"><i class="fas fa-edit"></i></button>
-                    <button class="btn-del" onclick="excluirAvulsa(${d.id})" title="Excluir" style="font-size:.72rem;padding:4px 7px;margin-left:3px;"><i class="fas fa-trash"></i></button>` : ''}
+                <td style="padding:7px 10px;text-align:center;">
+                    <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
+                        <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_${d.id}')" title="Ações">⋯</button>
+                        <div id="locmenu_cr_${d.id}" class="loc-menu" style="display:none;right:0;">
+                            ${!isPago ? `<button onclick="closeLocMenus();abrirBaixaConCtx(${cidStr},'${cliEsc}','${d.tipo}',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>` : ''}
+                            ${!isPago && d.tipo === 'contrato' ? `<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
+                            ${d.tipo === 'contrato' ? `<button class="danger" onclick="closeLocMenus();excluirPeriodoConCtx(${cidStr},'${cliEsc}',${d.id})"><i class="fas fa-trash"></i> Excluir</button>` : ''}
+                            ${d.tipo === 'avulsa' ? `<button onclick="closeLocMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button><button class="danger" onclick="closeLocMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>` : ''}
+                        </div>
+                    </div>
                 </td>
             </tr>`;
         }).join('');
@@ -583,7 +587,7 @@ function renderizar() {
                         <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
                             <thead><tr style="border-bottom:1px solid #e2e8f0;">
                                 <th style="padding:6px 10px;background:#f1f5f9;width:32px;text-align:center;"><input type="checkbox" onchange="selecionarTodos(${idx},this)" title="Selecionar todos" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;"></th>
-                                ${thS('Tipo')}${thS('Descrição')}${thS('Valor')}${thS('Vencimento')}${thS('Status')}${thS('Recebido em')}${thS('')}
+                                ${thS('Tipo')}${thS('Descrição')}${thS('Valor')}${thS('Vencimento')}${thS('Status')}${thS('Recebido em')}${thS('Ações')}
                             </tr></thead>
                             <tbody>${subLinhas || '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Sem registros</td></tr>'}</tbody>
                         </table>
@@ -1355,5 +1359,27 @@ async function confirmarAsaasContrato() {
 }
 
 window.addEventListener('load', carregarDados);
+
+function toggleLocMenu(e, id) {
+    e.stopPropagation();
+    const menu = document.getElementById('locmenu_' + id);
+    const isOpen = menu && menu.style.display !== 'none';
+    closeLocMenus();
+    if (menu && !isOpen) menu.style.display = 'block';
+}
+function closeLocMenus() {
+    document.querySelectorAll('.loc-menu').forEach(m => m.style.display = 'none');
+}
+document.addEventListener('click', closeLocMenus);
 </script>
+<style>
+.loc-menu-btn { background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:3px 9px;font-size:.95rem;cursor:pointer;color:#475569;letter-spacing:2px;line-height:1; }
+.loc-menu-btn:hover { background:#e2e8f0; }
+.loc-menu { position:absolute;right:0;top:calc(100% + 4px);z-index:200;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.10);min-width:150px;overflow:hidden; }
+.loc-menu button { display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;text-align:left;padding:9px 14px;font-size:.83rem;cursor:pointer;color:#374151; }
+.loc-menu button:hover { background:#f8fafc; }
+.loc-menu button.danger { color:#dc2626; }
+.loc-menu button.danger:hover { background:#fef2f2; }
+.loc-menu button i { width:14px;text-align:center; }
+</style>
 {% endblock %}
