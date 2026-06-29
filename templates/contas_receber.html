@@ -22,33 +22,33 @@
 .tab-btn:hover   { border-color:#2563eb; color:#2563eb; }
 .tab-btn.active  { background:#2563eb; border-color:#2563eb; color:#fff; }
 
-/* badge tipo */
-.badge-tipo { display:inline-block; font-size:.65rem; font-weight:700; padding:2px 8px;
-              border-radius:20px; text-transform:uppercase; letter-spacing:.04em; }
-.badge-tipo.contrato { background:#dbeafe; color:#1d4ed8; }
-.badge-tipo.multa    { background:#fee2e2; color:#b91c1c; }
-.badge-tipo.avulsa   { background:#f0fdf4; color:#15803d; }
+/* badge tipo — neutros, contexto por forma/texto */
+.badge-tipo { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 8px;
+              border-radius:4px; text-transform:uppercase; letter-spacing:.04em; }
+.badge-tipo.contrato { background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; }
+.badge-tipo.multa    { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+.badge-tipo.avulsa   { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
 
-/* badge status */
-.badge-status { display:inline-block; font-size:.65rem; font-weight:700; padding:2px 9px;
-                border-radius:20px; }
-.badge-status.pendente  { background:#fef3c7; color:#92400e; }
+/* badge status — apenas pago tem cor positiva */
+.badge-status { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 9px;
+                border-radius:4px; border:1px solid transparent; }
+.badge-status.pendente  { background:#f9fafb; color:#6b7280; border-color:#e5e7eb; }
 .badge-status.pago,
-.badge-status.recebido  { background:#dcfce7; color:#15803d; }
+.badge-status.recebido  { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
 
 /* ações */
-.btn-baixa { background:#10b981; color:#fff; border:none; border-radius:7px;
-             padding:5px 12px; font-size:.75rem; font-weight:600; cursor:pointer; }
-.btn-baixa:hover { background:#059669; }
-.btn-del   { background:none; border:none; color:#ef4444; cursor:pointer;
-             padding:5px 8px; border-radius:6px; font-size:.78rem; }
-.btn-del:hover { background:#fee2e2; }
-.btn-edit  { background:none; border:1px solid #e2e8f0; color:#64748b; cursor:pointer;
-             padding:5px 8px; border-radius:6px; font-size:.78rem; }
-.btn-edit:hover { background:#f1f5f9; }
+.btn-baixa { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; border-radius:6px;
+             padding:4px 8px; font-size:.72rem; font-weight:600; cursor:pointer; }
+.btn-baixa:hover { background:#dcfce7; }
+.btn-del   { background:none; border:1px solid transparent; color:#94a3b8; cursor:pointer;
+             padding:4px 7px; border-radius:6px; font-size:.72rem; }
+.btn-del:hover { background:#fef2f2; color:#ef4444; border-color:#fecaca; }
+.btn-edit  { background:none; border:1px solid #e2e8f0; color:#94a3b8; cursor:pointer;
+             padding:4px 7px; border-radius:6px; font-size:.72rem; }
+.btn-edit:hover { background:#f1f5f9; color:#374151; }
 
 /* linha de grupo de cliente */
-.grupo-row:hover td { background:#f0f9ff; }
+.grupo-row:hover td { background:#f8fafc; }
 .grupo-row td { transition: background .12s; }
 </style>
 
@@ -533,14 +533,14 @@ function renderizar() {
         }).join('');
 
         return `
-        <tr class="grupo-row" onclick="toggleGrupo(${idx})" style="cursor:pointer;${hasVenc ? 'background:#fff7ed;' : ''}">
+        <tr class="grupo-row" onclick="toggleGrupo(${idx})" style="cursor:pointer;${hasVenc ? 'border-left:3px solid #fca5a5;' : 'border-left:3px solid transparent;'}">
             <td>
                 <div style="font-weight:700;font-size:.88rem;color:#0f172a;">${g.cliente}</div>
                 <div style="font-size:.72rem;color:#94a3b8;margin-top:2px;">${g.itens.length} entrada${g.itens.length>1?'s':''}</div>
             </td>
             <td>
-                ${pendentes.length>0 ? `<span style="background:#fef3c7;color:#92400e;border-radius:12px;padding:3px 10px;font-size:.72rem;font-weight:700;">${pendentes.length} pendente${pendentes.length>1?'s':''}</span>` : ''}
-                ${pagas.length>0 ? `<span style="background:#dcfce7;color:#15803d;border-radius:12px;padding:3px 10px;font-size:.72rem;font-weight:700;${pendentes.length>0?'margin-left:4px;':''}">${pagas.length} paga${pagas.length>1?'s':''}</span>` : ''}
+                ${pendentes.length>0 ? `<span style="background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb;border-radius:4px;padding:2px 8px;font-size:.7rem;font-weight:600;">${pendentes.length} pendente${pendentes.length>1?'s':''}</span>` : ''}
+                ${pagas.length>0 ? `<span style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;font-size:.7rem;font-weight:600;${pendentes.length>0?'margin-left:4px;':''}">${pagas.length} paga${pagas.length>1?'s':''}</span>` : ''}
             </td>
             <td style="font-size:.82rem;${hasVenc ? 'color:#dc2626;font-weight:700;' : 'color:#374151;'}">
                 ${proxVenc ? fmtDate(proxVenc) + (hasVenc ? ' ⚠' : '') : '—'}
@@ -553,15 +553,15 @@ function renderizar() {
         </tr>
         <tr id="det_${idx}" class="detail-row" data-cid="${g.clienteId ?? ''}" style="display:none;">
             <td colspan="6" style="padding:0;">
-                <div style="border-top:2px solid #3b82f6;border-bottom:2px solid #e2e8f0;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 16px;background:#eff6ff;border-bottom:1px solid #dbeafe;">
-                        <div style="display:flex;gap:16px;font-size:.75rem;font-weight:600;flex-wrap:wrap;">
-                            <span style="color:#16a34a;"><i class="fas fa-check"></i> Recebido: ${fmtCurrency(totalRec)}</span>
-                            <span style="color:#d97706;"><i class="fas fa-clock"></i> Pendente: ${fmtCurrency(totalPend)}</span>
-                            <span style="color:#475569;">Total: ${fmtCurrency(totalPend + totalRec)}</span>
+                <div style="border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background:#f9fafb;border-bottom:1px solid #f1f5f9;">
+                        <div style="display:flex;gap:20px;font-size:.75rem;color:#6b7280;flex-wrap:wrap;">
+                            <span>Recebido: <strong style="color:#16a34a;">${fmtCurrency(totalRec)}</strong></span>
+                            <span>Pendente: <strong style="color:${totalPend > 0 ? '#92400e' : '#6b7280'};">${fmtCurrency(totalPend)}</strong></span>
+                            <span>Total: <strong style="color:#374151;">${fmtCurrency(totalPend + totalRec)}</strong></span>
                         </div>
                         <button onclick="exportarPdfCliente(${cidStr},'${cliEsc}')"
-                            style="display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:7px;border:none;background:#dc2626;color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;flex-shrink:0;">
+                            style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
                             <i class="fas fa-file-pdf"></i> PDF
                         </button>
                     </div>
