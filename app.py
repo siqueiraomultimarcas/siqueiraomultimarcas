@@ -2399,8 +2399,17 @@ def importar_multa_pdf():
     hora_m = re.search(r'\b(\d{2}:\d{2})\b', text)
     hora = hora_m.group(1) if hora_m else ''
 
-    # LOCAL: "CURITIBA-PR" — formato CIDADE-UF na linha de valores dos órgãos
-    local = after_label(r'LOCAL\s+DA\s+INFRA\w+', value_re=r'[A-ZÁÉÍÓÚÃÕÀÂÊÎÔÛÇ]+-[A-Z]{2}')
+    # LOCAL: pode ser "CURITIBA-PR" (cidade-UF) ou "BR476 KM 95,250" (rodovia)
+    # Tenta CIDADE-UF primeiro; senão, pega próxima linha e limpa prefixos numéricos/org
+    local_raw = after_label(r'LOCAL\s+DA\s+INFRA\w+')
+    city_uf = re.search(r'\b([A-ZÁÉÍÓÚÃÕÀÂÊÎÔÛÇ][A-ZÁÉÍÓÚÃÕÀÂÊÎÔÛÇ\s]+-[A-Z]{2})\b', local_raw) if local_raw else None
+    if city_uf:
+        local = city_uf.group(1).strip()
+    else:
+        # Remove código numérico e nome do órgão que aparecem antes do endereço real
+        local = re.sub(r'^[\d\s]+[A-Z][A-Z\s]+(?:TRANSP|TURA|NACION|ESTRUT)\w*\s*', '', local_raw or '').strip()
+        if not local:
+            local = local_raw or ''
 
     # VALOR: próxima linha após "VALOR DA MULTA" tem "5002 0 R$ 260,32"
     valor_raw = after_label(r'VALOR\s+DA\s+MULTA', value_re=r'[\d]+[.,][\d]+')
