@@ -314,6 +314,8 @@ def init_db():
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS asaas_link TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS asaas_status TEXT")
     cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS frequencia_cobranca TEXT DEFAULT 'avulso'")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS observacao TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS observacao TEXT")
 
     conn.commit()
     cur.close()
@@ -3611,7 +3613,7 @@ def get_contas_receber():
                descricao, valor, desconto, justificativa_desconto,
                data_recebimento, data_vencimento,
                status, data_cadastro, cliente_id, locacao_id,
-               data_inicio_period, data_fim_period, placa
+               data_inicio_period, data_fim_period, placa, observacao
         FROM (
             SELECT
                 'contrato'::text AS tipo, pl.id,
@@ -3630,7 +3632,8 @@ def get_contas_receber():
                 pl.locacao_id AS locacao_id,
                 pl.data_inicio AS data_inicio_period,
                 pl.data_fim AS data_fim_period,
-                v.placa AS placa
+                v.placa AS placa,
+                pl.observacao AS observacao
             FROM pagamentos_locacao pl
             JOIN locacoes l ON l.id = pl.locacao_id
             JOIN veiculos v ON v.id = l.veiculo_id
@@ -3653,7 +3656,8 @@ def get_contas_receber():
                 NULL::int AS locacao_id,
                 NULL::date AS data_inicio_period,
                 NULL::date AS data_fim_period,
-                ve.placa AS placa
+                ve.placa AS placa,
+                m.observacao AS observacao
             FROM multas m
             LEFT JOIN clientes c ON m.motorista_id = c.id
             LEFT JOIN veiculos ve ON m.veiculo_id = ve.id
@@ -3673,7 +3677,8 @@ def get_contas_receber():
                 NULL::int AS locacao_id,
                 NULL::date AS data_inicio_period,
                 NULL::date AS data_fim_period,
-                NULL::text AS placa
+                NULL::text AS placa,
+                ca.observacoes AS observacao
             FROM cobrancas_avulsas ca
             LEFT JOIN clientes c ON ca.cliente_id = c.id
         ) sub
@@ -3931,6 +3936,30 @@ def cobrar_asaas_contrato_pendente():
     conn.close()
     return jsonify({'parcelas': resultados, 'cliente_nome': cli_nome,
                     'cliente_tel': cli_tel or '', 'cliente_email': cli_email or ''})
+
+
+@app.route('/api/contas-receber/observacao', methods=['PUT'])
+@login_required
+def salvar_observacao_cr():
+    data = request.json
+    tipo = data.get('tipo')
+    id_  = data.get('id')
+    obs  = data.get('observacao', '').strip() or None
+    conn = get_conn()
+    cur  = conn.cursor()
+    if tipo == 'contrato':
+        cur.execute('UPDATE pagamentos_locacao SET observacao=%s WHERE id=%s', (obs, id_))
+    elif tipo == 'multa':
+        cur.execute('UPDATE multas SET observacao=%s WHERE id=%s', (obs, id_))
+    elif tipo == 'avulsa':
+        cur.execute('UPDATE cobrancas_avulsas SET observacoes=%s WHERE id=%s', (obs, id_))
+    else:
+        cur.close(); conn.close()
+        return jsonify({'error': 'tipo inválido'}), 400
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})
 
 
 @app.route('/api/contas-receber/baixa', methods=['PUT'])
