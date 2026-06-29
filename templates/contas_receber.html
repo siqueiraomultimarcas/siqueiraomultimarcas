@@ -488,14 +488,25 @@ function renderizar() {
 
     const grupos = {};
     lista.forEach(d => {
-        const key = d.cliente_id != null ? 'id_' + d.cliente_id : 'nome_' + (d.cliente || '');
-        if (!grupos[key]) grupos[key] = { clienteId: d.cliente_id, cliente: d.cliente || 'Sem cliente', itens: [] };
+        const key = (d.tipo || '') + '_' + (d.cliente_id != null ? 'id_' + d.cliente_id : 'nome_' + (d.cliente || ''));
+        if (!grupos[key]) grupos[key] = { clienteId: d.cliente_id, cliente: d.cliente || 'Sem cliente', tipo: d.tipo, itens: [] };
         grupos[key].itens.push(d);
     });
 
     const thS = s => `<th style="padding:6px 10px;font-size:.65rem;text-transform:uppercase;color:#64748b;background:#f1f5f9;font-weight:700;white-space:nowrap;">${s}</th>`;
 
-    tbody.innerHTML = Object.values(grupos).map((g, idx) => {
+    // Ordenar: contratos primeiro, avulsas depois, multas por último
+    const ordemTipo = { contrato: 0, avulsa: 1, multa: 2 };
+    const gruposOrdenados = Object.values(grupos).sort((a, b) => (ordemTipo[a.tipo]||0) - (ordemTipo[b.tipo]||0));
+
+    const secaoLabel = { contrato: 'Contratos', avulsa: 'Avulsas', multa: 'Multas' };
+    let ultimoTipo = null;
+
+    tbody.innerHTML = gruposOrdenados.map((g, idx) => {
+        const secHeader = (filtroTipo === 'todos' && g.tipo !== ultimoTipo)
+            ? (() => { ultimoTipo = g.tipo; return `<tr><td colspan="6" style="padding:10px 12px 4px;font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;background:#f8fafc;border-top:2px solid #e2e8f0;">${secaoLabel[g.tipo]||g.tipo}</td></tr>`; })()
+            : '';
+
         const pendentes = g.itens.filter(d => d.status !== 'pago' && d.status !== 'recebido');
         const pagas     = g.itens.filter(d => d.status === 'pago' || d.status === 'recebido');
         const vencidos  = pendentes.filter(d => d.data_vencimento && d.data_vencimento < hoje);
@@ -523,8 +534,8 @@ function renderizar() {
                 <td style="padding:7px 10px;font-size:.78rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
                 <td style="padding:7px 10px;text-align:center;">
                     <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
-                        <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_${d.id}')" title="Ações">⋯</button>
-                        <div id="locmenu_cr_${d.id}" class="loc-menu" style="display:none;right:0;">
+                        <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_${d.tipo}_${d.id}')" title="Ações">⋯</button>
+                        <div id="locmenu_cr_${d.tipo}_${d.id}" class="loc-menu" style="display:none;right:0;">
                             ${!isPago ? `<button onclick="closeLocMenus();abrirBaixaConCtx(${cidStr},'${cliEsc}','${d.tipo}',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>` : ''}
                             ${!isPago && d.tipo === 'contrato' ? `<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
                             ${!isPago && d.tipo === 'multa' ? `<button onclick="closeLocMenus();abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
