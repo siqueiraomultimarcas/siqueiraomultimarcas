@@ -226,13 +226,18 @@
             '<td>' + renderizarChecklist(l.checklist) + '</td>' +
             '<td>' + renderizarFotos(l.fotos_saida) + '</td>' +
             '<td>' + getStatusBadge(l.status) + '</td>' +
-            '<td style="white-space:nowrap">' +
-                '<button class="btn btn-sm" onclick="imprimirContrato(' + l.id + ')" title="Imprimir Contrato" style="background:#6b7280;color:white"><i class="fas fa-print"></i></button> ' +
-                (l.status === 'ativa' ?
-                    '<button class="btn btn-sm btn-primary" onclick="editarLocacao(' + l.id + ')" title="Editar"><i class="fas fa-edit"></i></button> ' +
-                    '<button class="btn btn-sm btn-success" onclick="abrirModalDevolucao(' + l.id + ')" title="Devolver"><i class="fas fa-undo"></i></button> '
-                : '') +
-                '<button class="btn btn-sm" onclick="confirmarExcluirLocacao(' + l.id + ', \'' + (l.placa || '') + ' ' + (l.nome_cliente || '') + '\')" title="Excluir Contrato" style="background:#ef4444;color:white"><i class="fas fa-trash"></i></button>' +
+            '<td style="text-align:center">' +
+                '<div class="loc-menu-wrap" style="position:relative;display:inline-block;">' +
+                    '<button class="loc-menu-btn" onclick="toggleLocMenu(event,' + l.id + ')" title="Ações">⋯</button>' +
+                    '<div id="locmenu_' + l.id + '" class="loc-menu" style="display:none;">' +
+                        '<button onclick="closeLocMenus();imprimirContrato(' + l.id + ')"><i class="fas fa-print"></i> Imprimir</button>' +
+                        (l.status === 'ativa' ?
+                            '<button onclick="closeLocMenus();editarLocacao(' + l.id + ')"><i class="fas fa-edit"></i> Editar</button>' +
+                            '<button onclick="closeLocMenus();abrirModalDevolucao(' + l.id + ')"><i class="fas fa-undo"></i> Devolver</button>'
+                        : '') +
+                        '<button class="danger" onclick="closeLocMenus();confirmarExcluirLocacao(' + l.id + ',\'' + (l.placa || '') + ' ' + (l.nome_cliente || '') + '\')"><i class="fas fa-trash"></i> Excluir</button>' +
+                    '</div>' +
+                '</div>' +
             '</td>' +
         '</tr>').join('');
     }
@@ -753,7 +758,41 @@
     }
 
     window.addEventListener('load', carregarDados);
+
+    function toggleLocMenu(e, id) {
+        e.stopPropagation();
+        const menu = document.getElementById('locmenu_' + id);
+        const isOpen = menu.style.display !== 'none';
+        closeLocMenus();
+        if (!isOpen) menu.style.display = 'block';
+    }
+    function closeLocMenus() {
+        document.querySelectorAll('.loc-menu').forEach(m => m.style.display = 'none');
+    }
+    document.addEventListener('click', closeLocMenus);
 </script>
+<style>
+.loc-menu-btn {
+    background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px;
+    padding: 4px 10px; font-size: 1rem; cursor: pointer; color: #475569;
+    letter-spacing: 2px; line-height: 1;
+}
+.loc-menu-btn:hover { background: #e2e8f0; }
+.loc-menu {
+    position: absolute; right: 0; top: calc(100% + 4px); z-index: 100;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.10); min-width: 150px; overflow: hidden;
+}
+.loc-menu button {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; background: none; border: none; text-align: left;
+    padding: 9px 14px; font-size: .83rem; cursor: pointer; color: #374151;
+}
+.loc-menu button:hover { background: #f8fafc; }
+.loc-menu button.danger { color: #dc2626; }
+.loc-menu button.danger:hover { background: #fef2f2; }
+.loc-menu button i { width: 14px; text-align: center; }
+</style>
 
 <!-- ── Lightbox Galeria de Fotos ────────────────────────────── -->
 <div id="lightbox" onclick="fecharGaleria()" style="
