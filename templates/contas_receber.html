@@ -24,6 +24,8 @@
 .badge-status.pendente { background:#f9fafb; color:#6b7280; border-color:#e5e7eb; }
 .badge-status.pago,
 .badge-status.recebido { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
+.grupo-row-card td { transition: background .12s; }
+.grupo-row-card:hover td { background:#f1f5f9; }
 </style>
 
 <div class="page-header">
@@ -478,33 +480,91 @@ function _setSumRow(lista, pendEl, recEl) {
     document.getElementById(recEl).innerHTML  = tr>0 ? `<span style="color:#16a34a;font-weight:700;">Recebido: ${fmtCurrency(tr)}</span>` : '';
 }
 
+function _agrupar(lista, keyFn, nomeFn) {
+    const grupos = {};
+    lista.forEach(d => {
+        const key = keyFn(d);
+        if (!grupos[key]) grupos[key] = { cliente: nomeFn(d), itens: [] };
+        grupos[key].itens.push(d);
+    });
+    return Object.values(grupos);
+}
+
+function _grupoSummary(g) {
+    const pendentes = g.itens.filter(d=>d.status!=='pago'&&d.status!=='recebido');
+    const pagas     = g.itens.filter(d=>d.status==='pago'||d.status==='recebido');
+    const vencidos  = pendentes.filter(d=>d.data_vencimento&&d.data_vencimento<hoje);
+    const totalPend = pendentes.reduce((s,d)=>s+parseFloat(d.valor||0),0);
+    const totalRec  = pagas.reduce((s,d)=>s+parseFloat(d.valor||0),0);
+    const proxVenc  = pendentes.filter(d=>d.data_vencimento).map(d=>d.data_vencimento).sort()[0];
+    const hasVenc   = vencidos.length>0;
+    return {pendentes,pagas,vencidos,totalPend,totalRec,proxVenc,hasVenc};
+}
+
+function _badgesGrupo(s) {
+    return (s.vencidos.length>0?`<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;margin-right:3px;">${s.vencidos.length} atrasad${s.vencidos.length>1?'os':'o'}</span>`:'')
+         + ((s.pendentes.length-s.vencidos.length)>0?`<span style="background:#fefce8;color:#ca8a04;border:1px solid #fde68a;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;margin-right:3px;">${s.pendentes.length-s.vencidos.length} pendente${(s.pendentes.length-s.vencidos.length)>1?'s':''}</span>`:'')
+         + (s.pagas.length>0?`<span style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;">${s.pagas.length} paga${s.pagas.length>1?'s':''}</span>`:'');
+}
+
+const _thS = s=>`<th style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:#64748b;background:#f8fafc;font-weight:700;white-space:nowrap;">${s}</th>`;
+
 function renderTableContratos(lista) {
     document.getElementById('badge-contratos').textContent = lista.length;
     _setSumRow(lista, 'sum-contratos-pend', 'sum-contratos-rec');
     const tbody = document.getElementById('tabela-contratos');
     if (!lista.length) { tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8;">Nenhum contrato encontrado</td></tr>'; return; }
-    tbody.innerHTML = lista.map(d => {
-        const isPago  = d.status==='pago'||d.status==='recebido';
-        const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
-        const desc    = (d.descricao||'').replace(/'/g,"\\'");
-        const cliEsc  = (d.cliente||'').replace(/'/g,"\\'");
-        return `<tr>
-            <td style="width:32px;text-align:center;"><input type="checkbox" class="chk-contrato" data-id="${d.id}" onchange="atualizarBtnCardContratos()" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;"></td>
-            <td style="font-size:.85rem;">${d.cliente||'—'}</td>
-            <td style="font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
-            <td style="font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
-            <td style="font-weight:700;">${fmtCurrency(d.valor)}</td>
-            <td style="font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
-            <td><span class="badge-status ${isPago?'pago':'pendente'}">${isPago?'pago':'pendente'}</span></td>
-            <td style="font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
-            <td style="text-align:center;">
-                <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
-                    <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_contrato_${d.id}')" title="Ações">⋯</button>
-                    <div id="locmenu_cr_contrato_${d.id}" class="loc-menu" style="display:none;">
-                        ${!isPago ? `<button onclick="closeLocMenus();abrirBaixa('contrato',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>` : ''}
-                        ${!isPago ? `<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
-                        <button class="danger" onclick="closeLocMenus();excluirPeriodo(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
+    const grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||''), d=>d.cliente||'—');
+    tbody.innerHTML = grupos.map((g,idx)=>{
+        const gId='cg_'+idx; const s=_grupoSummary(g);
+        const subRows = g.itens.map(d=>{
+            const isPago=d.status==='pago'||d.status==='recebido';
+            const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
+            const desc=(d.descricao||'').replace(/'/g,"\\'");
+            const cliEsc=(d.cliente||'').replace(/'/g,"\\'");
+            return `<tr style="background:#fafbfc;">
+                <td style="padding:7px 10px;width:32px;text-align:center;"><input type="checkbox" class="chk-contrato" data-id="${d.id}" onchange="atualizarBtnCardContratos()" style="cursor:pointer;width:14px;height:14px;accent-color:#2563eb;"></td>
+                <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
+                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+                <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
+                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
+                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':'pendente'}">${isPago?'pago':'pendente'}</span></td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
+                <td style="padding:7px 10px;text-align:center;">
+                    <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
+                        <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_contrato_${d.id}')" title="Ações">⋯</button>
+                        <div id="locmenu_cr_contrato_${d.id}" class="loc-menu" style="display:none;">
+                            ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('contrato',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
+                            ${!isPago?`<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>`:''}
+                            <button class="danger" onclick="closeLocMenus();excluirPeriodo(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
+                        </div>
                     </div>
+                </td>
+            </tr>`;
+        }).join('');
+        return `
+        <tr class="grupo-row-card" onclick="toggleGrupoCard('${gId}')" style="cursor:pointer;${s.hasVenc?'border-left:3px solid #fca5a5;':'border-left:3px solid transparent;'}">
+            <td style="text-align:center;" onclick="event.stopPropagation()">
+                <input type="checkbox" id="chkG_${gId}" onchange="selecionarGrupo('${gId}',this)" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">
+            </td>
+            <td><div style="font-weight:700;font-size:.88rem;color:#0f172a;">${g.cliente}</div><div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} entrada${g.itens.length>1?'s':''}</div></td>
+            <td colspan="2">${_badgesGrupo(s)}</td>
+            <td style="font-weight:700;color:${s.totalPend>0?'#d97706':'#94a3b8'};">${s.totalPend>0?fmtCurrency(s.totalPend):'—'}</td>
+            <td style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${s.proxVenc?fmtDate(s.proxVenc)+(s.hasVenc?' ⚠':''):'—'}</td>
+            <td></td>
+            <td style="font-weight:700;color:${s.totalRec>0?'#16a34a':'#94a3b8'};">${s.totalRec>0?fmtCurrency(s.totalRec):'—'}</td>
+            <td style="text-align:right;padding-right:12px;color:#94a3b8;"><i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;"></i></td>
+        </tr>
+        <tr id="det_${gId}" style="display:none;">
+            <td colspan="9" style="padding:0;">
+                <div style="border-top:1px solid #e2e8f0;">
+                    <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+                        <thead><tr style="border-bottom:1px solid #e2e8f0;">
+                            <th style="padding:5px 10px;background:#f8fafc;width:32px;"></th>
+                            ${_thS('Placa')}${_thS('Descrição')}${_thS('Valor')}${_thS('Vencimento')}${_thS('Status')}${_thS('Recebido em')}${_thS('Ações')}
+                        </tr></thead>
+                        <tbody>${subRows}</tbody>
+                    </table>
                 </div>
             </td>
         </tr>`;
@@ -516,27 +576,52 @@ function renderTableMultas(lista) {
     _setSumRow(lista, 'sum-multas-pend', 'sum-multas-rec');
     const tbody = document.getElementById('tabela-multas');
     if (!lista.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;">Nenhuma multa encontrada</td></tr>'; return; }
-    tbody.innerHTML = lista.map(d => {
-        const isPago  = d.status==='pago'||d.status==='recebido';
-        const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
-        const desc    = (d.descricao||'').replace(/'/g,"\\'");
-        const cliEsc  = (d.cliente||'').replace(/'/g,"\\'");
-        return `<tr>
-            <td style="font-size:.85rem;">${d.cliente||'Sem motorista'}</td>
-            <td style="font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
-            <td style="font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
-            <td style="font-weight:700;">${fmtCurrency(d.valor)}</td>
-            <td style="font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
-            <td><span class="badge-status ${isPago?'pago':'pendente'}">${isPago?'pago':'pendente'}</span></td>
-            <td style="font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
-            <td style="text-align:center;">
-                <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
-                    <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_multa_${d.id}')" title="Ações">⋯</button>
-                    <div id="locmenu_cr_multa_${d.id}" class="loc-menu" style="display:none;">
-                        ${!isPago ? `<button onclick="closeLocMenus();abrirBaixa('multa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>` : ''}
-                        ${!isPago ? `<button onclick="closeLocMenus();abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
-                        <button class="danger" onclick="closeLocMenus();excluirMultaCR(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
+    const grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||'sem'), d=>d.cliente||'Sem motorista');
+    tbody.innerHTML = grupos.map((g,idx)=>{
+        const gId='mg_'+idx; const s=_grupoSummary(g);
+        const subRows = g.itens.map(d=>{
+            const isPago=d.status==='pago'||d.status==='recebido';
+            const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
+            const desc=(d.descricao||'').replace(/'/g,"\\'");
+            const cliEsc=(d.cliente||'').replace(/'/g,"\\'");
+            return `<tr style="background:#fafbfc;">
+                <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
+                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+                <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
+                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
+                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':'pendente'}">${isPago?'pago':'pendente'}</span></td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
+                <td style="padding:7px 10px;text-align:center;">
+                    <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
+                        <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_multa_${d.id}')" title="Ações">⋯</button>
+                        <div id="locmenu_cr_multa_${d.id}" class="loc-menu" style="display:none;">
+                            ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('multa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
+                            ${!isPago?`<button onclick="closeLocMenus();abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>`:''}
+                            <button class="danger" onclick="closeLocMenus();excluirMultaCR(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
+                        </div>
                     </div>
+                </td>
+            </tr>`;
+        }).join('');
+        return `
+        <tr class="grupo-row-card" onclick="toggleGrupoCard('${gId}')" style="cursor:pointer;${s.hasVenc?'border-left:3px solid #fca5a5;':'border-left:3px solid transparent;'}">
+            <td><div style="font-weight:700;font-size:.88rem;color:#0f172a;">${g.cliente}</div><div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} multa${g.itens.length>1?'s':''}</div></td>
+            <td colspan="2">${_badgesGrupo(s)}</td>
+            <td style="font-weight:700;color:${s.totalPend>0?'#d97706':'#94a3b8'};">${s.totalPend>0?fmtCurrency(s.totalPend):'—'}</td>
+            <td style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${s.proxVenc?fmtDate(s.proxVenc)+(s.hasVenc?' ⚠':''):'—'}</td>
+            <td></td>
+            <td style="font-weight:700;color:${s.totalRec>0?'#16a34a':'#94a3b8'};">${s.totalRec>0?fmtCurrency(s.totalRec):'—'}</td>
+            <td style="text-align:right;padding-right:12px;color:#94a3b8;"><i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;"></i></td>
+        </tr>
+        <tr id="det_${gId}" style="display:none;">
+            <td colspan="8" style="padding:0;">
+                <div style="border-top:1px solid #e2e8f0;">
+                    <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+                        <thead><tr style="border-bottom:1px solid #e2e8f0;">
+                            ${_thS('Placa')}${_thS('Descrição')}${_thS('Valor')}${_thS('Vencimento')}${_thS('Status')}${_thS('Recebido em')}${_thS('Ações')}
+                        </tr></thead>
+                        <tbody>${subRows}</tbody>
+                    </table>
                 </div>
             </td>
         </tr>`;
@@ -548,26 +633,50 @@ function renderTableAvulsas(lista) {
     _setSumRow(lista, 'sum-avulsas-pend', 'sum-avulsas-rec');
     const tbody = document.getElementById('tabela-avulsas');
     if (!lista.length) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">Nenhuma cobrança avulsa encontrada</td></tr>'; return; }
-    tbody.innerHTML = lista.map(d => {
-        const isPago  = d.status==='pago'||d.status==='recebido';
-        const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
-        const desc    = (d.descricao||'').replace(/'/g,"\\'");
-        const cliEsc  = (d.cliente||'').replace(/'/g,"\\'");
-        return `<tr>
-            <td style="font-size:.85rem;">${d.cliente||'—'}</td>
-            <td style="font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
-            <td style="font-weight:700;">${fmtCurrency(d.valor)}</td>
-            <td style="font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
-            <td><span class="badge-status ${isPago?'recebido':'pendente'}">${isPago?'recebido':'pendente'}</span></td>
-            <td style="font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
-            <td style="text-align:center;">
-                <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
-                    <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_avulsa_${d.id}')" title="Ações">⋯</button>
-                    <div id="locmenu_cr_avulsa_${d.id}" class="loc-menu" style="display:none;">
-                        ${!isPago ? `<button onclick="closeLocMenus();abrirBaixa('avulsa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>` : ''}
-                        <button onclick="closeLocMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button>
-                        <button class="danger" onclick="closeLocMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
+    const grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||'sem'), d=>d.cliente||'—');
+    tbody.innerHTML = grupos.map((g,idx)=>{
+        const gId='ag_'+idx; const s=_grupoSummary(g);
+        const subRows = g.itens.map(d=>{
+            const isPago=d.status==='pago'||d.status==='recebido';
+            const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
+            const desc=(d.descricao||'').replace(/'/g,"\\'");
+            return `<tr style="background:#fafbfc;">
+                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+                <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
+                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
+                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'recebido':'pendente'}">${isPago?'recebido':'pendente'}</span></td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
+                <td style="padding:7px 10px;text-align:center;">
+                    <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
+                        <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_avulsa_${d.id}')" title="Ações">⋯</button>
+                        <div id="locmenu_cr_avulsa_${d.id}" class="loc-menu" style="display:none;">
+                            ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('avulsa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
+                            <button onclick="closeLocMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button>
+                            <button class="danger" onclick="closeLocMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
+                        </div>
                     </div>
+                </td>
+            </tr>`;
+        }).join('');
+        return `
+        <tr class="grupo-row-card" onclick="toggleGrupoCard('${gId}')" style="cursor:pointer;${s.hasVenc?'border-left:3px solid #fca5a5;':'border-left:3px solid transparent;'}">
+            <td><div style="font-weight:700;font-size:.88rem;color:#0f172a;">${g.cliente}</div><div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} cobrança${g.itens.length>1?'s':''}</div></td>
+            <td>${_badgesGrupo(s)}</td>
+            <td style="font-weight:700;color:${s.totalPend>0?'#d97706':'#94a3b8'};">${s.totalPend>0?fmtCurrency(s.totalPend):'—'}</td>
+            <td style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${s.proxVenc?fmtDate(s.proxVenc)+(s.hasVenc?' ⚠':''):'—'}</td>
+            <td></td>
+            <td style="font-weight:700;color:${s.totalRec>0?'#16a34a':'#94a3b8'};">${s.totalRec>0?fmtCurrency(s.totalRec):'—'}</td>
+            <td style="text-align:right;padding-right:12px;color:#94a3b8;"><i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;"></i></td>
+        </tr>
+        <tr id="det_${gId}" style="display:none;">
+            <td colspan="7" style="padding:0;">
+                <div style="border-top:1px solid #e2e8f0;">
+                    <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+                        <thead><tr style="border-bottom:1px solid #e2e8f0;">
+                            ${_thS('Descrição')}${_thS('Valor')}${_thS('Vencimento')}${_thS('Status')}${_thS('Recebido em')}${_thS('Ações')}
+                        </tr></thead>
+                        <tbody>${subRows}</tbody>
+                    </table>
                 </div>
             </td>
         </tr>`;
@@ -577,6 +686,26 @@ function renderTableAvulsas(lista) {
 // ── Seleção em massa — Contratos ──────────────────────────────────────────────
 function selecionarTodosCard(el) {
     document.querySelectorAll('.chk-contrato').forEach(c => c.checked = el.checked);
+    atualizarBtnCardContratos();
+}
+
+function toggleGrupoCard(gId) {
+    const det  = document.getElementById('det_' + gId);
+    const chev = document.getElementById('chev_' + gId);
+    if (!det) return;
+    const isOpen = det.style.display !== 'none';
+    det.style.display = isOpen ? 'none' : 'table-row';
+    if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+}
+function selecionarGrupo(gId, el) {
+    const det  = document.getElementById('det_' + gId);
+    const chev = document.getElementById('chev_' + gId);
+    if (!det) return;
+    if (el.checked && det.style.display === 'none') {
+        det.style.display = 'table-row';
+        if (chev) chev.style.transform = 'rotate(90deg)';
+    }
+    det.querySelectorAll('.chk-contrato').forEach(c => c.checked = el.checked);
     atualizarBtnCardContratos();
 }
 
