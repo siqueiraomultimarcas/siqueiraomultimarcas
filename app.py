@@ -2347,22 +2347,39 @@ def importar_multa_pdf():
         return jsonify({'error': 'Nenhum arquivo enviado'}), 400
     try:
         with pdfplumber.open(_io.BytesIO(f.read())) as pdf:
-            pages = []
-            for page in pdf.pages:
-                try:
-                    t = page.extract_text(layout=True) or ''
-                except Exception:
-                    t = page.extract_text() or ''
-                pages.append(t)
-            text = '\n'.join(pages)
-        # PDFs often use NFD decomposed chars (C + combining cedilla) — normalize to NFC
+            text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
         text = unicodedata.normalize('NFC', text)
     except Exception as e:
         return jsonify({'error': f'Erro ao ler PDF: {e}'}), 400
 
-    def find(pattern, default=''):
-        m = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
-        return m.group(1).strip() if m else default
+    # Abordagem linha-a-linha: mais robusta para PDFs multi-coluna do DENATRAN
+    lines = [l.strip() for l in text.splitlines()]
+
+    def after_label(label_re, value_re=None, default=''):
+        """Retorna o valor na linha seguinte ao label (ou na mesma linha após o label)."""
+        for i, line in enumerate(lines):
+            if not re.search(label_re, line, re.IGNORECASE):
+                continue
+            # Tenta extrair da mesma linha (após o label)
+            rest = re.split(label_re, line, maxsplit=1, flags=re.IGNORECASE)[-1].strip()
+            if rest:
+                if value_re is None:
+                    return rest
+                m = re.search(value_re, rest, re.IGNORECASE)
+                if m:
+                    return m.group(0).strip()
+            # Busca nas próximas linhas
+            for j in range(i + 1, min(i + 5, len(lines))):
+                v = lines[j].strip()
+                if not v:
+                    continue
+                if value_re is None:
+                    return v
+                m = re.search(value_re, v, re.IGNORECASE)
+                if m:
+                    return m.group(0).strip()
+                break  # próxima linha não bate com value_re: label sem valor esperado aqui
+        return default
 
     def to_iso(d):
         if not d: return ''
@@ -2371,34 +2388,45 @@ def importar_multa_pdf():
             return f'{p[2]}-{p[1]}-{p[0]}'
         except: return ''
 
-    # AIT: match full label as it appears in DENATRAN PDFs
-    ait = find(r'IDENTIFICA[ÇC][AÃ]O DO AUTO DE INFRA[ÇC][AÃ]O[^\n]*\)\s*[\n\s]+([A-Z0-9-]+)')
-    if not ait:
-        ait = find(r'N[UÚ]MERO DO AIT\)?[\s\n:]+([A-Z0-9-]+)')
+    # AIT: linha que contém "AIT)" ou "Número do AIT"
+    ait = after_label(r'IDENTIFICA\w*\s+DO\s+AUTO.*AIT\)', value_re=r'[A-Z0-9]{5,}')
     tipo = 'nic' if ait.upper().startswith('NIC') else 'multa'
 
-    placa = find(r'\bPLACA\b[\s\n]+([A-Z0-9]{7})\b')
+    placa = after_label(r'^\s*PLACA\s*$', value_re=r'[A-Z0-9]{7}')
 
-    # DATA da infração — deve ser a data do local/hora, não a de notificação ou limite
-    data_inf = find(r'\bDATA\b(?!\s*D[AO]\s*NOTIFICA|\s*LIMITE|\s*LIMITE\s*PARA)[\s\n]+(\d{2}/\d{2}/\d{4})')
+    # DATA da infração: linha exatamente "DATA" (não "DATA DA NOTIFICAÇÃO" ou "DATA LIMITE")
+    data_inf = after_label(r'^\s*DATA\s*$', value_re=r'\d{2}/\d{2}/\d{4}')
 
-    hora = find(r'\bHORA\b[\s\n]+(\d{2}:\d{2})')
+    hora = after_label(r'^\s*HORA\s*$', value_re=r'\d{2}:\d{2}')
 
-    # LOCAL: para na linha seguinte que começa com DATA, HORA, CÓDIGO ou outra label maiúscula
-    local_raw = find(r'LOCAL DA INFRA[ÇC][AÃ]O[\s\n]+(.+?)(?=[\n\r]+(?:DATA\b|HORA\b|C[OÓ]DIGO|NOME)|$)')
-    local = ' '.join(local_raw.split())
+    local = after_label(r'LOCAL\s+DA\s+INFRA\w+')
 
-    valor_raw = find(r'VALOR DA MULTA[\s\n]+R\$[\s]*([\d.,]+)')
-    valor = valor_raw.replace('.', '').replace(',', '.') if valor_raw else ''
+    # VALOR: busca "R$ 260,32" na mesma ou próxima linha
+    valor_raw = after_label(r'VALOR\s+DA\s+MULTA', value_re=r'R\$\s*[\d.,]+')
+    if not valor_raw:
+        valor_raw = after_label(r'VALOR\s+DA\s+MULTA', value_re=r'[\d.,]+')
+    valor_num = re.search(r'[\d.,]+', valor_raw) if valor_raw else None
+    valor = valor_num.group(0).replace('.', '').replace(',', '.') if valor_num else ''
 
-    descricao_raw = find(r'DESCRI[ÇC][AÃ]O DA INFRA[ÇC][AÃ]O[\s\n]+(.+?)(?=[\n\r]+MEDI[ÇC][AÃ]O|[\n\r]+VALOR CONSIDERADO|\Z)')
-    descricao = ' '.join(descricao_raw.split())
+    # DESCRIÇÃO: acumula linhas até encontrar "MEDIÇÃO" ou "VALOR CONSIDERADO"
+    descricao_lines = []
+    in_desc = False
+    for line in lines:
+        if re.search(r'DESCRI\w+\s+DA\s+INFRA\w+', line, re.IGNORECASE):
+            in_desc = True
+            continue
+        if in_desc:
+            if re.search(r'MEDI\w+\s+REALIZADA|VALOR\s+CONSIDERADO', line, re.IGNORECASE):
+                break
+            if line:
+                descricao_lines.append(line)
+    descricao = ' '.join(descricao_lines)
 
-    # RENAINF: não pegar o "NÚMERO RENAINF MULTA ORIGINAL"
-    renainf = find(r'N[UÚ]MERO RENAINF(?!\s+MULTA)[\s\n]+(\d+)')
+    # RENAINF: linha exatamente "NÚMERO RENAINF" (não "MULTA ORIGINAL")
+    renainf = after_label(r'RENAINF\s*$', value_re=r'\d{8,}')
 
-    dt_limite = find(r'DATA LIMITE PARA INTERPOSIÇÃO DE DEFESA PRÉVIA[\s\n]+(\d{2}/\d{2}/\d{4})')
-    dt_notif  = find(r'DATA DA NOTIFICA[ÇC][AÃ]O DA AUTUA[ÇC][AÃ]O[\s\n]+(\d{2}/\d{2}/\d{4})')
+    dt_limite = after_label(r'DATA\s+LIMITE.*DEFESA', value_re=r'\d{2}/\d{2}/\d{4}')
+    dt_notif  = after_label(r'DATA\s+DA\s+NOTIFICA\w+\s+DA\s+AUTUA', value_re=r'\d{2}/\d{2}/\d{4}')
 
     return jsonify({
         'tipo_notificacao':   tipo,
