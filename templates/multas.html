@@ -3,6 +3,11 @@
 {% block title %}Multas - Locadora{% endblock %}
 
 {% block content %}
+<style>
+.table-container { overflow-x: auto; }
+.grupo-multa-row td { transition: background .12s; }
+.grupo-multa-row:hover td { background: #f1f5f9; }
+</style>
 <div class="page-header">
     <div>
         <h1><i class="fas fa-file-invoice-dollar"></i> Controle de Multas</h1>
@@ -137,42 +142,101 @@
             : '<span class="badge badge-success">Pago</span>';
     }
 
+    const _thM = s => `<th style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:#64748b;background:#f8fafc;font-weight:700;white-space:nowrap;">${s}</th>`;
+
+    function _badgesMulta(pendentes, pagas) {
+        return (pendentes > 0 ? `<span style="background:#fefce8;color:#ca8a04;border:1px solid #fde68a;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;margin-right:3px;">${pendentes} pendente${pendentes>1?'s':''}</span>` : '')
+             + (pagas > 0    ? `<span style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;">${pagas} paga${pagas>1?'s':''}</span>` : '');
+    }
+
+    function toggleGrupoMulta(gId) {
+        const det  = document.getElementById('detM_' + gId);
+        const chev = document.getElementById('chevM_' + gId);
+        if (!det) return;
+        const isOpen = det.style.display !== 'none';
+        det.style.display = isOpen ? 'none' : 'table-row';
+        if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+    }
+
     function renderizarMultas(lista) {
         document.getElementById('countMultasBadge').textContent = lista.length;
         const tbody = document.getElementById('tabelaMultas');
         if (lista.length === 0) {
             tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px 20px;">
-    <i class="fas fa-file-invoice-dollar" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
-    <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhuma multa encontrada</div>
-    <div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou registre uma nova multa</div>
+<i class="fas fa-file-invoice-dollar" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
+<div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhuma multa encontrada</div>
+<div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou registre uma nova multa</div>
 </td></tr>`;
             return;
         }
 
-        tbody.innerHTML = lista.map(m => `
-            <tr>
-                <td>${formatDate(m.data_infracao)}</td>
-                <td><strong>${m.placa || '-'}</strong> ${m.marca ? '- ' + m.marca + ' ' + (m.modelo || '') : ''}</td>
-                <td>${m.nome_motorista || '-'}</td>
-                <td>${m.descricao || '-'}</td>
-                <td>${m.local_infracao || '-'}</td>
-                <td><strong>${formatCurrency(m.valor)}</strong></td>
-                <td>${m.pontos || 0} pts</td>
-                <td>${getStatusBadge(m.status)}</td>
-                <td style="text-align:center;">
-                    <div class="act-wrap">
-                        <button class="act-btn" onclick="toggleActMenu(event,${m.id})" title="Ações">⋯</button>
-                        <div id="actmenu_${m.id}" class="act-menu">
-                            <button onclick="toggleActMenu(event,-1);editarMulta(${m.id})"><i class="fas fa-edit"></i> Editar</button>
-                            ${m.status === 'pendente'
-                                ? `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-check"></i> Dar Baixa</button>`
-                                : `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-undo"></i> Desmarcar</button>`}
-                            <button class="danger" onclick="toggleActMenu(event,-1);confirmarExcluir(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
+        const grupos = {};
+        lista.forEach(m => {
+            const key = m.veiculo_id != null ? 'v_' + m.veiculo_id : 'p_' + (m.placa || '');
+            if (!grupos[key]) grupos[key] = {
+                placa: m.placa || '—',
+                nome: (m.placa || '—') + (m.marca ? ' · ' + m.marca + ' ' + (m.modelo || '') : ''),
+                itens: []
+            };
+            grupos[key].itens.push(m);
+        });
+
+        tbody.innerHTML = Object.values(grupos).map((g, idx) => {
+            const gId = 'mg_' + idx;
+            const pendentes = g.itens.filter(m => m.status === 'pendente').length;
+            const pagas     = g.itens.filter(m => m.status === 'pago').length;
+            const totalVal  = g.itens.reduce((s, m) => s + parseFloat(m.valor || 0), 0);
+            const totalPts  = g.itens.reduce((s, m) => s + parseInt(m.pontos || 0), 0);
+
+            const subRows = g.itens.map(m => `
+                <tr style="background:#fafbfc;">
+                    <td style="padding:7px 10px;font-size:.8rem;">${formatDate(m.data_infracao)}</td>
+                    <td style="padding:7px 10px;font-size:.8rem;">${m.nome_motorista || '—'}</td>
+                    <td style="padding:7px 10px;font-size:.8rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.descricao||''}">${m.descricao || '—'}</td>
+                    <td style="padding:7px 10px;font-size:.8rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.local_infracao||''}">${m.local_infracao || '—'}</td>
+                    <td style="padding:7px 10px;font-weight:700;">${formatCurrency(m.valor)}</td>
+                    <td style="padding:7px 10px;font-size:.8rem;">${m.pontos || 0} pts</td>
+                    <td style="padding:7px 10px;">${getStatusBadge(m.status)}</td>
+                    <td style="padding:7px 10px;text-align:center;">
+                        <div class="act-wrap">
+                            <button class="act-btn" onclick="toggleActMenu(event,${m.id})" title="Ações">⋯</button>
+                            <div id="actmenu_${m.id}" class="act-menu">
+                                <button onclick="toggleActMenu(event,-1);editarMulta(${m.id})"><i class="fas fa-edit"></i> Editar</button>
+                                ${m.status === 'pendente'
+                                    ? `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-check"></i> Dar Baixa</button>`
+                                    : `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-undo"></i> Desmarcar</button>`}
+                                <button class="danger" onclick="toggleActMenu(event,-1);confirmarExcluir(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
+                            </div>
                         </div>
+                    </td>
+                </tr>`).join('');
+
+            return `
+            <tr class="grupo-multa-row" onclick="toggleGrupoMulta('${gId}')" style="cursor:pointer;">
+                <td colspan="2">
+                    <div style="font-weight:700;font-size:.9rem;color:#0f172a;">${g.nome}</div>
+                    <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} multa${g.itens.length>1?'s':''}</div>
+                </td>
+                <td colspan="2">${_badgesMulta(pendentes, pagas)}</td>
+                <td></td>
+                <td style="font-weight:700;color:${totalVal>0?'#d97706':'#94a3b8'};">${formatCurrency(totalVal)}</td>
+                <td style="font-size:.82rem;">${totalPts} pts</td>
+                <td></td>
+                <td style="text-align:right;padding-right:12px;color:#94a3b8;"><i class="fas fa-chevron-right" id="chevM_${gId}" style="transition:transform .2s;"></i></td>
+            </tr>
+            <tr id="detM_${gId}" style="display:none;">
+                <td colspan="9" style="padding:0;">
+                    <div style="border-top:1px solid #e2e8f0;">
+                        <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+                            <thead><tr style="border-bottom:1px solid #e2e8f0;">
+                                ${_thM('Data')}${_thM('Motorista')}${_thM('Descrição')}${_thM('Local')}${_thM('Valor')}${_thM('Pontos')}${_thM('Status')}${_thM('Ações')}
+                            </tr></thead>
+                            <tbody>${subRows}</tbody>
+                        </table>
                     </div>
                 </td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
     }
 
     function filtrarMultas() {
