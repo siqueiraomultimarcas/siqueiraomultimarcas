@@ -942,6 +942,8 @@ def registrar_pagamento():
     data_pag   = data.get('data_pagamento') or str(_date.today())
     obs        = data.get('observacoes') or None
 
+    status = data.get('status', 'pago')
+
     if not d_ini or not d_fim:
         return jsonify({'error': 'Informe data de início e fim do período'}), 400
     if d_fim < d_ini:
@@ -954,26 +956,25 @@ def registrar_pagamento():
     conn = get_conn()
     cur = conn.cursor()
 
-    # Verifica sobreposição com períodos já pagos
+    # Verifica sobreposição com períodos já registrados
     cur.execute('''
         SELECT id, data_inicio, data_fim FROM pagamentos_locacao
-        WHERE locacao_id = %s AND status = 'pago'
+        WHERE locacao_id = %s AND status IN ('pago','pendente')
           AND data_inicio <= %s AND data_fim >= %s
     ''', (locacao_id, d_fim, d_ini))
     overlap = cur.fetchone()
     if overlap:
         cur.close(); conn.close()
-        return jsonify({'error': f'Período sobrepõe pagamento já registrado ({overlap[1]} a {overlap[2]})'}), 400
+        return jsonify({'error': f'Período sobrepõe registro já existente ({overlap[1]} a {overlap[2]})'}), 400
 
-    dias = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days + 1
-    # Busca diária do contrato para calcular valor previsto
+    dias = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days
     cur.execute('SELECT diaria FROM locacoes WHERE id=%s', (locacao_id,))
     row = cur.fetchone()
     diaria = float(row[0]) if row else 0
-    valor_prev = round(diaria * dias, 2)
-    valor_pago = round(valor_prev - desconto, 2)
+    valor_prev = round(diaria * dias)
+    valor_pago = round(valor_prev - desconto) if status == 'pago' else 0
+    data_pag   = data.get('data_pagamento') or (str(_date.today()) if status == 'pago' else None)
 
-    # Número sequencial do pagamento neste contrato
     cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
     semana_num = cur.fetchone()[0]
 
@@ -982,11 +983,11 @@ def registrar_pagamento():
             (locacao_id, semana_numero, data_inicio, data_fim,
              valor_previsto, valor_pago, desconto, justificativa_desconto,
              status, data_pagamento, observacoes)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'pago',%s,%s)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         RETURNING id
     ''', (locacao_id, semana_num, d_ini, d_fim,
           valor_prev, valor_pago, desconto, just or None,
-          data_pag, obs))
+          status, data_pag, obs))
     new_id = cur.fetchone()[0]
     conn.commit()
     cur.close()

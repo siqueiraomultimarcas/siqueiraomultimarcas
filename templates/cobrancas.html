@@ -238,10 +238,11 @@ function getEstado(lid) {
     if (!_estado[lid]) {
         const now = new Date();
         _estado[lid] = {
-            ano:   now.getFullYear(),
-            mes:   now.getMonth(),   // 0-based
-            start: null,             // dia (1-31) selecionado como início
-            end:   null,             // dia (1-31) selecionado como fim
+            ano:        now.getFullYear(),
+            mes:        now.getMonth(),
+            start:      null,
+            end:        null,
+            customMode: false,   // true = aguardando 2º clique para período personalizado
         };
     }
     return _estado[lid];
@@ -435,27 +436,104 @@ function mudarMes(lid, delta) {
 function selecionarDia(lid, dia) {
     const st = getEstado(lid);
 
-    if (!st.start || (st.start && st.end)) {
-        // Novo início
-        st.start = dia;
-        st.end   = null;
-    } else {
-        // Segundo clique
-        if (dia === st.start) { st.start = null; st.end = null; }
-        else if (dia < st.start) { st.start = dia; st.end = null; }
-        else { st.end = dia; }
-    }
-
-    // Verifica se algum dia do range está pago
-    if (st.start && st.end) {
-        const loc = _dados.find(l => l.locacao_id === lid);
-        if (loc && rangeTemDiaPago(loc, st)) {
-            showToast('O período selecionado inclui dias já pagos. Ajuste a seleção.', 'warning');
-            st.end = null;
+    if (st.customMode && st.start && !st.end) {
+        // Modo personalizado: aguardando 2º clique
+        if (dia === st.start) { st.start = null; st.end = null; st.customMode = false; }
+        else if (dia < st.start) { st.start = dia; }
+        else {
+            st.end = dia;
+            const loc = _dados.find(l => l.locacao_id === lid);
+            if (loc && rangeTemDiaPago(loc, st)) {
+                showToast('Período inclui dias já registrados. Ajuste a seleção.', 'warning');
+                st.end = null;
+            }
         }
+    } else {
+        // 1º clique: mostra opções rápidas
+        st.start      = dia;
+        st.end        = null;
+        st.customMode = false;
     }
 
     reRenderContrato(lid);
+}
+
+function ativarPersonalizado(lid) {
+    const st = getEstado(lid);
+    st.customMode = true;
+    reRenderContrato(lid);
+}
+
+function cancelarSelecao(lid) {
+    const st = getEstado(lid);
+    st.start = null; st.end = null; st.customMode = false;
+    reRenderContrato(lid);
+}
+
+async function criarRapido(lid, ndias) {
+    const loc = _dados.find(l => l.locacao_id === lid);
+    const st  = getEstado(lid);
+    if (!loc || !st.start) return;
+
+    const toISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dIni = new Date(st.ano, st.mes, st.start);
+    const dFim = new Date(st.ano, st.mes, st.start + ndias);
+    const valor = Math.round(loc.diaria * ndias);
+
+    try {
+        const r = await fetch('/api/cobrancas', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                locacao_id:  lid,
+                data_inicio: toISO(dIni),
+                data_fim:    toISO(dFim),
+                desconto:    0,
+                status:      'pendente'
+            })
+        });
+        const data = await r.json();
+        if (r.ok) {
+            st.start = null; st.end = null; st.customMode = false;
+            showToast(`Criado como pendente — ${ndias} dias · ${fmtR(valor)}`, 'success');
+            await carregarCobrancas();
+        } else {
+            showToast(data.error || 'Erro ao criar cobrança', 'error');
+        }
+    } catch { showToast('Erro de conexão', 'error'); }
+}
+
+async function baixarDireto(pagId, lid) {
+    const hoje = new Date().toISOString().slice(0,10);
+    abrirModal('Confirmar Recebimento', `
+        <div style="padding:8px 0">
+            <p style="margin-bottom:14px;color:#374151;">Informe a data do recebimento:</p>
+            <input type="date" id="dtBaixaDireto" class="form-control" value="${hoje}" style="margin-bottom:20px;">
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+                <button class="btn" onclick="executarBaixaDireto(${pagId},${lid})" style="background:#16a34a;color:#fff;font-weight:700;">
+                    <i class="fas fa-check"></i> Confirmar
+                </button>
+            </div>
+        </div>`);
+}
+
+async function executarBaixaDireto(pagId, lid) {
+    const dt = document.getElementById('dtBaixaDireto').value;
+    try {
+        const r = await fetch('/api/contas-receber/baixa', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ tipo: 'contrato', id: pagId, data_recebimento: dt })
+        });
+        if (r.ok) {
+            fecharModal();
+            showToast('Pagamento registrado!', 'success');
+            await carregarCobrancas();
+        } else {
+            showToast('Erro ao registrar baixa', 'error');
+        }
+    } catch { showToast('Erro de conexão', 'error'); }
 }
 
 function rangeTemDiaPago(loc, st) {
@@ -479,17 +557,46 @@ function renderResumoSel(loc) {
         return `<div class="sel-resumo" style="margin-top:14px;">
             <div class="sel-info" style="color:#94a3b8;font-size:.8rem;">
                 <i class="fas fa-hand-pointer" style="margin-right:6px;"></i>
-                Clique no 1° dia e depois no último dia do período
+                Clique em um dia para criar cobrança
             </div>
         </div>`;
     }
-    if (st.start && !st.end) {
+    if (st.start && !st.end && !st.customMode) {
+        const d1str = `${String(st.start).padStart(2,'0')}/${String(st.mes+1).padStart(2,'0')}/${st.ano}`;
+        const btnStyle = 'flex:1;padding:8px 4px;border-radius:8px;border:none;font-size:.75rem;font-weight:700;cursor:pointer;';
+        return `<div style="margin-top:14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:14px 16px;">
+            <div style="font-size:.75rem;font-weight:600;color:#0369a1;margin-bottom:10px;">
+                <i class="fas fa-calendar-day"></i> A partir de <strong>${d1str}</strong> — escolha o período:
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+                <button style="${btnStyle}background:#4f46e5;color:#fff;" onclick="criarRapido(${lid},7)">
+                    <i class="fas fa-bolt"></i><br>Semanal<br><span style="font-weight:400;font-size:.7rem;">7 dias</span>
+                </button>
+                <button style="${btnStyle}background:#0891b2;color:#fff;" onclick="criarRapido(${lid},15)">
+                    <i class="fas fa-calendar-week"></i><br>Quinzenal<br><span style="font-weight:400;font-size:.7rem;">15 dias</span>
+                </button>
+                <button style="${btnStyle}background:#059669;color:#fff;" onclick="criarRapido(${lid},30)">
+                    <i class="fas fa-calendar-alt"></i><br>Mensal<br><span style="font-weight:400;font-size:.7rem;">30 dias</span>
+                </button>
+                <button style="${btnStyle}background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;" onclick="ativarPersonalizado(${lid})">
+                    <i class="fas fa-sliders-h"></i><br>Personalizado<br><span style="font-weight:400;font-size:.7rem;">escolher fim</span>
+                </button>
+            </div>
+            <button onclick="cancelarSelecao(${lid})" style="width:100%;padding:5px;background:none;border:none;color:#94a3b8;font-size:.72rem;cursor:pointer;">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>`;
+    }
+    if (st.start && !st.end && st.customMode) {
         const d1str = `${String(st.start).padStart(2,'0')}/${String(st.mes+1).padStart(2,'0')}/${st.ano}`;
         return `<div class="sel-resumo" style="margin-top:14px;background:#fffbeb;border:1px solid #fde68a;">
             <div class="sel-info" style="color:#92400e;font-size:.8rem;">
                 <i class="fas fa-calendar-day" style="margin-right:6px;"></i>
                 Início: <strong>${d1str}</strong> — clique no dia final
             </div>
+            <button onclick="cancelarSelecao(${lid})" style="background:none;border:none;color:#94a3b8;font-size:.78rem;cursor:pointer;">
+                <i class="fas fa-times"></i>
+            </button>
         </div>`;
     }
 
@@ -539,16 +646,21 @@ function renderHistorico(loc) {
                        style="font-size:.65rem;padding:2px 8px;border-radius:4px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;cursor:pointer;font-weight:600;white-space:nowrap;">
                    <i class="fas fa-sync-alt"></i> Verificar
                </button>` : '';
+        const baixaBtn = !isPago
+            ? `<button onclick="baixarDireto(${p.id}, ${loc.locacao_id})"
+                       style="font-size:.65rem;padding:2px 8px;border-radius:4px;border:1px solid #bbf7d0;background:#f0fdf4;color:#15803d;cursor:pointer;font-weight:600;white-space:nowrap;">
+                   <i class="fas fa-check"></i> Baixa
+               </button>` : '';
         const dataPag = isPago ? ` · pago em ${fmtDate(p.data_pagamento)}` : '';
         return `<div class="hist-item">
             <div style="flex:1;min-width:0;">
                 <div class="hist-period">${parcelaTag}${periodo}</div>
                 <div class="hist-dias" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px;">
                     ${dias} dia${dias===1?'':'s'}${dataPag}
-                    ${statusBadge} ${verificarBtn}
+                    ${statusBadge} ${verificarBtn} ${baixaBtn}
                 </div>
             </div>
-            <div class="hist-val">${fmtR(p.valor_pago)}${desc}</div>
+            <div class="hist-val">${fmtR(isPago ? p.valor_pago : p.valor_previsto)}${desc}</div>
             <button class="hist-del" onclick="cancelarPagamento(${p.id}, ${loc.locacao_id})" title="Cancelar">
                 <i class="fas fa-trash"></i>
             </button>
