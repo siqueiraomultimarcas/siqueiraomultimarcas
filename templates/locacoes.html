@@ -528,7 +528,8 @@
             let existentes = [];
             try {
                 if (loc && loc.fotos_saida) {
-                    existentes = typeof loc.fotos_saida === 'string' ? JSON.parse(loc.fotos_saida) : loc.fotos_saida;
+                    const parsed = typeof loc.fotos_saida === 'string' ? JSON.parse(loc.fotos_saida) : loc.fotos_saida;
+                    if (Array.isArray(parsed)) existentes = parsed;
                 }
             } catch {}
             data.fotos_saida = [...existentes, ...fotosUrls];
