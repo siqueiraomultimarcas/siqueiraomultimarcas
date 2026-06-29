@@ -2341,13 +2341,22 @@ def delete_abastecimento(id):
 @app.route('/api/multas/importar-pdf', methods=['POST'])
 @login_required
 def importar_multa_pdf():
-    import pdfplumber, re, io as _io
+    import pdfplumber, re, io as _io, unicodedata
     f = request.files.get('pdf')
     if not f:
         return jsonify({'error': 'Nenhum arquivo enviado'}), 400
     try:
         with pdfplumber.open(_io.BytesIO(f.read())) as pdf:
-            text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
+            pages = []
+            for page in pdf.pages:
+                try:
+                    t = page.extract_text(layout=True) or ''
+                except Exception:
+                    t = page.extract_text() or ''
+                pages.append(t)
+            text = '\n'.join(pages)
+        # PDFs often use NFD decomposed chars (C + combining cedilla) — normalize to NFC
+        text = unicodedata.normalize('NFC', text)
     except Exception as e:
         return jsonify({'error': f'Erro ao ler PDF: {e}'}), 400
 
@@ -2362,32 +2371,48 @@ def importar_multa_pdf():
             return f'{p[2]}-{p[1]}-{p[0]}'
         except: return ''
 
-    ait        = find(r'Auto de Infra[çc][aã]o \(N[uú]mero do AIT\)\s*\n(.+?)(?:\n|$)')
-    tipo       = 'nic' if ait.upper().startswith('NIC') else 'multa'
-    placa      = find(r'PLACA\s*\n([A-Z0-9]{7})')
-    data_inf   = find(r'\bDATA\b\s*\n(\d{2}/\d{2}/\d{4})')
-    hora       = find(r'\bHORA\b\s*\n(\d{2}:\d{2})')
-    local      = find(r'LOCAL DA INFRA[ÇC][AÃ]O\s*\n(.+?)(?:\n[A-Z]|$)')
-    valor_raw  = find(r'VALOR DA MULTA\s*\nR\$\s*([\d.,]+)')
-    valor      = valor_raw.replace('.','').replace(',','.') if valor_raw else ''
-    descricao  = find(r'DESCRI[ÇC][AÃ]O DA INFRA[ÇC][AÃ]O\s*\n(.+?)(?:\nMEDI[ÇC][AÃ]O|\Z)')
-    descricao  = ' '.join(descricao.split())
-    renainf    = find(r'N[UÚ]MERO RENAINF\s*\n(\d+)')
-    dt_limite  = find(r'DATA LIMITE PARA INTERPOSIÇÃO DE DEFESA PRÉVIA\s*\n(\d{2}/\d{2}/\d{4})')
-    dt_notif   = find(r'DATA DA NOTIFICA[ÇC][AÃ]O DA AUTUA[ÇC][AÃ]O\s*\n(\d{2}/\d{2}/\d{4})')
+    # AIT: match full label as it appears in DENATRAN PDFs
+    ait = find(r'IDENTIFICA[ÇC][AÃ]O DO AUTO DE INFRA[ÇC][AÃ]O[^\n]*\)\s*[\n\s]+([A-Z0-9-]+)')
+    if not ait:
+        ait = find(r'N[UÚ]MERO DO AIT\)?[\s\n:]+([A-Z0-9-]+)')
+    tipo = 'nic' if ait.upper().startswith('NIC') else 'multa'
+
+    placa = find(r'\bPLACA\b[\s\n]+([A-Z0-9]{7})\b')
+
+    # DATA da infração — deve ser a data do local/hora, não a de notificação ou limite
+    data_inf = find(r'\bDATA\b(?!\s*D[AO]\s*NOTIFICA|\s*LIMITE|\s*LIMITE\s*PARA)[\s\n]+(\d{2}/\d{2}/\d{4})')
+
+    hora = find(r'\bHORA\b[\s\n]+(\d{2}:\d{2})')
+
+    # LOCAL: para na linha seguinte que começa com DATA, HORA, CÓDIGO ou outra label maiúscula
+    local_raw = find(r'LOCAL DA INFRA[ÇC][AÃ]O[\s\n]+(.+?)(?=[\n\r]+(?:DATA\b|HORA\b|C[OÓ]DIGO|NOME)|$)')
+    local = ' '.join(local_raw.split())
+
+    valor_raw = find(r'VALOR DA MULTA[\s\n]+R\$[\s]*([\d.,]+)')
+    valor = valor_raw.replace('.', '').replace(',', '.') if valor_raw else ''
+
+    descricao_raw = find(r'DESCRI[ÇC][AÃ]O DA INFRA[ÇC][AÃ]O[\s\n]+(.+?)(?=[\n\r]+MEDI[ÇC][AÃ]O|[\n\r]+VALOR CONSIDERADO|\Z)')
+    descricao = ' '.join(descricao_raw.split())
+
+    # RENAINF: não pegar o "NÚMERO RENAINF MULTA ORIGINAL"
+    renainf = find(r'N[UÚ]MERO RENAINF(?!\s+MULTA)[\s\n]+(\d+)')
+
+    dt_limite = find(r'DATA LIMITE PARA INTERPOSIÇÃO DE DEFESA PRÉVIA[\s\n]+(\d{2}/\d{2}/\d{4})')
+    dt_notif  = find(r'DATA DA NOTIFICA[ÇC][AÃ]O DA AUTUA[ÇC][AÃ]O[\s\n]+(\d{2}/\d{2}/\d{4})')
 
     return jsonify({
-        'tipo_notificacao':  tipo,
-        'numero_auto':       ait,
-        'placa':             placa,
-        'data_infracao':     to_iso(data_inf),
-        'hora_infracao':     hora,
-        'local_infracao':    local,
-        'valor':             valor,
-        'descricao':         descricao,
-        'numero_renainf':    renainf,
+        'tipo_notificacao':   tipo,
+        'numero_auto':        ait,
+        'placa':              placa,
+        'data_infracao':      to_iso(data_inf),
+        'hora_infracao':      hora,
+        'local_infracao':     local,
+        'valor':              valor,
+        'descricao':          descricao,
+        'numero_renainf':     renainf,
         'data_limite_defesa': to_iso(dt_limite),
-        'data_notificacao':  to_iso(dt_notif),
+        'data_notificacao':   to_iso(dt_notif),
+        '_debug':             text[:3000],
     })
 
 
