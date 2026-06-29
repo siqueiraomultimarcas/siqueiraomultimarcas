@@ -2388,23 +2388,26 @@ def importar_multa_pdf():
             return f'{p[2]}-{p[1]}-{p[0]}'
         except: return ''
 
-    # AIT: linha que contém "AIT)"
-    ait = after_label(r'IDENTIFICA\w*\s+DO\s+AUTO.*AIT\)', value_re=r'[A-Z0-9]{5,}')
+    # AIT: linha tem "AIT)" + "CURITIBA PR" na mesma linha — pegar próxima linha que tem letras+dígitos
+    ait = after_label(r'IDENTIFICA\w*\s+DO\s+AUTO.*AIT\)', value_re=r'[A-Z]{1,5}\d{5,}')
     tipo = 'nic' if ait.upper().startswith('NIC') else 'multa'
 
-    # Placa: linha exatamente "PLACA"
-    placa = after_label(r'^\s*PLACA\s*$', value_re=r'[A-Z0-9]{7}')
+    # PLACA: linha é "PLACA ESPÉCIE PAÍS" — não exata, pega próxima linha com placa 7 chars
+    placa = after_label(r'\bPLACA\b', value_re=r'\b[A-Z0-9]{7}\b')
 
-    hora = after_label(r'^\s*HORA\s*$', value_re=r'\d{2}:\d{2}')
+    # HORA: "01:10" aparece misturado na linha de órgão competente — busca direto no texto
+    hora_m = re.search(r'\b(\d{2}:\d{2})\b', text)
+    hora = hora_m.group(1) if hora_m else ''
 
-    local = after_label(r'LOCAL\s+DA\s+INFRA\w+')
+    # LOCAL: "CURITIBA-PR" — formato CIDADE-UF na linha de valores dos órgãos
+    local = after_label(r'LOCAL\s+DA\s+INFRA\w+', value_re=r'[A-ZÁÉÍÓÚÃÕÀÂÊÎÔÛÇ]+-[A-Z]{2}')
 
-    # VALOR: busca número após "VALOR DA MULTA" na mesma ou próxima linha
+    # VALOR: próxima linha após "VALOR DA MULTA" tem "5002 0 R$ 260,32"
     valor_raw = after_label(r'VALOR\s+DA\s+MULTA', value_re=r'[\d]+[.,][\d]+')
     valor_num = re.search(r'[\d.,]+', valor_raw) if valor_raw else None
     valor = valor_num.group(0).replace('.', '').replace(',', '.') if valor_num else ''
 
-    # DESCRIÇÃO: acumula linhas até encontrar "MEDIÇÃO" ou "VALOR CONSIDERADO"
+    # DESCRIÇÃO: acumula linhas, pula artefatos de coluna misturada (DATA LIMITE, Não se aplica)
     descricao_lines = []
     in_desc = False
     for line in lines:
@@ -2414,12 +2417,13 @@ def importar_multa_pdf():
         if in_desc:
             if re.search(r'MEDI\w+\s+REALIZADA|VALOR\s+CONSIDERADO', line, re.IGNORECASE):
                 break
-            if line:
+            if line and not re.search(r'^DATA LIMITE|^N[ãa]o se aplica', line, re.IGNORECASE):
                 descricao_lines.append(line)
     descricao = ' '.join(descricao_lines)
 
-    # RENAINF: ignora a linha "NÚMERO RENAINF MULTA ORIGINAL"
-    renainf = after_label(r'^.*RENAINF(?!\s+MULTA)\s*$', value_re=r'\d{7,}')
+    # RENAINF: linha "QNC7B48 ... NÚMERO RENAINF NÚMERO RENAINF MULTA ORIGINAL"
+    # valor na próxima linha: "11420353810 11211914720"
+    renainf = after_label(r'RENAINF(?!\s+MULTA)', value_re=r'\d{7,}')
 
     dt_limite = after_label(r'DATA\s+LIMITE.*DEFESA', value_re=r'\d{2}/\d{2}/\d{4}')
     # DATA DA NOTIFICAÇÃO DA AUTUAÇÃO = "Data da Infração" no sistema

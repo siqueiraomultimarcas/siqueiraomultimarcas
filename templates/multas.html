@@ -630,14 +630,6 @@
 
             const tipo = d.tipo_notificacao === 'nic' ? 'NIC' : 'Multa';
             showToast(`${tipo} importada — revise os dados e salve`, 'success');
-
-            // DEBUG TEMPORÁRIO — mostra texto extraído para diagnóstico
-            if (d._debug) {
-                setTimeout(() => abrirModal('Debug PDF (texto extraído)', `
-                    <p style="font-size:.75rem;color:#6b7280;margin-bottom:8px;">Copie este texto e envie para o suporte:</p>
-                    <textarea style="width:100%;height:300px;font-size:.65rem;font-family:monospace;white-space:pre" readonly>${d._debug}</textarea>
-                `), 300);
-            }
         } catch { showToast('Erro ao importar PDF', 'error'); }
         finally { if (status) status.style.display = 'none'; input.value = ''; }
     }
