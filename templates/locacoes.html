@@ -378,15 +378,17 @@
                 '<div class="form-group"><label>Data Fim <span style="font-size:0.7rem;color:#94a3b8;font-weight:400">(opcional)</span></label><input type="date" class="form-control" name="data_fim" id="dataFim" value="' + (isEdit ? (locacao.data_fim || '') : '') + '" onchange="calcularTotal()"></div>' +
             '</div>' +
             '<div class="form-group">' +
-                '<label>Frequência de Cobrança</label>' +
-                '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">' +
-                    ['avulso','semanal','quinzenal','mensal'].map(f => {
+                '<label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Frequência de Cobrança</label>' +
+                '<input type="hidden" name="frequencia_cobranca" id="freqCobranca" value="' + (isEdit ? (locacao.frequencia_cobranca || 'avulso') : 'avulso') + '">' +
+                '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="freqBtns">' +
+                    (function() {
                         const freq = isEdit ? (locacao.frequencia_cobranca || 'avulso') : 'avulso';
-                        const labels = {avulso:'Avulso (manual)',semanal:'Semanal (7 dias)',quinzenal:'Quinzenal (15 dias)',mensal:'Mensal (30 dias)'};
-                        const ativo = freq === f;
-                        return `<label style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:2px solid ${ativo?'#2563eb':'#e2e8f0'};background:${ativo?'#eff6ff':'#f8fafc'};color:${ativo?'#1d4ed8':'#64748b'};font-size:.78rem;font-weight:600;cursor:pointer;">` +
-                               `<input type="radio" name="frequencia_cobranca" value="${f}" ${ativo?'checked':''} style="accent-color:#2563eb;"> ${labels[f]}</label>`;
-                    }).join('') +
+                        const opts = [{v:'avulso',l:'Avulso (manual)'},{v:'semanal',l:'Semanal (7 dias)'},{v:'quinzenal',l:'Quinzenal (15 dias)'},{v:'mensal',l:'Mensal (30 dias)'}];
+                        return opts.map(o => {
+                            const a = freq === o.v;
+                            return '<button type="button" data-freq="' + o.v + '" onclick="setFreqLoc(\'' + o.v + '\')" style="padding:6px 14px;border-radius:8px;border:2px solid ' + (a?'#2563eb':'#e2e8f0') + ';background:' + (a?'#eff6ff':'#f8fafc') + ';color:' + (a?'#1d4ed8':'#64748b') + ';font-size:.78rem;font-weight:600;cursor:pointer;">' + o.l + '</button>';
+                        }).join('');
+                    })() +
                 '</div>' +
             '</div>' +
             '<div class="grid-3">' +
@@ -439,6 +441,16 @@
         const dia = document.getElementById('diariaLoc');
         if (dia) dia.value = s > 0 ? Math.round(s / 7 * 100) / 100 : '';
         calcularTotal();
+    }
+
+    function setFreqLoc(freq) {
+        document.getElementById('freqCobranca').value = freq;
+        document.querySelectorAll('#freqBtns button').forEach(btn => {
+            const a = btn.dataset.freq === freq;
+            btn.style.border      = '2px solid ' + (a ? '#2563eb' : '#e2e8f0');
+            btn.style.background  = a ? '#eff6ff' : '#f8fafc';
+            btn.style.color       = a ? '#1d4ed8' : '#64748b';
+        });
     }
 
     function calcularTotal() {
