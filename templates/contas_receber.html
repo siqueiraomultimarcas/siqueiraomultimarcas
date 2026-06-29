@@ -522,7 +522,7 @@ function renderizar() {
             const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
             const stLabel = isPago ? (d.tipo === 'avulsa' ? 'recebido' : 'pago') : 'pendente';
             const desc    = (d.descricao||'').replace(/'/g,"\\'");
-            return `<tr style="${vencido ? 'background:#fff7ed;' : ''}">
+            return `<tr>
                 <td style="padding:7px 10px;width:32px;text-align:center;">
                     ${d.tipo === 'contrato' ? `<input type="checkbox" class="chk-periodo" data-id="${d.id}" onchange="atualizarBtnExcluir(${idx})" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">` : ''}
                 </td>
