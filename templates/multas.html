@@ -70,7 +70,7 @@
     </div>
     <div class="table-container">
         <table data-sortable>
-            <thead>
+            <thead style="display:none;">
                 <tr>
                     <th>Data</th>
                     <th>Veículo</th>
@@ -212,17 +212,29 @@
                 </tr>`).join('');
 
             return `
-            <tr class="grupo-multa-row" onclick="toggleGrupoMulta('${gId}')" style="cursor:pointer;">
-                <td colspan="2">
-                    <div style="font-weight:700;font-size:.9rem;color:#0f172a;">${g.nome}</div>
-                    <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} multa${g.itens.length>1?'s':''}</div>
+            <tr class="grupo-multa-row" onclick="toggleGrupoMulta('${gId}')" style="cursor:pointer;border-bottom:1px solid #e2e8f0;">
+                <td colspan="9" style="padding:12px 16px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <div>
+                                <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${g.nome}</div>
+                                <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} multa${g.itens.length>1?'s':''}</div>
+                            </div>
+                            <div>${_badgesMulta(pendentes, pagas)}</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:20px;">
+                            <div style="text-align:right;">
+                                <div style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Total</div>
+                                <div style="font-weight:700;color:${totalVal>0?'#d97706':'#94a3b8'};">${formatCurrency(totalVal)}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pontos</div>
+                                <div style="font-size:.85rem;font-weight:600;">${totalPts} pts</div>
+                            </div>
+                            <i class="fas fa-chevron-right" id="chevM_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
+                        </div>
+                    </div>
                 </td>
-                <td colspan="2">${_badgesMulta(pendentes, pagas)}</td>
-                <td></td>
-                <td style="font-weight:700;color:${totalVal>0?'#d97706':'#94a3b8'};">${formatCurrency(totalVal)}</td>
-                <td style="font-size:.82rem;">${totalPts} pts</td>
-                <td></td>
-                <td style="text-align:right;padding-right:12px;color:#94a3b8;"><i class="fas fa-chevron-right" id="chevM_${gId}" style="transition:transform .2s;"></i></td>
             </tr>
             <tr id="detM_${gId}" style="display:none;">
                 <td colspan="9" style="padding:0;">
