@@ -220,15 +220,9 @@
                 <div id="importStatusMulta" style="display:none;font-size:.78rem;color:#2563eb;margin-bottom:10px;text-align:center;">
                     <i class="fas fa-spinner fa-spin"></i> Lendo PDF...
                 </div>` : ''}
-                <div style="display:flex;gap:8px;margin-bottom:12px;">
-                    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.83rem;">
-                        <input type="radio" name="tipo_notificacao" value="multa" ${tipoAtual==='multa'?'checked':''}>
-                        <span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:2px 8px;font-size:.72rem;font-weight:700;">MULTA</span>
-                    </label>
-                    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.83rem;">
-                        <input type="radio" name="tipo_notificacao" value="nic" ${tipoAtual==='nic'?'checked':''}>
-                        <span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;padding:2px 8px;font-size:.72rem;font-weight:700;">NIC</span>
-                    </label>
+                <input type="hidden" name="tipo_notificacao" id="fTipoNotificacao" value="${tipoAtual}">
+                <div style="margin-bottom:12px;">
+                    <span style="background:${tipoAtual==='nic'?'#eff6ff':'#fef2f2'};color:${tipoAtual==='nic'?'#1d4ed8':'#dc2626'};border:1px solid ${tipoAtual==='nic'?'#bfdbfe':'#fecaca'};border-radius:4px;padding:3px 10px;font-size:.75rem;font-weight:700;">${tipoAtual==='nic'?'NIC':'MULTA'}</span>
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
@@ -610,8 +604,8 @@
             if (!r.ok) { showToast(d.error || 'Erro ao ler PDF', 'error'); return; }
 
             // preenche tipo
-            const radioTipo = document.querySelector(`input[name="tipo_notificacao"][value="${d.tipo_notificacao}"]`);
-            if (radioTipo) radioTipo.checked = true;
+            const hiddenTipo = document.getElementById('fTipoNotificacao');
+            if (hiddenTipo) hiddenTipo.value = d.tipo_notificacao;
 
             // preenche campos por id
             const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
