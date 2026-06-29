@@ -4,7 +4,6 @@
 
 {% block content %}
 <style>
-.table-container { overflow-x: auto; overflow-y: visible; max-height: none; height: auto; }
 .grupo-multa-row td { transition: background .12s; }
 .grupo-multa-row:hover td { background: #f1f5f9; }
 </style>
@@ -68,8 +67,8 @@
             </select>
         </div>
     </div>
-    <div class="table-container">
-        <table data-sortable>
+    <div>
+        <table data-sortable style="width:100%;border-collapse:collapse;">
             <thead style="display:none;">
                 <tr>
                     <th>Data</th>
