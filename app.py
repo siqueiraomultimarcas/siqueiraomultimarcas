@@ -202,6 +202,10 @@ def init_db():
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS total_parcelas INTEGER DEFAULT 1")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS numero_auto TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS data_pagamento DATE")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS tipo_notificacao TEXT DEFAULT 'multa'")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS data_limite_defesa DATE")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS numero_renainf TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS hora_infracao TEXT")
     for col, tipo in [('cep','TEXT'), ('bairro','TEXT'), ('nome_fantasia','TEXT'), ('data_fundacao','DATE'), ('situacao_receita','TEXT'), ('responsavel_principal','TEXT')]:
         cur.execute(f"ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS {col} {tipo}")
     for col, tipo in [('numero_pedido','TEXT'), ('fornecedor_id','INTEGER'), ('itens_json','TEXT')]:
@@ -2334,6 +2338,59 @@ def delete_abastecimento(id):
 
 # ==================== API MULTAS ====================
 
+@app.route('/api/multas/importar-pdf', methods=['POST'])
+@login_required
+def importar_multa_pdf():
+    import pdfplumber, re, io as _io
+    f = request.files.get('pdf')
+    if not f:
+        return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+    try:
+        with pdfplumber.open(_io.BytesIO(f.read())) as pdf:
+            text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
+    except Exception as e:
+        return jsonify({'error': f'Erro ao ler PDF: {e}'}), 400
+
+    def find(pattern, default=''):
+        m = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+        return m.group(1).strip() if m else default
+
+    def to_iso(d):
+        if not d: return ''
+        try:
+            p = d.strip().split('/')
+            return f'{p[2]}-{p[1]}-{p[0]}'
+        except: return ''
+
+    ait        = find(r'Auto de Infra[çc][aã]o \(N[uú]mero do AIT\)\s*\n(.+?)(?:\n|$)')
+    tipo       = 'nic' if ait.upper().startswith('NIC') else 'multa'
+    placa      = find(r'PLACA\s*\n([A-Z0-9]{7})')
+    data_inf   = find(r'\bDATA\b\s*\n(\d{2}/\d{2}/\d{4})')
+    hora       = find(r'\bHORA\b\s*\n(\d{2}:\d{2})')
+    local      = find(r'LOCAL DA INFRA[ÇC][AÃ]O\s*\n(.+?)(?:\n[A-Z]|$)')
+    valor_raw  = find(r'VALOR DA MULTA\s*\nR\$\s*([\d.,]+)')
+    valor      = valor_raw.replace('.','').replace(',','.') if valor_raw else ''
+    descricao  = find(r'DESCRI[ÇC][AÃ]O DA INFRA[ÇC][AÃ]O\s*\n(.+?)(?:\nMEDI[ÇC][AÃ]O|\Z)')
+    descricao  = ' '.join(descricao.split())
+    renainf    = find(r'N[UÚ]MERO RENAINF\s*\n(\d+)')
+    dt_limite  = find(r'DATA LIMITE PARA INTERPOSIÇÃO DE DEFESA PRÉVIA\s*\n(\d{2}/\d{2}/\d{4})')
+    dt_notif   = find(r'DATA DA NOTIFICA[ÇC][AÃ]O DA AUTUA[ÇC][AÃ]O\s*\n(\d{2}/\d{2}/\d{4})')
+
+    return jsonify({
+        'tipo_notificacao':  tipo,
+        'numero_auto':       ait,
+        'placa':             placa,
+        'data_infracao':     to_iso(data_inf),
+        'hora_infracao':     hora,
+        'local_infracao':    local,
+        'valor':             valor,
+        'descricao':         descricao,
+        'numero_renainf':    renainf,
+        'data_limite_defesa': to_iso(dt_limite),
+        'data_notificacao':  to_iso(dt_notif),
+    })
+
+
 @app.route('/api/multas', methods=['GET'])
 @login_required
 def get_multas():
@@ -2359,12 +2416,14 @@ def add_multa():
     conn = get_conn()
     cur = conn.cursor()
     cur.execute('''
-        INSERT INTO multas (veiculo_id, motorista_id, data_infracao, descricao, valor, local_infracao, pontos, status, observacoes, numero_auto)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO multas (veiculo_id, motorista_id, data_infracao, descricao, valor, local_infracao, pontos, status, observacoes, numero_auto, tipo_notificacao, data_limite_defesa, numero_renainf, hora_infracao)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ''', (data.get('veiculo_id'), data.get('motorista_id'), data.get('data_infracao'),
           data.get('descricao'), data.get('valor'), data.get('local_infracao'),
           data.get('pontos'), data.get('status', 'pendente'), data.get('observacoes'),
-          data.get('numero_auto')))
+          data.get('numero_auto'), data.get('tipo_notificacao', 'multa'),
+          data.get('data_limite_defesa') or None, data.get('numero_renainf') or None,
+          data.get('hora_infracao') or None))
     conn.commit()
     cur.close()
     conn.close()
@@ -2380,11 +2439,14 @@ def update_multa(id):
     cur.execute('''
         UPDATE multas SET veiculo_id=%s, motorista_id=%s, data_infracao=%s, descricao=%s,
         valor=%s, local_infracao=%s, pontos=%s, status=%s, observacoes=%s, numero_auto=%s,
-        data_pagamento=%s WHERE id=%s
+        data_pagamento=%s, tipo_notificacao=%s, data_limite_defesa=%s, numero_renainf=%s, hora_infracao=%s
+        WHERE id=%s
     ''', (data.get('veiculo_id'), data.get('motorista_id'), data.get('data_infracao'),
           data.get('descricao'), data.get('valor'), data.get('local_infracao'),
           data.get('pontos'), data.get('status'), data.get('observacoes'),
-          data.get('numero_auto'), data.get('data_pagamento'), id))
+          data.get('numero_auto'), data.get('data_pagamento'),
+          data.get('tipo_notificacao', 'multa'), data.get('data_limite_defesa') or None,
+          data.get('numero_renainf') or None, data.get('hora_infracao') or None, id))
     conn.commit()
     cur.close()
     conn.close()

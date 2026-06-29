@@ -203,8 +203,30 @@
             optionsMotoristas += `<option value="${c.id}" ${sel}>${c.nome}</option>`;
         });
 
+        const tipoAtual = multa?.tipo_notificacao || 'multa';
         const content = `
             <form id="formMulta" onsubmit="salvarMulta(event, ${multa ? multa.id : 'null'})">
+                ${!isEdit ? `
+                <div style="display:flex;gap:8px;margin-bottom:14px;">
+                    <input type="file" id="inputPdfMulta" accept=".pdf" style="display:none" onchange="importarPdfMulta(this)">
+                    <button type="button" onclick="document.getElementById('inputPdfMulta').click()"
+                        style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;border-radius:8px;border:2px dashed #e2e8f0;background:#f8fafc;color:#374151;font-size:.83rem;font-weight:600;cursor:pointer;">
+                        <i class="fas fa-file-pdf" style="color:#dc2626;"></i> Importar Multa / NIC (PDF)
+                    </button>
+                </div>
+                <div id="importStatusMulta" style="display:none;font-size:.78rem;color:#2563eb;margin-bottom:10px;text-align:center;">
+                    <i class="fas fa-spinner fa-spin"></i> Lendo PDF...
+                </div>` : ''}
+                <div style="display:flex;gap:8px;margin-bottom:12px;">
+                    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.83rem;">
+                        <input type="radio" name="tipo_notificacao" value="multa" ${tipoAtual==='multa'?'checked':''}>
+                        <span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:2px 8px;font-size:.72rem;font-weight:700;">MULTA</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.83rem;">
+                        <input type="radio" name="tipo_notificacao" value="nic" ${tipoAtual==='nic'?'checked':''}>
+                        <span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:4px;padding:2px 8px;font-size:.72rem;font-weight:700;">NIC</span>
+                    </label>
+                </div>
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Veículo *</label>
@@ -221,22 +243,42 @@
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
-                        <label>Data da Infração *</label>
-                        <input type="date" class="form-control" name="data_infracao" value="${multa ? multa.data_infracao : ''}" required>
+                        <label>Número do Auto (AIT)</label>
+                        <input type="text" class="form-control" name="numero_auto" id="fNumeroAuto" value="${multa ? (multa.numero_auto || '') : ''}" placeholder="Ex: NIC1912173">
                     </div>
                     <div class="form-group">
+                        <label>Número RENAINF</label>
+                        <input type="text" class="form-control" name="numero_renainf" id="fRenainf" value="${multa ? (multa.numero_renainf || '') : ''}" placeholder="Ex: 11420353810">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Data da Infração *</label>
+                        <input type="date" class="form-control" name="data_infracao" id="fDataInfracao" value="${multa ? (multa.data_infracao || '') : ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Hora</label>
+                        <input type="time" class="form-control" name="hora_infracao" id="fHora" value="${multa ? (multa.hora_infracao || '') : ''}">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
                         <label>Valor (R$)</label>
-                        <input type="number" class="form-control" name="valor" value="${multa ? multa.valor : ''}" step="0.01" min="0" placeholder="0,00">
+                        <input type="number" class="form-control" name="valor" id="fValor" value="${multa ? multa.valor : ''}" step="0.01" min="0" placeholder="0,00">
+                    </div>
+                    <div class="form-group">
+                        <label>Data Limite Defesa Prévia</label>
+                        <input type="date" class="form-control" name="data_limite_defesa" id="fDataLimite" value="${multa ? (multa.data_limite_defesa || '') : ''}">
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Descrição da Infração</label>
-                    <input type="text" class="form-control" name="descricao" value="${multa ? multa.descricao : ''}" placeholder="Ex: Excesso de velocidade">
+                    <input type="text" class="form-control" name="descricao" id="fDescricao" value="${multa ? (multa.descricao || '') : ''}" placeholder="Ex: Excesso de velocidade">
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
                         <label>Local da Infração</label>
-                        <input type="text" class="form-control" name="local_infracao" value="${multa ? multa.local_infracao : ''}" placeholder="Ex: Av. Brasil, 500">
+                        <input type="text" class="form-control" name="local_infracao" id="fLocal" value="${multa ? (multa.local_infracao || '') : ''}" placeholder="Ex: Av. Brasil, 500">
                     </div>
                     <div class="form-group">
                         <label>Pontos na CNH</label>
@@ -252,13 +294,9 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Número do Auto</label>
-                        <input type="text" class="form-control" name="numero_auto" value="${multa ? (multa.numero_auto || '') : ''}" placeholder="Ex: AI-12345">
+                        <label>Observações</label>
+                        <input type="text" class="form-control" name="observacoes" value="${multa ? (multa.observacoes || '') : ''}" placeholder="Informações adicionais...">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Observações</label>
-                    <textarea class="form-control" name="observacoes" rows="2" placeholder="Informações adicionais...">${multa ? (multa.observacoes || '') : ''}</textarea>
                 </div>
                 <div style="text-align: right; margin-top: 20px;">
                     <button type="button" class="btn" onclick="fecharModal()" style="background: #6b7280; color: white; margin-right: 10px;">Cancelar</button>
@@ -554,6 +592,46 @@
 
         abrirModalMulta(multaImportada);
         showToast('Infração importada — revise os dados e salve', 'info');
+    }
+
+    async function importarPdfMulta(input) {
+        if (!input.files[0]) return;
+        const status = document.getElementById('importStatusMulta');
+        if (status) status.style.display = 'block';
+        const fd = new FormData();
+        fd.append('pdf', input.files[0]);
+        try {
+            const r = await fetch('/api/multas/importar-pdf', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (!r.ok) { showToast(d.error || 'Erro ao ler PDF', 'error'); return; }
+
+            // preenche tipo
+            const radioTipo = document.querySelector(`input[name="tipo_notificacao"][value="${d.tipo_notificacao}"]`);
+            if (radioTipo) radioTipo.checked = true;
+
+            // preenche campos por id
+            const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+            set('fNumeroAuto',  d.numero_auto);
+            set('fRenainf',     d.numero_renainf);
+            set('fDataInfracao',d.data_infracao);
+            set('fHora',        d.hora_infracao);
+            set('fValor',       d.valor);
+            set('fDataLimite',  d.data_limite_defesa);
+            set('fDescricao',   d.descricao);
+            set('fLocal',       d.local_infracao);
+
+            // tenta selecionar veículo pela placa
+            if (d.placa) {
+                const sel = document.querySelector('select[name="veiculo_id"]');
+                if (sel) Array.from(sel.options).forEach(o => {
+                    if (o.text.includes(d.placa)) sel.value = o.value;
+                });
+            }
+
+            const tipo = d.tipo_notificacao === 'nic' ? 'NIC' : 'Multa';
+            showToast(`${tipo} importada — revise os dados e salve`, 'success');
+        } catch { showToast('Erro ao importar PDF', 'error'); }
+        finally { if (status) status.style.display = 'none'; input.value = ''; }
     }
 
     window.addEventListener('load', carregarDados);
