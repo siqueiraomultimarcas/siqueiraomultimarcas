@@ -123,13 +123,14 @@
                 <td>${precoLitro}</td>
                 <td><strong>${total}</strong></td>
                 <td>${km}</td>
-                <td>
-                    <button class="btn btn-sm btn-primary" onclick="editarAbastecimento(${a.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="excluirAbastecimento(${a.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                <td style="text-align:center;">
+                    <div class="act-wrap">
+                        <button class="act-btn" onclick="toggleActMenu(event,${a.id})" title="Ações">⋯</button>
+                        <div id="actmenu_${a.id}" class="act-menu">
+                            <button onclick="toggleActMenu(event,-1);editarAbastecimento(${a.id})"><i class="fas fa-edit"></i> Editar</button>
+                            <button class="danger" onclick="toggleActMenu(event,-1);excluirAbastecimento(${a.id})"><i class="fas fa-trash"></i> Excluir</button>
+                        </div>
+                    </div>
                 </td>
             </tr>`;
         }).join('');

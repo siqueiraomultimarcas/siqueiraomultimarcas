@@ -418,8 +418,13 @@ function renderizarVeiculos(lista) {
                 }
             </td>
             <td style="text-align:center;">
-                <button class="btn btn-sm btn-primary" onclick="editarVeiculo(${v.id})" title="Editar"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-sm btn-danger" onclick="confirmarExcluir(${v.id}, '${v.placa}')" title="Excluir"><i class="fas fa-trash"></i></button>
+                <div class="act-wrap">
+                    <button class="act-btn" onclick="toggleActMenu(event,${v.id})" title="Ações">⋯</button>
+                    <div id="actmenu_${v.id}" class="act-menu">
+                        <button onclick="toggleActMenu(event,-1);editarVeiculo(${v.id})"><i class="fas fa-edit"></i> Editar</button>
+                        <button class="danger" onclick="toggleActMenu(event,-1);confirmarExcluir(${v.id}, '${v.placa}')"><i class="fas fa-trash"></i> Excluir</button>
+                    </div>
+                </div>
             </td>
         </tr>`;
     }).join('');

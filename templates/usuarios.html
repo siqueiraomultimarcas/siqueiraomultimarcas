@@ -117,10 +117,14 @@
                 '<td>' + nivelBadge + '</td>' +
                 '<td>' + statusBadge + '</td>' +
                 '<td>' + dataCad + '</td>' +
-                '<td style="white-space:nowrap">' +
-                    '<button class="btn btn-sm btn-primary" onclick="editarUsuario(' + u.id + ')" title="Editar"><i class="fas fa-edit"></i></button>' +
-                    (!ownUser ? ' <button class="btn btn-sm ' + (u.ativo ? 'btn-warning' : 'btn-success') + '" onclick="toggleUsuario(' + u.id + ', ' + u.ativo + ')" title="' + (u.ativo ? 'Desativar' : 'Ativar') + '">' +
-                        '<i class="fas ' + (u.ativo ? 'fa-ban' : 'fa-check') + '"></i></button>' : '') +
+                '<td style="text-align:center;">' +
+                    '<div class="act-wrap">' +
+                        '<button class="act-btn" onclick="toggleActMenu(event,' + u.id + ')" title="Ações">⋯</button>' +
+                        '<div id="actmenu_' + u.id + '" class="act-menu">' +
+                            '<button onclick="toggleActMenu(event,-1);editarUsuario(' + u.id + ')"><i class="fas fa-edit"></i> Editar</button>' +
+                            (!ownUser ? '<button onclick="toggleActMenu(event,-1);toggleUsuario(' + u.id + ',' + u.ativo + ')"><i class="fas ' + (u.ativo ? 'fa-ban' : 'fa-check') + '"></i> ' + (u.ativo ? 'Desativar' : 'Ativar') + '</button>' : '') +
+                        '</div>' +
+                    '</div>' +
                 '</td>' +
             '</tr>';
         }).join('');

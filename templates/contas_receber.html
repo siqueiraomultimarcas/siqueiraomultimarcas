@@ -527,6 +527,7 @@ function renderizar() {
                         <div id="locmenu_cr_${d.id}" class="loc-menu" style="display:none;right:0;">
                             ${!isPago ? `<button onclick="closeLocMenus();abrirBaixaConCtx(${cidStr},'${cliEsc}','${d.tipo}',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>` : ''}
                             ${!isPago && d.tipo === 'contrato' ? `<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
+                            ${!isPago && d.tipo === 'multa' ? `<button onclick="closeLocMenus();abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>` : ''}
                             ${d.tipo === 'contrato' ? `<button class="danger" onclick="closeLocMenus();excluirPeriodoConCtx(${cidStr},'${cliEsc}',${d.id})"><i class="fas fa-trash"></i> Excluir</button>` : ''}
                             ${d.tipo === 'avulsa' ? `<button onclick="closeLocMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button><button class="danger" onclick="closeLocMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>` : ''}
                         </div>
@@ -1359,6 +1360,59 @@ async function confirmarAsaasContrato() {
 }
 
 window.addEventListener('load', carregarDados);
+
+/* ── ASAAS Multa ──────────────────────────────────────────────── */
+let _amMultaId = null, _amTipo = 'PIX', _amValor = 0;
+function abrirAsaasMulta(multaId, valor, descricao, cliente) {
+    _amMultaId = multaId;
+    _amValor   = valor;
+    _amTipo    = 'PIX';
+    const hoje = new Date(); const pad = v => String(v).padStart(2,'0');
+    const venc = `${hoje.getFullYear()}-${pad(hoje.getMonth()+1)}-${pad(hoje.getDate())}`;
+    abrirModal('Cobrar via ASAAS — Multa', `
+        <p style="font-size:.85rem;color:#374151;margin-bottom:14px;"><strong>${cliente}</strong><br>${descricao}<br>Valor: <strong>R$ ${parseFloat(valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></p>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+            <button id="btnAMPix" onclick="_amSetTipo('PIX')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">PIX</button>
+            <button id="btnAMBoleto" onclick="_amSetTipo('BOLETO_BANCARIO')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;">Boleto</button>
+        </div>
+        <div class="form-group"><label>Vencimento</label><input type="date" class="form-control" id="amVencimento" value="${venc}"></div>
+        <div id="amResultado" style="display:none;margin-top:14px;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+            <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+            <button class="btn btn-primary" id="btnGerarAM" onclick="confirmarAsaasMulta()"><i class="fas fa-bolt"></i> Gerar Cobrança</button>
+        </div>
+    `);
+}
+function _amSetTipo(t) {
+    _amTipo = t;
+    const a = 'flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
+    const i = 'flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnAMPix').style.cssText    = t === 'PIX'             ? a : i;
+    document.getElementById('btnAMBoleto').style.cssText = t === 'BOLETO_BANCARIO' ? a : i;
+}
+async function confirmarAsaasMulta() {
+    const btn = document.getElementById('btnGerarAM');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde...';
+    const venc = document.getElementById('amVencimento').value;
+    try {
+        const r = await fetch('/api/cobrar-asaas-multa', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({multa_id: _amMultaId, billing_type: _amTipo, data_vencimento: venc})
+        });
+        const d = await r.json();
+        if (!r.ok) { showToast(d.error || 'Erro ao gerar cobrança', 'error'); btn.disabled=false; btn.innerHTML='<i class="fas fa-bolt"></i> Gerar Cobrança'; return; }
+        const div = document.getElementById('amResultado');
+        div.style.display = 'block';
+        let html = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;font-size:.82rem;">
+            <p style="color:#16a34a;font-weight:700;margin-bottom:8px;"><i class="fas fa-check-circle"></i> Cobrança gerada!</p>`;
+        if (d.invoice_url) html += `<a href="${d.invoice_url}" target="_blank" class="btn btn-primary" style="margin-bottom:8px;display:inline-block;font-size:.78rem;">Abrir link de pagamento</a><br>`;
+        if (d.pix_code) html += `<p style="word-break:break-all;font-size:.72rem;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:6px;margin-top:6px;">${d.pix_code}</p>`;
+        html += '</div>';
+        div.innerHTML = html;
+        btn.innerHTML = '<i class="fas fa-check"></i> Gerado';
+        carregarDados();
+    } catch { showToast('Erro ao conectar com ASAAS', 'error'); btn.disabled=false; btn.innerHTML='<i class="fas fa-bolt"></i> Gerar Cobrança'; }
+}
 
 function toggleLocMenu(e, id) {
     e.stopPropagation();

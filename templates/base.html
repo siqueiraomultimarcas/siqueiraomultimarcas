@@ -229,6 +229,17 @@
         .btn-info:hover { background: #0284c7; transform: translateY(-1px); }
         .btn-sm { padding: 5px 10px; font-size: 0.78rem; border-radius: 6px; }
 
+        /* ── Dropdown de Ações (global) ───────────────────────── */
+        .act-wrap { position:relative; display:inline-block; }
+        .act-btn { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; padding:4px 10px; font-size:.95rem; cursor:pointer; color:#475569; letter-spacing:2px; line-height:1; }
+        .act-btn:hover { background:#e2e8f0; }
+        .act-menu { position:absolute; right:0; top:calc(100% + 4px); z-index:300; background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.10); min-width:160px; overflow:hidden; display:none; }
+        .act-menu button { display:flex; align-items:center; gap:8px; width:100%; background:none; border:none; text-align:left; padding:9px 14px; font-size:.83rem; cursor:pointer; color:#374151; }
+        .act-menu button:hover { background:#f8fafc; }
+        .act-menu button.danger { color:#dc2626; }
+        .act-menu button.danger:hover { background:#fef2f2; }
+        .act-menu button i { width:14px; text-align:center; }
+
         /* ── Forms ────────────────────────────────────────────── */
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.76rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -719,6 +730,15 @@
                 </button>
             </div>`);
     }
+
+    /* ── Dropdown de Ações global ─────────────────────────── */
+    function toggleActMenu(e, id) {
+        e.stopPropagation();
+        document.querySelectorAll('.act-menu').forEach(m => { if (m.id !== 'actmenu_' + id) m.style.display = 'none'; });
+        const m = document.getElementById('actmenu_' + id);
+        if (m) m.style.display = m.style.display === 'block' ? 'none' : 'block';
+    }
+    document.addEventListener('click', () => document.querySelectorAll('.act-menu').forEach(m => m.style.display = 'none'));
 
     /* ── Utilitários ───────────────────────────────────────── */
     function formatCurrency(value) {

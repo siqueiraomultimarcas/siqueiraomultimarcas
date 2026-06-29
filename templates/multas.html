@@ -159,18 +159,17 @@
                 <td><strong>${formatCurrency(m.valor)}</strong></td>
                 <td>${m.pontos || 0} pts</td>
                 <td>${getStatusBadge(m.status)}</td>
-                <td>
-                    <button class="btn btn-sm btn-primary" onclick="editarMulta(${m.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm ${m.status === 'pendente' ? 'btn-success' : 'btn-secondary'}"
-                        onclick="togglePagamento(${m.id})"
-                        title="${m.status === 'pendente' ? 'Marcar como Paga' : 'Desmarcar Pagamento'}">
-                        <i class="fas fa-${m.status === 'pendente' ? 'check' : 'undo'}"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="confirmarExcluir(${m.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                <td style="text-align:center;">
+                    <div class="act-wrap">
+                        <button class="act-btn" onclick="toggleActMenu(event,${m.id})" title="Ações">⋯</button>
+                        <div id="actmenu_${m.id}" class="act-menu">
+                            <button onclick="toggleActMenu(event,-1);editarMulta(${m.id})"><i class="fas fa-edit"></i> Editar</button>
+                            ${m.status === 'pendente'
+                                ? `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-check"></i> Dar Baixa</button>`
+                                : `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-undo"></i> Desmarcar</button>`}
+                            <button class="danger" onclick="toggleActMenu(event,-1);confirmarExcluir(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
+                        </div>
+                    </div>
                 </td>
             </tr>
         `).join('');

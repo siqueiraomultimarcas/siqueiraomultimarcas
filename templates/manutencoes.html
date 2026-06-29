@@ -301,9 +301,15 @@
                     <td style="font-weight:700;color:#1e293b;">${formatCurrency(m.custo)}</td>
                     <td style="font-size:0.82rem;">${m.oficina || '-'}</td>
                     <td>${getStatusBadge(m.status)}</td>
-                    <td style="white-space:nowrap;">
-                        ${btnDetalhes}<button class="btn btn-sm btn-primary" onclick="editarManutencao(${m.id})" title="Editar"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="excluirManutencao(${m.id})" title="Excluir"><i class="fas fa-trash"></i></button>
+                    <td style="white-space:nowrap;text-align:center;">
+                        <div class="act-wrap">
+                            <button class="act-btn" onclick="toggleActMenu(event,${m.id})" title="Ações">⋯</button>
+                            <div id="actmenu_${m.id}" class="act-menu">
+                                ${temItens ? `<button onclick="toggleActMenu(event,-1);verDetalhes(${m.id})"><i class="fas fa-list-ul"></i> Ver Itens</button>` : ''}
+                                <button onclick="toggleActMenu(event,-1);editarManutencao(${m.id})"><i class="fas fa-edit"></i> Editar</button>
+                                <button class="danger" onclick="toggleActMenu(event,-1);excluirManutencao(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
+                            </div>
+                        </div>
                     </td>
                 </tr>`;
         }).join('');

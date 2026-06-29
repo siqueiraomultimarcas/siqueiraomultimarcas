@@ -111,16 +111,15 @@
                         ${c.status === 'ativo' ? 'Ativo' : 'Bloqueado'}
                     </span>
                 </td>
-                <td style="white-space:nowrap">
-                    <button class="btn btn-sm" onclick="verHistorico(${c.id}, '${c.nome.replace(/'/g, "\\'")}')" title="Histórico de Locações" style="background:#6b7280;color:white">
-                        <i class="fas fa-history"></i>
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="editarCliente(${c.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="excluirCliente(${c.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                <td style="white-space:nowrap;text-align:center;">
+                    <div class="act-wrap">
+                        <button class="act-btn" onclick="toggleActMenu(event,${c.id})" title="Ações">⋯</button>
+                        <div id="actmenu_${c.id}" class="act-menu">
+                            <button onclick="toggleActMenu(event,-1);verHistorico(${c.id}, '${c.nome.replace(/'/g, "\\'")}')"><i class="fas fa-history"></i> Histórico</button>
+                            <button onclick="toggleActMenu(event,-1);editarCliente(${c.id})"><i class="fas fa-edit"></i> Editar</button>
+                            <button class="danger" onclick="toggleActMenu(event,-1);excluirCliente(${c.id})"><i class="fas fa-trash"></i> Excluir</button>
+                        </div>
+                    </div>
                 </td>
             </tr>
         `).join('');

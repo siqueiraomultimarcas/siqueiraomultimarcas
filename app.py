@@ -310,6 +310,9 @@ def init_db():
     cur.execute("ALTER TABLE cobrancas_avulsas ADD COLUMN IF NOT EXISTS justificativa_desconto TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS desconto NUMERIC(10,2) DEFAULT 0")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS justificativa_desconto TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS asaas_id TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS asaas_link TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS asaas_status TEXT")
     cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS frequencia_cobranca TEXT DEFAULT 'avulso'")
 
     conn.commit()
@@ -1128,6 +1131,106 @@ def cobrar_asaas():
     conn.commit()
     cur.close(); conn.close()
     return jsonify({'success': True, 'parcelas': resultados})
+
+
+@app.route('/api/cobrar-asaas-multa', methods=['POST'])
+@login_required
+def cobrar_asaas_multa():
+    data       = request.json
+    multa_id   = int(data.get('multa_id'))
+    billing    = data.get('billing_type', 'PIX')
+    vencimento = data.get('data_vencimento')
+
+    conn = get_conn()
+    cur  = conn.cursor()
+    cur.execute('''
+        SELECT m.valor, m.descricao, m.numero_auto, m.tipo_notificacao,
+               c.nome, c.cpf, c.telefone, c.email
+        FROM multas m
+        LEFT JOIN clientes c ON m.motorista_id = c.id
+        WHERE m.id = %s
+    ''', (multa_id,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Multa não encontrada'}), 404
+
+    valor, desc, num_auto, tipo, cli_nome, cli_cpf, cli_tel, cli_email = row
+    valor = float(valor or 0)
+    if valor <= 0:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Multa sem valor definido'}), 400
+    if not cli_cpf:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Motorista sem CPF cadastrado — não é possível gerar cobrança ASAAS'}), 400
+
+    tipo_label = 'NIC' if tipo == 'nic' else 'Multa'
+    descricao  = f'{tipo_label} {num_auto or ""} — {desc or ""}'.strip(' —')
+
+    customer_id, err = _asaas_get_or_create_customer(cli_cpf, cli_nome or '', cli_email or '', cli_tel or '')
+    if err:
+        cur.close(); conn.close()
+        return jsonify({'error': err}), 502
+
+    due_date = vencimento or str(_date.today())
+    charge, sc = _asaas_req('POST', '/payments', {
+        'customer':    customer_id,
+        'billingType': billing,
+        'value':       valor,
+        'dueDate':     due_date,
+        'description': descricao,
+    })
+    if sc not in (200, 201):
+        cur.close(); conn.close()
+        return jsonify({'error': charge.get('errors', [{}])[0].get('description', 'Erro ASAAS')}), 502
+
+    asaas_id   = charge.get('id')
+    asaas_link = charge.get('invoiceUrl', '')
+    cur.execute('''UPDATE multas SET asaas_id=%s, asaas_link=%s, asaas_status='PENDING' WHERE id=%s''',
+                (asaas_id, asaas_link, multa_id))
+    conn.commit()
+
+    r = {'id': multa_id, 'asaas_id': asaas_id, 'invoice_url': asaas_link, 'asaas_status': 'PENDING'}
+    if billing == 'PIX':
+        pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
+        r['pix_code']  = pix.get('payload', '')
+        r['pix_image'] = pix.get('encodedImage', '')
+
+    cur.close(); conn.close()
+    return jsonify(r)
+
+
+@app.route('/api/cobrar-asaas-multa/<int:multa_id>/verificar', methods=['PUT'])
+@login_required
+def verificar_asaas_multa(multa_id):
+    conn = get_conn()
+    cur  = conn.cursor()
+    cur.execute('SELECT asaas_id FROM multas WHERE id=%s', (multa_id,))
+    row = cur.fetchone()
+    if not row or not row[0]:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Sem cobrança ASAAS para esta multa'}), 404
+
+    charge, sc = _asaas_req('GET', f'/payments/{row[0]}')
+    if sc != 200:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Cobrança não encontrada no ASAAS'}), 404
+
+    st = charge.get('status', '')
+    if st in ('RECEIVED', 'CONFIRMED'):
+        cur.execute("UPDATE multas SET status='pago', asaas_status=%s, data_pagamento=%s WHERE id=%s",
+                    (st, _date.today(), multa_id))
+        conn.commit()
+        cur.close(); conn.close()
+        return jsonify({'status': 'pago', 'asaas_status': st, 'label': 'Pago', 'cor': '#16a34a'})
+
+    label_map = {'PENDING': ('Aguardando', '#f59e0b'), 'OVERDUE': ('Vencido', '#dc2626'),
+                 'CANCELLED': ('Cancelado', '#6b7280')}
+    lbl, cor = label_map.get(st, (st, '#64748b'))
+    cur.execute('UPDATE multas SET asaas_status=%s WHERE id=%s', (st, multa_id))
+    conn.commit()
+    cur.close(); conn.close()
+    return jsonify({'status': 'pendente', 'asaas_status': st, 'label': lbl, 'cor': cor})
 
 
 @app.route('/api/cobrancas/<int:pagamento_id>/verificar', methods=['PUT'])

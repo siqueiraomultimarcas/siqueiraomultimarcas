@@ -152,12 +152,13 @@
                 <td style="font-size:0.82rem;">${f.responsavel || '—'}</td>
                 <td>${getStatusBadge(f.status)}</td>
                 <td style="text-align:center;white-space:nowrap;">
-                    <button class="btn btn-sm btn-primary" onclick="editarFornecedor(${f.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="excluirFornecedor(${f.id})" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <div class="act-wrap">
+                        <button class="act-btn" onclick="toggleActMenu(event,${f.id})" title="Ações">⋯</button>
+                        <div id="actmenu_${f.id}" class="act-menu">
+                            <button onclick="toggleActMenu(event,-1);editarFornecedor(${f.id})"><i class="fas fa-edit"></i> Editar</button>
+                            <button class="danger" onclick="toggleActMenu(event,-1);excluirFornecedor(${f.id})"><i class="fas fa-trash"></i> Excluir</button>
+                        </div>
+                    </div>
                 </td>
             </tr>`;
         }).join('');
