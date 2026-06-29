@@ -882,7 +882,7 @@ def get_cobrancas():
                 'semana_numero':        p['semana_numero'],
                 'data_inicio':          str(p['data_inicio']) if p['data_inicio'] else None,
                 'data_fim':             str(p['data_fim']) if p['data_fim'] else None,
-                'dias':                 (((_date.fromisoformat(str(p['data_fim'])) - _date.fromisoformat(str(p['data_inicio']))).days + 1)
+                'dias':                 (((_date.fromisoformat(str(p['data_fim'])) - _date.fromisoformat(str(p['data_inicio']))).days)
                                          if p['data_inicio'] and p['data_fim'] else 0),
                 'valor_previsto':       float(p['valor_previsto'] or 0),
                 'valor_pago':           float(p['valor_pago'] or 0),
@@ -922,7 +922,7 @@ def get_cobrancas():
             'data_inicio':       str(loc['data_inicio']),
             'data_fim':          str(loc['data_fim']) if loc['data_fim'] else None,
             'diaria':            diaria,
-            'valor_semanal':     round(diaria * 7, 2),
+            'valor_semanal':     round(diaria * 7),
             'pagamentos':        pagamentos,
             'total_pago':        total_pago,
             'n_pagamentos':      len(pagamentos),

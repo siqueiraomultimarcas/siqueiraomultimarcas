@@ -386,9 +386,8 @@ function renderCalendario(loc) {
 
         const isPaid     = diasPagos.has(dia);
         const isPendente = diasPendente.has(dia);
-        const isFuture   = thisDate > hoje;
         const isBeforeContract = dtInicio && thisDate < dtInicio;
-        const disabled   = isPaid || isPendente || isFuture || isBeforeContract;
+        const disabled   = isPaid || isPendente || isBeforeContract;
 
         const isStart    = st.start === dia;
         const isEnd      = st.end   === dia;
@@ -494,8 +493,8 @@ function renderResumoSel(loc) {
         </div>`;
     }
 
-    const dias = Math.abs(st.end - st.start) + 1;
-    const valorPrev = Math.round(loc.diaria * dias * 100) / 100;
+    const dias = Math.abs(st.end - st.start);
+    const valorPrev = Math.round(loc.diaria * dias);
     const d1 = Math.min(st.start, st.end), d2 = Math.max(st.start, st.end);
     const fmtD = d => `${String(d).padStart(2,'0')}/${String(st.mes+1).padStart(2,'0')}/${st.ano}`;
 
@@ -585,8 +584,8 @@ function abrirModalPag(lid) {
     const fmtISO = d => `${st.ano}-${String(st.mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const d1iso  = fmtISO(d1), d2iso = fmtISO(d2);
     const fmtD   = s => { const [y,m,d] = s.split('-'); return `${d}/${m}/${y}`; };
-    const dias   = d2 - d1 + 1;
-    const valPrev= Math.round(loc.diaria * dias * 100) / 100;
+    const dias   = d2 - d1;
+    const valPrev= Math.round(loc.diaria * dias);
 
     _modalCtx = {
         locacaoId:   lid,
