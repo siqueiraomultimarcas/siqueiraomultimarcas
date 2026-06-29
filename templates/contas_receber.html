@@ -61,7 +61,7 @@
 </div>
 
 <!-- KPIs -->
-<div class="kpi-grid" style="margin-bottom:20px;">
+<div class="kpi-grid" style="margin-bottom:14px;">
     <div class="kpi-card blue">
         <div class="kpi-label">Total Pendente</div>
         <div class="kpi-value" id="kpiPendente" style="font-size:1.1rem">R$ 0,00</div>
@@ -86,6 +86,25 @@
         <div class="kpi-label" style="color:#7c3aed;">Descontos no Mês</div>
         <div class="kpi-value" id="kpiDescontos" style="color:#7c3aed;font-size:1.1rem;">R$ 0,00</div>
         <i class="fas fa-tag kpi-icon-bg" style="color:#7c3aed;"></i>
+    </div>
+</div>
+
+<!-- KPIs de Projeção -->
+<div class="kpi-grid" style="margin-bottom:20px;">
+    <div class="kpi-card" style="border-left:4px solid #dc2626;">
+        <div class="kpi-label" style="color:#dc2626;">Vence Hoje</div>
+        <div class="kpi-value" id="kpiVenceHoje" style="color:#dc2626;font-size:1.1rem;">R$ 0,00</div>
+        <i class="fas fa-calendar-day kpi-icon-bg" style="color:#dc2626;"></i>
+    </div>
+    <div class="kpi-card" style="border-left:4px solid #f59e0b;">
+        <div class="kpi-label" style="color:#d97706;">Vence esta Semana</div>
+        <div class="kpi-value" id="kpiVenceSemana" style="color:#d97706;font-size:1.1rem;">R$ 0,00</div>
+        <i class="fas fa-calendar-week kpi-icon-bg" style="color:#d97706;"></i>
+    </div>
+    <div class="kpi-card" style="border-left:4px solid #0891b2;">
+        <div class="kpi-label" style="color:#0891b2;">Projeção do Mês</div>
+        <div class="kpi-value" id="kpiProjecaoMes" style="color:#0891b2;font-size:1.1rem;">R$ 0,00</div>
+        <i class="fas fa-chart-line kpi-icon-bg" style="color:#0891b2;"></i>
     </div>
 </div>
 
@@ -366,11 +385,20 @@ const hoje = new Date().toISOString().split('T')[0];
 // ── Carregamento ──────────────────────────────────────────────────────────────
 async function carregarDados() {
     try {
-        const r = await fetch('/api/contas-receber');
+        const [r, rp] = await Promise.all([
+            fetch('/api/contas-receber'),
+            fetch('/api/projecao-cobrancas'),
+        ]);
         dados = await r.json();
         calcularKPIs();
         renderizar();
         await carregarClientes();
+        if (rp.ok) {
+            const proj = await rp.json();
+            document.getElementById('kpiVenceHoje').textContent   = fmtCurrency(proj.vence_hoje);
+            document.getElementById('kpiVenceSemana').textContent = fmtCurrency(proj.vence_semana);
+            document.getElementById('kpiProjecaoMes').textContent = fmtCurrency(proj.projecao_mes);
+        }
     } catch (e) {
         showToast('Erro ao carregar dados', 'error');
     }

@@ -399,9 +399,32 @@
         } catch {}
     }
 
+    async function carregarAlertasCobranca() {
+        try {
+            const alertas = await fetch('/api/alertas-cobranca').then(r => r.json());
+            if (!alertas.length) return;
+            const div = document.getElementById('alertas');
+            const fmtR = v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+            const fmtD = s => { if (!s) return ''; const [y,m,d] = s.slice(0,10).split('-'); return `${d}/${m}/${y}`; };
+            const freqLabel = f => f === 'semanal' ? 'Semanal' : f === 'quinzenal' ? 'Quinzenal' : 'Mensal';
+            const extras = alertas.map(a => `
+                <div class="alert-item danger" onclick="location.href='/contas-receber'" style="cursor:pointer;">
+                    <i class="fas fa-money-bill-wave alert-icon"></i>
+                    <div class="alert-text">
+                        <strong>${a.cliente} — ${a.placa} ${a.marca} ${a.modelo}</strong>
+                        <small>${freqLabel(a.frequencia_cobranca)} vencida em ${fmtD(a.data_fim)} · ${fmtR(a.valor_previsto)}</small>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.7rem;"></i>
+                </div>`).join('');
+            if (div.innerHTML.includes('fa-check-circle')) div.innerHTML = extras;
+            else div.innerHTML += extras;
+        } catch {}
+    }
+
     window.addEventListener('load', async () => {
         await carregarDashboard();
         await carregarAlertasRevisao();
+        await carregarAlertasCobranca();
     });
 </script>
 {% endblock %}

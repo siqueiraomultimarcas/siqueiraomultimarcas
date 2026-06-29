@@ -306,6 +306,7 @@ def init_db():
     cur.execute("ALTER TABLE cobrancas_avulsas ADD COLUMN IF NOT EXISTS justificativa_desconto TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS desconto NUMERIC(10,2) DEFAULT 0")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS justificativa_desconto TEXT")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS frequencia_cobranca TEXT DEFAULT 'avulso'")
 
     conn.commit()
     cur.close()
@@ -2112,14 +2113,15 @@ def add_locacao():
         if fotos_saida and isinstance(fotos_saida, list):
             fotos_saida = _json.dumps(fotos_saida)
 
+        freq = data.get('frequencia_cobranca') or 'avulso'
         conn = get_conn()
         cur = conn.cursor()
         cur.execute('''
-            INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida, status, checklist, fotos_saida, observacoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida, status, checklist, fotos_saida, observacoes, frequencia_cobranca)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (data['veiculo_id'], data['cliente_id'], data['data_inicio'], data_fim,
               diaria or None, total, data.get('km_saida') or None, data.get('status', 'ativa'),
-              data.get('checklist'), fotos_saida, data.get('observacoes')))
+              data.get('checklist'), fotos_saida, data.get('observacoes'), freq))
         cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (data['veiculo_id'],))
         conn.commit()
         cur.close()
@@ -2158,12 +2160,14 @@ def update_locacao(id):
 
         cur.execute('''
             UPDATE locacoes SET veiculo_id=%s, cliente_id=%s, data_inicio=%s, data_fim=%s,
-            diaria=%s, total=%s, km_saida=%s, checklist=%s, fotos_saida=%s, observacoes=%s
+            diaria=%s, total=%s, km_saida=%s, checklist=%s, fotos_saida=%s, observacoes=%s,
+            frequencia_cobranca=%s
             WHERE id=%s
         ''', (data.get('veiculo_id'), data.get('cliente_id'), data.get('data_inicio'),
               data_fim, data.get('diaria'), total,
               data.get('km_saida') or None, data.get('checklist'),
-              fotos_saida, data.get('observacoes'), id))
+              fotos_saida, data.get('observacoes'),
+              data.get('frequencia_cobranca') or 'avulso', id))
 
         veiculo_novo = data.get('veiculo_id')
         if veiculo_antigo != veiculo_novo and status_antigo == 'ativa':
@@ -3149,9 +3153,170 @@ def fipe_preco(marca, modelo, ano):
 def contas_receber_page():
     return render_template('contas_receber.html')
 
+# ==================== GERAÇÃO AUTOMÁTICA DE PERÍODOS RECORRENTES ====================
+
+def gerar_periodos_pendentes():
+    """Cria registros pendentes para contratos recorrentes com períodos já vencidos."""
+    hoje = _date.today()
+    freq_dias = {'semanal': 7, 'quinzenal': 15, 'mensal': 30}
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute('''
+            SELECT l.id, l.data_inicio, l.data_fim, l.diaria, l.frequencia_cobranca
+            FROM locacoes l
+            WHERE l.status = 'ativa'
+              AND l.frequencia_cobranca IN ('semanal', 'quinzenal', 'mensal')
+        ''')
+        contratos = cur.fetchall()
+        gerados = 0
+        for loc_id, data_inicio, data_fim_loc, diaria, freq in contratos:
+            if not data_inicio:
+                continue
+            if isinstance(data_inicio, str):
+                data_inicio = _date.fromisoformat(data_inicio)
+            if data_fim_loc and isinstance(data_fim_loc, str):
+                data_fim_loc = _date.fromisoformat(str(data_fim_loc))
+            n_dias = freq_dias[freq]
+            diaria_f = float(diaria or 0)
+            periodo_ini = data_inicio
+            while True:
+                periodo_fim = periodo_ini + timedelta(days=n_dias - 1)
+                if data_fim_loc:
+                    if periodo_ini > data_fim_loc:
+                        break
+                    if periodo_fim > data_fim_loc:
+                        periodo_fim = data_fim_loc
+                # Só gera períodos cujo fim já passou (período vencido)
+                if periodo_fim >= hoje:
+                    break
+                # Verifica se já existe registro cobrindo este período
+                cur.execute('''
+                    SELECT COUNT(*) FROM pagamentos_locacao
+                    WHERE locacao_id=%s AND data_inicio <= %s AND data_fim >= %s
+                ''', (loc_id, periodo_fim, periodo_ini))
+                if cur.fetchone()[0] == 0:
+                    dias = (periodo_fim - periodo_ini).days + 1
+                    valor_prev = round(diaria_f * dias, 2)
+                    cur.execute(
+                        'SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s',
+                        (loc_id,)
+                    )
+                    next_seq = cur.fetchone()[0]
+                    cur.execute('''
+                        INSERT INTO pagamentos_locacao
+                            (locacao_id, semana_numero, data_inicio, data_fim,
+                             valor_previsto, valor_pago, desconto, status)
+                        VALUES (%s, %s, %s, %s, %s, 0, 0, 'pendente')
+                    ''', (loc_id, next_seq, periodo_ini, periodo_fim, valor_prev))
+                    gerados += 1
+                periodo_ini = periodo_fim + timedelta(days=1)
+        if gerados:
+            conn.commit()
+    except Exception as e:
+        print(f'[gerar_periodos_pendentes] {e}')
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.route('/api/projecao-cobrancas')
+@login_required
+def projecao_cobrancas():
+    """Retorna: vence_hoje, vence_semana, projecao_mes (pendentes + futuros projetados)."""
+    hoje = _date.today()
+    freq_dias = {'semanal': 7, 'quinzenal': 15, 'mensal': 30}
+    mes_ini = hoje.replace(day=1)
+    if mes_ini.month == 12:
+        mes_fim = _date(mes_ini.year + 1, 1, 1) - timedelta(days=1)
+    else:
+        mes_fim = _date(mes_ini.year, mes_ini.month + 1, 1) - timedelta(days=1)
+    semana_fim = hoje + timedelta(days=6)
+
+    conn = get_conn()
+    cur  = conn.cursor()
+
+    cur.execute('''
+        SELECT pl.data_fim, pl.valor_previsto
+        FROM pagamentos_locacao pl WHERE pl.status = 'pendente'
+    ''')
+    pendentes = [(r[0] if isinstance(r[0], _date) else (_date.fromisoformat(str(r[0])) if r[0] else None),
+                  float(r[1] or 0)) for r in cur.fetchall()]
+
+    vence_hoje   = sum(v for d, v in pendentes if d == hoje)
+    vence_semana = sum(v for d, v in pendentes if d and hoje <= d <= semana_fim)
+    projecao_mes = sum(v for d, v in pendentes if d and mes_ini <= d <= mes_fim)
+
+    # Adiciona períodos futuros ainda não gerados
+    cur.execute('''
+        SELECT l.id, l.data_inicio, l.data_fim, l.diaria, l.frequencia_cobranca
+        FROM locacoes l
+        WHERE l.status = 'ativa' AND l.frequencia_cobranca IN ('semanal', 'quinzenal', 'mensal')
+    ''')
+    for loc_id, di, df, diaria, freq in cur.fetchall():
+        if not di: continue
+        if isinstance(di, str): di = _date.fromisoformat(di)
+        if df and isinstance(df, str): df = _date.fromisoformat(str(df))
+        n_dias = freq_dias[freq]
+        diaria_f = float(diaria or 0)
+        periodo_ini = di
+        while True:
+            periodo_fim = periodo_ini + timedelta(days=n_dias - 1)
+            if df:
+                if periodo_ini > df: break
+                if periodo_fim > df: periodo_fim = df
+            if periodo_ini > mes_fim: break
+            # Período ainda não vencido e termina neste mês
+            if periodo_fim >= hoje and mes_ini <= periodo_fim <= mes_fim:
+                cur.execute('''
+                    SELECT COUNT(*) FROM pagamentos_locacao
+                    WHERE locacao_id=%s AND data_inicio <= %s AND data_fim >= %s
+                ''', (loc_id, periodo_fim, periodo_ini))
+                if cur.fetchone()[0] == 0:
+                    dias = (periodo_fim - periodo_ini).days + 1
+                    projecao_mes += round(diaria_f * dias, 2)
+            periodo_ini = periodo_fim + timedelta(days=1)
+
+    cur.close()
+    conn.close()
+    return jsonify({
+        'vence_hoje':   round(vence_hoje, 2),
+        'vence_semana': round(vence_semana, 2),
+        'projecao_mes': round(projecao_mes, 2),
+    })
+
+
+@app.route('/api/alertas-cobranca')
+@login_required
+def alertas_cobranca():
+    """Retorna cobranças recorrentes com período vencido e sem pagamento."""
+    conn = get_conn()
+    cur  = conn.cursor()
+    cur.execute('''
+        SELECT pl.id, pl.data_fim, pl.valor_previsto,
+               c.nome AS cliente, v.placa, v.marca, v.modelo,
+               l.frequencia_cobranca
+        FROM pagamentos_locacao pl
+        JOIN locacoes l ON l.id = pl.locacao_id
+        JOIN veiculos v ON v.id = l.veiculo_id
+        JOIN clientes c ON c.id = l.cliente_id
+        WHERE pl.status = 'pendente'
+          AND pl.data_fim < CURRENT_DATE
+          AND l.frequencia_cobranca IN ('semanal','quinzenal','mensal')
+        ORDER BY pl.data_fim ASC
+        LIMIT 20
+    ''')
+    result = rows_to_dict(cur)
+    cur.close()
+    conn.close()
+    return jsonify(result)
+
+
 @app.route('/api/contas-receber')
 @login_required
 def get_contas_receber():
+    gerar_periodos_pendentes()
     conn = get_conn()
     cur = conn.cursor()
     cur.execute('''
