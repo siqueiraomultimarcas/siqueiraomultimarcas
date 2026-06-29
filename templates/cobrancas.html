@@ -469,6 +469,30 @@ function cancelarSelecao(lid) {
     reRenderContrato(lid);
 }
 
+async function criarPersonalizado(lid) {
+    const loc = _dados.find(l => l.locacao_id === lid);
+    const st  = getEstado(lid);
+    if (!loc || !st.start || !st.end) return;
+    const d1 = Math.min(st.start, st.end), d2 = Math.max(st.start, st.end);
+    const dias  = d2 - d1;
+    const valor = Math.round(loc.diaria * dias);
+    const toISO = d => `${st.ano}-${String(st.mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    try {
+        const r = await fetch('/api/cobrancas', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ locacao_id: lid, data_inicio: toISO(d1),
+                                   data_fim: toISO(d2), desconto: 0, status: 'pendente' })
+        });
+        const data = await r.json();
+        if (r.ok) {
+            st.start = null; st.end = null; st.customMode = false;
+            showToast(`Pendente criado — ${dias} dias · ${fmtR(valor)}`, 'success');
+            await carregarCobrancas();
+        } else { showToast(data.error || 'Erro ao criar período', 'error'); }
+    } catch { showToast('Erro de conexão', 'error'); }
+}
+
 async function criarRapido(lid, ndias) {
     const loc = _dados.find(l => l.locacao_id === lid);
     const st  = getEstado(lid);
@@ -610,10 +634,15 @@ function renderResumoSel(loc) {
             <div class="sel-valor">${fmtR(valorPrev)}</div>
             <div class="sel-detalhe">${dias} dia${dias===1?'':'s'} × ${fmtR(loc.diaria)}/dia</div>
         </div>
-        <button class="btn btn-primary" style="background:#1d4ed8;white-space:nowrap;"
-                onclick="abrirModalPag(${lid})">
-            <i class="fas fa-bolt"></i> Cobrar
-        </button>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <button class="btn" style="background:#16a34a;color:#fff;white-space:nowrap;font-size:.78rem;"
+                    onclick="criarPersonalizado(${lid})">
+                <i class="fas fa-save"></i> Salvar Pendente
+            </button>
+            <button onclick="cancelarSelecao(${lid})" style="background:none;border:none;color:#94a3b8;font-size:.72rem;cursor:pointer;">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>
     </div>`;
 }
 

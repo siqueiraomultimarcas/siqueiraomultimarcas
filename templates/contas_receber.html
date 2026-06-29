@@ -86,7 +86,7 @@
 
 <!-- Filtros -->
 <div class="card" style="padding:14px 18px;margin-bottom:14px;">
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <div class="tabs" id="tabsStatus">
             <button class="tab-btn active" data-status="todos" onclick="setTab(this,'status')">Todos</button>
             <button class="tab-btn" data-status="pendente" onclick="setTab(this,'status')">Pendente</button>
@@ -98,9 +98,12 @@
             <button class="tab-btn" data-tipo="multa" onclick="setTab(this,'tipo')">Multas</button>
             <button class="tab-btn" data-tipo="avulsa" onclick="setTab(this,'tipo')">Avulsas</button>
         </div>
-        <input type="text" id="busca" class="form-control" placeholder="Buscar cliente ou descrição..."
-               oninput="renderizar()" style="max-width:260px;">
-        <button class="btn" onclick="carregarDados()" style="margin-left:auto;">
+        <select id="filtroCliente" class="form-control" onchange="renderizar()" style="max-width:220px;">
+            <option value="">Todos os clientes</option>
+        </select>
+        <input type="text" id="busca" class="form-control" placeholder="Buscar..."
+               oninput="renderizar()" style="max-width:180px;">
+        <button class="btn" onclick="carregarDados()" style="margin-left:auto;" title="Recarregar">
             <i class="fas fa-sync-alt"></i>
         </button>
     </div>
@@ -144,6 +147,73 @@
             <button class="btn" onclick="fecharModalBaixa()" style="background:#6b7280;color:#fff;">Cancelar</button>
             <button class="btn" onclick="confirmarBaixa()" style="background:#10b981;color:#fff;font-weight:600;">
                 <i class="fas fa-check"></i> Confirmar Baixa
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Histórico por Cliente -->
+<div id="modalHistorico" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <div style="font-size:1.05rem;font-weight:700;color:#0f172a;">
+                <i class="fas fa-user-clock" style="color:#2563eb;margin-right:8px;"></i>
+                <span id="tituloHistorico">Histórico do Cliente</span>
+            </div>
+            <button onclick="document.getElementById('modalHistorico').style.display='none'"
+                    style="background:none;border:none;font-size:1.2rem;color:#94a3b8;cursor:pointer;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="resumoHistorico" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;"></div>
+        <div id="corpoHistorico"></div>
+    </div>
+</div>
+
+<!-- Modal Asaas para Contratos Pendentes -->
+<div id="modalAsaasContrato" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;">
+        <div style="font-size:1.05rem;font-weight:700;color:#0f172a;margin-bottom:6px;">
+            <i class="fas fa-bolt" style="color:#1d4ed8;"></i> Cobrar via Asaas
+        </div>
+        <div id="resumoAsaasContrato" style="background:#f1f5f9;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#374151;margin-bottom:14px;"></div>
+        <input type="hidden" id="asaasContratoPagId">
+        <!-- PIX / Boleto -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button id="btnACPix" onclick="acSetTipo('PIX')"
+                    style="flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">
+                <i class="fas fa-qrcode"></i> PIX
+            </button>
+            <button id="btnACBoleto" onclick="acSetTipo('BOLETO_BANCARIO')"
+                    style="flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;">
+                <i class="fas fa-barcode"></i> Boleto
+            </button>
+        </div>
+        <!-- Parcelamento -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <span style="font-size:.78rem;font-weight:600;color:#374151;white-space:nowrap;">Parcelamento:</span>
+            <button id="btnACP1" onclick="acSetParcelas(1)"
+                    style="padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">
+                À vista
+            </button>
+            <button id="btnACPn" onclick="acSetParcelas(2)"
+                    style="padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;">
+                Parcelar
+            </button>
+            <select id="selACParcelas" onchange="acSetParcelas(parseInt(this.value))"
+                    style="display:none;padding:5px 8px;border-radius:6px;border:1px solid #bfdbfe;font-size:.78rem;background:#eff6ff;color:#1d4ed8;font-weight:700;">
+                <option value="2">2x</option><option value="3">3x</option>
+                <option value="4">4x</option><option value="5">5x</option>
+                <option value="6">6x</option><option value="8">8x</option>
+                <option value="10">10x</option><option value="12">12x</option>
+            </select>
+        </div>
+        <div id="acParcelasWrap"></div>
+        <div id="acAsaasResultado" style="display:none;margin-top:12px;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
+            <button class="btn" onclick="document.getElementById('modalAsaasContrato').style.display='none'" style="background:#6b7280;color:#fff;">Cancelar</button>
+            <button class="btn" id="btnGerarAsaasContrato" onclick="confirmarAsaasContrato()" style="background:#1d4ed8;color:#fff;font-weight:700;">
+                <i class="fas fa-paper-plane"></i> Gerar Cobrança
             </button>
         </div>
     </div>
@@ -263,6 +333,17 @@ async function carregarClientes() {
     try {
         const r = await fetch('/api/clientes');
         const clientes = await r.json();
+
+        // Popula filtro de cliente
+        const fc = document.getElementById('filtroCliente');
+        const fcAtual = fc.value;
+        fc.innerHTML = '<option value="">Todos os clientes</option>';
+        clientes.forEach(c => {
+            fc.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+        });
+        if (fcAtual) fc.value = fcAtual;
+
+        // Popula select do modal avulsa
         const sel = document.getElementById('avulsaCliente');
         const atual = sel.value;
         sel.innerHTML = '<option value="">Selecione o cliente...</option>';
@@ -305,12 +386,14 @@ function setTab(btn, group) {
 
 // ── Renderização ──────────────────────────────────────────────────────────────
 function renderizar() {
-    const busca = document.getElementById('busca').value.toLowerCase();
+    const busca       = document.getElementById('busca').value.toLowerCase();
+    const cliFilter   = document.getElementById('filtroCliente').value;
     const lista = dados.filter(d => {
         const isPago = d.status === 'pago' || d.status === 'recebido';
         if (filtroStatus === 'pendente' && isPago)   return false;
         if (filtroStatus === 'recebido' && !isPago)  return false;
         if (filtroTipo !== 'todos' && d.tipo !== filtroTipo) return false;
+        if (cliFilter && String(d.cliente_id) !== cliFilter) return false;
         if (busca && !(d.cliente||'').toLowerCase().includes(busca) &&
                      !(d.descricao||'').toLowerCase().includes(busca)) return false;
         return true;
@@ -332,23 +415,27 @@ function renderizar() {
         return `
         <tr${vencido ? ' style="background:#fff7ed;"' : ''}>
             <td><span class="badge-tipo ${d.tipo}">${tipoLabel(d.tipo)}</span></td>
-            <td style="font-weight:600;font-size:.85rem;">${d.cliente || '—'}</td>
+            <td style="font-weight:600;font-size:.85rem;">
+                ${d.cliente_id ? `<span style="cursor:pointer;color:#2563eb;text-decoration:underline dotted;" onclick="abrirHistoricoCliente(${d.cliente_id},'${(d.cliente||'').replace(/'/g,"\\'")}')">
+                    ${d.cliente || '—'}
+                </span>` : (d.cliente || '—')}
+            </td>
             <td style="font-size:.82rem;color:#374151;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${d.descricao||''}">${d.descricao || '—'}</td>
             <td style="font-weight:700;color:#0f172a;">${fmtCurrency(d.valor)}</td>
             <td style="font-size:.82rem;${vencido ? 'color:#dc2626;font-weight:700;' : ''}">${fmtDate(d.data_vencimento)}${vencido ? ' ⚠' : ''}</td>
             <td><span class="badge-status ${statusLabel}">${statusLabel}</span></td>
             <td style="font-size:.82rem;color:#64748b;">${fmtDate(d.data_recebimento) || '—'}</td>
-            <td>
-                ${!isPago ? `<button class="btn-baixa" onclick="abrirBaixa('${d.tipo}',${d.id},'${(d.descricao||'').replace(/'/g,"\\'")}',${parseFloat(d.valor||0)})">
+            <td style="white-space:nowrap;">
+                ${!isPago ? `<button class="btn-baixa" onclick="abrirBaixa('${d.tipo}',${d.id},'${(d.descricao||'').replace(/'/g,"\\'")}',${parseFloat(d.valor||0)})" style="margin-right:4px;">
                     <i class="fas fa-check"></i> Baixa
                 </button>` : ''}
-                ${d.tipo === 'avulsa' ? `
-                <button class="btn-edit" onclick="editarAvulsa(${d.id})" title="Editar">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn-del" onclick="excluirAvulsa(${d.id})" title="Excluir">
-                    <i class="fas fa-trash"></i>
+                ${!isPago && d.tipo === 'contrato' ? `<button onclick="abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${(d.descricao||'').replace(/'/g,"\\'")}','${d.cliente||''}')"
+                    style="background:#7c3aed;color:#fff;border:none;border-radius:7px;padding:5px 10px;font-size:.75rem;font-weight:600;cursor:pointer;margin-right:4px;">
+                    <i class="fas fa-bolt"></i> Asaas
                 </button>` : ''}
+                ${d.tipo === 'avulsa' ? `
+                <button class="btn-edit" onclick="editarAvulsa(${d.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                <button class="btn-del" onclick="excluirAvulsa(${d.id})" title="Excluir"><i class="fas fa-trash"></i></button>` : ''}
             </td>
         </tr>`;
     }).join('');
@@ -636,6 +723,171 @@ function fmtDate(s) {
 }
 function tipoLabel(t) {
     return t === 'contrato' ? 'Contrato' : t === 'multa' ? 'Multa' : 'Avulsa';
+}
+
+// ── Histórico por Cliente ─────────────────────────────────────────────────────
+function abrirHistoricoCliente(clienteId, clienteNome) {
+    const registros = dados.filter(d => String(d.cliente_id) === String(clienteId));
+    const total     = registros.reduce((s,d) => s + parseFloat(d.valor||0), 0);
+    const recebido  = registros.filter(d => d.status === 'pago' || d.status === 'recebido')
+                               .reduce((s,d) => s + parseFloat(d.valor||0), 0);
+    const pendente  = total - recebido;
+
+    document.getElementById('tituloHistorico').textContent = clienteNome;
+    document.getElementById('resumoHistorico').innerHTML = `
+        <div style="background:#f0fdf4;border-radius:10px;padding:10px 14px;text-align:center;">
+            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#16a34a;margin-bottom:4px;">Recebido</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#16a34a;">${fmtCurrency(recebido)}</div>
+        </div>
+        <div style="background:#fffbeb;border-radius:10px;padding:10px 14px;text-align:center;">
+            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#d97706;margin-bottom:4px;">Pendente</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#d97706;">${fmtCurrency(pendente)}</div>
+        </div>
+        <div style="background:#f1f5f9;border-radius:10px;padding:10px 14px;text-align:center;">
+            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#475569;margin-bottom:4px;">Total</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#0f172a;">${fmtCurrency(total)}</div>
+        </div>`;
+
+    const linhas = registros.map(d => {
+        const isPago  = d.status === 'pago' || d.status === 'recebido';
+        const vencido = !isPago && d.data_vencimento && d.data_vencimento < hoje;
+        const statusLabel = isPago ? (d.tipo === 'avulsa' ? 'recebido' : 'pago') : 'pendente';
+        return `<tr${vencido ? ' style="background:#fff7ed;"' : ''}>
+            <td><span class="badge-tipo ${d.tipo}">${tipoLabel(d.tipo)}</span></td>
+            <td style="font-size:.82rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
+            <td style="font-weight:700;">${fmtCurrency(d.valor)}</td>
+            <td style="font-size:.82rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
+            <td><span class="badge-status ${statusLabel}">${statusLabel}</span></td>
+            <td style="font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('corpoHistorico').innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+            <thead><tr style="border-bottom:2px solid #e2e8f0;">
+                <th style="padding:8px 6px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;">Tipo</th>
+                <th style="padding:8px 6px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;">Descrição</th>
+                <th style="padding:8px 6px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;">Valor</th>
+                <th style="padding:8px 6px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;">Vencimento</th>
+                <th style="padding:8px 6px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;">Status</th>
+                <th style="padding:8px 6px;text-align:left;font-size:.7rem;text-transform:uppercase;color:#64748b;">Recebido em</th>
+            </tr></thead>
+            <tbody>${linhas || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8;">Sem registros</td></tr>'}</tbody>
+        </table>`;
+
+    document.getElementById('modalHistorico').style.display = 'flex';
+}
+
+// ── Asaas para Contratos Pendentes ────────────────────────────────────────────
+let _acTipo = 'PIX';
+let _acNParcelas = 1;
+let _acValorTotal = 0;
+
+function abrirAsaasContrato(pagId, valor, descricao, cliente) {
+    document.getElementById('asaasContratoPagId').value = pagId;
+    _acValorTotal = valor;
+    _acTipo = 'PIX';
+    _acNParcelas = 1;
+    document.getElementById('resumoAsaasContrato').innerHTML =
+        `<strong>${cliente}</strong><br>${descricao}<br>Valor: <strong>${fmtCurrency(valor)}</strong>`;
+    document.getElementById('acAsaasResultado').style.display = 'none';
+    document.getElementById('acAsaasResultado').innerHTML = '';
+    acSetTipo('PIX');
+    acSetParcelas(1);
+    document.getElementById('modalAsaasContrato').style.display = 'flex';
+}
+
+function acSetTipo(tipo) {
+    _acTipo = tipo;
+    const ativo   = 'flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
+    const inativo = 'flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnACPix').style.cssText    = tipo === 'PIX'             ? ativo : inativo;
+    document.getElementById('btnACBoleto').style.cssText = tipo === 'BOLETO_BANCARIO' ? ativo : inativo;
+}
+
+function acSetParcelas(n) {
+    _acNParcelas = n;
+    const ativoS  = 'padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;';
+    const inaS    = 'padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnACP1').style.cssText = n === 1 ? ativoS : inaS;
+    document.getElementById('btnACPn').style.cssText = n > 1  ? ativoS : inaS;
+    const sel = document.getElementById('selACParcelas');
+    sel.style.display = n > 1 ? 'inline-block' : 'none';
+    if (n > 1) sel.value = n;
+    _acRenderParcelas(n);
+}
+
+function _acRenderParcelas(n) {
+    const wrap = document.getElementById('acParcelasWrap');
+    const parc = n > 1 ? Math.round(_acValorTotal / n * 100) / 100 : _acValorTotal;
+    const pad  = v => String(v).padStart(2,'0');
+    const hojeD = new Date();
+    wrap.innerHTML = Array.from({length: n}, (_, i) => {
+        const dt = new Date(hojeD); dt.setDate(dt.getDate() + i * 30);
+        const dtStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+        const label = n === 1 ? 'Vencimento' : `Parcela ${i+1}/${n}`;
+        return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px;">
+            <label style="font-size:.75rem;font-weight:600;color:#374151;white-space:nowrap;min-width:80px;">${label}</label>
+            <input type="date" class="form-control ac-parc-data" value="${dtStr}" style="flex:1;">
+            <input type="number" class="form-control ac-parc-valor" value="${parc.toFixed(2)}" step="0.01" min="0" style="width:100px;text-align:right;font-weight:700;">
+        </div>`;
+    }).join('');
+}
+
+async function confirmarAsaasContrato() {
+    const pagId    = document.getElementById('asaasContratoPagId').value;
+    const parcelas = Array.from(document.querySelectorAll('.ac-parc-data')).map((el,i) => ({
+        data_vencimento: el.value,
+        valor: parseFloat(document.querySelectorAll('.ac-parc-valor')[i]?.value) || 0,
+    }));
+    const menor = Math.min(...parcelas.map(p => p.valor));
+    if (menor < 5) { showToast('Valor mínimo por parcela no Asaas é R$ 5,00', 'warning', 6000); return; }
+
+    const btn = document.getElementById('btnGerarAsaasContrato');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde...';
+
+    try {
+        const r = await fetch('/api/cobrar-asaas-contrato-pendente', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ pagamento_id: parseInt(pagId), billing_type: _acTipo, parcelas })
+        });
+        const data = await r.json();
+        if (!r.ok) { showToast(data.error || 'Erro ao gerar cobrança', 'error'); return; }
+
+        const div = document.getElementById('acAsaasResultado');
+        div.style.display = 'block';
+        const itens = data.parcelas || [];
+        const n = itens.length;
+        div.innerHTML = itens.map(p => {
+            const tel = (data.cliente_tel||'').replace(/\D/g,'');
+            const msg = encodeURIComponent(`Olá ${data.cliente_nome}, segue o link de pagamento:\n${p.invoice_url}`);
+            const wa  = tel ? `https://wa.me/55${tel}?text=${msg}` : `https://wa.me/?text=${msg}`;
+            const label = n > 1 ? `<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtCurrency(p.valor)}</div>` : '';
+            if (_acTipo === 'PIX' && p.pix_qrcode) {
+                return `<div style="text-align:center;${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:10px;padding-bottom:10px;':''}">
+                    ${label}
+                    <img src="data:image/png;base64,${p.pix_qrcode}" style="width:160px;height:160px;border-radius:8px;border:1px solid #e2e8f0;">
+                    <div style="font-size:.68rem;color:#64748b;margin-top:5px;word-break:break-all;background:#f8fafc;padding:5px;border-radius:5px;">${p.pix_payload||''}</div>
+                    <a href="${wa}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+                </div>`;
+            } else {
+                return `<div style="${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:10px;padding-bottom:10px;':''}">
+                    ${label}
+                    <a href="${p.bank_slip_url||p.invoice_url}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:#1d4ed8;color:#fff;border-radius:7px;text-decoration:none;font-size:.82rem;font-weight:700;margin-bottom:6px;"><i class="fas fa-barcode"></i> Abrir Boleto</a>
+                    <a href="${wa}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:5px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+                </div>`;
+            }
+        }).join('');
+
+        showToast(n > 1 ? `${n} cobranças geradas!` : `Cobrança ${_acTipo === 'PIX' ? 'PIX' : 'Boleto'} gerada!`, 'success');
+        carregarDados();
+    } catch { showToast('Erro de conexão', 'error'); }
+    finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Gerar Cobrança';
+    }
 }
 
 window.addEventListener('load', carregarDados);

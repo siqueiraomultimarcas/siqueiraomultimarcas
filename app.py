@@ -3151,18 +3151,26 @@ def get_contas_receber():
     conn = get_conn()
     cur = conn.cursor()
     cur.execute('''
-        SELECT tipo, id, cliente, cliente_cpf, cliente_telefone, descricao, valor,
-               data_recebimento, data_vencimento, status, data_cadastro
+        SELECT tipo, id, cliente, cliente_cpf, cliente_telefone, cliente_email,
+               descricao, valor, data_recebimento, data_vencimento,
+               status, data_cadastro, cliente_id, locacao_id,
+               data_inicio_period, data_fim_period
         FROM (
             SELECT
                 'contrato'::text AS tipo, pl.id,
                 c.nome AS cliente, COALESCE(c.cpf,'') AS cliente_cpf,
                 COALESCE(c.telefone,'') AS cliente_telefone,
+                COALESCE(c.email,'') AS cliente_email,
                 (v.placa || ' — ' || v.marca || ' ' || v.modelo) AS descricao,
-                COALESCE(pl.valor_pago, pl.valor_previsto) AS valor,
+                CASE WHEN pl.status = 'pago' THEN COALESCE(pl.valor_pago,0)
+                     ELSE COALESCE(pl.valor_previsto,0) END AS valor,
                 pl.data_pagamento AS data_recebimento,
                 pl.data_fim AS data_vencimento,
-                pl.status, pl.data_cadastro
+                pl.status, pl.data_cadastro,
+                l.cliente_id AS cliente_id,
+                pl.locacao_id AS locacao_id,
+                pl.data_inicio AS data_inicio_period,
+                pl.data_fim AS data_fim_period
             FROM pagamentos_locacao pl
             JOIN locacoes l ON l.id = pl.locacao_id
             JOIN veiculos v ON v.id = l.veiculo_id
@@ -3171,21 +3179,33 @@ def get_contas_receber():
             SELECT
                 'multa'::text AS tipo, m.id,
                 COALESCE(c.nome,'Sem motorista') AS cliente,
-                COALESCE(c.cpf,'') AS cliente_cpf, COALESCE(c.telefone,'') AS cliente_telefone,
+                COALESCE(c.cpf,'') AS cliente_cpf,
+                COALESCE(c.telefone,'') AS cliente_telefone,
+                COALESCE(c.email,'') AS cliente_email,
                 ('Multa: ' || m.descricao) AS descricao,
                 m.valor, m.data_pagamento AS data_recebimento,
                 m.data_infracao AS data_vencimento,
-                m.status, m.data_infracao::timestamp AS data_cadastro
+                m.status, m.data_infracao::timestamp AS data_cadastro,
+                m.motorista_id AS cliente_id,
+                NULL::int AS locacao_id,
+                NULL::date AS data_inicio_period,
+                NULL::date AS data_fim_period
             FROM multas m
             LEFT JOIN clientes c ON m.motorista_id = c.id
             UNION ALL
             SELECT
                 'avulsa'::text AS tipo, ca.id,
                 COALESCE(c.nome,'Sem cliente') AS cliente,
-                COALESCE(c.cpf,'') AS cliente_cpf, COALESCE(c.telefone,'') AS cliente_telefone,
+                COALESCE(c.cpf,'') AS cliente_cpf,
+                COALESCE(c.telefone,'') AS cliente_telefone,
+                COALESCE(c.email,'') AS cliente_email,
                 ca.descricao, ca.valor,
                 ca.data_recebimento, ca.data_vencimento,
-                ca.status, ca.data_cadastro
+                ca.status, ca.data_cadastro,
+                ca.cliente_id AS cliente_id,
+                NULL::int AS locacao_id,
+                NULL::date AS data_inicio_period,
+                NULL::date AS data_fim_period
             FROM cobrancas_avulsas ca
             LEFT JOIN clientes c ON ca.cliente_id = c.id
         ) sub
@@ -3318,6 +3338,120 @@ def cobrar_asaas_avulsa():
         r = {'id': new_id, 'asaas_id': asaas_id, 'invoice_url': asaas_link,
              'bank_slip_url': charge.get('bankSlipUrl', ''),
              'parcela_num': item['parcela_num'], 'total': item['total'], 'valor': item['valor']}
+        if billing == 'PIX':
+            pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
+            r['pix_qrcode']  = pix.get('encodedImage', '')
+            r['pix_payload'] = pix.get('payload', '')
+        resultados.append(r)
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'parcelas': resultados, 'cliente_nome': cli_nome,
+                    'cliente_tel': cli_tel or '', 'cliente_email': cli_email or ''})
+
+
+@app.route('/api/cobrar-asaas-contrato-pendente', methods=['POST'])
+@login_required
+def cobrar_asaas_contrato_pendente():
+    """Cobra via Asaas um pagamento_locacao já existente (pendente)."""
+    data       = request.json
+    pag_id     = data.get('pagamento_id')
+    billing    = data.get('billing_type', 'PIX')
+    parcelas   = data.get('parcelas')  # [{data_vencimento, valor}]
+
+    conn = get_conn()
+    cur  = conn.cursor()
+    cur.execute('''
+        SELECT pl.id, pl.locacao_id, pl.data_inicio, pl.data_fim,
+               pl.valor_previsto, pl.valor_pago, pl.status,
+               c.nome, c.cpf, c.telefone, c.email,
+               v.placa, v.marca, v.modelo
+        FROM pagamentos_locacao pl
+        JOIN locacoes l ON l.id = pl.locacao_id
+        JOIN clientes c ON c.id  = l.cliente_id
+        JOIN veiculos v ON v.id  = l.veiculo_id
+        WHERE pl.id = %s
+    ''', (pag_id,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Pagamento não encontrado'}), 404
+
+    (pid, loc_id, d_ini, d_fim, val_prev, val_pago, status,
+     cli_nome, cli_cpf, cli_tel, cli_email,
+     placa, marca, modelo) = row
+
+    if not cli_cpf:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Cliente sem CPF — necessário para Asaas'}), 400
+
+    customer_id, err = _asaas_get_or_create_customer(
+        cli_cpf, cli_nome, cli_email or '', cli_tel or '')
+    if err:
+        cur.close(); conn.close()
+        return jsonify({'error': f'Asaas: {err}'}), 500
+
+    valor_total = float(val_prev or 0)
+    desc_base   = f'Locação {placa} {marca} {modelo} ({d_ini} a {d_fim})'
+
+    if parcelas and len(parcelas) > 1:
+        n    = len(parcelas)
+        itens = [{'due_date': p.get('data_vencimento') or str(_date.today()),
+                  'valor': round(float(p.get('valor') or 0), 2),
+                  'parcela_num': i + 1, 'total': n,
+                  'descricao': f'{desc_base} — Parcela {i+1}/{n}'}
+                 for i, p in enumerate(parcelas)]
+    else:
+        due = (parcelas[0].get('data_vencimento') if parcelas else None) or str(d_fim or _date.today())
+        itens = [{'due_date': due, 'valor': valor_total,
+                  'parcela_num': 1, 'total': 1, 'descricao': desc_base}]
+
+    resultados = []
+    first = True
+    for item in itens:
+        charge, sc = _asaas_req('POST', '/payments', {
+            'customer':    customer_id,
+            'billingType': billing,
+            'dueDate':     item['due_date'],
+            'value':       item['valor'],
+            'description': item['descricao'],
+        })
+        if sc not in (200, 201):
+            conn.rollback(); cur.close(); conn.close()
+            errs = charge.get('errors', [{}])
+            return jsonify({'error': errs[0].get('description', 'Erro Asaas')}), 500
+
+        asaas_id   = charge.get('id')
+        asaas_link = charge.get('invoiceUrl', '')
+
+        if first:
+            cur.execute('''UPDATE pagamentos_locacao
+                           SET asaas_id=%s, asaas_link=%s, asaas_status='PENDING',
+                               valor_pago=%s
+                           WHERE id=%s''',
+                        (asaas_id, asaas_link, item['valor'], pid))
+            first = False
+        else:
+            cur.execute('''SELECT COALESCE(MAX(semana_numero),0)+1
+                           FROM pagamentos_locacao WHERE locacao_id=%s''', (loc_id,))
+            seq = cur.fetchone()[0]
+            cur.execute('''
+                INSERT INTO pagamentos_locacao
+                    (locacao_id, semana_numero, data_inicio, data_fim,
+                     valor_previsto, valor_pago, status,
+                     asaas_id, asaas_link, asaas_status,
+                     parcela_num, total_parcelas)
+                VALUES (%s,%s,%s,%s,%s,%s,'pendente',%s,%s,'PENDING',%s,%s)
+            ''', (loc_id, seq, d_ini, d_fim,
+                  item['valor'], item['valor'],
+                  asaas_id, asaas_link,
+                  item['parcela_num'], item['total']))
+
+        r = {'asaas_id': asaas_id, 'invoice_url': asaas_link,
+             'bank_slip_url': charge.get('bankSlipUrl', ''),
+             'parcela_num': item['parcela_num'], 'total': item['total'],
+             'valor': item['valor']}
         if billing == 'PIX':
             pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
             r['pix_qrcode']  = pix.get('encodedImage', '')
