@@ -560,7 +560,15 @@ function renderizar() {
                             <span>Pendente: <strong style="color:${totalPend > 0 ? '#92400e' : '#6b7280'};">${fmtCurrency(totalPend)}</strong></span>
                             <span>Total: <strong style="color:#374151;">${fmtCurrency(totalPend + totalRec)}</strong></span>
                         </div>
-                        <div style="display:flex;gap:6px;align-items:center;">
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                            <button id="btnBaixaSel_${idx}" onclick="baixaSelecionados(${idx})"
+                                style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
+                                <i class="fas fa-check"></i> <span id="lblBaixaSel_${idx}">Dar Baixa</span>
+                            </button>
+                            <button id="btnAsaasSel_${idx}" onclick="asaasSelecionados(${idx})"
+                                style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #ddd6fe;background:#f5f3ff;color:#7c3aed;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
+                                <i class="fas fa-bolt"></i> <span id="lblAsaasSel_${idx}">Asaas</span>
+                            </button>
                             <button id="btnExcluirSel_${idx}" onclick="excluirSelecionados(${idx})"
                                 style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
                                 <i class="fas fa-trash"></i> <span id="lblExcluirSel_${idx}">Excluir</span>
@@ -647,10 +655,13 @@ function atualizarBtnExcluir(idx) {
     const det = document.getElementById('det_' + idx);
     if (!det) return;
     const n = det.querySelectorAll('.chk-periodo:checked').length;
-    const btn = document.getElementById('btnExcluirSel_' + idx);
-    const lbl = document.getElementById('lblExcluirSel_' + idx);
-    if (btn) btn.style.display = n > 0 ? 'flex' : 'none';
-    if (lbl) lbl.textContent = `Excluir ${n} selecionado${n !== 1 ? 's' : ''}`;
+    const show = n > 0 ? 'flex' : 'none';
+    const btnEx = document.getElementById('btnExcluirSel_' + idx);
+    const btnBx = document.getElementById('btnBaixaSel_' + idx);
+    const btnAs = document.getElementById('btnAsaasSel_' + idx);
+    if (btnEx) { btnEx.style.display = show; document.getElementById('lblExcluirSel_' + idx).textContent = `Excluir (${n})`; }
+    if (btnBx) { btnBx.style.display = show; document.getElementById('lblBaixaSel_' + idx).textContent = `Dar Baixa (${n})`; }
+    if (btnAs) { btnAs.style.display = show; document.getElementById('lblAsaasSel_' + idx).textContent = `Asaas (${n})`; }
 }
 
 function excluirSelecionados(idx) {
@@ -690,6 +701,107 @@ async function confirmarExcluirSelecionados() {
     _excluirSelecionadosCid = null;
     if (erros > 0) showToast(`${ids.length - erros} excluído${ids.length - erros !== 1 ? 's' : ''}, ${erros} com erro`, 'warning');
     else showToast(`${ids.length} período${ids.length !== 1 ? 's' : ''} excluído${ids.length !== 1 ? 's' : ''} com sucesso`, 'success');
+    await carregarDados();
+    if (cid != null) reabrirDetalhe(cid);
+}
+
+// ── Baixa em massa ────────────────────────────────────────────────────────────
+function baixaSelecionados(idx) {
+    const det = document.getElementById('det_' + idx);
+    if (!det) return;
+    _periodosSelecionados = Array.from(det.querySelectorAll('.chk-periodo:checked')).map(c => parseInt(c.dataset.id));
+    if (!_periodosSelecionados.length) return;
+    const cid = det.dataset.cid;
+    _excluirSelecionadosCid = cid !== '' && !isNaN(parseInt(cid)) ? parseInt(cid) : null;
+    const n = _periodosSelecionados.length;
+    const hoje = new Date().toISOString().split('T')[0];
+    abrirModal('Dar Baixa em Massa', `
+        <div style="padding:4px 0">
+            <p style="margin-bottom:16px;color:#374151;">Confirmar recebimento de <strong>${n} período${n !== 1 ? 's' : ''}</strong>?</p>
+            <div class="form-group">
+                <label>Data de Recebimento</label>
+                <input type="date" id="baixaMassaData" class="form-control" value="${hoje}">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+                <button class="btn" onclick="confirmarBaixaSelecionados()" style="background:#16a34a;color:#fff;font-weight:600;">
+                    <i class="fas fa-check"></i> Confirmar Baixa
+                </button>
+            </div>
+        </div>`);
+}
+
+async function confirmarBaixaSelecionados() {
+    const ids = [..._periodosSelecionados];
+    const cid = _excluirSelecionadosCid;
+    const dataRec = document.getElementById('baixaMassaData').value;
+    fecharModal();
+    let erros = 0;
+    for (const id of ids) {
+        try {
+            const r = await fetch('/api/contas-receber/baixa', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tipo: 'contrato', id, data_recebimento: dataRec, desconto: 0 })
+            });
+            if (!r.ok) erros++;
+        } catch { erros++; }
+    }
+    _periodosSelecionados = [];
+    _excluirSelecionadosCid = null;
+    if (erros > 0) showToast(`${ids.length - erros} baixas registradas, ${erros} com erro`, 'warning');
+    else showToast(`${ids.length} baixa${ids.length !== 1 ? 's' : ''} registrada${ids.length !== 1 ? 's' : ''} com sucesso`, 'success');
+    await carregarDados();
+    if (cid != null) reabrirDetalhe(cid);
+}
+
+// ── Asaas em massa ────────────────────────────────────────────────────────────
+function asaasSelecionados(idx) {
+    const det = document.getElementById('det_' + idx);
+    if (!det) return;
+    _periodosSelecionados = Array.from(det.querySelectorAll('.chk-periodo:checked')).map(c => parseInt(c.dataset.id));
+    if (!_periodosSelecionados.length) return;
+    const cid = det.dataset.cid;
+    _excluirSelecionadosCid = cid !== '' && !isNaN(parseInt(cid)) ? parseInt(cid) : null;
+    const n = _periodosSelecionados.length;
+    abrirModal('Cobrar via Asaas', `
+        <div style="padding:4px 0">
+            <p style="margin-bottom:8px;color:#374151;">Gerar cobranças <strong>PIX</strong> no Asaas para <strong>${n} período${n !== 1 ? 's' : ''}</strong>?</p>
+            <p style="font-size:.8rem;color:#64748b;margin-bottom:20px;">Cada período receberá uma cobrança individual.</p>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+                <button class="btn" onclick="confirmarAsaasSelecionados()" style="background:#7c3aed;color:#fff;font-weight:600;">
+                    <i class="fas fa-bolt"></i> Gerar Cobranças
+                </button>
+            </div>
+        </div>`);
+}
+
+async function confirmarAsaasSelecionados() {
+    const ids = [..._periodosSelecionados];
+    const cid = _excluirSelecionadosCid;
+    fecharModal();
+    let erros = 0;
+    for (const id of ids) {
+        try {
+            const item = dados.find(d => d.id === id && d.tipo === 'contrato');
+            if (!item) { erros++; continue; }
+            const r = await fetch('/api/cobrar-asaas-contrato-pendente', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pagamento_id: id,
+                    billing_type: 'PIX',
+                    parcelas: [{ valor: parseFloat(item.valor || 0), data_vencimento: item.data_vencimento || new Date().toISOString().split('T')[0] }]
+                })
+            });
+            if (!r.ok) erros++;
+        } catch { erros++; }
+    }
+    _periodosSelecionados = [];
+    _excluirSelecionadosCid = null;
+    if (erros > 0) showToast(`${ids.length - erros} cobrança${ids.length - erros !== 1 ? 's' : ''} gerada${ids.length - erros !== 1 ? 's' : ''}, ${erros} com erro`, 'warning');
+    else showToast(`${ids.length} cobrança${ids.length !== 1 ? 's' : ''} gerada${ids.length !== 1 ? 's' : ''} com sucesso`, 'success');
     await carregarDados();
     if (cid != null) reabrirDetalhe(cid);
 }
