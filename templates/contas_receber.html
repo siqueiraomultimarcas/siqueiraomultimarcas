@@ -151,7 +151,7 @@
 
 <!-- Modal Nova Cobrança Avulsa / Editar -->
 <div id="modalAvulsa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;">
+    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;">
         <div style="font-size:1.1rem;font-weight:700;color:#0f172a;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
             <i class="fas fa-bolt" style="color:#2563eb;"></i>
             <span id="tituloModalAvulsa">Nova Cobrança Avulsa</span>
@@ -171,7 +171,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div>
                     <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Valor (R$) *</label>
-                    <input type="number" id="avulsaValor" class="form-control" placeholder="0,00" step="0.01" min="0">
+                    <input type="number" id="avulsaValor" class="form-control" placeholder="0,00" step="0.01" min="0" oninput="_avulsaRecalcParcelas()">
                 </div>
                 <div>
                     <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Vencimento</label>
@@ -183,10 +183,56 @@
                 <textarea id="avulsaObs" class="form-control" rows="2" placeholder="Opcional"></textarea>
             </div>
         </div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+
+        <!-- Seção Asaas (toggle) -->
+        <div id="avulsaAsaasWrap" style="display:none;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px;">
+            <div style="font-size:.82rem;font-weight:700;color:#1d4ed8;margin-bottom:10px;">
+                <i class="fas fa-bolt"></i> Cobrar via Asaas
+            </div>
+            <!-- PIX / Boleto -->
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <button id="btnAvPix" onclick="avulsaSetTipo('PIX')"
+                        style="flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-qrcode"></i> PIX
+                </button>
+                <button id="btnAvBoleto" onclick="avulsaSetTipo('BOLETO_BANCARIO')"
+                        style="flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-barcode"></i> Boleto
+                </button>
+            </div>
+            <!-- Parcelamento -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <span style="font-size:.78rem;font-weight:600;color:#374151;white-space:nowrap;">Parcelamento:</span>
+                <button id="btnAvP1" onclick="avulsaSetParcelas(1)"
+                        style="padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">
+                    À vista
+                </button>
+                <button id="btnAvPn" onclick="avulsaSetParcelas(2)"
+                        style="padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;">
+                    Parcelar
+                </button>
+                <select id="selAvParcelas" onchange="avulsaSetParcelas(parseInt(this.value))"
+                        style="display:none;padding:5px 8px;border-radius:6px;border:1px solid #bfdbfe;font-size:.78rem;background:#eff6ff;color:#1d4ed8;font-weight:700;">
+                    <option value="2">2x</option><option value="3">3x</option>
+                    <option value="4">4x</option><option value="5">5x</option>
+                    <option value="6">6x</option><option value="8">8x</option>
+                    <option value="10">10x</option><option value="12">12x</option>
+                </select>
+            </div>
+            <div id="avulsaParcelasWrap"></div>
+            <div id="avulsaAsaasResultado" style="display:none;margin-top:12px;"></div>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
             <button class="btn" onclick="fecharModalAvulsa()" style="background:#6b7280;color:#fff;">Cancelar</button>
-            <button class="btn btn-primary" onclick="salvarAvulsa()">
-                <i class="fas fa-save"></i> Salvar
+            <button class="btn" onclick="salvarAvulsa()" id="btnSalvarAvulsa" style="background:#2563eb;color:#fff;">
+                <i class="fas fa-save"></i> Salvar Pendente
+            </button>
+            <button class="btn" onclick="toggleAvulsaAsaas()" id="btnToggleAsaas" style="background:#7c3aed;color:#fff;">
+                <i class="fas fa-bolt"></i> Cobrar via Asaas
+            </button>
+            <button class="btn" onclick="confirmarAsaasAvulsa()" id="btnGerarAsaas" style="display:none;background:#059669;color:#fff;font-weight:700;">
+                <i class="fas fa-paper-plane"></i> Gerar Cobrança
             </button>
         </div>
     </div>
@@ -342,6 +388,9 @@ async function confirmarBaixa() {
 }
 
 // ── Modal Cobrança Avulsa ─────────────────────────────────────────────────────
+let _avTipo = 'PIX';
+let _avNParcelas = 1;
+
 function abrirModalAvulsa() {
     document.getElementById('avulsaId').value        = '';
     document.getElementById('avulsaCliente').value   = '';
@@ -350,11 +399,163 @@ function abrirModalAvulsa() {
     document.getElementById('avulsaVencimento').value = '';
     document.getElementById('avulsaObs').value       = '';
     document.getElementById('tituloModalAvulsa').textContent = 'Nova Cobrança Avulsa';
+    _fecharAsaasAvulsaSection();
     document.getElementById('modalAvulsa').style.display = 'flex';
 }
 
 function fecharModalAvulsa() {
     document.getElementById('modalAvulsa').style.display = 'none';
+    _fecharAsaasAvulsaSection();
+}
+
+function _fecharAsaasAvulsaSection() {
+    document.getElementById('avulsaAsaasWrap').style.display = 'none';
+    document.getElementById('avulsaAsaasResultado').style.display = 'none';
+    document.getElementById('avulsaAsaasResultado').innerHTML = '';
+    document.getElementById('btnGerarAsaas').style.display = 'none';
+    document.getElementById('btnToggleAsaas').style.display = '';
+    _avTipo = 'PIX';
+    _avNParcelas = 1;
+}
+
+function toggleAvulsaAsaas() {
+    const wrap = document.getElementById('avulsaAsaasWrap');
+    const isOpen = wrap.style.display !== 'none';
+    if (isOpen) {
+        _fecharAsaasAvulsaSection();
+    } else {
+        wrap.style.display = 'block';
+        document.getElementById('btnGerarAsaas').style.display = '';
+        document.getElementById('btnToggleAsaas').style.display = 'none';
+        avulsaSetTipo('PIX');
+        avulsaSetParcelas(1);
+    }
+}
+
+function avulsaSetTipo(tipo) {
+    _avTipo = tipo;
+    const ativo   = 'border:2px solid #3b82f6;background:#3b82f6;color:#fff;';
+    const inativo = 'border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;';
+    document.getElementById('btnAvPix').style.cssText    = (tipo === 'PIX'              ? ativo : inativo) + 'flex:1;padding:9px;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnAvBoleto').style.cssText = (tipo === 'BOLETO_BANCARIO'  ? ativo : inativo) + 'flex:1;padding:9px;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;';
+}
+
+function avulsaSetParcelas(n) {
+    _avNParcelas = n;
+    const ativoS  = 'padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;';
+    const inaS    = 'padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;';
+    document.getElementById('btnAvP1').style.cssText = n === 1 ? ativoS : inaS;
+    document.getElementById('btnAvPn').style.cssText = n > 1  ? ativoS : inaS;
+    const sel = document.getElementById('selAvParcelas');
+    sel.style.display = n > 1 ? 'inline-block' : 'none';
+    if (n > 1) sel.value = n;
+    _avulsaRenderParcelas(n);
+}
+
+function _avulsaRecalcParcelas() {
+    if (_avNParcelas > 1) _avulsaRenderParcelas(_avNParcelas);
+}
+
+function _avulsaRenderParcelas(n) {
+    const wrap  = document.getElementById('avulsaParcelasWrap');
+    const total = parseFloat(document.getElementById('avulsaValor').value) || 0;
+    const parc  = n > 1 ? Math.round(total / n * 100) / 100 : total;
+    const hoje  = new Date();
+    const pad   = v => String(v).padStart(2,'0');
+    wrap.innerHTML = Array.from({length: n}, (_, i) => {
+        const dt = new Date(hoje); dt.setDate(dt.getDate() + i * 30);
+        const dtStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+        const label = n === 1 ? 'Vencimento' : `Parcela ${i+1}/${n}`;
+        return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px;">
+            <label style="font-size:.75rem;font-weight:600;color:#374151;white-space:nowrap;min-width:80px;">${label}</label>
+            <input type="date" class="form-control av-parc-data" data-idx="${i}" value="${dtStr}" style="flex:1;">
+            <input type="number" class="form-control av-parc-valor" data-idx="${i}" value="${parc.toFixed(2)}" step="0.01" min="0" style="width:100px;text-align:right;font-weight:700;">
+        </div>`;
+    }).join('');
+}
+
+function _avulsaLerParcelas() {
+    return Array.from(document.querySelectorAll('.av-parc-data')).map((el, i) => ({
+        data_vencimento: el.value,
+        valor: parseFloat(document.querySelectorAll('.av-parc-valor')[i]?.value) || 0,
+    }));
+}
+
+async function confirmarAsaasAvulsa() {
+    const descricao   = document.getElementById('avulsaDescricao').value.trim();
+    const valor       = parseFloat(document.getElementById('avulsaValor').value);
+    const cliente_id  = document.getElementById('avulsaCliente').value;
+    const observacoes = document.getElementById('avulsaObs').value || null;
+
+    if (!descricao || !valor || valor <= 0) { showToast('Descrição e valor são obrigatórios', 'warning'); return; }
+    if (!cliente_id) { showToast('Selecione um cliente para cobrar via Asaas', 'warning'); return; }
+
+    const parcelas = _avulsaLerParcelas();
+    const menorParcela = Math.min(...parcelas.map(p => p.valor));
+    if (menorParcela < 5) { showToast('Valor mínimo por parcela no Asaas é R$ 5,00', 'warning', 6000); return; }
+
+    document.getElementById('btnGerarAsaas').disabled = true;
+    document.getElementById('btnGerarAsaas').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde...';
+
+    try {
+        const r = await fetch('/api/cobrar-asaas-avulsa', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ cliente_id, descricao, valor, billing_type: _avTipo,
+                                   parcelas, observacoes })
+        });
+        const data = await r.json();
+        if (!r.ok) { showToast(data.error || 'Erro ao gerar cobrança', 'error'); return; }
+
+        const div = document.getElementById('avulsaAsaasResultado');
+        div.style.display = 'block';
+        const itens = data.parcelas || [];
+        const n = itens.length;
+        const clienteNome  = data.cliente_nome  || '';
+        const clienteTel   = data.cliente_tel   || '';
+        const clienteEmail = data.cliente_email || '';
+
+        div.innerHTML = itens.map((p, i) => {
+            const label = n > 1 ? `<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtCurrency(p.valor)}</div>` : '';
+            const tel = clienteTel.replace(/\D/g,'');
+            const msg = encodeURIComponent(`Olá ${clienteNome}, segue o link de pagamento:\n${p.invoice_url}`);
+            const wa  = tel ? `https://wa.me/55${tel}?text=${msg}` : `https://wa.me/?text=${msg}`;
+            const emailHref = clienteEmail
+                ? `mailto:${clienteEmail}?subject=Cobrança&body=${encodeURIComponent(`Olá ${clienteNome},\n\nLink para pagamento:\n${p.invoice_url}`)}`
+                : '';
+
+            if (_avTipo === 'PIX' && p.pix_qrcode) {
+                return `<div style="text-align:center;padding:8px 0;${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:12px;':''}">
+                    ${label}
+                    <img src="data:image/png;base64,${p.pix_qrcode}" style="width:160px;height:160px;border-radius:8px;border:1px solid #e2e8f0;">
+                    <div style="font-size:.7rem;color:#64748b;margin-top:6px;word-break:break-all;background:#f8fafc;padding:6px 8px;border-radius:6px;">${p.pix_payload||''}</div>
+                    <div style="display:flex;gap:6px;margin-top:6px;">
+                        <a href="${wa}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+                        ${emailHref ? `<a href="${emailHref}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fas fa-envelope"></i> E-mail</a>` : ''}
+                    </div>
+                </div>`;
+            } else {
+                const bsUrl = p.bank_slip_url || p.invoice_url;
+                return `<div style="padding:8px 0;${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:12px;':''}">
+                    ${label}
+                    <a href="${bsUrl}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#1d4ed8;color:#fff;border-radius:8px;text-decoration:none;font-size:.82rem;font-weight:700;margin-bottom:6px;">
+                        <i class="fas fa-barcode"></i> Abrir Boleto
+                    </a>
+                    <div style="display:flex;gap:6px;">
+                        <a href="${wa}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+                        ${emailHref ? `<a href="${emailHref}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fas fa-envelope"></i> E-mail</a>` : ''}
+                    </div>
+                </div>`;
+            }
+        }).join('');
+
+        showToast(n > 1 ? `${n} cobranças geradas no Asaas!` : `Cobrança ${_avTipo === 'PIX' ? 'PIX' : 'Boleto'} gerada!`, 'success');
+        carregarDados();
+    } catch { showToast('Erro de conexão', 'error'); }
+    finally {
+        document.getElementById('btnGerarAsaas').disabled = false;
+        document.getElementById('btnGerarAsaas').innerHTML = '<i class="fas fa-paper-plane"></i> Gerar Cobrança';
+    }
 }
 
 async function editarAvulsa(id) {

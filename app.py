@@ -299,6 +299,9 @@ def init_db():
             data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    cur.execute("ALTER TABLE cobrancas_avulsas ADD COLUMN IF NOT EXISTS asaas_id TEXT")
+    cur.execute("ALTER TABLE cobrancas_avulsas ADD COLUMN IF NOT EXISTS asaas_link TEXT")
+    cur.execute("ALTER TABLE cobrancas_avulsas ADD COLUMN IF NOT EXISTS asaas_status TEXT")
 
     conn.commit()
     cur.close()
@@ -3239,6 +3242,94 @@ def delete_cobranca_avulsa(id):
     cur.close()
     conn.close()
     return jsonify({'success': True})
+
+@app.route('/api/cobrar-asaas-avulsa', methods=['POST'])
+@login_required
+def cobrar_asaas_avulsa():
+    data        = request.json
+    cliente_id  = data.get('cliente_id')
+    descricao   = (data.get('descricao') or '').strip()
+    valor       = float(data.get('valor') or 0)
+    billing     = data.get('billing_type', 'PIX')
+    parcelas    = data.get('parcelas')   # [{data_vencimento, valor}, ...]
+    observacoes = data.get('observacoes')
+
+    if not descricao or valor <= 0:
+        return jsonify({'error': 'Descrição e valor são obrigatórios'}), 400
+    if not cliente_id:
+        return jsonify({'error': 'Selecione um cliente para cobrar via Asaas'}), 400
+
+    conn = get_conn()
+    cur  = conn.cursor()
+
+    cur.execute('SELECT nome, cpf, telefone, email FROM clientes WHERE id=%s', (cliente_id,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Cliente não encontrado'}), 404
+    cli_nome, cli_cpf, cli_tel, cli_email = row
+
+    if not cli_cpf:
+        cur.close(); conn.close()
+        return jsonify({'error': 'Cliente sem CPF cadastrado — necessário para Asaas'}), 400
+
+    customer_id, err = _asaas_get_or_create_customer(cli_cpf, cli_nome, cli_email or '', cli_tel or '')
+    if err:
+        cur.close(); conn.close()
+        return jsonify({'error': f'Asaas: {err}'}), 500
+
+    if parcelas and len(parcelas) > 1:
+        n = len(parcelas)
+        itens = [{'due_date': p.get('data_vencimento') or str(_date.today()),
+                  'valor': round(float(p.get('valor') or 0), 2),
+                  'parcela_num': i + 1, 'total': n,
+                  'descricao': f'{descricao} — Parcela {i+1}/{n}'}
+                 for i, p in enumerate(parcelas)]
+    else:
+        due = (parcelas[0].get('data_vencimento') if parcelas else None) or str(_date.today())
+        itens = [{'due_date': due, 'valor': valor, 'parcela_num': 1, 'total': 1, 'descricao': descricao}]
+
+    resultados = []
+    for idx, item in enumerate(itens):
+        charge, sc = _asaas_req('POST', '/payments', {
+            'customer':    customer_id,
+            'billingType': billing,
+            'dueDate':     item['due_date'],
+            'value':       item['valor'],
+            'description': item['descricao'],
+        })
+        if sc not in (200, 201):
+            conn.rollback(); cur.close(); conn.close()
+            errs = charge.get('errors', [{}])
+            return jsonify({'error': f"Parcela {item['parcela_num']}: {errs[0].get('description','Erro Asaas')}"}), 500
+
+        asaas_id   = charge.get('id')
+        asaas_link = charge.get('invoiceUrl', '')
+
+        cur.execute('''
+            INSERT INTO cobrancas_avulsas
+                (cliente_id, descricao, valor, data_vencimento, status, observacoes,
+                 asaas_id, asaas_link, asaas_status)
+            VALUES (%s,%s,%s,%s,'pendente',%s,%s,%s,'PENDING') RETURNING id
+        ''', (cliente_id, item['descricao'], item['valor'], item['due_date'],
+              observacoes if idx == 0 else None, asaas_id, asaas_link))
+        new_id = cur.fetchone()[0]
+
+        r = {'id': new_id, 'asaas_id': asaas_id, 'invoice_url': asaas_link,
+             'bank_slip_url': charge.get('bankSlipUrl', ''),
+             'parcela_num': item['parcela_num'], 'total': item['total'], 'valor': item['valor']}
+        if billing == 'PIX':
+            pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
+            r['pix_qrcode']  = pix.get('encodedImage', '')
+            r['pix_payload'] = pix.get('payload', '')
+        resultados.append(r)
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'parcelas': resultados, 'cliente_nome': cli_nome,
+                    'cliente_tel': cli_tel or '', 'cliente_email': cli_email or ''})
+
 
 @app.route('/api/contas-receber/baixa', methods=['PUT'])
 @login_required
