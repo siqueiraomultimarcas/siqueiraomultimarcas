@@ -516,6 +516,9 @@ function renderizar() {
             const stLabel = isPago ? (d.tipo === 'avulsa' ? 'recebido' : 'pago') : 'pendente';
             const desc    = (d.descricao||'').replace(/'/g,"\\'");
             return `<tr style="${vencido ? 'background:#fff7ed;' : ''}">
+                <td style="padding:7px 10px;width:32px;text-align:center;">
+                    ${d.tipo === 'contrato' ? `<input type="checkbox" class="chk-periodo" data-id="${d.id}" onchange="atualizarBtnExcluir(${idx})" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">` : ''}
+                </td>
                 <td style="padding:7px 10px;"><span class="badge-tipo ${d.tipo}">${tipoLabel(d.tipo)}</span></td>
                 <td style="padding:7px 10px;font-size:.8rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.descricao||''}">${d.descricao||'—'}</td>
                 <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
@@ -560,17 +563,24 @@ function renderizar() {
                             <span>Pendente: <strong style="color:${totalPend > 0 ? '#92400e' : '#6b7280'};">${fmtCurrency(totalPend)}</strong></span>
                             <span>Total: <strong style="color:#374151;">${fmtCurrency(totalPend + totalRec)}</strong></span>
                         </div>
-                        <button onclick="exportarPdfCliente(${cidStr},'${cliEsc}')"
-                            style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
-                            <i class="fas fa-file-pdf"></i> PDF
-                        </button>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <button id="btnExcluirSel_${idx}" onclick="excluirSelecionados(${idx})"
+                                style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
+                                <i class="fas fa-trash"></i> <span id="lblExcluirSel_${idx}">Excluir</span>
+                            </button>
+                            <button onclick="exportarPdfCliente(${cidStr},'${cliEsc}')"
+                                style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:.72rem;font-weight:600;cursor:pointer;flex-shrink:0;">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </button>
+                        </div>
                     </div>
                     <div style="overflow-x:auto;">
                         <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
                             <thead><tr style="border-bottom:1px solid #e2e8f0;">
+                                <th style="padding:6px 10px;background:#f1f5f9;width:32px;text-align:center;"><input type="checkbox" onchange="selecionarTodos(${idx},this)" title="Selecionar todos" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;"></th>
                                 ${thS('Tipo')}${thS('Descrição')}${thS('Valor')}${thS('Vencimento')}${thS('Status')}${thS('Recebido em')}${thS('')}
                             </tr></thead>
-                            <tbody>${subLinhas || '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Sem registros</td></tr>'}</tbody>
+                            <tbody>${subLinhas || '<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">Sem registros</td></tr>'}</tbody>
                         </table>
                     </div>
                 </div>
@@ -623,6 +633,68 @@ function excluirPeriodoConCtx(clienteId, clienteNome, id) {
 function exportarPdfCliente(clienteId, clienteNome) {
     _setHistCtxByCliente(clienteId, clienteNome);
     imprimirHistorico();
+}
+
+// ── Exclusão em massa ─────────────────────────────────────────────────────────
+let _periodosSelecionados = [];
+let _excluirSelecionadosCid = null;
+
+function selecionarTodos(idx, el) {
+    const det = document.getElementById('det_' + idx);
+    if (!det) return;
+    det.querySelectorAll('.chk-periodo').forEach(c => c.checked = el.checked);
+    atualizarBtnExcluir(idx);
+}
+
+function atualizarBtnExcluir(idx) {
+    const det = document.getElementById('det_' + idx);
+    if (!det) return;
+    const n = det.querySelectorAll('.chk-periodo:checked').length;
+    const btn = document.getElementById('btnExcluirSel_' + idx);
+    const lbl = document.getElementById('lblExcluirSel_' + idx);
+    if (btn) btn.style.display = n > 0 ? 'flex' : 'none';
+    if (lbl) lbl.textContent = `Excluir ${n} selecionado${n !== 1 ? 's' : ''}`;
+}
+
+function excluirSelecionados(idx) {
+    const det = document.getElementById('det_' + idx);
+    if (!det) return;
+    _periodosSelecionados = Array.from(det.querySelectorAll('.chk-periodo:checked')).map(c => parseInt(c.dataset.id));
+    if (!_periodosSelecionados.length) return;
+    const cid = det.dataset.cid;
+    _excluirSelecionadosCid = cid !== '' && !isNaN(parseInt(cid)) ? parseInt(cid) : null;
+    const n = _periodosSelecionados.length;
+    abrirModal('Excluir Períodos Selecionados', `
+        <div style="text-align:center;padding:20px 0">
+            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
+            <p style="margin-bottom:8px;font-weight:600;">Excluir ${n} período${n !== 1 ? 's' : ''} selecionado${n !== 1 ? 's' : ''}?</p>
+            <p style="font-size:.8rem;color:#64748b;margin-bottom:20px;">Esta ação não pode ser desfeita.</p>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+                <button class="btn btn-danger" onclick="confirmarExcluirSelecionados()">
+                    <i class="fas fa-trash"></i> Excluir
+                </button>
+            </div>
+        </div>`);
+}
+
+async function confirmarExcluirSelecionados() {
+    const ids = [..._periodosSelecionados];
+    const cid = _excluirSelecionadosCid;
+    fecharModal();
+    let erros = 0;
+    for (const id of ids) {
+        try {
+            const r = await fetch(`/api/cobrancas/${id}`, { method: 'DELETE' });
+            if (!r.ok) erros++;
+        } catch { erros++; }
+    }
+    _periodosSelecionados = [];
+    _excluirSelecionadosCid = null;
+    if (erros > 0) showToast(`${ids.length - erros} excluído${ids.length - erros !== 1 ? 's' : ''}, ${erros} com erro`, 'warning');
+    else showToast(`${ids.length} período${ids.length !== 1 ? 's' : ''} excluído${ids.length !== 1 ? 's' : ''} com sucesso`, 'success');
+    await carregarDados();
+    if (cid != null) reabrirDetalhe(cid);
 }
 
 // ── Modal Baixa ───────────────────────────────────────────────────────────────
