@@ -625,7 +625,6 @@ function renderTableContratos(lista, busca) {
                         ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
                         ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d97706;">${fmtCurrency(s.totalPend)}</div></div>`:''}
                         ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
-                        ${tel&&s.totalPend>0?`<a href="https://wa.me/55${tel}?text=${waMsg}" target="_blank" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;background:#25d366;color:#fff;border-radius:6px;padding:5px 10px;font-size:.75rem;font-weight:600;text-decoration:none;"><i class="fab fa-whatsapp"></i> Cobrar</a>`:''}
                         <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
                     </div>
                 </div>
@@ -714,7 +713,6 @@ function renderTableMultas(lista, busca) {
                         ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
                         ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d97706;">${fmtCurrency(s.totalPend)}</div></div>`:''}
                         ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
-                        ${tel&&s.totalPend>0?`<a href="https://wa.me/55${tel}?text=${waMsg}" target="_blank" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;background:#25d366;color:#fff;border-radius:6px;padding:5px 10px;font-size:.75rem;font-weight:600;text-decoration:none;"><i class="fab fa-whatsapp"></i> Cobrar</a>`:''}
                         <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
                     </div>
                 </div>
@@ -799,7 +797,6 @@ function renderTableAvulsas(lista, busca) {
                         ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
                         ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d97706;">${fmtCurrency(s.totalPend)}</div></div>`:''}
                         ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
-                        ${tel&&s.totalPend>0?`<a href="https://wa.me/55${tel}?text=${waMsg}" target="_blank" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;background:#25d366;color:#fff;border-radius:6px;padding:5px 10px;font-size:.75rem;font-weight:600;text-decoration:none;"><i class="fab fa-whatsapp"></i> Cobrar</a>`:''}
                         <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
                     </div>
                 </div>
