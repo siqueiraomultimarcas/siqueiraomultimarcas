@@ -577,6 +577,10 @@ function renderizar() {
             </td>
         </tr>`;
     }).join('');
+
+    // Ativa sort nas sub-tabelas do acordeão
+    if (typeof makeSortable === 'function')
+        tbody.querySelectorAll('.detail-row table').forEach(t => makeSortable(t));
 }
 
 // ── Acordeão ──────────────────────────────────────────────────────────────────
