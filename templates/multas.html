@@ -9,8 +9,11 @@
         <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Registro e acompanhamento de infrações de trânsito</p>
     </div>
     <div>
-        <button class="btn btn-primary" onclick="abrirModalMulta()">
+        <button class="btn btn-primary" onclick="abrirModalMulta(null, 'multa')">
             <i class="fas fa-plus"></i> Nova Multa
+        </button>
+        <button class="btn" onclick="abrirModalMulta(null, 'nic')" style="margin-left:8px;background:#1d4ed8;color:#fff;">
+            <i class="fas fa-plus"></i> Nova NIC
         </button>
         <button class="btn btn-info" onclick="abrirModalBuscarMultas()" style="margin-left: 8px;">
             <i class="fas fa-satellite-dish"></i> Consultar SERPRO
@@ -188,7 +191,7 @@
         renderizarMultas(filtradas);
     }
 
-    function abrirModalMulta(multa = null) {
+    function abrirModalMulta(multa = null, tipoInicial = 'multa') {
         const isEdit = multa !== null;
 
         let optionsVeiculos = '<option value="">Selecione o veículo</option>';
@@ -203,7 +206,7 @@
             optionsMotoristas += `<option value="${c.id}" ${sel}>${c.nome}</option>`;
         });
 
-        const tipoAtual = multa?.tipo_notificacao || 'multa';
+        const tipoAtual = multa?.tipo_notificacao || tipoInicial;
         const content = `
             <form id="formMulta" onsubmit="salvarMulta(event, ${multa ? multa.id : 'null'})">
                 ${!isEdit ? `
@@ -304,7 +307,8 @@
                 </div>
             </form>
         `;
-        abrirModal(isEdit ? 'Editar Multa' : 'Nova Multa', content);
+        const titulo = isEdit ? `Editar ${tipoAtual === 'nic' ? 'NIC' : 'Multa'}` : (tipoAtual === 'nic' ? 'Nova NIC' : 'Nova Multa');
+        abrirModal(titulo, content);
     }
 
     async function editarMulta(id) {
