@@ -14,6 +14,10 @@
 .kpi-card.green .kpi-value { color:#16a34a; } .kpi-card.green .kpi-icon-bg { color:#16a34a; }
 .kpi-card.amber .kpi-value { color:#d97706; } .kpi-card.amber .kpi-icon-bg { color:#d97706; }
 .kpi-card.red   .kpi-value { color:#dc2626; } .kpi-card.red   .kpi-icon-bg { color:#dc2626; }
+.kpi-card.blue  { border-left:3px solid #2563eb; }
+.kpi-card.green { border-left:3px solid #16a34a; }
+.kpi-card.amber { border-left:3px solid #d97706; }
+.kpi-card.red   { border-left:3px solid #dc2626; }
 .tabs { display:flex; gap:6px; flex-wrap:wrap; }
 .tab-btn { padding:6px 16px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
            font-size:.78rem; font-weight:600; cursor:pointer; color:#64748b; transition:all .15s; }
@@ -21,11 +25,14 @@
 .tab-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; }
 .badge-status { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 9px;
                 border-radius:4px; border:1px solid transparent; }
-.badge-status.pendente { background:#f9fafb; color:#6b7280; border-color:#e5e7eb; }
+.badge-status.pendente { background:#fffbeb; color:#92400e; border-color:#fde68a; }
+.badge-status.vencido  { background:#fef2f2; color:#dc2626; border-color:#fecaca; font-weight:700; }
 .badge-status.pago,
 .badge-status.recebido { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
 .grupo-row-card td { transition: background .12s; }
 .grupo-row-card:hover td { background:#f1f5f9; }
+.cr-filter-label { font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.cr-filter-sep { width:1px; height:28px; background:#e2e8f0; flex-shrink:0; }
 </style>
 
 <div class="page-header">
@@ -39,7 +46,7 @@
 </div>
 
 <!-- KPIs -->
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:20px;">
     <div class="kpi-card blue">
         <div class="kpi-label">Total Pendente</div>
         <div class="kpi-value" id="kpiPendente" style="font-size:1.1rem">R$ 0,00</div>
@@ -83,27 +90,40 @@
 </div>
 
 <!-- Filtros -->
-<div class="card" style="padding:14px 18px;margin-bottom:14px;">
+<div class="card" style="padding:12px 18px;margin-bottom:14px;">
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <div class="tabs" id="tabsStatus">
-            <button class="tab-btn active" data-status="todos"    onclick="setTab(this,'status')">Todos</button>
-            <button class="tab-btn"        data-status="pendente" onclick="setTab(this,'status')">Pendente</button>
-            <button class="tab-btn"        data-status="recebido" onclick="setTab(this,'status')">Recebido</button>
+        <div style="display:flex;align-items:center;gap:6px;">
+            <span class="cr-filter-label">Status</span>
+            <div class="tabs" id="tabsStatus">
+                <button class="tab-btn active" data-status="todos"    onclick="setTab(this,'status')">Todos</button>
+                <button class="tab-btn"        data-status="pendente" onclick="setTab(this,'status')">Pendente</button>
+                <button class="tab-btn"        data-status="recebido" onclick="setTab(this,'status')">Recebido</button>
+            </div>
         </div>
-        <div class="tabs" id="tabsTipo">
-            <button class="tab-btn active" data-tipo="todos"     onclick="setTab(this,'tipo')">Todos</button>
-            <button class="tab-btn"        data-tipo="contrato"  onclick="setTab(this,'tipo')">Contratos</button>
-            <button class="tab-btn"        data-tipo="multa"     onclick="setTab(this,'tipo')">Multas</button>
-            <button class="tab-btn"        data-tipo="avulsa"    onclick="setTab(this,'tipo')">Avulsas</button>
+        <div class="cr-filter-sep"></div>
+        <div style="display:flex;align-items:center;gap:6px;">
+            <span class="cr-filter-label">Tipo</span>
+            <div class="tabs" id="tabsTipo">
+                <button class="tab-btn active" data-tipo="todos"     onclick="setTab(this,'tipo')">Todos</button>
+                <button class="tab-btn"        data-tipo="contrato"  onclick="setTab(this,'tipo')">Contratos</button>
+                <button class="tab-btn"        data-tipo="multa"     onclick="setTab(this,'tipo')">Multas</button>
+                <button class="tab-btn"        data-tipo="avulsa"    onclick="setTab(this,'tipo')">Avulsas</button>
+            </div>
         </div>
+        <div class="cr-filter-sep"></div>
         <select id="filtroCliente" class="form-control" onchange="renderizar()" style="max-width:220px;">
             <option value="">Todos os clientes</option>
         </select>
-        <input type="text" id="busca" class="form-control" placeholder="Buscar..."
-               oninput="renderizar()" style="max-width:180px;">
-        <button class="btn" onclick="carregarDados()" style="margin-left:auto;" title="Recarregar">
-            <i class="fas fa-sync-alt"></i>
-        </button>
+        <input type="text" id="busca" class="form-control" placeholder="Buscar por nome, placa, descrição..."
+               oninput="renderizar()" style="max-width:200px;">
+        <div style="margin-left:auto;display:flex;gap:6px;">
+            <button class="btn" onclick="limparFiltros()" style="font-size:.78rem;padding:6px 12px;" title="Limpar filtros">
+                <i class="fas fa-times"></i> Limpar
+            </button>
+            <button class="btn" onclick="carregarDados()" title="Recarregar dados">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -560,8 +580,8 @@ function renderTableContratos(lista, busca) {
     _setSumRow(lista, 'sum-contratos-pend', 'sum-contratos-rec');
     const tbody = document.getElementById('tabela-contratos');
     if (!lista.length) {
-        tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8;">
-            <div style="font-size:2rem;margin-bottom:8px;">📋</div>
+        tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:36px;color:#94a3b8;">
+            <i class="fas fa-file-contract" style="font-size:2rem;margin-bottom:10px;display:block;color:#cbd5e1;"></i>
             Nenhum contrato encontrado
             <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
         </td></tr>`;
@@ -591,9 +611,9 @@ function renderTableContratos(lista, busca) {
                 <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
                 <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
                 <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
-                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':'pendente'}">${isPago?'pago':'pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['contrato_'+d.id])}" style="color:#f59e0b;cursor:help;font-size:.9rem;">💬</span>`:''}</td>
+                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
+                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['contrato_'+d.id])}" style="color:#f59e0b;cursor:help;" title="Tem observação"><i class="fas fa-comment-alt"></i></span>`:''}</td>
                 <td style="padding:7px 10px;text-align:center;">
                     <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
                         <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_contrato_${d.id}')" title="Ações">⋯</button>
@@ -653,8 +673,8 @@ function renderTableMultas(lista, busca) {
     _setSumRow(lista, 'sum-multas-pend', 'sum-multas-rec');
     const tbody = document.getElementById('tabela-multas');
     if (!lista.length) {
-        tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;">
-            <div style="font-size:2rem;margin-bottom:8px;">🚫</div>
+        tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:36px;color:#94a3b8;">
+            <i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:10px;display:block;color:#cbd5e1;"></i>
             Nenhuma multa encontrada
             <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
         </td></tr>`;
@@ -682,9 +702,9 @@ function renderTableMultas(lista, busca) {
                 <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
                 <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
                 <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
-                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':'pendente'}">${isPago?'pago':'pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['multa_'+d.id])}" style="color:#f59e0b;cursor:help;font-size:.9rem;">💬</span>`:''}</td>
+                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
+                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['multa_'+d.id])}" style="color:#f59e0b;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
                 <td style="padding:7px 10px;text-align:center;">
                     <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
                         <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_multa_${d.id}')" title="Ações">⋯</button>
@@ -739,8 +759,8 @@ function renderTableAvulsas(lista, busca) {
     _setSumRow(lista, 'sum-avulsas-pend', 'sum-avulsas-rec');
     const tbody = document.getElementById('tabela-avulsas');
     if (!lista.length) {
-        tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">
-            <div style="font-size:2rem;margin-bottom:8px;">💳</div>
+        tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:36px;color:#94a3b8;">
+            <i class="fas fa-receipt" style="font-size:2rem;margin-bottom:10px;display:block;color:#cbd5e1;"></i>
             Nenhuma cobrança avulsa encontrada
             <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
         </td></tr>`;
@@ -766,9 +786,9 @@ function renderTableAvulsas(lista, busca) {
             return `<tr style="background:#fafbfc;">
                 <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
                 <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:700;':''}">${fmtDate(d.data_vencimento)||'—'}${vencido?' ⚠':''}</td>
-                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'recebido':'pendente'}">${isPago?'recebido':'pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['avulsa_'+d.id])}" style="color:#f59e0b;cursor:help;font-size:.9rem;">💬</span>`:''}</td>
+                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
+                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'recebido':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['avulsa_'+d.id])}" style="color:#f59e0b;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
                 <td style="padding:7px 10px;text-align:center;">
                     <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
                         <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_avulsa_${d.id}')" title="Ações">⋯</button>
