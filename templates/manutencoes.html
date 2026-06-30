@@ -220,9 +220,11 @@
             renderizarManutencoes(manutencoes);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
+            showToast('Erro ao carregar dados', 'error');
+            document.getElementById('tabelaManutencoes').innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8;">Erro ao carregar. Tente recarregar a página.</td></tr>';
         }
     }
-    
+
     // Função para carregar fornecedores (refresh)
     async function recarregarFornecedores() {
         try {
@@ -230,6 +232,7 @@
             fornecedores = await respFornec.json();
         } catch (error) {
             console.error('Erro ao carregar fornecedores:', error);
+            showToast('Erro ao carregar fornecedores', 'error');
         }
     }
     

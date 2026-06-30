@@ -87,6 +87,8 @@
             renderizarAbastecimentos(abastecimentos);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
+            showToast('Erro ao carregar dados', 'error');
+            document.getElementById('tabelaAbastecimentos').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8;">Erro ao carregar. Tente recarregar a página.</td></tr>';
         }
     }
 

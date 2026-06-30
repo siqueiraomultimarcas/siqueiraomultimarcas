@@ -1,11 +1,10 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, Response
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
 import psycopg2
-import psycopg2.errorcodes
 import cloudinary
 import cloudinary.uploader
+import json
 import os
 import base64
 import re
@@ -14,7 +13,6 @@ from contextlib import contextmanager
 from datetime import datetime, date as _date, timedelta
 from dotenv import load_dotenv
 import requests
-from bs4 import BeautifulSoup
 import pdfplumber
 
 load_dotenv()
@@ -646,7 +644,8 @@ def upload_foto_generica():
         )
         return jsonify({'success': True, 'url': result['secure_url']})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em upload_foto_generica: %s', e)
+        return jsonify({'error': 'Erro ao processar upload. Tente novamente.'}), 500
 
 
 # ==================== API UPLOAD FOTOS (CLOUDINARY) ====================
@@ -676,7 +675,8 @@ def upload_foto_veiculo(id):
 
         return jsonify({'success': True, 'foto_url': foto_url})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em upload_foto_veiculo: %s', e)
+        return jsonify({'error': 'Erro ao fazer upload da foto. Tente novamente.'}), 500
 
 
 @app.route('/api/veiculos/<int:id>/foto', methods=['DELETE'])
@@ -687,7 +687,8 @@ def delete_foto_veiculo(id):
             cur.execute('UPDATE veiculos SET foto = NULL WHERE id = %s', (id,))
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em delete_foto_veiculo: %s', e)
+        return jsonify({'error': 'Erro ao remover foto. Tente novamente.'}), 500
 
 # ==================== API CLIENTES ====================
 
@@ -717,7 +718,8 @@ def add_cliente():
     except psycopg2.IntegrityError:
         return jsonify({'error': 'CPF já cadastrado!'}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em add_cliente: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 
 @app.route('/api/clientes/<int:id>', methods=['PUT'])
@@ -1288,7 +1290,8 @@ def add_veiculo():
     except psycopg2.IntegrityError:
         return jsonify({'error': 'Placa já cadastrada!'}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em add_veiculo: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 
 @app.route('/api/veiculos/<int:id>', methods=['PUT'])
@@ -1317,7 +1320,8 @@ def update_veiculo(id):
     except psycopg2.IntegrityError:
         return jsonify({'error': 'Placa já cadastrada por outro veículo!'}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em update_veiculo: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 
 @app.route('/api/veiculos/<int:id>', methods=['DELETE'])
@@ -1352,7 +1356,8 @@ def upload_crlv_veiculo(id):
             cur.execute('UPDATE veiculos SET crlv_url = %s WHERE id = %s', (crlv_url, id))
         return jsonify({'success': True, 'crlv_url': crlv_url})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em upload_crlv_veiculo: %s', e)
+        return jsonify({'error': 'Erro ao fazer upload do CRLV. Tente novamente.'}), 500
 
 
 @app.route('/api/veiculos/<int:id>/crlv/download')
@@ -1376,7 +1381,8 @@ def download_crlv_veiculo(id):
             }
         )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em download_crlv_veiculo: %s', e)
+        return jsonify({'error': 'Erro ao baixar CRLV. Tente novamente.'}), 500
 
 
 @app.route('/api/veiculos/<int:id>/crlv', methods=['DELETE'])
@@ -1387,7 +1393,8 @@ def delete_crlv_veiculo(id):
             cur.execute('UPDATE veiculos SET crlv_url = NULL WHERE id = %s', (id,))
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em delete_crlv_veiculo: %s', e)
+        return jsonify({'error': 'Erro ao remover CRLV. Tente novamente.'}), 500
 
 
 # ==================== IMPORTAR CRLV ====================
@@ -1414,7 +1421,8 @@ def importar_crlv():
             return jsonify({'error': 'Não foi possível extrair dados do CRLV. Verifique se o PDF é válido.'}), 422
         return jsonify({'success': True, 'dados': dados, 'texto_bruto': texto[:2000]})
     except Exception as e:
-        return jsonify({'error': f'Erro ao processar PDF: {str(e)}'}), 500
+        app.logger.error('Erro em importar_crlv: %s', e)
+        return jsonify({'error': 'Erro ao processar PDF. Verifique se o arquivo é válido.'}), 500
 
 
 def _parse_crlv(texto):
@@ -2074,7 +2082,8 @@ def importar_manutencao_pdf():
         return jsonify(result)
 
     except Exception as e:
-        return jsonify({'error': f'Erro ao processar PDF: {str(e)}'}), 500
+        app.logger.error('Erro em importar_manutencao_pdf: %s', e)
+        return jsonify({'error': 'Erro ao processar PDF. Verifique se o arquivo é válido.'}), 500
 
 
 @app.route('/api/manutencoes/<int:id>', methods=['DELETE'])
@@ -2156,7 +2165,6 @@ def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria):
 @login_required
 def add_locacao():
     data = request.json
-    import json as _json
     try:
         data_fim  = data.get('data_fim') or None
         diaria    = float(data.get('diaria') or 0)
@@ -2168,7 +2176,7 @@ def add_locacao():
 
         fotos_saida = data.get('fotos_saida')
         if fotos_saida and isinstance(fotos_saida, list):
-            fotos_saida = _json.dumps(fotos_saida)
+            fotos_saida = json.dumps(fotos_saida)
 
         freq = data.get('frequencia_cobranca') or 'avulso'
         with _db() as (conn, cur):
@@ -2184,7 +2192,8 @@ def add_locacao():
                 _gerar_periodos_futuros(cur, new_id, data['data_inicio'], freq, diaria)
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'error': f'Erro ao salvar locação: {str(e)}'}), 500
+        app.logger.error('Erro em add_locacao: %s', e)
+        return jsonify({'error': 'Erro ao salvar locação. Tente novamente.'}), 500
 
 
 @app.route('/api/locacoes/<int:id>', methods=['PUT'])
@@ -2200,10 +2209,9 @@ def update_locacao(id):
 
             veiculo_antigo, status_antigo = locacao
 
-            import json as _json
             fotos_saida = data.get('fotos_saida')
             if fotos_saida and isinstance(fotos_saida, list):
-                fotos_saida = _json.dumps(fotos_saida)
+                fotos_saida = json.dumps(fotos_saida)
 
             # data_fim é opcional — converte string vazia para None
             data_fim = data.get('data_fim') or None
@@ -2232,7 +2240,8 @@ def update_locacao(id):
                 _gerar_periodos_futuros(cur, id, data.get('data_inicio'), freq_edit, data.get('diaria'))
 
     except Exception as e:
-        return jsonify({'error': f'Erro ao atualizar locação: {str(e)}'}), 500
+        app.logger.error('Erro em update_locacao: %s', e)
+        return jsonify({'error': 'Erro ao atualizar locação. Tente novamente.'}), 500
 
     return jsonify({'success': True})
 
@@ -2254,7 +2263,8 @@ def delete_locacao(id):
             cur.execute('DELETE FROM locacoes WHERE id=%s', (id,))
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em delete_locacao: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 
 @app.route('/api/locacoes/<int:id>/devolver', methods=['PUT'])
@@ -2266,10 +2276,9 @@ def devolver_locacao(id):
         locacao = cur.fetchone()
 
         if locacao:
-            import json as _json
             fotos_retorno = data.get('fotos_retorno')
             if fotos_retorno and isinstance(fotos_retorno, list):
-                fotos_retorno = _json.dumps(fotos_retorno)
+                fotos_retorno = json.dumps(fotos_retorno)
             cur.execute(
                 "UPDATE locacoes SET data_fim=%s, data_devolucao_real=%s, km_retorno=%s, fotos_retorno=%s, status='concluida' WHERE id=%s",
                 (data.get('data_fim'), data.get('data_devolucao_real'), data.get('km_retorno'), fotos_retorno, id)
@@ -2329,12 +2338,12 @@ def delete_abastecimento(id):
 @app.route('/api/multas/importar-pdf', methods=['POST'])
 @login_required
 def importar_multa_pdf():
-    import pdfplumber, re, io as _io, unicodedata
+    import unicodedata
     f = request.files.get('pdf')
     if not f:
         return jsonify({'error': 'Nenhum arquivo enviado'}), 400
     try:
-        with pdfplumber.open(_io.BytesIO(f.read())) as pdf:
+        with pdfplumber.open(io.BytesIO(f.read())) as pdf:
             text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
         text = unicodedata.normalize('NFC', text)
     except Exception as e:
@@ -2575,7 +2584,8 @@ def buscar_multas_online():
     except requests.Timeout:
         return jsonify({'success': False, 'error': 'Tempo de conexão com SERPRO excedido. Tente novamente.'}), 504
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        app.logger.error('Erro em buscar_multas_online: %s', e)
+        return jsonify({'success': False, 'error': 'Erro interno. Tente novamente.'}), 500
 
 
 _APIBRASIL_ESTADOS = ['MG','AL','PB','GO','MS','RR','PE','MA','TO','PA','PI','AM','SC','SE','PR']
@@ -2627,9 +2637,8 @@ def consultar_multas_apibrasil():
     except requests.exceptions.ConnectionError:
         return jsonify({'error': f'Não foi possível conectar ao servidor APIBrasil ({url_base}).'}), 503
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em consultar_multas_apibrasil: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 # ==================== API FORNECEDORES ====================
 
@@ -2720,7 +2729,6 @@ def delete_tipo_fornecedor(id):
 @app.route('/api/consulta-cnpj/<cnpj>')
 @login_required
 def consulta_cnpj(cnpj):
-    import re
     cnpj_clean = re.sub(r'\D', '', cnpj)
     if len(cnpj_clean) != 14:
         return jsonify({'error': 'CNPJ inválido'}), 400
@@ -3003,7 +3011,8 @@ def get_relatorio_lucratividade():
         return jsonify({'resultados': resultados, 'dados_mensais': dados_mensais, 'periodo': {'inicio': data_inicio, 'fim': data_fim}})
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em get_relatorio_lucratividade: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 
 @app.route('/api/relatorio-fornecedor', methods=['POST'])
@@ -3051,7 +3060,8 @@ def get_relatorio_fornecedor():
         return jsonify({'resultados': resultados, 'periodo': {'inicio': data_inicio, 'fim': data_fim}})
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em get_relatorio_fornecedor: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 # ==================== API ALERTAS ====================
 
@@ -3138,7 +3148,8 @@ def add_usuario():
     except psycopg2.IntegrityError:
         return jsonify({'error': 'E-mail já cadastrado!'}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em add_usuario: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 
 @app.route('/api/usuarios/<int:id>', methods=['PUT'])
@@ -3164,7 +3175,8 @@ def update_usuario(id):
     except psycopg2.IntegrityError:
         return jsonify({'error': 'E-mail já cadastrado!'}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error('Erro em update_usuario: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 
 @app.route('/api/usuarios/<int:id>', methods=['DELETE'])
@@ -3194,7 +3206,8 @@ def fipe_marcas(tipo):
         data = r.json()
         return jsonify([{'valor': str(m['code']), 'nome': m['name']} for m in data])
     except Exception as e:
-        return jsonify({'error': str(e)}), 503
+        app.logger.error('Erro em fipe_marcas: %s', e)
+        return jsonify({'error': 'Serviço FIPE indisponível. Tente novamente.'}), 503
 
 @app.route('/api/fipe/modelos/<marca>')
 @login_required
@@ -3205,7 +3218,8 @@ def fipe_modelos(marca):
         data = r.json()
         return jsonify([{'valor': str(m['code']), 'modelo': m['name']} for m in data])
     except Exception as e:
-        return jsonify({'error': str(e)}), 503
+        app.logger.error('Erro em fipe_modelos: %s', e)
+        return jsonify({'error': 'Serviço FIPE indisponível. Tente novamente.'}), 503
 
 @app.route('/api/fipe/anos/<marca>/<modelo>')
 @login_required
@@ -3216,7 +3230,8 @@ def fipe_anos(marca, modelo):
         data = r.json()
         return jsonify([{'valor': str(a['code']), 'nome': a['name']} for a in data])
     except Exception as e:
-        return jsonify({'error': str(e)}), 503
+        app.logger.error('Erro em fipe_anos: %s', e)
+        return jsonify({'error': 'Serviço FIPE indisponível. Tente novamente.'}), 503
 
 @app.route('/api/fipe/preco/<marca>/<modelo>/<ano>')
 @login_required
@@ -3232,7 +3247,8 @@ def fipe_preco(marca, modelo, ano):
             'modelo':       d.get('model', ''),
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 503
+        app.logger.error('Erro em fipe_preco: %s', e)
+        return jsonify({'error': 'Serviço FIPE indisponível. Tente novamente.'}), 503
 
 
 # ==================== CONTAS A RECEBER ====================

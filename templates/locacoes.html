@@ -46,7 +46,7 @@
             <select class="form-control" id="filtroStatusLoc" onchange="filtrarLocacoes()" style="width: 150px;">
                 <option value="todos">Todos Status</option>
                 <option value="ativa">Ativa</option>
-                <option value="finalizada">Finalizada</option>
+                <option value="concluida">Finalizada</option>
             </select>
         </div>
     </div>
@@ -116,12 +116,14 @@
             renderizarLocacoes(locacoes);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
+            showToast('Erro ao carregar dados', 'error');
+            document.getElementById('tabelaLocacoes').innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#94a3b8;">Erro ao carregar. Tente recarregar a página.</td></tr>';
         }
     }
 
     function atualizarEstatisticas() {
         const ativas = locacoes.filter(l => l.status === 'ativa').length;
-        const finalizadas = locacoes.filter(l => l.status === 'finalizada').length;
+        const finalizadas = locacoes.filter(l => l.status === 'concluida').length;
         const fatTotal = locacoes.reduce((sum, l) => sum + (parseFloat(l.total) || 0), 0);
         document.getElementById('countAtivas').textContent = ativas;
         document.getElementById('countFinalizadas').textContent = finalizadas;
@@ -481,6 +483,8 @@
     }
 
     async function salvarLocacao(id) {
+      const btnSalvar = document.querySelector('button[onclick*="salvarLocacao"]');
+      if (btnSalvar) { btnSalvar.disabled = true; btnSalvar.textContent = 'Salvando...'; }
       try {
         const form = document.getElementById('formLocacao');
         if (!form) { showToast('Formulário não encontrado', 'error'); return; }
@@ -561,6 +565,8 @@
         }
       } catch (outer) {
           showToast('Erro inesperado: ' + (outer.message || outer), 'error');
+      } finally {
+          if (btnSalvar) { btnSalvar.disabled = false; btnSalvar.textContent = 'Salvar'; }
       }
     }
 

@@ -697,7 +697,12 @@
         const container = document.getElementById('toast-container');
         const el = document.createElement('div');
         el.className = 'toast ' + type;
-        el.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + '"></i><span>' + msg + '</span>';
+        const icon = document.createElement('i');
+        icon.className = 'fas ' + (icons[type] || icons.info);
+        const span = document.createElement('span');
+        span.textContent = msg;
+        el.appendChild(icon);
+        el.appendChild(span);
         container.appendChild(el);
         setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, duration);
     }
@@ -712,6 +717,7 @@
     function fecharModal() {
         document.getElementById('modalTemplate').classList.remove('active');
     }
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') fecharModal(); });
     document.getElementById('modalTemplate').addEventListener('click', function(e) {
         if (e.target === this) fecharModal();
     });

@@ -87,6 +87,8 @@
             renderizarClientes(clientes);
         } catch (error) {
             console.error('Erro ao carregar clientes:', error);
+            showToast('Erro ao carregar dados', 'error');
+            document.getElementById('tabelaClientes').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;">Erro ao carregar. Tente recarregar a página.</td></tr>';
         }
     }
     
@@ -241,7 +243,7 @@
                     <textarea class="form-control" name="observacoes" rows="3">${cliente ? cliente.observacoes : ''}</textarea>
                 </div>
                 <div style="text-align: right; margin-top: 20px;">
-                    <button type="button" class="btn" onclick="fecharModal()" class="btn btn-secondary" style="margin-right: 10px;">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()" style="margin-right: 10px;">Cancelar</button>
                     <button type="submit" class="btn btn-primary">${isEdit ? 'Atualizar' : 'Cadastrar'}</button>
                 </div>
             </form>
