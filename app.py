@@ -3546,6 +3546,35 @@ def projecao_cobrancas():
                         projecao_mes += round(diaria_f * dias, 2)
                 periodo_ini = periodo_fim + timedelta(days=1)
 
+        # Locações avulsas ativas ainda sem pagamentos_locacao (receita projetada na devolução)
+        cur.execute('''
+            SELECT l.data_fim, l.total, l.diaria, l.data_inicio
+            FROM locacoes l
+            WHERE l.status = 'ativa'
+              AND COALESCE(l.frequencia_cobranca, 'avulso') = 'avulso'
+              AND l.data_fim IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM pagamentos_locacao pl
+                  WHERE pl.locacao_id = l.id AND pl.status != 'cancelado'
+              )
+        ''')
+        for df_loc, total_loc, diaria_loc, di_loc in cur.fetchall():
+            if df_loc and isinstance(df_loc, str): df_loc = _date.fromisoformat(str(df_loc))
+            if di_loc and isinstance(di_loc, str): di_loc = _date.fromisoformat(str(di_loc))
+            if not df_loc: continue
+            if total_loc:
+                val = float(total_loc)
+            elif diaria_loc and di_loc:
+                val = round(float(diaria_loc) * ((df_loc - di_loc).days + 1), 2)
+            else:
+                continue
+            if df_loc == hoje:
+                vence_hoje += val
+            if hoje <= df_loc <= semana_fim:
+                vence_semana += val
+            if mes_ini <= df_loc <= mes_fim:
+                projecao_mes += val
+
     return jsonify({
         'vence_hoje':   round(vence_hoje, 2),
         'vence_semana': round(vence_semana, 2),
