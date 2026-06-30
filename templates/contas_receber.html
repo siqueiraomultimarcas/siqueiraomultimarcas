@@ -60,10 +60,10 @@
         <div class="kpi-value" id="kpiVencidos">0</div>
         <i class="fas fa-exclamation-triangle kpi-icon-bg"></i>
     </div>
-    <div class="kpi-card" style="border-left:4px solid #0891b2;">
-        <div class="kpi-label" style="color:#0891b2;">Descontos no Mês</div>
-        <div class="kpi-value" id="kpiDescontos" style="color:#0891b2;font-size:1.1rem;">R$ 0,00</div>
-        <i class="fas fa-tag kpi-icon-bg" style="color:#0891b2;"></i>
+    <div class="kpi-card" style="border-left:4px solid #7c3aed;">
+        <div class="kpi-label" style="color:#7c3aed;">Descontos no Mês</div>
+        <div class="kpi-value" id="kpiDescontos" style="color:#7c3aed;font-size:1.1rem;">R$ 0,00</div>
+        <i class="fas fa-tag kpi-icon-bg" style="color:#7c3aed;"></i>
     </div>
     <div class="kpi-card" style="border-left:4px solid #dc2626;">
         <div class="kpi-label" style="color:#dc2626;">Vence Hoje</div>
@@ -120,7 +120,7 @@
             <button id="btnBaixaSelC" onclick="baixaSelecionadosCard()" style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #bbf7d0;background:#f0fdf4;color:#16a34a;font-size:.72rem;font-weight:600;cursor:pointer;">
                 <i class="fas fa-check"></i> <span id="lblBaixaSelC">Dar Baixa</span>
             </button>
-            <button id="btnAsaasSelC" onclick="asaasSelecionadosCard()" style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #cffafe;background:#ecfeff;color:#0891b2;font-size:.72rem;font-weight:600;cursor:pointer;">
+            <button id="btnAsaasSelC" onclick="asaasSelecionadosCard()" style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #ddd6fe;background:#f5f3ff;color:#7c3aed;font-size:.72rem;font-weight:600;cursor:pointer;">
                 <i class="fas fa-bolt"></i> <span id="lblAsaasSelC">Asaas</span>
             </button>
             <button id="btnExcluirSelC" onclick="excluirSelecionadosCard()" style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;font-size:.72rem;font-weight:600;cursor:pointer;">
@@ -357,7 +357,7 @@
             <button class="btn" onclick="salvarAvulsa()" style="background:#2563eb;color:#fff;">
                 <i class="fas fa-save"></i> Salvar Pendente
             </button>
-            <button class="btn" onclick="toggleAvulsaAsaas()" id="btnToggleAsaas" style="background:#0891b2;color:#fff;">
+            <button class="btn" onclick="toggleAvulsaAsaas()" id="btnToggleAsaas" style="background:#7c3aed;color:#fff;">
                 <i class="fas fa-bolt"></i> Cobrar via Asaas
             </button>
             <button class="btn" onclick="confirmarAsaasAvulsa()" id="btnGerarAsaas" style="display:none;background:#059669;color:#fff;font-weight:700;">
@@ -885,7 +885,7 @@ function asaasSelecionadosCard() {
             <p style="margin-bottom:8px;color:#374151;">Gerar cobranças <strong>PIX</strong> para <strong>${n} período${n!==1?'s':''}</strong>?</p>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
                 <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
-                <button class="btn" onclick="confirmarAsaasSelecionados()" style="background:#0891b2;color:#fff;font-weight:600;">
+                <button class="btn" onclick="confirmarAsaasSelecionados()" style="background:#7c3aed;color:#fff;font-weight:600;">
                     <i class="fas fa-bolt"></i> Gerar Cobranças
                 </button>
             </div>
