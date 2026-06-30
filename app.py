@@ -2675,6 +2675,23 @@ def add_multa():
     return jsonify({'success': True})
 
 
+@app.route('/api/multas/<int:id>/pdf-view')
+@login_required
+def view_multa_pdf(id):
+    import requests as _req
+    with _db() as (conn, cur):
+        cur.execute('SELECT pdf_url FROM multas WHERE id=%s', (id,))
+        row = cur.fetchone()
+    if not row or not row[0]:
+        return 'PDF não encontrado', 404
+    r = _req.get(row[0], timeout=15)
+    if not r.ok:
+        return 'Erro ao buscar PDF', 502
+    from flask import Response
+    return Response(r.content, content_type='application/pdf',
+                    headers={'Content-Disposition': 'inline; filename="multa.pdf"'})
+
+
 @app.route('/api/multas/<int:id>/upload-pdf', methods=['POST'])
 @login_required
 def upload_multa_pdf(id):
