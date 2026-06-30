@@ -52,16 +52,16 @@
         </div>
     </div>
     <div class="table-container">
-        <table data-sortable>
+        <table>
             <thead>
                 <tr>
-                    <th>Nome</th>
-                    <th>CPF</th>
+                    <th onclick="sortClientes('nome')" style="cursor:pointer;user-select:none;">Nome <span id="sort_c_nome"></span></th>
+                    <th onclick="sortClientes('cpf')" style="cursor:pointer;user-select:none;">CPF <span id="sort_c_cpf"></span></th>
                     <th>CNH</th>
                     <th>Telefone</th>
                     <th>Email</th>
-                    <th>Cidade</th>
-                    <th>Status</th>
+                    <th onclick="sortClientes('cidade')" style="cursor:pointer;user-select:none;">Cidade <span id="sort_c_cidade"></span></th>
+                    <th onclick="sortClientes('status')" style="cursor:pointer;user-select:none;">Status <span id="sort_c_status"></span></th>
                     <th>Ações</th>
                 </tr>
             </thead>
@@ -70,37 +70,74 @@
             </tbody>
         </table>
     </div>
+    <div id="paginacaoClientes" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);"></div>
 </div>
 
 <script>
     let clientes = [];
-    
-    // Carregar clientes
+    let _filtradosC = [];
+    let _pagC = 1;
+    const _POR_PAG_C = 20;
+    let _sortColC = null, _sortAscC = true;
+
     async function carregarClientes() {
         try {
             const response = await fetch('/api/clientes');
             clientes = await response.json();
-            // Atualizar estatísticas
             document.getElementById('totalClientes').textContent = clientes.length;
             document.getElementById('clientesAtivos').textContent = clientes.filter(c => c.status === 'ativo').length;
             document.getElementById('clientesBloqueados').textContent = clientes.filter(c => c.status === 'bloqueado').length;
-            renderizarClientes(clientes);
+            filtrarClientes();
         } catch (error) {
-            console.error('Erro ao carregar clientes:', error);
             showToast('Erro ao carregar dados', 'error');
             document.getElementById('tabelaClientes').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;">Erro ao carregar. Tente recarregar a página.</td></tr>';
         }
     }
-    
+
+    function sortClientes(col) {
+        if (_sortColC === col) _sortAscC = !_sortAscC;
+        else { _sortColC = col; _sortAscC = true; }
+        ['nome','cpf','cidade','status'].forEach(c => {
+            const el = document.getElementById('sort_c_' + c);
+            if (el) el.textContent = c === _sortColC ? (_sortAscC ? ' ↑' : ' ↓') : '';
+        });
+        _pagC = 1;
+        _renderPageC();
+    }
+
+    function _sortListaC(lista) {
+        if (!_sortColC) return lista;
+        return [...lista].sort((a, b) => {
+            let va = (a[_sortColC] || '').toString().toLowerCase();
+            let vb = (b[_sortColC] || '').toString().toLowerCase();
+            return _sortAscC ? va.localeCompare(vb, 'pt-BR') : vb.localeCompare(va, 'pt-BR');
+        });
+    }
+
     function renderizarClientes(lista) {
+        _filtradosC = lista;
+        _pagC = 1;
+        _renderPageC();
+    }
+
+    function _renderPageC() {
         const tbody = document.getElementById('tabelaClientes');
-        document.getElementById('countClientesBadge').textContent = lista.length;
-        if (lista.length === 0) {
+        const pag   = document.getElementById('paginacaoClientes');
+        document.getElementById('countClientesBadge').textContent = _filtradosC.length;
+
+        if (_filtradosC.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px 0;"><i class="fas fa-users" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>Nenhum cliente encontrado</td></tr>';
+            pag.innerHTML = '';
             return;
         }
-        
-        tbody.innerHTML = lista.map(c => `
+
+        const sorted = _sortListaC(_filtradosC);
+        const totalPags = Math.ceil(sorted.length / _POR_PAG_C);
+        if (_pagC > totalPags) _pagC = totalPags;
+        const inicio = (_pagC - 1) * _POR_PAG_C;
+        const pagina = sorted.slice(inicio, inicio + _POR_PAG_C);
+
+        tbody.innerHTML = pagina.map(c => `
             <tr>
                 <td><strong>${c.nome}</strong></td>
                 <td>${c.cpf || '-'}</td>
@@ -125,19 +162,29 @@
                 </td>
             </tr>
         `).join('');
+
+        if (totalPags <= 1) { pag.innerHTML = ''; return; }
+        const btnStyle = (ativo) => `style="border:1px solid rgba(255,255,255,.15);background:${ativo ? '#2563eb' : 'rgba(255,255,255,.05)'};color:${ativo ? '#fff' : '#94a3b8'};border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;"`;
+        let html = `<span style="font-size:.75rem;color:#64748b;">${inicio+1}–${Math.min(inicio+_POR_PAG_C, sorted.length)} de ${sorted.length}</span>`;
+        html += `<button ${btnStyle(false)} onclick="_irPagC(${_pagC-1})" ${_pagC===1?'disabled':''}>‹</button>`;
+        for (let p = Math.max(1,_pagC-2); p <= Math.min(totalPags,_pagC+2); p++) {
+            html += `<button ${btnStyle(p===_pagC)} onclick="_irPagC(${p})">${p}</button>`;
+        }
+        html += `<button ${btnStyle(false)} onclick="_irPagC(${_pagC+1})" ${_pagC===totalPags?'disabled':''}>›</button>`;
+        pag.innerHTML = html;
     }
-    
+
+    function _irPagC(p) { _pagC = p; _renderPageC(); }
+
     function filtrarClientes() {
         const busca = document.getElementById('buscaCliente').value.toLowerCase();
         const status = document.getElementById('filtroStatus').value;
-        
         const filtrados = clientes.filter(c => {
-            const matchBusca = c.nome.toLowerCase().includes(busca) || 
+            const matchBusca = c.nome.toLowerCase().includes(busca) ||
                               (c.cpf && c.cpf.includes(busca));
             const matchStatus = status === 'todos' || c.status === status;
             return matchBusca && matchStatus;
         });
-        
         renderizarClientes(filtrados);
     }
     

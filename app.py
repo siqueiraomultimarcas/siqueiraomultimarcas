@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, Response
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, Response, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
@@ -8,6 +8,7 @@ import json
 import os
 import base64
 import re
+import time
 import io
 from contextlib import contextmanager
 from datetime import datetime, date as _date, timedelta
@@ -23,6 +24,9 @@ if not _secret:
     raise RuntimeError('SECRET_KEY não configurada — defina a variável de ambiente antes de iniciar.')
 app.secret_key = _secret
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 cloudinary.config(
     cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
@@ -89,6 +93,28 @@ def _db():
         except Exception: pass
         try: conn.close()
         except Exception: pass
+
+
+# ==================== SEGURANÇA ====================
+
+_failed_logins: dict = {}
+
+def _brute_check(ip: str) -> bool:
+    now = time.time()
+    _failed_logins[ip] = [t for t in _failed_logins.get(ip, []) if now - t < 600]
+    return len(_failed_logins.get(ip, [])) >= 5
+
+def _brute_record(ip: str) -> None:
+    _failed_logins.setdefault(ip, []).append(time.time())
+
+
+@app.after_request
+def _security_headers(resp):
+    resp.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    resp.headers['X-Content-Type-Options'] = 'nosniff'
+    resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    resp.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    return resp
 
 
 def _serialize_val(v):
@@ -488,6 +514,10 @@ def login():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
+        ip = request.remote_addr or '0.0.0.0'
+        if _brute_check(ip):
+            return render_template('login.html', erro='Muitas tentativas incorretas. Aguarde 10 minutos e tente novamente.')
+
         email = request.form.get('email', '').strip().lower()
         senha = request.form.get('senha', '')
         lembrar = request.form.get('lembrar') == 'on'
@@ -504,13 +534,15 @@ def login():
 
         if row and check_password_hash(row[4], senha):
             user = User(row[0], row[1], row[2], row[3])
+            session.permanent = True
             login_user(user, remember=lembrar)
             next_url = request.args.get('next') or ''
             from urllib.parse import urlparse
-            if urlparse(next_url).netloc:  # URL absoluta → rejeita (open redirect)
+            if urlparse(next_url).netloc:
                 next_url = ''
             return redirect(next_url or url_for('index'))
 
+        _brute_record(ip)
         return render_template('login.html', erro='E-mail ou senha incorretos.')
 
     return render_template('login.html')
@@ -729,6 +761,22 @@ def get_operacional():
         'multas_prazo': multas_prazo,
         'manutencoes_atrasadas': manutencoes_atrasadas
     })
+
+
+@app.route('/api/operacional/badge')
+@login_required
+def get_operacional_badge():
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT
+                (SELECT COUNT(*) FROM locacoes WHERE status='ativa' AND data_fim <= CURRENT_DATE) +
+                (SELECT COUNT(*) FROM pagamentos_locacao WHERE status='pendente' AND data_fim < CURRENT_DATE) +
+                (SELECT COUNT(*) FROM cobrancas_avulsas
+                 WHERE status='pendente' AND data_vencimento IS NOT NULL AND data_vencimento < CURRENT_DATE)
+            AS total
+        ''')
+        row = cur.fetchone()
+    return jsonify({'total': int(row[0]) if row and row[0] else 0})
 
 
 @app.route('/relatorios')

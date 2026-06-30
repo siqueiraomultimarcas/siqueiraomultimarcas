@@ -73,7 +73,7 @@
             </select>
         </div>
     </div>
-    <div class="table-container">
+    <div class="table-container" id="veiculosTableContainer">
         <table>
             <thead>
                 <tr>
@@ -98,6 +98,7 @@
             </tbody>
         </table>
     </div>
+    <div id="paginacaoVeiculos" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);"></div>
 </div>
 
 <!-- ================================================
@@ -312,6 +313,9 @@
 let veiculos = [];
 let dadosCRLV = {};
 let _sortCol = null, _sortAsc = true;
+let _filtradosV = [];
+let _pagV = 1;
+const _POR_PAG_V = 20;
 
 function sortBy(col) {
     if (_sortCol === col) _sortAsc = !_sortAsc;
@@ -365,16 +369,31 @@ function getStatusBadge(s) {
 }
 
 function renderizarVeiculos(lista) {
-    document.getElementById('countFrotaBadge').textContent = lista.length;
+    _filtradosV = lista;
+    _pagV = 1;
+    _renderPageV();
+}
+
+function _renderPageV() {
+    document.getElementById('countFrotaBadge').textContent = _filtradosV.length;
     const tbody = document.getElementById('tabelaVeiculos');
-    if (!lista.length) {
+    const pag   = document.getElementById('paginacaoVeiculos');
+
+    if (!_filtradosV.length) {
         tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:48px 20px;">
     <i class="fas fa-car" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
     <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhum veículo encontrado</div>
     <div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou cadastre um novo veículo</div>
 </td></tr>`;
+        pag.innerHTML = '';
         return;
     }
+
+    const totalPags = Math.ceil(_filtradosV.length / _POR_PAG_V);
+    if (_pagV > totalPags) _pagV = totalPags;
+    const inicio = (_pagV - 1) * _POR_PAG_V;
+    const lista  = _filtradosV.slice(inicio, inicio + _POR_PAG_V);
+
     tbody.innerHTML = lista.map(v => {
         const foto = v.foto
             ? `<img src="${v.foto}" class="foto-thumbnail" alt="${v.placa}">`
@@ -428,7 +447,19 @@ function renderizarVeiculos(lista) {
             </td>
         </tr>`;
     }).join('');
+
+    if (totalPags <= 1) { pag.innerHTML = ''; return; }
+    const btnStyle = (ativo) => `style="border:1px solid rgba(255,255,255,.15);background:${ativo ? '#2563eb' : 'rgba(255,255,255,.05)'};color:${ativo ? '#fff' : '#94a3b8'};border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;"`;
+    let html = `<span style="font-size:.75rem;color:#64748b;">${inicio+1}–${Math.min(inicio+_POR_PAG_V, _filtradosV.length)} de ${_filtradosV.length}</span>`;
+    html += `<button ${btnStyle(false)} onclick="_irPagV(${_pagV-1})" ${_pagV===1?'disabled':''}>‹</button>`;
+    for (let p = Math.max(1,_pagV-2); p <= Math.min(totalPags,_pagV+2); p++) {
+        html += `<button ${btnStyle(p===_pagV)} onclick="_irPagV(${p})">${p}</button>`;
+    }
+    html += `<button ${btnStyle(false)} onclick="_irPagV(${_pagV+1})" ${_pagV===totalPags?'disabled':''}>›</button>`;
+    pag.innerHTML = html;
 }
+
+function _irPagV(p) { _pagV = p; _renderPageV(); }
 
 function filtrarVeiculos() {
     const busca    = document.getElementById('buscaVeiculo').value.toLowerCase();

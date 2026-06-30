@@ -516,8 +516,9 @@
 
             <li class="nav-section">Operacional</li>
             <li class="nav-item">
-                <a href="/operacional" class="nav-link {% if request.path == '/operacional' %}active{% endif %}">
-                    <i class="fas fa-clipboard-list"></i> <span>Hoje</span>
+                <a href="/operacional" class="nav-link {% if request.path == '/operacional' %}active{% endif %}" style="display:flex;align-items:center;justify-content:space-between;">
+                    <span><i class="fas fa-clipboard-list"></i> <span>Hoje</span></span>
+                    <span id="badge-hoje" style="display:none;background:#dc2626;color:#fff;border-radius:10px;padding:1px 8px;font-size:.65rem;font-weight:700;line-height:1.5;"></span>
                 </a>
             </li>
             <li class="nav-item">
@@ -864,5 +865,18 @@
     }
 </script>
 {% block extra_js %}{% endblock %}
+<script>
+(async function() {
+    try {
+        const r = await fetch('/api/operacional/badge');
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.total > 0) {
+            const b = document.getElementById('badge-hoje');
+            if (b) { b.textContent = d.total; b.style.display = 'inline'; }
+        }
+    } catch(e) {}
+})();
+</script>
 </body>
 </html>
