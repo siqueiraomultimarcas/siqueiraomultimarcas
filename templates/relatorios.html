@@ -903,7 +903,7 @@ function exibirResultadosFornecedor(data) {
 function renderizarGraficoFornecedor(resultados) {
     const ctx = document.getElementById('chartFornecedores').getContext('2d');
     if (chartFornecedores) chartFornecedores.destroy();
-    const cores = ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899'];
+    const cores = ['#2563eb','#10b981','#f59e0b','#ef4444','#0891b2','#06b6d4','#ec4899'];
     chartFornecedores = new Chart(ctx, {
         type:'bar',
         data: {
