@@ -516,6 +516,11 @@
 
             <li class="nav-section">Operacional</li>
             <li class="nav-item">
+                <a href="/operacional" class="nav-link {% if request.path == '/operacional' %}active{% endif %}">
+                    <i class="fas fa-clipboard-list"></i> <span>Hoje</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="/clientes" class="nav-link {% if request.path == '/clientes' %}active{% endif %}">
                     <i class="fas fa-users"></i> <span>Clientes</span>
                 </a>

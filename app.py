@@ -607,6 +607,130 @@ def fornecedores():
     return render_template('fornecedores.html')
 
 
+@app.route('/operacional')
+@login_required
+def operacional():
+    return render_template('operacional.html')
+
+
+@app.route('/api/operacional')
+@login_required
+def get_operacional():
+    from datetime import date, timedelta
+    hoje = date.today()
+    proximos7 = hoje + timedelta(days=7)
+    proximos10 = hoje + timedelta(days=10)
+
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT l.id, v.placa, v.marca, v.modelo,
+                   c.nome AS cliente, COALESCE(c.telefone,'') AS telefone,
+                   l.data_inicio::text AS data_inicio, l.data_fim::text AS data_fim,
+                   COALESCE(l.total, 0) AS total
+            FROM locacoes l
+            JOIN veiculos v ON v.id = l.veiculo_id
+            JOIN clientes c ON c.id = l.cliente_id
+            WHERE l.status = %s AND l.data_fim = %s
+            ORDER BY c.nome
+        ''', ('ativa', hoje))
+        devolucoes_hoje = rows_to_dict(cur)
+
+        cur.execute('''
+            SELECT l.id, v.placa, v.marca, v.modelo,
+                   c.nome AS cliente, COALESCE(c.telefone,'') AS telefone,
+                   l.data_inicio::text AS data_inicio, l.data_fim::text AS data_fim,
+                   COALESCE(l.total, 0) AS total
+            FROM locacoes l
+            JOIN veiculos v ON v.id = l.veiculo_id
+            JOIN clientes c ON c.id = l.cliente_id
+            WHERE l.status = %s AND l.data_fim > %s AND l.data_fim <= %s
+            ORDER BY l.data_fim, c.nome
+        ''', ('ativa', hoje, proximos7))
+        devolucoes_semana = rows_to_dict(cur)
+
+        cur.execute('''
+            SELECT 'contrato' AS tipo, pl.id,
+                   c.nome AS cliente, COALESCE(c.telefone,'') AS telefone,
+                   pl.data_fim::text AS data_vencimento,
+                   COALESCE(pl.valor_previsto,0) - COALESCE(pl.desconto,0) AS valor,
+                   (CURRENT_DATE - pl.data_fim) AS dias_atraso,
+                   (v.placa || ' — ' || v.marca || ' ' || v.modelo) AS descricao
+            FROM pagamentos_locacao pl
+            JOIN locacoes l ON l.id = pl.locacao_id
+            JOIN veiculos v ON v.id = l.veiculo_id
+            JOIN clientes c ON c.id = l.cliente_id
+            WHERE pl.status = 'pendente' AND pl.data_fim < CURRENT_DATE
+            UNION ALL
+            SELECT 'multa', m.id,
+                   COALESCE(c.nome,'Sem motorista'), COALESCE(c.telefone,''),
+                   m.data_infracao::text,
+                   COALESCE(m.valor,0) - COALESCE(m.desconto,0),
+                   (CURRENT_DATE - m.data_infracao),
+                   COALESCE(m.descricao,'Multa')
+            FROM multas m
+            LEFT JOIN clientes c ON c.id = m.motorista_id
+            WHERE m.status = 'pendente'
+            UNION ALL
+            SELECT 'avulsa', ca.id,
+                   COALESCE(c.nome,'Sem cliente'), COALESCE(c.telefone,''),
+                   ca.data_vencimento::text,
+                   COALESCE(ca.valor,0) - COALESCE(ca.desconto,0),
+                   (CURRENT_DATE - ca.data_vencimento),
+                   COALESCE(ca.descricao,'Cobrança avulsa')
+            FROM cobrancas_avulsas ca
+            LEFT JOIN clientes c ON c.id = ca.cliente_id
+            WHERE ca.status = 'pendente'
+              AND ca.data_vencimento IS NOT NULL
+              AND ca.data_vencimento < CURRENT_DATE
+            ORDER BY dias_atraso DESC NULLS LAST
+            LIMIT 30
+        ''')
+        cobrancas_vencidas = rows_to_dict(cur)
+
+        cur.execute('''
+            SELECT m.id, v.placa, v.marca, v.modelo,
+                   COALESCE(c.nome,'Sem motorista') AS motorista,
+                   COALESCE(m.descricao,'Multa') AS descricao,
+                   COALESCE(m.valor,0) AS valor,
+                   m.data_limite_defesa::text AS data_limite_defesa,
+                   (m.data_limite_defesa - CURRENT_DATE) AS dias_restantes
+            FROM multas m
+            JOIN veiculos v ON v.id = m.veiculo_id
+            LEFT JOIN clientes c ON c.id = m.motorista_id
+            WHERE m.data_limite_defesa IS NOT NULL
+              AND m.data_limite_defesa >= CURRENT_DATE
+              AND m.data_limite_defesa <= %s
+              AND m.status != 'pago'
+            ORDER BY m.data_limite_defesa
+        ''', (proximos10,))
+        multas_prazo = rows_to_dict(cur)
+
+        cur.execute('''
+            SELECT v.id, v.placa, v.marca, v.modelo, COALESCE(v.km_atual,0) AS km_atual,
+                   mn.proxima_manutencao_km, mn.tipo,
+                   (COALESCE(v.km_atual,0) - mn.proxima_manutencao_km) AS km_atrasado
+            FROM veiculos v
+            JOIN manutencoes mn ON mn.id = (
+                SELECT id FROM manutencoes
+                WHERE veiculo_id = v.id AND proxima_manutencao_km IS NOT NULL
+                ORDER BY data_manutencao DESC, id DESC LIMIT 1
+            )
+            WHERE v.status != 'inativo'
+              AND mn.proxima_manutencao_km IS NOT NULL
+              AND COALESCE(v.km_atual,0) >= mn.proxima_manutencao_km
+            ORDER BY km_atrasado DESC
+        ''')
+        manutencoes_atrasadas = rows_to_dict(cur)
+
+    return jsonify({
+        'devolucoes_hoje': devolucoes_hoje,
+        'devolucoes_semana': devolucoes_semana,
+        'cobrancas_vencidas': cobrancas_vencidas,
+        'multas_prazo': multas_prazo,
+        'manutencoes_atrasadas': manutencoes_atrasadas
+    })
+
+
 @app.route('/relatorios')
 @login_required
 def relatorios():
