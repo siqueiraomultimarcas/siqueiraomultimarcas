@@ -216,11 +216,6 @@ def init_db():
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS codigo_fipe TEXT")
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS referencia_fipe TEXT")
     cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS valor_compra NUMERIC(12,2)")
-    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_id TEXT")
-    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_link TEXT")
-    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_status TEXT")
-    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS parcela_num INTEGER DEFAULT 1")
-    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS total_parcelas INTEGER DEFAULT 1")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS numero_auto TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS data_pagamento DATE")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS tipo_notificacao TEXT DEFAULT 'multa'")
@@ -310,6 +305,13 @@ def init_db():
             UNIQUE (locacao_id, semana_numero)
         )
     ''')
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_id TEXT")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_link TEXT")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS asaas_status TEXT")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS parcela_num INTEGER DEFAULT 1")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS total_parcelas INTEGER DEFAULT 1")
+    # Normalizar status legado 'finalizada' → 'concluida'
+    cur.execute("UPDATE locacoes SET status='concluida' WHERE status='finalizada'")
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS cobrancas_avulsas (
@@ -737,9 +739,16 @@ def update_cliente(id):
 @app.route('/api/clientes/<int:id>', methods=['DELETE'])
 @login_required
 def delete_cliente(id):
-    with _db() as (conn, cur):
-        cur.execute('DELETE FROM clientes WHERE id=%s', (id,))
-    return jsonify({'success': True})
+    if current_user.nivel != 'admin':
+        return jsonify({'error': 'Acesso negado'}), 403
+    try:
+        with _db() as (conn, cur):
+            cur.execute('DELETE FROM clientes WHERE id=%s', (id,))
+        return jsonify({'success': True})
+    except Exception as e:
+        if 'foreign key' in str(e).lower() or 'violates' in str(e).lower():
+            return jsonify({'error': 'Cliente possui locações ou cobranças vinculadas e não pode ser excluído.'}), 409
+        return jsonify({'error': 'Erro ao excluir cliente'}), 500
 
 @app.route('/api/clientes/importar', methods=['POST'])
 @login_required
@@ -1314,9 +1323,16 @@ def update_veiculo(id):
 @app.route('/api/veiculos/<int:id>', methods=['DELETE'])
 @login_required
 def delete_veiculo(id):
-    with _db() as (conn, cur):
-        cur.execute('DELETE FROM veiculos WHERE id=%s', (id,))
-    return jsonify({'success': True})
+    if current_user.nivel != 'admin':
+        return jsonify({'error': 'Acesso negado'}), 403
+    try:
+        with _db() as (conn, cur):
+            cur.execute('DELETE FROM veiculos WHERE id=%s', (id,))
+        return jsonify({'success': True})
+    except Exception as e:
+        if 'foreign key' in str(e).lower() or 'violates' in str(e).lower():
+            return jsonify({'error': 'Veículo possui locações ou manutenções vinculadas e não pode ser excluído.'}), 409
+        return jsonify({'error': 'Erro ao excluir veículo'}), 500
 
 @app.route('/api/veiculos/<int:id>/crlv', methods=['POST'])
 @login_required
@@ -2224,6 +2240,8 @@ def update_locacao(id):
 @app.route('/api/locacoes/<int:id>', methods=['DELETE'])
 @login_required
 def delete_locacao(id):
+    if current_user.nivel != 'admin':
+        return jsonify({'error': 'Acesso negado'}), 403
     try:
         with _db() as (conn, cur):
             cur.execute('SELECT veiculo_id, status FROM locacoes WHERE id=%s', (id,))
@@ -2253,7 +2271,7 @@ def devolver_locacao(id):
             if fotos_retorno and isinstance(fotos_retorno, list):
                 fotos_retorno = _json.dumps(fotos_retorno)
             cur.execute(
-                "UPDATE locacoes SET data_fim=%s, data_devolucao_real=%s, km_retorno=%s, fotos_retorno=%s, status='finalizada' WHERE id=%s",
+                "UPDATE locacoes SET data_fim=%s, data_devolucao_real=%s, km_retorno=%s, fotos_retorno=%s, status='concluida' WHERE id=%s",
                 (data.get('data_fim'), data.get('data_devolucao_real'), data.get('km_retorno'), fotos_retorno, id)
             )
             if data.get('km_retorno'):
@@ -2497,6 +2515,8 @@ def update_multa(id):
 @app.route('/api/multas/<int:id>', methods=['DELETE'])
 @login_required
 def delete_multa(id):
+    if current_user.nivel != 'admin':
+        return jsonify({'error': 'Acesso negado'}), 403
     with _db() as (conn, cur):
         cur.execute('DELETE FROM multas WHERE id=%s', (id,))
     return jsonify({'success': True})
@@ -2796,7 +2816,7 @@ def get_dashboard():
         )
         faturamento_mes = float(cur.fetchone()[0])
 
-        cur.execute("SELECT COALESCE(SUM(total), 0) FROM locacoes WHERE status = 'finalizada'")
+        cur.execute("SELECT COALESCE(SUM(total), 0) FROM locacoes WHERE status = 'concluida'")
         faturamento_total = float(cur.fetchone()[0])
 
         cur.execute("SELECT COALESCE(SUM(custo), 0) FROM manutencoes WHERE status = 'concluida'")
@@ -2817,7 +2837,7 @@ def get_dashboard():
 
         cur.execute('''
             SELECT TO_CHAR(data_inicio, 'YYYY-MM') as mes, SUM(total) as total, COUNT(*) as qtd
-            FROM locacoes WHERE status = 'finalizada'
+            FROM locacoes WHERE status = 'concluida'
             GROUP BY mes ORDER BY mes DESC LIMIT 6
         ''')
         locacoes_mes_raw = cur.fetchall()
