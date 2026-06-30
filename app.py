@@ -2681,7 +2681,7 @@ def upload_multa_pdf(id):
     file = request.files.get('pdf')
     if not file or not file.filename.lower().endswith('.pdf'):
         return jsonify({'error': 'Envie um arquivo PDF'}), 400
-    public_id = f'siqueirao/multas/multa_{id}_{int(datetime.now().timestamp())}'
+    public_id = f'siqueirao/multas/multa_{id}_{int(datetime.now().timestamp())}.pdf'
     result = cloudinary.uploader.upload(file, public_id=public_id, resource_type='raw', overwrite=True)
     pdf_url = result['secure_url']
     with _db() as (conn, cur):
