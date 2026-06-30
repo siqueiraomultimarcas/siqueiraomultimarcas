@@ -19,7 +19,10 @@ import pdfplumber
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-troque-em-producao')
+_secret = os.environ.get('SECRET_KEY')
+if not _secret:
+    raise RuntimeError('SECRET_KEY não configurada — defina a variável de ambiente antes de iniciar.')
+app.secret_key = _secret
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 cloudinary.config(
@@ -468,7 +471,11 @@ def login():
         if row and check_password_hash(row[4], senha):
             user = User(row[0], row[1], row[2], row[3])
             login_user(user, remember=lembrar)
-            return redirect(request.args.get('next') or url_for('index'))
+            next_url = request.args.get('next') or ''
+            from urllib.parse import urlparse
+            if urlparse(next_url).netloc:  # URL absoluta → rejeita (open redirect)
+                next_url = ''
+            return redirect(next_url or url_for('index'))
 
         return render_template('login.html', erro='E-mail ou senha incorretos.')
 
@@ -1934,7 +1941,8 @@ def importar_manutencao_pdf():
             if m:
                 data_parsed = f'{m.group(3)}-{m.group(2)}-{m.group(1)}'
         result['data_manutencao'] = data_parsed
-        result['_debug_data_raw'] = re.findall(r'\d{1,2}/\w{2,3}/\d{4}', all_text)[:3]
+        if app.debug:
+            result['_debug_data_raw'] = re.findall(r'\d{1,2}/\w{2,3}/\d{4}', all_text)[:3]
 
         # Placa — padrão Mercosul e antigo
         m = re.search(r'Placa[:\s|]+([A-Z]{3}[\d][A-Z\d][\d]{2})', all_text, re.IGNORECASE)
@@ -2083,12 +2091,13 @@ def importar_manutencao_pdf():
         itens = itens_ok
 
         result['itens'] = itens
-        result['_debug_bloco_itens'] = bloco_itens[:500] if bloco_itens else ''
-        result['_debug_n_tabelas'] = len(all_tables)
-        result['_debug_text_inicio'] = all_text[:300]
-        result['_debug_table_headers'] = [
-            [str(c or '') for c in (t[0] if t else [])] for t in all_tables[:3]
-        ]
+        if app.debug:
+            result['_debug_bloco_itens'] = bloco_itens[:500] if bloco_itens else ''
+            result['_debug_n_tabelas'] = len(all_tables)
+            result['_debug_text_inicio'] = all_text[:300]
+            result['_debug_table_headers'] = [
+                [str(c or '') for c in (t[0] if t else [])] for t in all_tables[:3]
+            ]
 
         # Total: soma dos itens (confiável) — evita bug do regex capturar nº de itens
         if itens:
@@ -2573,7 +2582,7 @@ def importar_multa_pdf():
         'descricao':          descricao,
         'numero_renainf':     renainf,
         'data_limite_defesa': to_iso(dt_limite),
-        '_debug':             text[:3000],
+        **(({'_debug': text[:3000]} if app.debug else {})),
     })
 
 

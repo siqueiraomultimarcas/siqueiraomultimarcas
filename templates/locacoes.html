@@ -264,7 +264,7 @@
             const data = await resp.json();
             if (data.success) {
                 showToast('Contrato excluído com sucesso', 'success');
-                carregarLocacoes();
+                carregarDados();
             } else {
                 showToast(data.error || 'Erro ao excluir contrato', 'error');
             }
