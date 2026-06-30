@@ -10,6 +10,7 @@ import os
 import base64
 import re
 import io
+from contextlib import contextmanager
 from datetime import datetime, date as _date, timedelta
 from dotenv import load_dotenv
 import requests
@@ -73,6 +74,23 @@ def get_conn():
     if not url:
         raise RuntimeError('DATABASE_URL não configurada. Crie um arquivo .env com a connection string do Neon.')
     return psycopg2.connect(url)
+
+
+@contextmanager
+def _db():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        yield conn, cur
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        try: cur.close()
+        except Exception: pass
+        try: conn.close()
+        except Exception: pass
 
 
 def _serialize_val(v):
@@ -475,15 +493,12 @@ def login():
         lembrar = request.form.get('lembrar') == 'on'
 
         try:
-            conn = get_conn()
-            cur = conn.cursor()
-            cur.execute(
-                'SELECT id, nome, email, nivel, senha_hash FROM usuarios WHERE email = %s AND ativo = TRUE',
-                (email,)
-            )
-            row = cur.fetchone()
-            cur.close()
-            conn.close()
+            with _db() as (conn, cur):
+                cur.execute(
+                    'SELECT id, nome, email, nivel, senha_hash FROM usuarios WHERE email = %s AND ativo = TRUE',
+                    (email,)
+                )
+                row = cur.fetchone()
         except Exception as e:
             return render_template('login.html', erro=f'Erro de conexão com o banco: {e}')
 
@@ -512,12 +527,9 @@ def logout():
 def setup():
     """Cria o primeiro usuário admin. Só funciona se não houver nenhum usuário."""
     try:
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute('SELECT COUNT(*) FROM usuarios')
-        total = cur.fetchone()[0]
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute('SELECT COUNT(*) FROM usuarios')
+            total = cur.fetchone()[0]
     except Exception as e:
         return f'Erro ao conectar ao banco: {e}', 500
 
@@ -533,15 +545,11 @@ def setup():
             return render_template('setup.html', erro='Preencha todos os campos.')
 
         try:
-            conn = get_conn()
-            cur = conn.cursor()
-            cur.execute(
-                'INSERT INTO usuarios (nome, email, senha_hash, nivel) VALUES (%s, %s, %s, %s)',
-                (nome, email, generate_password_hash(senha), 'admin')
-            )
-            conn.commit()
-            cur.close()
-            conn.close()
+            with _db() as (conn, cur):
+                cur.execute(
+                    'INSERT INTO usuarios (nome, email, senha_hash, nivel) VALUES (%s, %s, %s, %s)',
+                    (nome, email, generate_password_hash(senha), 'admin')
+                )
         except Exception as e:
             return render_template('setup.html', erro=f'Erro ao criar usuário: {e}')
 
@@ -661,12 +669,8 @@ def upload_foto_veiculo(id):
         result = cloudinary.uploader.upload(file, public_id=public_id, overwrite=True)
         foto_url = result['secure_url']
 
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute('UPDATE veiculos SET foto = %s WHERE id = %s', (foto_url, id))
-        conn.commit()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute('UPDATE veiculos SET foto = %s WHERE id = %s', (foto_url, id))
 
         return jsonify({'success': True, 'foto_url': foto_url})
     except Exception as e:
@@ -677,12 +681,8 @@ def upload_foto_veiculo(id):
 @login_required
 def delete_foto_veiculo(id):
     try:
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute('UPDATE veiculos SET foto = NULL WHERE id = %s', (id,))
-        conn.commit()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute('UPDATE veiculos SET foto = NULL WHERE id = %s', (id,))
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -692,12 +692,9 @@ def delete_foto_veiculo(id):
 @app.route('/api/clientes', methods=['GET'])
 @login_required
 def get_clientes():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM clientes ORDER BY nome')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('SELECT * FROM clientes ORDER BY nome')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
@@ -706,22 +703,16 @@ def get_clientes():
 def add_cliente():
     data = request.json
     try:
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute('''
-            INSERT INTO clientes (nome, cpf, cnh, telefone, email, cep, endereco, bairro, cidade, estado, status, observacoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ''', (data['nome'], data.get('cpf'), data.get('cnh'), data.get('telefone'),
-              data.get('email'), data.get('cep') or None, data.get('endereco'),
-              data.get('bairro') or None, data.get('cidade'),
-              data.get('estado'), data.get('status', 'ativo'), data.get('observacoes')))
-        conn.commit()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute('''
+                INSERT INTO clientes (nome, cpf, cnh, telefone, email, cep, endereco, bairro, cidade, estado, status, observacoes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (data['nome'], data.get('cpf'), data.get('cnh'), data.get('telefone'),
+                  data.get('email'), data.get('cep') or None, data.get('endereco'),
+                  data.get('bairro') or None, data.get('cidade'),
+                  data.get('estado'), data.get('status', 'ativo'), data.get('observacoes')))
         return jsonify({'success': True})
     except psycopg2.IntegrityError:
-        conn.rollback()
-        conn.close()
         return jsonify({'error': 'CPF já cadastrado!'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -731,31 +722,23 @@ def add_cliente():
 @login_required
 def update_cliente(id):
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        UPDATE clientes SET nome=%s, cpf=%s, cnh=%s, telefone=%s, email=%s,
-        cep=%s, endereco=%s, bairro=%s, cidade=%s, estado=%s, status=%s, observacoes=%s
-        WHERE id=%s
-    ''', (data['nome'], data.get('cpf'), data.get('cnh'), data.get('telefone'),
-          data.get('email'), data.get('cep') or None, data.get('endereco'),
-          data.get('bairro') or None, data.get('cidade'),
-          data.get('estado'), data.get('status'), data.get('observacoes'), id))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            UPDATE clientes SET nome=%s, cpf=%s, cnh=%s, telefone=%s, email=%s,
+            cep=%s, endereco=%s, bairro=%s, cidade=%s, estado=%s, status=%s, observacoes=%s
+            WHERE id=%s
+        ''', (data['nome'], data.get('cpf'), data.get('cnh'), data.get('telefone'),
+              data.get('email'), data.get('cep') or None, data.get('endereco'),
+              data.get('bairro') or None, data.get('cidade'),
+              data.get('estado'), data.get('status'), data.get('observacoes'), id))
     return jsonify({'success': True})
 
 
 @app.route('/api/clientes/<int:id>', methods=['DELETE'])
 @login_required
 def delete_cliente(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM clientes WHERE id=%s', (id,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM clientes WHERE id=%s', (id,))
     return jsonify({'success': True})
 
 @app.route('/api/clientes/importar', methods=['POST'])
@@ -832,51 +815,47 @@ def importar_clientes():
         d = re.sub(r'\D', '', s)
         return d.zfill(11) if d and len(d) <= 11 else (d or None)
 
-    conn = get_conn()
-    cur = conn.cursor()
     importados = ignorados = 0
     erros = []
 
-    for i, row in enumerate(rows[1:], start=2):
-        nome = get(row, I_NOME)
-        if not nome:
-            continue
-
-        cpf = fmt_cpf(get(row, I_CPF))
-
-        if cpf:
-            cur.execute('SELECT id FROM clientes WHERE cpf=%s', (cpf,))
-            if cur.fetchone():
-                ignorados += 1
+    with _db() as (conn, cur):
+        for i, row in enumerate(rows[1:], start=2):
+            nome = get(row, I_NOME)
+            if not nome:
                 continue
 
-        telefone = re.sub(r'\D', '', get(row, I_CEL) or get(row, I_FONE)) or None
-        email    = get(row, I_EMAIL) or None
-        rua      = get(row, I_RUA)
-        num      = get(row, I_NUM)
-        comp     = get(row, I_COMP)
-        endereco = ', '.join(p for p in [rua, num, comp] if p) or None
-        bairro   = get(row, I_BAIRRO) or None
-        cidade_r = get(row, I_CIDADE)
-        cidade   = cidade_r.split(' - ')[0].strip() if ' - ' in cidade_r else (cidade_r or None)
-        cep      = fmt_cep(get(row, I_CEP))
-        estado   = get(row, I_UF) or None
+            cpf = fmt_cpf(get(row, I_CPF))
 
-        try:
-            cur.execute('SAVEPOINT sp_imp')
-            cur.execute('''
-                INSERT INTO clientes (nome, cpf, telefone, email, cep, endereco, bairro, cidade, estado, status)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            ''', (nome, cpf, telefone, email, cep, endereco, bairro, cidade, estado, 'ativo'))
-            cur.execute('RELEASE SAVEPOINT sp_imp')
-            importados += 1
-        except Exception as e:
-            cur.execute('ROLLBACK TO SAVEPOINT sp_imp')
-            erros.append(f'Linha {i} ({nome}): {str(e)[:100]}')
+            if cpf:
+                cur.execute('SELECT id FROM clientes WHERE cpf=%s', (cpf,))
+                if cur.fetchone():
+                    ignorados += 1
+                    continue
 
-    conn.commit()
-    cur.close()
-    conn.close()
+            telefone = re.sub(r'\D', '', get(row, I_CEL) or get(row, I_FONE)) or None
+            email    = get(row, I_EMAIL) or None
+            rua      = get(row, I_RUA)
+            num      = get(row, I_NUM)
+            comp     = get(row, I_COMP)
+            endereco = ', '.join(p for p in [rua, num, comp] if p) or None
+            bairro   = get(row, I_BAIRRO) or None
+            cidade_r = get(row, I_CIDADE)
+            cidade   = cidade_r.split(' - ')[0].strip() if ' - ' in cidade_r else (cidade_r or None)
+            cep      = fmt_cep(get(row, I_CEP))
+            estado   = get(row, I_UF) or None
+
+            try:
+                cur.execute('SAVEPOINT sp_imp')
+                cur.execute('''
+                    INSERT INTO clientes (nome, cpf, telefone, email, cep, endereco, bairro, cidade, estado, status)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                ''', (nome, cpf, telefone, email, cep, endereco, bairro, cidade, estado, 'ativo'))
+                cur.execute('RELEASE SAVEPOINT sp_imp')
+                importados += 1
+            except Exception as e:
+                cur.execute('ROLLBACK TO SAVEPOINT sp_imp')
+                erros.append(f'Linha {i} ({nome}): {str(e)[:100]}')
+
     return jsonify({'importados': importados, 'ignorados': ignorados, 'erros': erros})
 
 # ==================== COBRANÇAS ====================
@@ -889,60 +868,55 @@ def cobrancas_page():
 @app.route('/api/cobrancas', methods=['GET'])
 @login_required
 def get_cobrancas():
-    conn = get_conn()
-    cur = conn.cursor()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT l.id, l.data_inicio, l.data_fim, l.diaria,
+                   v.placa, v.marca, v.modelo,
+                   c.nome AS cliente_nome, c.cpf AS cliente_cpf,
+                   c.telefone AS cliente_telefone, c.email AS cliente_email
+            FROM locacoes l
+            JOIN veiculos v ON v.id = l.veiculo_id
+            JOIN clientes c ON c.id = l.cliente_id
+            WHERE l.status = 'ativa'
+            ORDER BY v.placa, l.data_inicio
+        ''')
+        locacoes_db = rows_to_dict(cur)
 
-    cur.execute('''
-        SELECT l.id, l.data_inicio, l.data_fim, l.diaria,
-               v.placa, v.marca, v.modelo,
-               c.nome AS cliente_nome, c.cpf AS cliente_cpf,
-               c.telefone AS cliente_telefone, c.email AS cliente_email
-        FROM locacoes l
-        JOIN veiculos v ON v.id = l.veiculo_id
-        JOIN clientes c ON c.id = l.cliente_id
-        WHERE l.status = 'ativa'
-        ORDER BY v.placa, l.data_inicio
-    ''')
-    locacoes_db = rows_to_dict(cur)
-
-    ids = [l['id'] for l in locacoes_db]
-    pagamentos_por_loc = {}
-    if ids:
-        ph = ','.join(['%s'] * len(ids))
-        cur.execute(f'''
-            SELECT id, locacao_id, semana_numero, data_inicio, data_fim,
-                   valor_previsto, valor_pago, desconto,
-                   justificativa_desconto, status, data_pagamento, observacoes,
-                   asaas_id, asaas_link, asaas_status, parcela_num, total_parcelas
-            FROM pagamentos_locacao
-            WHERE locacao_id IN ({ph})
-            ORDER BY locacao_id, data_inicio
-        ''', ids)
-        for p in rows_to_dict(cur):
-            lid = p['locacao_id']
-            pagamentos_por_loc.setdefault(lid, []).append({
-                'id':                   p['id'],
-                'semana_numero':        p['semana_numero'],
-                'data_inicio':          str(p['data_inicio']) if p['data_inicio'] else None,
-                'data_fim':             str(p['data_fim']) if p['data_fim'] else None,
-                'dias':                 (((_date.fromisoformat(str(p['data_fim'])) - _date.fromisoformat(str(p['data_inicio']))).days)
-                                         if p['data_inicio'] and p['data_fim'] else 0),
-                'valor_previsto':       float(p['valor_previsto'] or 0),
-                'valor_pago':           float(p['valor_pago'] or 0),
-                'desconto':             float(p['desconto'] or 0),
-                'justificativa_desconto': p['justificativa_desconto'],
-                'status':               p['status'],
-                'data_pagamento':       str(p['data_pagamento']) if p['data_pagamento'] else None,
-                'observacoes':          p['observacoes'],
-                'asaas_id':             p.get('asaas_id'),
-                'asaas_link':           p.get('asaas_link'),
-                'asaas_status':         p.get('asaas_status'),
-                'parcela_num':          p.get('parcela_num') or 1,
-                'total_parcelas':       p.get('total_parcelas') or 1,
-            })
-
-    cur.close()
-    conn.close()
+        ids = [l['id'] for l in locacoes_db]
+        pagamentos_por_loc = {}
+        if ids:
+            ph = ','.join(['%s'] * len(ids))
+            cur.execute(f'''
+                SELECT id, locacao_id, semana_numero, data_inicio, data_fim,
+                       valor_previsto, valor_pago, desconto,
+                       justificativa_desconto, status, data_pagamento, observacoes,
+                       asaas_id, asaas_link, asaas_status, parcela_num, total_parcelas
+                FROM pagamentos_locacao
+                WHERE locacao_id IN ({ph})
+                ORDER BY locacao_id, data_inicio
+            ''', ids)
+            for p in rows_to_dict(cur):
+                lid = p['locacao_id']
+                pagamentos_por_loc.setdefault(lid, []).append({
+                    'id':                   p['id'],
+                    'semana_numero':        p['semana_numero'],
+                    'data_inicio':          str(p['data_inicio']) if p['data_inicio'] else None,
+                    'data_fim':             str(p['data_fim']) if p['data_fim'] else None,
+                    'dias':                 (((_date.fromisoformat(str(p['data_fim'])) - _date.fromisoformat(str(p['data_inicio']))).days)
+                                             if p['data_inicio'] and p['data_fim'] else 0),
+                    'valor_previsto':       float(p['valor_previsto'] or 0),
+                    'valor_pago':           float(p['valor_pago'] or 0),
+                    'desconto':             float(p['desconto'] or 0),
+                    'justificativa_desconto': p['justificativa_desconto'],
+                    'status':               p['status'],
+                    'data_pagamento':       str(p['data_pagamento']) if p['data_pagamento'] else None,
+                    'observacoes':          p['observacoes'],
+                    'asaas_id':             p.get('asaas_id'),
+                    'asaas_link':           p.get('asaas_link'),
+                    'asaas_status':         p.get('asaas_status'),
+                    'parcela_num':          p.get('parcela_num') or 1,
+                    'total_parcelas':       p.get('total_parcelas') or 1,
+                })
 
     result = []
     for loc in locacoes_db:
@@ -996,45 +970,39 @@ def registrar_pagamento():
     if desconto > 0 and not just:
         return jsonify({'error': 'Justificativa obrigatória quando há desconto'}), 400
 
-    conn = get_conn()
-    cur = conn.cursor()
+    with _db() as (conn, cur):
+        # Verifica sobreposição com períodos já registrados
+        cur.execute('''
+            SELECT id, data_inicio, data_fim FROM pagamentos_locacao
+            WHERE locacao_id = %s AND status IN ('pago','pendente')
+              AND data_inicio <= %s AND data_fim >= %s
+        ''', (locacao_id, d_fim, d_ini))
+        overlap = cur.fetchone()
+        if overlap:
+            return jsonify({'error': f'Período sobrepõe registro já existente ({overlap[1]} a {overlap[2]})'}), 400
 
-    # Verifica sobreposição com períodos já registrados
-    cur.execute('''
-        SELECT id, data_inicio, data_fim FROM pagamentos_locacao
-        WHERE locacao_id = %s AND status IN ('pago','pendente')
-          AND data_inicio <= %s AND data_fim >= %s
-    ''', (locacao_id, d_fim, d_ini))
-    overlap = cur.fetchone()
-    if overlap:
-        cur.close(); conn.close()
-        return jsonify({'error': f'Período sobrepõe registro já existente ({overlap[1]} a {overlap[2]})'}), 400
+        dias = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days
+        cur.execute('SELECT diaria FROM locacoes WHERE id=%s', (locacao_id,))
+        row = cur.fetchone()
+        diaria = float(row[0]) if row else 0
+        valor_prev = round(diaria * dias)
+        valor_pago = round(valor_prev - desconto) if status == 'pago' else 0
+        data_pag   = data.get('data_pagamento') or (str(_date.today()) if status == 'pago' else None)
 
-    dias = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days
-    cur.execute('SELECT diaria FROM locacoes WHERE id=%s', (locacao_id,))
-    row = cur.fetchone()
-    diaria = float(row[0]) if row else 0
-    valor_prev = round(diaria * dias)
-    valor_pago = round(valor_prev - desconto) if status == 'pago' else 0
-    data_pag   = data.get('data_pagamento') or (str(_date.today()) if status == 'pago' else None)
+        cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
+        semana_num = cur.fetchone()[0]
 
-    cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
-    semana_num = cur.fetchone()[0]
-
-    cur.execute('''
-        INSERT INTO pagamentos_locacao
-            (locacao_id, semana_numero, data_inicio, data_fim,
-             valor_previsto, valor_pago, desconto, justificativa_desconto,
-             status, data_pagamento, observacoes)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        RETURNING id
-    ''', (locacao_id, semana_num, d_ini, d_fim,
-          valor_prev, valor_pago, desconto, just or None,
-          status, data_pag, obs))
-    new_id = cur.fetchone()[0]
-    conn.commit()
-    cur.close()
-    conn.close()
+        cur.execute('''
+            INSERT INTO pagamentos_locacao
+                (locacao_id, semana_numero, data_inicio, data_fim,
+                 valor_previsto, valor_pago, desconto, justificativa_desconto,
+                 status, data_pagamento, observacoes)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id
+        ''', (locacao_id, semana_num, d_ini, d_fim,
+              valor_prev, valor_pago, desconto, just or None,
+              status, data_pag, obs))
+        new_id = cur.fetchone()[0]
     return jsonify({'success': True, 'id': new_id, 'valor_pago': valor_pago, 'valor_previsto': valor_prev, 'dias': dias})
 
 @app.route('/api/cobrar-asaas', methods=['POST'])
@@ -1053,111 +1021,103 @@ def cobrar_asaas():
     if d_fim < d_ini:
         return jsonify({'error': 'Data fim deve ser igual ou posterior à data início'}), 400
 
-    conn = get_conn()
-    cur  = conn.cursor()
-
-    cur.execute('''
-        SELECT l.diaria, c.nome, c.cpf, c.telefone, c.email, v.placa, v.marca, v.modelo
-        FROM locacoes l
-        JOIN clientes c ON c.id = l.cliente_id
-        JOIN veiculos v ON v.id = l.veiculo_id
-        WHERE l.id = %s
-    ''', (locacao_id,))
-    row = cur.fetchone()
-    if not row:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Locação não encontrada'}), 404
-
-    diaria, cli_nome, cli_cpf, cli_tel, cli_email, placa, marca, modelo = row
-    diaria = float(diaria or 0)
-
-    # Verifica sobreposição (ignorando registros com mesmo período — são parcelas)
-    cur.execute('''
-        SELECT id, data_inicio, data_fim FROM pagamentos_locacao
-        WHERE locacao_id = %s AND status IN ('pago','pendente')
-          AND data_inicio <= %s AND data_fim >= %s
-          AND NOT (data_inicio = %s AND data_fim = %s)
-    ''', (locacao_id, d_fim, d_ini, d_ini, d_fim))
-    overlap = cur.fetchone()
-    if overlap:
-        cur.close(); conn.close()
-        return jsonify({'error': f'Período sobrepõe cobrança já registrada ({overlap[1]} a {overlap[2]})'}), 400
-
-    dias       = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days + 1
-    valor_prev = round(diaria * dias, 2)
-    valor_total = round(valor_prev - max(0, desconto), 2)
-    desc_base  = f'Locação {placa} {marca} {modelo} — {dias} dia(s) ({d_ini} a {d_fim})'
-
-    customer_id, err = _asaas_get_or_create_customer(cli_cpf, cli_nome, cli_email or '', cli_tel or '')
-    if err:
-        cur.close(); conn.close()
-        return jsonify({'error': f'Asaas: {err}'}), 500
-
-    cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
-    next_seq = cur.fetchone()[0]
-
-    # Monta lista de cobranças a criar
-    if parcelas and len(parcelas) > 1:
-        n = len(parcelas)
-        itens = []
-        for i, p in enumerate(parcelas):
-            itens.append({
-                'due_date':    p.get('data_vencimento') or str(_date.today()),
-                'valor':       round(float(p.get('valor') or 0), 2),
-                'parcela_num': i + 1,
-                'total':       n,
-                'descricao':   f'{desc_base} — Parcela {i+1}/{n}',
-            })
-    else:
-        due_date = (parcelas[0].get('data_vencimento') if parcelas else None) or data.get('data_vencimento') or str(_date.today())
-        itens = [{'due_date': due_date, 'valor': valor_total,
-                  'parcela_num': 1, 'total': 1, 'descricao': desc_base}]
-
-    resultados = []
-    for idx, item in enumerate(itens):
-        charge, sc = _asaas_req('POST', '/payments', {
-            'customer':    customer_id,
-            'billingType': billing,
-            'dueDate':     item['due_date'],
-            'value':       item['valor'],
-            'description': item['descricao'],
-        })
-        if sc not in (200, 201):
-            conn.rollback(); cur.close(); conn.close()
-            errs = charge.get('errors', [{}])
-            return jsonify({'error': f"Parcela {item['parcela_num']}: {errs[0].get('description','Erro Asaas')}"}), 500
-
-        asaas_id   = charge.get('id')
-        asaas_link = charge.get('invoiceUrl', '')
-        seq        = next_seq + idx
-
+    with _db() as (conn, cur):
         cur.execute('''
-            INSERT INTO pagamentos_locacao
-                (locacao_id, semana_numero, data_inicio, data_fim,
-                 valor_previsto, valor_pago, desconto, status,
-                 asaas_id, asaas_link, asaas_status,
-                 parcela_num, total_parcelas)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,'pendente',%s,%s,'PENDING',%s,%s)
-            RETURNING id
-        ''', (locacao_id, seq, d_ini, d_fim,
-              round(valor_prev / len(itens), 2), item['valor'],
-              round(max(0, desconto) / len(itens), 2),
-              asaas_id, asaas_link,
-              item['parcela_num'], item['total']))
-        new_id = cur.fetchone()[0]
+            SELECT l.diaria, c.nome, c.cpf, c.telefone, c.email, v.placa, v.marca, v.modelo
+            FROM locacoes l
+            JOIN clientes c ON c.id = l.cliente_id
+            JOIN veiculos v ON v.id = l.veiculo_id
+            WHERE l.id = %s
+        ''', (locacao_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Locação não encontrada'}), 404
 
-        r = {'id': new_id, 'asaas_id': asaas_id, 'invoice_url': asaas_link,
-             'bank_slip_url': charge.get('bankSlipUrl', ''),
-             'parcela_num': item['parcela_num'], 'total': item['total'],
-             'valor': item['valor']}
-        if billing == 'PIX':
-            pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
-            r['pix_qrcode']  = pix.get('encodedImage', '')
-            r['pix_payload'] = pix.get('payload', '')
-        resultados.append(r)
+        diaria, cli_nome, cli_cpf, cli_tel, cli_email, placa, marca, modelo = row
+        diaria = float(diaria or 0)
 
-    conn.commit()
-    cur.close(); conn.close()
+        # Verifica sobreposição (ignorando registros com mesmo período — são parcelas)
+        cur.execute('''
+            SELECT id, data_inicio, data_fim FROM pagamentos_locacao
+            WHERE locacao_id = %s AND status IN ('pago','pendente')
+              AND data_inicio <= %s AND data_fim >= %s
+              AND NOT (data_inicio = %s AND data_fim = %s)
+        ''', (locacao_id, d_fim, d_ini, d_ini, d_fim))
+        overlap = cur.fetchone()
+        if overlap:
+            return jsonify({'error': f'Período sobrepõe cobrança já registrada ({overlap[1]} a {overlap[2]})'}), 400
+
+        dias       = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days + 1
+        valor_prev = round(diaria * dias, 2)
+        valor_total = round(valor_prev - max(0, desconto), 2)
+        desc_base  = f'Locação {placa} {marca} {modelo} — {dias} dia(s) ({d_ini} a {d_fim})'
+
+        customer_id, err = _asaas_get_or_create_customer(cli_cpf, cli_nome, cli_email or '', cli_tel or '')
+        if err:
+            return jsonify({'error': f'Asaas: {err}'}), 500
+
+        cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
+        next_seq = cur.fetchone()[0]
+
+        # Monta lista de cobranças a criar
+        if parcelas and len(parcelas) > 1:
+            n = len(parcelas)
+            itens = []
+            for i, p in enumerate(parcelas):
+                itens.append({
+                    'due_date':    p.get('data_vencimento') or str(_date.today()),
+                    'valor':       round(float(p.get('valor') or 0), 2),
+                    'parcela_num': i + 1,
+                    'total':       n,
+                    'descricao':   f'{desc_base} — Parcela {i+1}/{n}',
+                })
+        else:
+            due_date = (parcelas[0].get('data_vencimento') if parcelas else None) or data.get('data_vencimento') or str(_date.today())
+            itens = [{'due_date': due_date, 'valor': valor_total,
+                      'parcela_num': 1, 'total': 1, 'descricao': desc_base}]
+
+        resultados = []
+        for idx, item in enumerate(itens):
+            charge, sc = _asaas_req('POST', '/payments', {
+                'customer':    customer_id,
+                'billingType': billing,
+                'dueDate':     item['due_date'],
+                'value':       item['valor'],
+                'description': item['descricao'],
+            })
+            if sc not in (200, 201):
+                errs = charge.get('errors', [{}])
+                raise Exception(f"Parcela {item['parcela_num']}: {errs[0].get('description','Erro Asaas')}")
+
+            asaas_id   = charge.get('id')
+            asaas_link = charge.get('invoiceUrl', '')
+            seq        = next_seq + idx
+
+            cur.execute('''
+                INSERT INTO pagamentos_locacao
+                    (locacao_id, semana_numero, data_inicio, data_fim,
+                     valor_previsto, valor_pago, desconto, status,
+                     asaas_id, asaas_link, asaas_status,
+                     parcela_num, total_parcelas)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,'pendente',%s,%s,'PENDING',%s,%s)
+                RETURNING id
+            ''', (locacao_id, seq, d_ini, d_fim,
+                  round(valor_prev / len(itens), 2), item['valor'],
+                  round(max(0, desconto) / len(itens), 2),
+                  asaas_id, asaas_link,
+                  item['parcela_num'], item['total']))
+            new_id = cur.fetchone()[0]
+
+            r = {'id': new_id, 'asaas_id': asaas_id, 'invoice_url': asaas_link,
+                 'bank_slip_url': charge.get('bankSlipUrl', ''),
+                 'parcela_num': item['parcela_num'], 'total': item['total'],
+                 'valor': item['valor']}
+            if billing == 'PIX':
+                pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
+                r['pix_qrcode']  = pix.get('encodedImage', '')
+                r['pix_payload'] = pix.get('payload', '')
+            resultados.append(r)
+
     return jsonify({'success': True, 'parcelas': resultados})
 
 
@@ -1169,54 +1129,47 @@ def cobrar_asaas_multa():
     billing    = data.get('billing_type', 'PIX')
     vencimento = data.get('data_vencimento')
 
-    conn = get_conn()
-    cur  = conn.cursor()
-    cur.execute('''
-        SELECT m.valor, m.descricao, m.numero_auto, m.tipo_notificacao,
-               c.nome, c.cpf, c.telefone, c.email
-        FROM multas m
-        LEFT JOIN clientes c ON m.motorista_id = c.id
-        WHERE m.id = %s
-    ''', (multa_id,))
-    row = cur.fetchone()
-    if not row:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Multa não encontrada'}), 404
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT m.valor, m.descricao, m.numero_auto, m.tipo_notificacao,
+                   c.nome, c.cpf, c.telefone, c.email
+            FROM multas m
+            LEFT JOIN clientes c ON m.motorista_id = c.id
+            WHERE m.id = %s
+        ''', (multa_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Multa não encontrada'}), 404
 
-    valor, desc, num_auto, tipo, cli_nome, cli_cpf, cli_tel, cli_email = row
-    valor = float(valor or 0)
-    if valor <= 0:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Multa sem valor definido'}), 400
-    if not cli_cpf:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Motorista sem CPF cadastrado — não é possível gerar cobrança ASAAS'}), 400
+        valor, desc, num_auto, tipo, cli_nome, cli_cpf, cli_tel, cli_email = row
+        valor = float(valor or 0)
+        if valor <= 0:
+            return jsonify({'error': 'Multa sem valor definido'}), 400
+        if not cli_cpf:
+            return jsonify({'error': 'Motorista sem CPF cadastrado — não é possível gerar cobrança ASAAS'}), 400
 
-    tipo_label = 'NIC' if tipo == 'nic' else 'Multa'
-    descricao  = f'{tipo_label} {num_auto or ""} — {desc or ""}'.strip(' —')
+        tipo_label = 'NIC' if tipo == 'nic' else 'Multa'
+        descricao  = f'{tipo_label} {num_auto or ""} — {desc or ""}'.strip(' —')
 
-    customer_id, err = _asaas_get_or_create_customer(cli_cpf, cli_nome or '', cli_email or '', cli_tel or '')
-    if err:
-        cur.close(); conn.close()
-        return jsonify({'error': err}), 502
+        customer_id, err = _asaas_get_or_create_customer(cli_cpf, cli_nome or '', cli_email or '', cli_tel or '')
+        if err:
+            return jsonify({'error': err}), 502
 
-    due_date = vencimento or str(_date.today())
-    charge, sc = _asaas_req('POST', '/payments', {
-        'customer':    customer_id,
-        'billingType': billing,
-        'value':       valor,
-        'dueDate':     due_date,
-        'description': descricao,
-    })
-    if sc not in (200, 201):
-        cur.close(); conn.close()
-        return jsonify({'error': charge.get('errors', [{}])[0].get('description', 'Erro ASAAS')}), 502
+        due_date = vencimento or str(_date.today())
+        charge, sc = _asaas_req('POST', '/payments', {
+            'customer':    customer_id,
+            'billingType': billing,
+            'value':       valor,
+            'dueDate':     due_date,
+            'description': descricao,
+        })
+        if sc not in (200, 201):
+            return jsonify({'error': charge.get('errors', [{}])[0].get('description', 'Erro ASAAS')}), 502
 
-    asaas_id   = charge.get('id')
-    asaas_link = charge.get('invoiceUrl', '')
-    cur.execute('''UPDATE multas SET asaas_id=%s, asaas_link=%s, asaas_status='PENDING' WHERE id=%s''',
-                (asaas_id, asaas_link, multa_id))
-    conn.commit()
+        asaas_id   = charge.get('id')
+        asaas_link = charge.get('invoiceUrl', '')
+        cur.execute('''UPDATE multas SET asaas_id=%s, asaas_link=%s, asaas_status='PENDING' WHERE id=%s''',
+                    (asaas_id, asaas_link, multa_id))
 
     r = {'id': multa_id, 'asaas_id': asaas_id, 'invoice_url': asaas_link, 'asaas_status': 'PENDING'}
     if billing == 'PIX':
@@ -1224,89 +1177,70 @@ def cobrar_asaas_multa():
         r['pix_code']  = pix.get('payload', '')
         r['pix_image'] = pix.get('encodedImage', '')
 
-    cur.close(); conn.close()
     return jsonify(r)
 
 
 @app.route('/api/cobrar-asaas-multa/<int:multa_id>/verificar', methods=['PUT'])
 @login_required
 def verificar_asaas_multa(multa_id):
-    conn = get_conn()
-    cur  = conn.cursor()
-    cur.execute('SELECT asaas_id FROM multas WHERE id=%s', (multa_id,))
-    row = cur.fetchone()
-    if not row or not row[0]:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Sem cobrança ASAAS para esta multa'}), 404
+    with _db() as (conn, cur):
+        cur.execute('SELECT asaas_id FROM multas WHERE id=%s', (multa_id,))
+        row = cur.fetchone()
+        if not row or not row[0]:
+            return jsonify({'error': 'Sem cobrança ASAAS para esta multa'}), 404
 
-    charge, sc = _asaas_req('GET', f'/payments/{row[0]}')
-    if sc != 200:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Cobrança não encontrada no ASAAS'}), 404
+        charge, sc = _asaas_req('GET', f'/payments/{row[0]}')
+        if sc != 200:
+            return jsonify({'error': 'Cobrança não encontrada no ASAAS'}), 404
 
-    st = charge.get('status', '')
-    if st in ('RECEIVED', 'CONFIRMED'):
-        cur.execute("UPDATE multas SET status='pago', asaas_status=%s, data_pagamento=%s WHERE id=%s",
-                    (st, _date.today(), multa_id))
-        conn.commit()
-        cur.close(); conn.close()
-        return jsonify({'status': 'pago', 'asaas_status': st, 'label': 'Pago', 'cor': '#16a34a'})
+        st = charge.get('status', '')
+        if st in ('RECEIVED', 'CONFIRMED'):
+            cur.execute("UPDATE multas SET status='pago', asaas_status=%s, data_pagamento=%s WHERE id=%s",
+                        (st, _date.today(), multa_id))
+            return jsonify({'status': 'pago', 'asaas_status': st, 'label': 'Pago', 'cor': '#16a34a'})
 
-    label_map = {'PENDING': ('Aguardando', '#f59e0b'), 'OVERDUE': ('Vencido', '#dc2626'),
-                 'CANCELLED': ('Cancelado', '#6b7280')}
-    lbl, cor = label_map.get(st, (st, '#64748b'))
-    cur.execute('UPDATE multas SET asaas_status=%s WHERE id=%s', (st, multa_id))
-    conn.commit()
-    cur.close(); conn.close()
+        label_map = {'PENDING': ('Aguardando', '#f59e0b'), 'OVERDUE': ('Vencido', '#dc2626'),
+                     'CANCELLED': ('Cancelado', '#6b7280')}
+        lbl, cor = label_map.get(st, (st, '#64748b'))
+        cur.execute('UPDATE multas SET asaas_status=%s WHERE id=%s', (st, multa_id))
     return jsonify({'status': 'pendente', 'asaas_status': st, 'label': lbl, 'cor': cor})
 
 
 @app.route('/api/cobrancas/<int:pagamento_id>/verificar', methods=['PUT'])
 @login_required
 def verificar_pagamento(pagamento_id):
-    conn = get_conn()
-    cur  = conn.cursor()
-    cur.execute('SELECT asaas_id FROM pagamentos_locacao WHERE id=%s', (pagamento_id,))
-    row = cur.fetchone()
-    if not row or not row[0]:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Cobrança Asaas não encontrada para este pagamento'}), 404
+    with _db() as (conn, cur):
+        cur.execute('SELECT asaas_id FROM pagamentos_locacao WHERE id=%s', (pagamento_id,))
+        row = cur.fetchone()
+        if not row or not row[0]:
+            return jsonify({'error': 'Cobrança Asaas não encontrada para este pagamento'}), 404
 
-    asaas_id = row[0]
-    charge, status_code = _asaas_req('GET', f'/payments/{asaas_id}')
-    if status_code != 200:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Cobrança não encontrada no Asaas'}), 404
+        asaas_id = row[0]
+        charge, status_code = _asaas_req('GET', f'/payments/{asaas_id}')
+        if status_code != 200:
+            return jsonify({'error': 'Cobrança não encontrada no Asaas'}), 404
 
-    st = charge.get('status', '')
-    if st in ('RECEIVED', 'CONFIRMED'):
-        cur.execute('''
-            UPDATE pagamentos_locacao
-               SET status='pago', asaas_status=%s, data_pagamento=%s
-             WHERE id=%s
-        ''', (st, _date.today(), pagamento_id))
-        conn.commit()
-        cur.close(); conn.close()
-        return jsonify({'status': 'pago', 'asaas_status': st, 'label': 'Pago', 'cor': '#16a34a'})
+        st = charge.get('status', '')
+        if st in ('RECEIVED', 'CONFIRMED'):
+            cur.execute('''
+                UPDATE pagamentos_locacao
+                   SET status='pago', asaas_status=%s, data_pagamento=%s
+                 WHERE id=%s
+            ''', (st, _date.today(), pagamento_id))
+            return jsonify({'status': 'pago', 'asaas_status': st, 'label': 'Pago', 'cor': '#16a34a'})
 
-    label_map = {'PENDING': ('Aguardando', '#f59e0b'), 'OVERDUE': ('Vencido', '#dc2626'),
-                 'CANCELLED': ('Cancelado', '#6b7280')}
-    lbl, cor = label_map.get(st, (st, '#64748b'))
-    cur.execute('UPDATE pagamentos_locacao SET asaas_status=%s WHERE id=%s', (st, pagamento_id))
-    conn.commit()
-    cur.close(); conn.close()
+        label_map = {'PENDING': ('Aguardando', '#f59e0b'), 'OVERDUE': ('Vencido', '#dc2626'),
+                     'CANCELLED': ('Cancelado', '#6b7280')}
+        lbl, cor = label_map.get(st, (st, '#64748b'))
+        cur.execute('UPDATE pagamentos_locacao SET asaas_status=%s WHERE id=%s', (st, pagamento_id))
     return jsonify({'status': 'pendente', 'asaas_status': st, 'label': lbl, 'cor': cor})
 
 
 @app.route('/api/cobrancas/<int:pagamento_id>', methods=['DELETE'])
 @login_required
 def cancelar_pagamento(pagamento_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("UPDATE pagamentos_locacao SET status='cancelado' WHERE id=%s", (pagamento_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute("UPDATE pagamentos_locacao SET status='cancelado' WHERE id=%s", (pagamento_id,))
     return jsonify({'success': True})
 
 # ==================== API VEÍCULOS ====================
@@ -1314,12 +1248,9 @@ def cancelar_pagamento(pagamento_id):
 @app.route('/api/veiculos', methods=['GET'])
 @login_required
 def get_veiculos():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM veiculos ORDER BY marca, modelo')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('SELECT * FROM veiculos ORDER BY marca, modelo')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
@@ -1328,30 +1259,24 @@ def get_veiculos():
 def add_veiculo():
     data = request.json
     try:
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute('''
-            INSERT INTO veiculos (placa, marca, modelo, ano, cor, categoria, diaria, km_atual, status, combustivel, observacoes, renavam, chassi, ano_fabricacao, potencia, versao, valor_fipe, codigo_fipe, referencia_fipe, valor_compra)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-        ''', (data.get('placa'), data.get('marca'), data.get('modelo'),
-              data.get('ano') or None, data.get('cor') or None,
-              data.get('categoria') or None, data.get('diaria') or None,
-              data.get('km_atual') or 0, data.get('status', 'disponivel'),
-              data.get('combustivel') or None, data.get('observacoes') or None,
-              data.get('renavam') or None, data.get('chassi') or None,
-              data.get('ano_fabricacao') or None,
-              data.get('potencia') or None, data.get('versao') or None,
-              _float_or_none(data.get('valor_fipe')),
-              data.get('codigo_fipe') or None, data.get('referencia_fipe') or None,
-              _float_or_none(data.get('valor_compra'))))
-        veiculo_id = cur.fetchone()[0]
-        conn.commit()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute('''
+                INSERT INTO veiculos (placa, marca, modelo, ano, cor, categoria, diaria, km_atual, status, combustivel, observacoes, renavam, chassi, ano_fabricacao, potencia, versao, valor_fipe, codigo_fipe, referencia_fipe, valor_compra)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+            ''', (data.get('placa'), data.get('marca'), data.get('modelo'),
+                  data.get('ano') or None, data.get('cor') or None,
+                  data.get('categoria') or None, data.get('diaria') or None,
+                  data.get('km_atual') or 0, data.get('status', 'disponivel'),
+                  data.get('combustivel') or None, data.get('observacoes') or None,
+                  data.get('renavam') or None, data.get('chassi') or None,
+                  data.get('ano_fabricacao') or None,
+                  data.get('potencia') or None, data.get('versao') or None,
+                  _float_or_none(data.get('valor_fipe')),
+                  data.get('codigo_fipe') or None, data.get('referencia_fipe') or None,
+                  _float_or_none(data.get('valor_compra'))))
+            veiculo_id = cur.fetchone()[0]
         return jsonify({'success': True, 'id': veiculo_id})
     except psycopg2.IntegrityError:
-        conn.rollback()
-        conn.close()
         return jsonify({'error': 'Placa já cadastrada!'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1361,48 +1286,36 @@ def add_veiculo():
 @login_required
 def update_veiculo(id):
     data = request.json
-    conn = get_conn()
     try:
-        cur = conn.cursor()
-        cur.execute('''
-            UPDATE veiculos SET placa=%s, marca=%s, modelo=%s, ano=%s, cor=%s, categoria=%s,
-            diaria=%s, km_atual=%s, status=%s, combustivel=%s, observacoes=%s, renavam=%s,
-            chassi=%s, ano_fabricacao=%s, potencia=%s, versao=%s,
-            valor_fipe=%s, codigo_fipe=%s, referencia_fipe=%s, valor_compra=%s WHERE id=%s
-        ''', (data.get('placa'), data.get('marca'), data.get('modelo'),
-              data.get('ano') or None, data.get('cor'), data.get('categoria'),
-              data.get('diaria') or None, data.get('km_atual') or 0,
-              data.get('status', 'disponivel'), data.get('combustivel'),
-              data.get('observacoes'), data.get('renavam') or None,
-              data.get('chassi') or None,
-              data.get('ano_fabricacao') or None,
-              data.get('potencia') or None, data.get('versao') or None,
-              _float_or_none(data.get('valor_fipe')),
-              data.get('codigo_fipe') or None, data.get('referencia_fipe') or None,
-              _float_or_none(data.get('valor_compra')), id))
-        conn.commit()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute('''
+                UPDATE veiculos SET placa=%s, marca=%s, modelo=%s, ano=%s, cor=%s, categoria=%s,
+                diaria=%s, km_atual=%s, status=%s, combustivel=%s, observacoes=%s, renavam=%s,
+                chassi=%s, ano_fabricacao=%s, potencia=%s, versao=%s,
+                valor_fipe=%s, codigo_fipe=%s, referencia_fipe=%s, valor_compra=%s WHERE id=%s
+            ''', (data.get('placa'), data.get('marca'), data.get('modelo'),
+                  data.get('ano') or None, data.get('cor'), data.get('categoria'),
+                  data.get('diaria') or None, data.get('km_atual') or 0,
+                  data.get('status', 'disponivel'), data.get('combustivel'),
+                  data.get('observacoes'), data.get('renavam') or None,
+                  data.get('chassi') or None,
+                  data.get('ano_fabricacao') or None,
+                  data.get('potencia') or None, data.get('versao') or None,
+                  _float_or_none(data.get('valor_fipe')),
+                  data.get('codigo_fipe') or None, data.get('referencia_fipe') or None,
+                  _float_or_none(data.get('valor_compra')), id))
         return jsonify({'success': True})
     except psycopg2.IntegrityError:
-        conn.rollback()
-        conn.close()
         return jsonify({'error': 'Placa já cadastrada por outro veículo!'}), 400
     except Exception as e:
-        conn.rollback()
-        conn.close()
         return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/veiculos/<int:id>', methods=['DELETE'])
 @login_required
 def delete_veiculo(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM veiculos WHERE id=%s', (id,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM veiculos WHERE id=%s', (id,))
     return jsonify({'success': True})
 
 @app.route('/api/veiculos/<int:id>/crlv', methods=['POST'])
@@ -1419,12 +1332,8 @@ def upload_crlv_veiculo(id):
             file, public_id=public_id, resource_type='raw', overwrite=True
         )
         crlv_url = result['secure_url']
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute('UPDATE veiculos SET crlv_url = %s WHERE id = %s', (crlv_url, id))
-        conn.commit()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute('UPDATE veiculos SET crlv_url = %s WHERE id = %s', (crlv_url, id))
         return jsonify({'success': True, 'crlv_url': crlv_url})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1434,12 +1343,9 @@ def upload_crlv_veiculo(id):
 @login_required
 def download_crlv_veiculo(id):
     try:
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute('SELECT crlv_url, placa FROM veiculos WHERE id = %s', (id,))
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute('SELECT crlv_url, placa FROM veiculos WHERE id = %s', (id,))
+            row = cur.fetchone()
         if not row or not row[0]:
             return jsonify({'error': 'CRLV não encontrado'}), 404
         crlv_url, placa = row[0], row[1]
@@ -1461,12 +1367,8 @@ def download_crlv_veiculo(id):
 @login_required
 def delete_crlv_veiculo(id):
     try:
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute('UPDATE veiculos SET crlv_url = NULL WHERE id = %s', (id,))
-        conn.commit()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute('UPDATE veiculos SET crlv_url = NULL WHERE id = %s', (id,))
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1723,57 +1625,48 @@ def _parse_crlv(texto):
 @app.route('/api/historico-veiculo/<placa>', methods=['GET'])
 @login_required
 def historico_veiculo(placa):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(
-        'SELECT id, placa, marca, modelo, ano, ano_fabricacao, km_atual, status, cor, combustivel, categoria '
-        'FROM veiculos WHERE UPPER(placa) = %s',
-        (placa.upper(),)
-    )
-    row = cur.fetchone()
-    if not row:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Veículo não encontrado'}), 404
-    cols = [d[0] for d in cur.description]
-    veiculo = dict(zip(cols, row))
+    with _db() as (conn, cur):
+        cur.execute(
+            'SELECT id, placa, marca, modelo, ano, ano_fabricacao, km_atual, status, cor, combustivel, categoria '
+            'FROM veiculos WHERE UPPER(placa) = %s',
+            (placa.upper(),)
+        )
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Veículo não encontrado'}), 404
+        cols = [d[0] for d in cur.description]
+        veiculo = dict(zip(cols, row))
 
-    cur.execute(
-        'SELECT m.*, v.placa, v.marca, v.modelo '
-        'FROM manutencoes m LEFT JOIN veiculos v ON m.veiculo_id = v.id '
-        'WHERE m.veiculo_id = %s ORDER BY m.data_manutencao DESC, m.id DESC',
-        (veiculo['id'],)
-    )
-    manutencoes_list = rows_to_dict(cur)
-    cur.close(); conn.close()
+        cur.execute(
+            'SELECT m.*, v.placa, v.marca, v.modelo '
+            'FROM manutencoes m LEFT JOIN veiculos v ON m.veiculo_id = v.id '
+            'WHERE m.veiculo_id = %s ORDER BY m.data_manutencao DESC, m.id DESC',
+            (veiculo['id'],)
+        )
+        manutencoes_list = rows_to_dict(cur)
     return jsonify({'veiculo': veiculo, 'manutencoes': manutencoes_list})
 
 
 @app.route('/api/manutencoes', methods=['GET'])
 @login_required
 def get_manutencoes():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT m.*, v.placa, v.marca, v.modelo
-        FROM manutencoes m
-        LEFT JOIN veiculos v ON m.veiculo_id = v.id
-        ORDER BY m.data_manutencao DESC
-    ''')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT m.*, v.placa, v.marca, v.modelo
+            FROM manutencoes m
+            LEFT JOIN veiculos v ON m.veiculo_id = v.id
+            ORDER BY m.data_manutencao DESC
+        ''')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
 @app.route('/api/manutencoes/veiculo/<int:veiculo_id>')
 @login_required
 def get_manutencoes_veiculo(veiculo_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM manutencoes WHERE veiculo_id = %s ORDER BY data_manutencao DESC', (veiculo_id,))
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('SELECT * FROM manutencoes WHERE veiculo_id = %s ORDER BY data_manutencao DESC', (veiculo_id,))
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
@@ -1781,45 +1674,41 @@ def get_manutencoes_veiculo(veiculo_id):
 @login_required
 def add_manutencao():
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        INSERT INTO manutencoes (veiculo_id, tipo, descricao, data_manutencao, km_manutencao,
-        custo, oficina, proxima_manutencao_km, proxima_manutencao_data, status,
-        numero_pedido, fornecedor_id, itens_json)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ''', (_int_or_none(data.get('veiculo_id')),
-          data.get('tipo'),
-          data.get('descricao') or None,
-          _normalize_date(data.get('data_manutencao')),
-          _int_or_none(data.get('km_manutencao')),
-          _float_or_none(data.get('custo')),
-          data.get('oficina') or None,
-          _int_or_none(data.get('proxima_manutencao_km')),
-          _normalize_date(data.get('proxima_manutencao_data')),
-          data.get('status') or 'concluida',
-          data.get('numero_pedido') or None,
-          _int_or_none(data.get('fornecedor_id')),
-          data.get('itens_json') or None))
-
-    vid = _int_or_none(data.get('veiculo_id'))
-    if vid:
+    with _db() as (conn, cur):
         cur.execute('''
-            UPDATE veiculos SET km_atual = (
-                SELECT km_manutencao FROM manutencoes
-                WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
-                ORDER BY data_manutencao DESC, id DESC LIMIT 1
-            )
-            WHERE id = %s AND (
-                SELECT km_manutencao FROM manutencoes
-                WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
-                ORDER BY data_manutencao DESC, id DESC LIMIT 1
-            ) IS NOT NULL
-        ''', (vid, vid, vid))
+            INSERT INTO manutencoes (veiculo_id, tipo, descricao, data_manutencao, km_manutencao,
+            custo, oficina, proxima_manutencao_km, proxima_manutencao_data, status,
+            numero_pedido, fornecedor_id, itens_json)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (_int_or_none(data.get('veiculo_id')),
+              data.get('tipo'),
+              data.get('descricao') or None,
+              _normalize_date(data.get('data_manutencao')),
+              _int_or_none(data.get('km_manutencao')),
+              _float_or_none(data.get('custo')),
+              data.get('oficina') or None,
+              _int_or_none(data.get('proxima_manutencao_km')),
+              _normalize_date(data.get('proxima_manutencao_data')),
+              data.get('status') or 'concluida',
+              data.get('numero_pedido') or None,
+              _int_or_none(data.get('fornecedor_id')),
+              data.get('itens_json') or None))
 
-    conn.commit()
-    cur.close()
-    conn.close()
+        vid = _int_or_none(data.get('veiculo_id'))
+        if vid:
+            cur.execute('''
+                UPDATE veiculos SET km_atual = (
+                    SELECT km_manutencao FROM manutencoes
+                    WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
+                    ORDER BY data_manutencao DESC, id DESC LIMIT 1
+                )
+                WHERE id = %s AND (
+                    SELECT km_manutencao FROM manutencoes
+                    WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
+                    ORDER BY data_manutencao DESC, id DESC LIMIT 1
+                ) IS NOT NULL
+            ''', (vid, vid, vid))
+
     return jsonify({'success': True})
 
 
@@ -1856,46 +1745,42 @@ def _float_or_none(v):
 @login_required
 def update_manutencao(id):
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        UPDATE manutencoes SET veiculo_id=%s, tipo=%s, descricao=%s, data_manutencao=%s,
-        km_manutencao=%s, custo=%s, oficina=%s, proxima_manutencao_km=%s,
-        proxima_manutencao_data=%s, status=%s, fornecedor_id=%s, numero_pedido=%s, itens_json=%s
-        WHERE id=%s
-    ''', (_int_or_none(data.get('veiculo_id')),
-          data.get('tipo'),
-          data.get('descricao') or None,
-          _normalize_date(data.get('data_manutencao')),
-          _int_or_none(data.get('km_manutencao')),
-          _float_or_none(data.get('custo')),
-          data.get('oficina') or None,
-          _int_or_none(data.get('proxima_manutencao_km')),
-          _normalize_date(data.get('proxima_manutencao_data')),
-          data.get('status'),
-          _int_or_none(data.get('fornecedor_id')),
-          data.get('numero_pedido') or None,
-          data.get('itens_json') or None,
-          id))
-
-    vid = _int_or_none(data.get('veiculo_id'))
-    if vid:
+    with _db() as (conn, cur):
         cur.execute('''
-            UPDATE veiculos SET km_atual = (
-                SELECT km_manutencao FROM manutencoes
-                WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
-                ORDER BY data_manutencao DESC, id DESC LIMIT 1
-            )
-            WHERE id = %s AND (
-                SELECT km_manutencao FROM manutencoes
-                WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
-                ORDER BY data_manutencao DESC, id DESC LIMIT 1
-            ) IS NOT NULL
-        ''', (vid, vid, vid))
+            UPDATE manutencoes SET veiculo_id=%s, tipo=%s, descricao=%s, data_manutencao=%s,
+            km_manutencao=%s, custo=%s, oficina=%s, proxima_manutencao_km=%s,
+            proxima_manutencao_data=%s, status=%s, fornecedor_id=%s, numero_pedido=%s, itens_json=%s
+            WHERE id=%s
+        ''', (_int_or_none(data.get('veiculo_id')),
+              data.get('tipo'),
+              data.get('descricao') or None,
+              _normalize_date(data.get('data_manutencao')),
+              _int_or_none(data.get('km_manutencao')),
+              _float_or_none(data.get('custo')),
+              data.get('oficina') or None,
+              _int_or_none(data.get('proxima_manutencao_km')),
+              _normalize_date(data.get('proxima_manutencao_data')),
+              data.get('status'),
+              _int_or_none(data.get('fornecedor_id')),
+              data.get('numero_pedido') or None,
+              data.get('itens_json') or None,
+              id))
 
-    conn.commit()
-    cur.close()
-    conn.close()
+        vid = _int_or_none(data.get('veiculo_id'))
+        if vid:
+            cur.execute('''
+                UPDATE veiculos SET km_atual = (
+                    SELECT km_manutencao FROM manutencoes
+                    WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
+                    ORDER BY data_manutencao DESC, id DESC LIMIT 1
+                )
+                WHERE id = %s AND (
+                    SELECT km_manutencao FROM manutencoes
+                    WHERE veiculo_id = %s AND km_manutencao IS NOT NULL
+                    ORDER BY data_manutencao DESC, id DESC LIMIT 1
+                ) IS NOT NULL
+            ''', (vid, vid, vid))
+
     return jsonify({'success': True})
 
 
@@ -2133,47 +2018,43 @@ def importar_manutencao_pdf():
             else:
                 result['total'] = 0.0
 
-        # Cruzamento de veículo
-        conn = get_conn()
-        cur = conn.cursor()
-        veiculo_match = None
-        if result.get('placa'):
-            cur.execute(
-                'SELECT id, placa, marca, modelo, ano_fabricacao, km_atual FROM veiculos WHERE UPPER(placa) = %s',
-                (result['placa'].upper(),)
-            )
-            row = cur.fetchone()
-            if row:
-                veiculo_match = {'id': row[0], 'placa': row[1], 'marca': row[2],
-                                 'modelo': row[3], 'ano': row[4], 'km_atual': row[5]}
-        result['veiculo'] = veiculo_match
+        # Cruzamento de veículo e fornecedor
+        with _db() as (conn, cur):
+            veiculo_match = None
+            if result.get('placa'):
+                cur.execute(
+                    'SELECT id, placa, marca, modelo, ano_fabricacao, km_atual FROM veiculos WHERE UPPER(placa) = %s',
+                    (result['placa'].upper(),)
+                )
+                row = cur.fetchone()
+                if row:
+                    veiculo_match = {'id': row[0], 'placa': row[1], 'marca': row[2],
+                                     'modelo': row[3], 'ano': row[4], 'km_atual': row[5]}
+            result['veiculo'] = veiculo_match
 
-        # Cruzamento de fornecedor — CNPJ primeiro, depois nome parcial
-        fornecedor_match = None
-        cnpj_clean = re.sub(r'\D', '', cnpj_raw)
-        if cnpj_clean:
-            cur.execute(
-                "SELECT id, nome, nome_fantasia, cnpj FROM fornecedores "
-                "WHERE REGEXP_REPLACE(COALESCE(cnpj,''),'[^0-9]','','g') = %s LIMIT 1",
-                (cnpj_clean,)
-            )
-            row = cur.fetchone()
-            if row:
-                fornecedor_match = {'id': row[0], 'nome': row[1], 'nome_fantasia': row[2], 'cnpj': row[3]}
-        if not fornecedor_match and fornec_nome_raw:
-            q = fornec_nome_raw.upper()[:25]
-            cur.execute(
-                "SELECT id, nome, nome_fantasia, cnpj FROM fornecedores "
-                "WHERE UPPER(nome) LIKE %s OR UPPER(COALESCE(nome_fantasia,'')) LIKE %s LIMIT 1",
-                (f'%{q}%', f'%{q}%')
-            )
-            row = cur.fetchone()
-            if row:
-                fornecedor_match = {'id': row[0], 'nome': row[1], 'nome_fantasia': row[2], 'cnpj': row[3]}
-        result['fornecedor'] = fornecedor_match
+            fornecedor_match = None
+            cnpj_clean = re.sub(r'\D', '', cnpj_raw)
+            if cnpj_clean:
+                cur.execute(
+                    "SELECT id, nome, nome_fantasia, cnpj FROM fornecedores "
+                    "WHERE REGEXP_REPLACE(COALESCE(cnpj,''),'[^0-9]','','g') = %s LIMIT 1",
+                    (cnpj_clean,)
+                )
+                row = cur.fetchone()
+                if row:
+                    fornecedor_match = {'id': row[0], 'nome': row[1], 'nome_fantasia': row[2], 'cnpj': row[3]}
+            if not fornecedor_match and fornec_nome_raw:
+                q = fornec_nome_raw.upper()[:25]
+                cur.execute(
+                    "SELECT id, nome, nome_fantasia, cnpj FROM fornecedores "
+                    "WHERE UPPER(nome) LIKE %s OR UPPER(COALESCE(nome_fantasia,'')) LIKE %s LIMIT 1",
+                    (f'%{q}%', f'%{q}%')
+                )
+                row = cur.fetchone()
+                if row:
+                    fornecedor_match = {'id': row[0], 'nome': row[1], 'nome_fantasia': row[2], 'cnpj': row[3]}
+            result['fornecedor'] = fornecedor_match
 
-        cur.close()
-        conn.close()
         return jsonify(result)
 
     except Exception as e:
@@ -2183,12 +2064,8 @@ def importar_manutencao_pdf():
 @app.route('/api/manutencoes/<int:id>', methods=['DELETE'])
 @login_required
 def delete_manutencao(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM manutencoes WHERE id=%s', (id,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM manutencoes WHERE id=%s', (id,))
     return jsonify({'success': True})
 
 # ==================== API LOCAÇÕES ====================
@@ -2196,37 +2073,31 @@ def delete_manutencao(id):
 @app.route('/api/locacoes', methods=['GET'])
 @login_required
 def get_locacoes():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT l.*, v.placa, v.marca, v.modelo, c.nome as nome_cliente
-        FROM locacoes l
-        LEFT JOIN veiculos v ON l.veiculo_id = v.id
-        LEFT JOIN clientes c ON l.cliente_id = c.id
-        ORDER BY l.data_inicio DESC
-    ''')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT l.*, v.placa, v.marca, v.modelo, c.nome as nome_cliente
+            FROM locacoes l
+            LEFT JOIN veiculos v ON l.veiculo_id = v.id
+            LEFT JOIN clientes c ON l.cliente_id = c.id
+            ORDER BY l.data_inicio DESC
+        ''')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
 @app.route('/api/locacoes/<int:id>', methods=['GET'])
 @login_required
 def get_locacao(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT l.*, v.placa, v.marca, v.modelo, v.cor, v.ano, v.combustivel,
-               c.nome as nome_cliente, c.cpf, c.cnh, c.telefone, c.endereco, c.cidade, c.estado
-        FROM locacoes l
-        LEFT JOIN veiculos v ON l.veiculo_id = v.id
-        LEFT JOIN clientes c ON l.cliente_id = c.id
-        WHERE l.id = %s
-    ''', (id,))
-    result = row_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT l.*, v.placa, v.marca, v.modelo, v.cor, v.ano, v.combustivel,
+                   c.nome as nome_cliente, c.cpf, c.cnh, c.telefone, c.endereco, c.cidade, c.estado
+            FROM locacoes l
+            LEFT JOIN veiculos v ON l.veiculo_id = v.id
+            LEFT JOIN clientes c ON l.cliente_id = c.id
+            WHERE l.id = %s
+        ''', (id,))
+        result = row_to_dict(cur)
     if not result:
         return jsonify({'error': 'Locação não encontrada'}), 404
     return jsonify(result)
@@ -2284,21 +2155,17 @@ def add_locacao():
             fotos_saida = _json.dumps(fotos_saida)
 
         freq = data.get('frequencia_cobranca') or 'avulso'
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute('''
-            INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida, status, checklist, fotos_saida, observacoes, frequencia_cobranca)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-        ''', (data['veiculo_id'], data['cliente_id'], data['data_inicio'], data_fim,
-              diaria or None, total, data.get('km_saida') or None, data.get('status', 'ativa'),
-              data.get('checklist'), fotos_saida, data.get('observacoes'), freq))
-        new_id = cur.fetchone()[0]
-        cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (data['veiculo_id'],))
-        if freq in ('semanal', 'quinzenal', 'mensal') and not data_fim:
-            _gerar_periodos_futuros(cur, new_id, data['data_inicio'], freq, diaria)
-        conn.commit()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute('''
+                INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida, status, checklist, fotos_saida, observacoes, frequencia_cobranca)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+            ''', (data['veiculo_id'], data['cliente_id'], data['data_inicio'], data_fim,
+                  diaria or None, total, data.get('km_saida') or None, data.get('status', 'ativa'),
+                  data.get('checklist'), fotos_saida, data.get('observacoes'), freq))
+            new_id = cur.fetchone()[0]
+            cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (data['veiculo_id'],))
+            if freq in ('semanal', 'quinzenal', 'mensal') and not data_fim:
+                _gerar_periodos_futuros(cur, new_id, data['data_inicio'], freq, diaria)
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': f'Erro ao salvar locação: {str(e)}'}), 500
@@ -2308,112 +2175,93 @@ def add_locacao():
 @login_required
 def update_locacao(id):
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-
     try:
-        cur.execute('SELECT veiculo_id, status FROM locacoes WHERE id = %s', (id,))
-        locacao = cur.fetchone()
-        if not locacao:
-            cur.close(); conn.close()
-            return jsonify({'error': 'Locação não encontrada'}), 404
+        with _db() as (conn, cur):
+            cur.execute('SELECT veiculo_id, status FROM locacoes WHERE id = %s', (id,))
+            locacao = cur.fetchone()
+            if not locacao:
+                return jsonify({'error': 'Locação não encontrada'}), 404
 
-        veiculo_antigo, status_antigo = locacao
+            veiculo_antigo, status_antigo = locacao
 
-        import json as _json
-        fotos_saida = data.get('fotos_saida')
-        if fotos_saida and isinstance(fotos_saida, list):
-            fotos_saida = _json.dumps(fotos_saida)
+            import json as _json
+            fotos_saida = data.get('fotos_saida')
+            if fotos_saida and isinstance(fotos_saida, list):
+                fotos_saida = _json.dumps(fotos_saida)
 
-        # data_fim é opcional — converte string vazia para None
-        data_fim = data.get('data_fim') or None
-        total    = data.get('total')
-        if total == '' or total is None:
-            total = None
+            # data_fim é opcional — converte string vazia para None
+            data_fim = data.get('data_fim') or None
+            total    = data.get('total')
+            if total == '' or total is None:
+                total = None
 
-        cur.execute('''
-            UPDATE locacoes SET veiculo_id=%s, cliente_id=%s, data_inicio=%s, data_fim=%s,
-            diaria=%s, total=%s, km_saida=%s, checklist=%s, fotos_saida=%s, observacoes=%s,
-            frequencia_cobranca=%s
-            WHERE id=%s
-        ''', (data.get('veiculo_id'), data.get('cliente_id'), data.get('data_inicio'),
-              data_fim, data.get('diaria'), total,
-              data.get('km_saida') or None, data.get('checklist'),
-              fotos_saida, data.get('observacoes'),
-              data.get('frequencia_cobranca') or 'avulso', id))
+            cur.execute('''
+                UPDATE locacoes SET veiculo_id=%s, cliente_id=%s, data_inicio=%s, data_fim=%s,
+                diaria=%s, total=%s, km_saida=%s, checklist=%s, fotos_saida=%s, observacoes=%s,
+                frequencia_cobranca=%s
+                WHERE id=%s
+            ''', (data.get('veiculo_id'), data.get('cliente_id'), data.get('data_inicio'),
+                  data_fim, data.get('diaria'), total,
+                  data.get('km_saida') or None, data.get('checklist'),
+                  fotos_saida, data.get('observacoes'),
+                  data.get('frequencia_cobranca') or 'avulso', id))
 
-        veiculo_novo = data.get('veiculo_id')
-        if veiculo_antigo != veiculo_novo and status_antigo == 'ativa':
-            cur.execute("UPDATE veiculos SET status = 'disponivel' WHERE id = %s", (veiculo_antigo,))
-            cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (veiculo_novo,))
+            veiculo_novo = data.get('veiculo_id')
+            if veiculo_antigo != veiculo_novo and status_antigo == 'ativa':
+                cur.execute("UPDATE veiculos SET status = 'disponivel' WHERE id = %s", (veiculo_antigo,))
+                cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (veiculo_novo,))
 
-        freq_edit = data.get('frequencia_cobranca') or 'avulso'
-        if freq_edit in ('semanal', 'quinzenal', 'mensal') and not data_fim:
-            _gerar_periodos_futuros(cur, id, data.get('data_inicio'), freq_edit, data.get('diaria'))
+            freq_edit = data.get('frequencia_cobranca') or 'avulso'
+            if freq_edit in ('semanal', 'quinzenal', 'mensal') and not data_fim:
+                _gerar_periodos_futuros(cur, id, data.get('data_inicio'), freq_edit, data.get('diaria'))
 
-        conn.commit()
     except Exception as e:
-        conn.rollback()
-        cur.close(); conn.close()
         return jsonify({'error': f'Erro ao atualizar locação: {str(e)}'}), 500
 
-    cur.close()
-    conn.close()
     return jsonify({'success': True})
 
 
 @app.route('/api/locacoes/<int:id>', methods=['DELETE'])
 @login_required
 def delete_locacao(id):
-    conn = get_conn()
-    cur = conn.cursor()
     try:
-        cur.execute('SELECT veiculo_id, status FROM locacoes WHERE id=%s', (id,))
-        row = cur.fetchone()
-        if not row:
-            return jsonify({'error': 'Locação não encontrada'}), 404
-        veiculo_id, status_loc = row
-        if status_loc == 'ativa' and veiculo_id:
-            cur.execute("UPDATE veiculos SET status='disponivel' WHERE id=%s", (veiculo_id,))
-        cur.execute('DELETE FROM locacoes WHERE id=%s', (id,))
-        conn.commit()
+        with _db() as (conn, cur):
+            cur.execute('SELECT veiculo_id, status FROM locacoes WHERE id=%s', (id,))
+            row = cur.fetchone()
+            if not row:
+                return jsonify({'error': 'Locação não encontrada'}), 404
+            veiculo_id, status_loc = row
+            if status_loc == 'ativa' and veiculo_id:
+                cur.execute("UPDATE veiculos SET status='disponivel' WHERE id=%s", (veiculo_id,))
+            cur.execute('DELETE FROM locacoes WHERE id=%s', (id,))
         return jsonify({'success': True})
     except Exception as e:
-        conn.rollback()
         return jsonify({'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
 
 
 @app.route('/api/locacoes/<int:id>/devolver', methods=['PUT'])
 @login_required
 def devolver_locacao(id):
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
+    with _db() as (conn, cur):
+        cur.execute('SELECT veiculo_id FROM locacoes WHERE id = %s', (id,))
+        locacao = cur.fetchone()
 
-    cur.execute('SELECT veiculo_id FROM locacoes WHERE id = %s', (id,))
-    locacao = cur.fetchone()
-
-    if locacao:
-        import json as _json
-        fotos_retorno = data.get('fotos_retorno')
-        if fotos_retorno and isinstance(fotos_retorno, list):
-            fotos_retorno = _json.dumps(fotos_retorno)
-        cur.execute(
-            "UPDATE locacoes SET data_fim=%s, data_devolucao_real=%s, km_retorno=%s, fotos_retorno=%s, status='finalizada' WHERE id=%s",
-            (data.get('data_fim'), data.get('data_devolucao_real'), data.get('km_retorno'), fotos_retorno, id)
-        )
-        if data.get('km_retorno'):
+        if locacao:
+            import json as _json
+            fotos_retorno = data.get('fotos_retorno')
+            if fotos_retorno and isinstance(fotos_retorno, list):
+                fotos_retorno = _json.dumps(fotos_retorno)
             cur.execute(
-                "UPDATE veiculos SET km_atual=%s, status='disponivel' WHERE id=%s",
-                (data['km_retorno'], locacao[0])
+                "UPDATE locacoes SET data_fim=%s, data_devolucao_real=%s, km_retorno=%s, fotos_retorno=%s, status='finalizada' WHERE id=%s",
+                (data.get('data_fim'), data.get('data_devolucao_real'), data.get('km_retorno'), fotos_retorno, id)
             )
+            if data.get('km_retorno'):
+                cur.execute(
+                    "UPDATE veiculos SET km_atual=%s, status='disponivel' WHERE id=%s",
+                    (data['km_retorno'], locacao[0])
+                )
 
-    conn.commit()
-    cur.close()
-    conn.close()
     return jsonify({'success': True})
 
 # ==================== API ABASTECIMENTOS ====================
@@ -2421,17 +2269,14 @@ def devolver_locacao(id):
 @app.route('/api/abastecimentos', methods=['GET'])
 @login_required
 def get_abastecimentos():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT a.*, v.placa, v.marca, v.modelo
-        FROM abastecimentos a
-        LEFT JOIN veiculos v ON a.veiculo_id = v.id
-        ORDER BY a.data_abastecimento DESC
-    ''')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT a.*, v.placa, v.marca, v.modelo
+            FROM abastecimentos a
+            LEFT JOIN veiculos v ON a.veiculo_id = v.id
+            ORDER BY a.data_abastecimento DESC
+        ''')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
@@ -2440,33 +2285,25 @@ def get_abastecimentos():
 def add_abastecimento():
     data = request.json
     total = float(data.get('litros', 0)) * float(data.get('valor_litro', 0))
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        INSERT INTO abastecimentos (veiculo_id, data_abastecimento, litros, valor_litro, total, km_abastecimento)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    ''', (data['veiculo_id'], data.get('data_abastecimento'), data.get('litros'),
-          data.get('valor_litro'), total, data.get('km_abastecimento')))
+    with _db() as (conn, cur):
+        cur.execute('''
+            INSERT INTO abastecimentos (veiculo_id, data_abastecimento, litros, valor_litro, total, km_abastecimento)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (data['veiculo_id'], data.get('data_abastecimento'), data.get('litros'),
+              data.get('valor_litro'), total, data.get('km_abastecimento')))
 
-    if data.get('km_abastecimento'):
-        cur.execute('UPDATE veiculos SET km_atual = %s WHERE id = %s',
-                    (data['km_abastecimento'], data['veiculo_id']))
+        if data.get('km_abastecimento'):
+            cur.execute('UPDATE veiculos SET km_atual = %s WHERE id = %s',
+                        (data['km_abastecimento'], data['veiculo_id']))
 
-    conn.commit()
-    cur.close()
-    conn.close()
     return jsonify({'success': True})
 
 
 @app.route('/api/abastecimentos/<int:id>', methods=['DELETE'])
 @login_required
 def delete_abastecimento(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM abastecimentos WHERE id=%s', (id,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM abastecimentos WHERE id=%s', (id,))
     return jsonify({'success': True})
 
 # ==================== API MULTAS ====================
@@ -2608,18 +2445,15 @@ def importar_multa_pdf():
 @app.route('/api/multas', methods=['GET'])
 @login_required
 def get_multas():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT m.*, v.placa, v.marca, v.modelo, c.nome as nome_motorista
-        FROM multas m
-        LEFT JOIN veiculos v ON m.veiculo_id = v.id
-        LEFT JOIN clientes c ON m.motorista_id = c.id
-        ORDER BY m.data_infracao DESC
-    ''')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT m.*, v.placa, v.marca, v.modelo, c.nome as nome_motorista
+            FROM multas m
+            LEFT JOIN veiculos v ON m.veiculo_id = v.id
+            LEFT JOIN clientes c ON m.motorista_id = c.id
+            ORDER BY m.data_infracao DESC
+        ''')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
@@ -2627,21 +2461,17 @@ def get_multas():
 @login_required
 def add_multa():
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        INSERT INTO multas (veiculo_id, motorista_id, data_infracao, descricao, valor, local_infracao, pontos, status, observacoes, numero_auto, tipo_notificacao, data_limite_defesa, numero_renainf, hora_infracao)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ''', (data.get('veiculo_id') or None, data.get('motorista_id') or None,
-          data.get('data_infracao'), data.get('descricao'), data.get('valor'),
-          data.get('local_infracao'), data.get('pontos') or None,
-          data.get('status', 'pendente'), data.get('observacoes'),
-          data.get('numero_auto'), data.get('tipo_notificacao', 'multa'),
-          data.get('data_limite_defesa') or None, data.get('numero_renainf') or None,
-          data.get('hora_infracao') or None))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            INSERT INTO multas (veiculo_id, motorista_id, data_infracao, descricao, valor, local_infracao, pontos, status, observacoes, numero_auto, tipo_notificacao, data_limite_defesa, numero_renainf, hora_infracao)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (data.get('veiculo_id') or None, data.get('motorista_id') or None,
+              data.get('data_infracao'), data.get('descricao'), data.get('valor'),
+              data.get('local_infracao'), data.get('pontos') or None,
+              data.get('status', 'pendente'), data.get('observacoes'),
+              data.get('numero_auto'), data.get('tipo_notificacao', 'multa'),
+              data.get('data_limite_defesa') or None, data.get('numero_renainf') or None,
+              data.get('hora_infracao') or None))
     return jsonify({'success': True})
 
 
@@ -2649,34 +2479,26 @@ def add_multa():
 @login_required
 def update_multa(id):
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        UPDATE multas SET veiculo_id=%s, motorista_id=%s, data_infracao=%s, descricao=%s,
-        valor=%s, local_infracao=%s, pontos=%s, status=%s, observacoes=%s, numero_auto=%s,
-        data_pagamento=%s, tipo_notificacao=%s, data_limite_defesa=%s, numero_renainf=%s, hora_infracao=%s
-        WHERE id=%s
-    ''', (data.get('veiculo_id'), data.get('motorista_id'), data.get('data_infracao'),
-          data.get('descricao'), data.get('valor'), data.get('local_infracao'),
-          data.get('pontos'), data.get('status'), data.get('observacoes'),
-          data.get('numero_auto'), data.get('data_pagamento'),
-          data.get('tipo_notificacao', 'multa'), data.get('data_limite_defesa') or None,
-          data.get('numero_renainf') or None, data.get('hora_infracao') or None, id))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            UPDATE multas SET veiculo_id=%s, motorista_id=%s, data_infracao=%s, descricao=%s,
+            valor=%s, local_infracao=%s, pontos=%s, status=%s, observacoes=%s, numero_auto=%s,
+            data_pagamento=%s, tipo_notificacao=%s, data_limite_defesa=%s, numero_renainf=%s, hora_infracao=%s
+            WHERE id=%s
+        ''', (data.get('veiculo_id'), data.get('motorista_id'), data.get('data_infracao'),
+              data.get('descricao'), data.get('valor'), data.get('local_infracao'),
+              data.get('pontos'), data.get('status'), data.get('observacoes'),
+              data.get('numero_auto'), data.get('data_pagamento'),
+              data.get('tipo_notificacao', 'multa'), data.get('data_limite_defesa') or None,
+              data.get('numero_renainf') or None, data.get('hora_infracao') or None, id))
     return jsonify({'success': True})
 
 
 @app.route('/api/multas/<int:id>', methods=['DELETE'])
 @login_required
 def delete_multa(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM multas WHERE id=%s', (id,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM multas WHERE id=%s', (id,))
     return jsonify({'success': True})
 
 
@@ -2794,17 +2616,14 @@ def consultar_multas_apibrasil():
 @app.route('/api/fornecedores', methods=['GET'])
 @login_required
 def get_fornecedores():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT f.*, t.nome as tipo_nome
-        FROM fornecedores f
-        LEFT JOIN tipos_fornecedor t ON f.tipo_id = t.id
-        ORDER BY f.nome
-    ''')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT f.*, t.nome as tipo_nome
+            FROM fornecedores f
+            LEFT JOIN tipos_fornecedor t ON f.tipo_id = t.id
+            ORDER BY f.nome
+        ''')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
@@ -2812,20 +2631,16 @@ def get_fornecedores():
 @login_required
 def add_fornecedor():
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        INSERT INTO fornecedores (nome, cnpj, cpf, telefone, email, endereco, bairro, cep, cidade, estado,
-            tipo_id, responsavel, nome_fantasia, data_fundacao, situacao_receita, status, observacoes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ''', (data['nome'], data.get('cnpj'), data.get('cpf'), data.get('telefone'),
-          data.get('email'), data.get('endereco'), data.get('bairro'), data.get('cep'),
-          data.get('cidade'), data.get('estado'), data.get('tipo_id'), data.get('responsavel'),
-          data.get('nome_fantasia'), data.get('data_fundacao') or None,
-          data.get('situacao_receita'), data.get('status', 'ativo'), data.get('observacoes')))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            INSERT INTO fornecedores (nome, cnpj, cpf, telefone, email, endereco, bairro, cep, cidade, estado,
+                tipo_id, responsavel, nome_fantasia, data_fundacao, situacao_receita, status, observacoes)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (data['nome'], data.get('cnpj'), data.get('cpf'), data.get('telefone'),
+              data.get('email'), data.get('endereco'), data.get('bairro'), data.get('cep'),
+              data.get('cidade'), data.get('estado'), data.get('tipo_id'), data.get('responsavel'),
+              data.get('nome_fantasia'), data.get('data_fundacao') or None,
+              data.get('situacao_receita'), data.get('status', 'ativo'), data.get('observacoes')))
     return jsonify({'success': True})
 
 
@@ -2833,44 +2648,33 @@ def add_fornecedor():
 @login_required
 def update_fornecedor(id):
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        UPDATE fornecedores SET nome=%s, cnpj=%s, cpf=%s, telefone=%s, email=%s,
-        endereco=%s, bairro=%s, cep=%s, cidade=%s, estado=%s, tipo_id=%s, responsavel=%s,
-        nome_fantasia=%s, data_fundacao=%s, situacao_receita=%s, status=%s, observacoes=%s WHERE id=%s
-    ''', (data['nome'], data.get('cnpj'), data.get('cpf'), data.get('telefone'),
-          data.get('email'), data.get('endereco'), data.get('bairro'), data.get('cep'),
-          data.get('cidade'), data.get('estado'), data.get('tipo_id'), data.get('responsavel'),
-          data.get('nome_fantasia'), data.get('data_fundacao') or None,
-          data.get('situacao_receita'), data.get('status'), data.get('observacoes'), id))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            UPDATE fornecedores SET nome=%s, cnpj=%s, cpf=%s, telefone=%s, email=%s,
+            endereco=%s, bairro=%s, cep=%s, cidade=%s, estado=%s, tipo_id=%s, responsavel=%s,
+            nome_fantasia=%s, data_fundacao=%s, situacao_receita=%s, status=%s, observacoes=%s WHERE id=%s
+        ''', (data['nome'], data.get('cnpj'), data.get('cpf'), data.get('telefone'),
+              data.get('email'), data.get('endereco'), data.get('bairro'), data.get('cep'),
+              data.get('cidade'), data.get('estado'), data.get('tipo_id'), data.get('responsavel'),
+              data.get('nome_fantasia'), data.get('data_fundacao') or None,
+              data.get('situacao_receita'), data.get('status'), data.get('observacoes'), id))
     return jsonify({'success': True})
 
 
 @app.route('/api/fornecedores/<int:id>', methods=['DELETE'])
 @login_required
 def delete_fornecedor(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM fornecedores WHERE id=%s', (id,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM fornecedores WHERE id=%s', (id,))
     return jsonify({'success': True})
 
 
 @app.route('/api/tipos-fornecedor', methods=['GET'])
 @login_required
 def get_tipos_fornecedor():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM tipos_fornecedor ORDER BY nome')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('SELECT * FROM tipos_fornecedor ORDER BY nome')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
@@ -2878,25 +2682,17 @@ def get_tipos_fornecedor():
 @login_required
 def add_tipo_fornecedor():
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('INSERT INTO tipos_fornecedor (nome, descricao) VALUES (%s, %s)',
-                (data['nome'], data.get('descricao')))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('INSERT INTO tipos_fornecedor (nome, descricao) VALUES (%s, %s)',
+                    (data['nome'], data.get('descricao')))
     return jsonify({'success': True})
 
 
 @app.route('/api/tipos-fornecedor/<int:id>', methods=['DELETE'])
 @login_required
 def delete_tipo_fornecedor(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM tipos_fornecedor WHERE id=%s', (id,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM tipos_fornecedor WHERE id=%s', (id,))
     return jsonify({'success': True})
 
 # ==================== API CONSULTA CNPJ ====================
@@ -2978,74 +2774,69 @@ def consulta_cnpj(cnpj):
 @app.route('/api/dashboard')
 @login_required
 def get_dashboard():
-    conn = get_conn()
-    cur = conn.cursor()
+    with _db() as (conn, cur):
+        cur.execute('SELECT COUNT(*) FROM veiculos')
+        total_veiculos = cur.fetchone()[0]
 
-    cur.execute('SELECT COUNT(*) FROM veiculos')
-    total_veiculos = cur.fetchone()[0]
+        cur.execute("SELECT status, COUNT(*) FROM veiculos GROUP BY status")
+        status_veiculos = {row[0]: row[1] for row in cur.fetchall()}
+        disponiveis = status_veiculos.get('disponivel', 0)
+        taxa_ocupacao = ((total_veiculos - disponiveis) / total_veiculos * 100) if total_veiculos > 0 else 0
 
-    cur.execute("SELECT status, COUNT(*) FROM veiculos GROUP BY status")
-    status_veiculos = {row[0]: row[1] for row in cur.fetchall()}
-    disponiveis = status_veiculos.get('disponivel', 0)
-    taxa_ocupacao = ((total_veiculos - disponiveis) / total_veiculos * 100) if total_veiculos > 0 else 0
+        cur.execute("SELECT COUNT(*) FROM clientes WHERE status = 'ativo'")
+        total_clientes = cur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM clientes WHERE status = 'ativo'")
-    total_clientes = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM locacoes WHERE status = 'ativa'")
+        locacoes_ativas = cur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM locacoes WHERE status = 'ativa'")
-    locacoes_ativas = cur.fetchone()[0]
-
-    mes_atual = datetime.now().strftime('%Y-%m')
-    cur.execute(
-        "SELECT COALESCE(SUM(total), 0) FROM locacoes WHERE TO_CHAR(data_inicio, 'YYYY-MM') = %s",
-        (mes_atual,)
-    )
-    faturamento_mes = float(cur.fetchone()[0])
-
-    cur.execute("SELECT COALESCE(SUM(total), 0) FROM locacoes WHERE status = 'finalizada'")
-    faturamento_total = float(cur.fetchone()[0])
-
-    cur.execute("SELECT COALESCE(SUM(custo), 0) FROM manutencoes WHERE status = 'concluida'")
-    custo_manutencao = float(cur.fetchone()[0])
-
-    cur.execute('''
-        SELECT v.placa, v.marca, v.modelo, COUNT(l.id) as total_locacoes
-        FROM veiculos v
-        LEFT JOIN locacoes l ON v.id = l.veiculo_id
-        GROUP BY v.id, v.placa, v.marca, v.modelo
-        ORDER BY total_locacoes DESC
-        LIMIT 5
-    ''')
-    veiculos_mais_locados = [
-        {'placa': r[0], 'marca': r[1], 'modelo': r[2], 'total_locacoes': r[3]}
-        for r in cur.fetchall()
-    ]
-
-    cur.execute('''
-        SELECT TO_CHAR(data_inicio, 'YYYY-MM') as mes, SUM(total) as total, COUNT(*) as qtd
-        FROM locacoes WHERE status = 'finalizada'
-        GROUP BY mes ORDER BY mes DESC LIMIT 6
-    ''')
-    locacoes_mes_raw = cur.fetchall()
-
-    locacoes_mes = []
-    for row in locacoes_mes_raw:
-        mes = row[0]
+        mes_atual = datetime.now().strftime('%Y-%m')
         cur.execute(
-            "SELECT COALESCE(SUM(custo), 0) FROM manutencoes WHERE TO_CHAR(data_manutencao, 'YYYY-MM') = %s AND status = 'concluida'",
-            (mes,)
+            "SELECT COALESCE(SUM(total), 0) FROM locacoes WHERE TO_CHAR(data_inicio, 'YYYY-MM') = %s",
+            (mes_atual,)
         )
-        custo_m = float(cur.fetchone()[0])
-        locacoes_mes.append({'mes': mes, 'total': float(row[1] or 0), 'qtd': row[2], 'custo_manutencao': custo_m})
+        faturamento_mes = float(cur.fetchone()[0])
 
-    cur.execute("SELECT COUNT(*) FROM manutencoes WHERE status != 'concluida'")
-    manutencoes_pendentes = cur.fetchone()[0]
+        cur.execute("SELECT COALESCE(SUM(total), 0) FROM locacoes WHERE status = 'finalizada'")
+        faturamento_total = float(cur.fetchone()[0])
 
-    cur.execute("SELECT COUNT(*) FROM multas WHERE status = 'pendente'")
-    multas_pendentes = cur.fetchone()[0]
+        cur.execute("SELECT COALESCE(SUM(custo), 0) FROM manutencoes WHERE status = 'concluida'")
+        custo_manutencao = float(cur.fetchone()[0])
 
-    cur.close()
-    conn.close()
+        cur.execute('''
+            SELECT v.placa, v.marca, v.modelo, COUNT(l.id) as total_locacoes
+            FROM veiculos v
+            LEFT JOIN locacoes l ON v.id = l.veiculo_id
+            GROUP BY v.id, v.placa, v.marca, v.modelo
+            ORDER BY total_locacoes DESC
+            LIMIT 5
+        ''')
+        veiculos_mais_locados = [
+            {'placa': r[0], 'marca': r[1], 'modelo': r[2], 'total_locacoes': r[3]}
+            for r in cur.fetchall()
+        ]
+
+        cur.execute('''
+            SELECT TO_CHAR(data_inicio, 'YYYY-MM') as mes, SUM(total) as total, COUNT(*) as qtd
+            FROM locacoes WHERE status = 'finalizada'
+            GROUP BY mes ORDER BY mes DESC LIMIT 6
+        ''')
+        locacoes_mes_raw = cur.fetchall()
+
+        locacoes_mes = []
+        for row in locacoes_mes_raw:
+            mes = row[0]
+            cur.execute(
+                "SELECT COALESCE(SUM(custo), 0) FROM manutencoes WHERE TO_CHAR(data_manutencao, 'YYYY-MM') = %s AND status = 'concluida'",
+                (mes,)
+            )
+            custo_m = float(cur.fetchone()[0])
+            locacoes_mes.append({'mes': mes, 'total': float(row[1] or 0), 'qtd': row[2], 'custo_manutencao': custo_m})
+
+        cur.execute("SELECT COUNT(*) FROM manutencoes WHERE status != 'concluida'")
+        manutencoes_pendentes = cur.fetchone()[0]
+
+        cur.execute("SELECT COUNT(*) FROM multas WHERE status = 'pendente'")
+        multas_pendentes = cur.fetchone()[0]
 
     return jsonify({
         'total_veiculos': total_veiculos,
@@ -3069,20 +2860,17 @@ def get_dashboard():
 @app.route('/api/custos-veiculos')
 @login_required
 def get_custos_veiculos():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT v.id, v.placa, v.marca, v.modelo, v.ano, v.km_atual,
-               COALESCE(SUM(m.custo), 0) as custo_total_manutencao
-        FROM veiculos v
-        LEFT JOIN manutencoes m ON v.id = m.veiculo_id AND m.status = 'concluida'
-        GROUP BY v.id, v.placa, v.marca, v.modelo, v.ano, v.km_atual
-        HAVING COALESCE(SUM(m.custo), 0) > 0
-        ORDER BY v.placa
-    ''')
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT v.id, v.placa, v.marca, v.modelo, v.ano, v.km_atual,
+                   COALESCE(SUM(m.custo), 0) as custo_total_manutencao
+            FROM veiculos v
+            LEFT JOIN manutencoes m ON v.id = m.veiculo_id AND m.status = 'concluida'
+            GROUP BY v.id, v.placa, v.marca, v.modelo, v.ano, v.km_atual
+            HAVING COALESCE(SUM(m.custo), 0) > 0
+            ORDER BY v.placa
+        ''')
+        rows = cur.fetchall()
 
     veiculos = []
     for r in rows:
@@ -3115,9 +2903,6 @@ def get_relatorio_lucratividade():
         if not veiculos_ids or not data_inicio or not data_fim:
             return jsonify({'error': 'Parâmetros inválidos'}), 400
 
-        conn = get_conn()
-        cur = conn.cursor()
-
         # Gera lista de meses do período diretamente — não depende de locações
         def _meses_periodo(ini, fim):
             try:
@@ -3134,68 +2919,67 @@ def get_relatorio_lucratividade():
 
         meses = _meses_periodo(data_inicio, data_fim)
 
-        resultados = []
-        for vid in veiculos_ids:
-            cur.execute('SELECT * FROM veiculos WHERE id = %s', (vid,))
-            cols = [d[0] for d in cur.description]
-            vrow = cur.fetchone()
-            if not vrow:
-                continue
-            v = dict(zip(cols, vrow))
+        with _db() as (conn, cur):
+            resultados = []
+            for vid in veiculos_ids:
+                cur.execute('SELECT * FROM veiculos WHERE id = %s', (vid,))
+                cols = [d[0] for d in cur.description]
+                vrow = cur.fetchone()
+                if not vrow:
+                    continue
+                v = dict(zip(cols, vrow))
 
-            cur.execute('''
-                SELECT COALESCE(SUM(total), 0), COUNT(*)
-                FROM locacoes WHERE veiculo_id=%s AND data_inicio>=%s AND data_inicio<=%s
-            ''', (vid, data_inicio, data_fim))
-            rec_row = cur.fetchone()
-            receita = float(rec_row[0])
+                cur.execute('''
+                    SELECT COALESCE(SUM(total), 0), COUNT(*)
+                    FROM locacoes WHERE veiculo_id=%s AND data_inicio>=%s AND data_inicio<=%s
+                ''', (vid, data_inicio, data_fim))
+                rec_row = cur.fetchone()
+                receita = float(rec_row[0])
 
-            custo_m = custo_a = custo_mul = 0.0
+                custo_m = custo_a = custo_mul = 0.0
 
-            if inc_manut:
-                cur.execute('SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE veiculo_id=%s AND data_manutencao>=%s AND data_manutencao<=%s', (vid, data_inicio, data_fim))
-                custo_m = float(cur.fetchone()[0])
+                if inc_manut:
+                    cur.execute('SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE veiculo_id=%s AND data_manutencao>=%s AND data_manutencao<=%s', (vid, data_inicio, data_fim))
+                    custo_m = float(cur.fetchone()[0])
 
-            if inc_abast:
-                cur.execute('SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE veiculo_id=%s AND data_abastecimento>=%s AND data_abastecimento<=%s', (vid, data_inicio, data_fim))
-                custo_a = float(cur.fetchone()[0])
+                if inc_abast:
+                    cur.execute('SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE veiculo_id=%s AND data_abastecimento>=%s AND data_abastecimento<=%s', (vid, data_inicio, data_fim))
+                    custo_a = float(cur.fetchone()[0])
 
-            if inc_multas:
-                cur.execute('SELECT COALESCE(SUM(valor),0) FROM multas WHERE veiculo_id=%s AND data_infracao>=%s AND data_infracao<=%s', (vid, data_inicio, data_fim))
-                custo_mul = float(cur.fetchone()[0])
+                if inc_multas:
+                    cur.execute('SELECT COALESCE(SUM(valor),0) FROM multas WHERE veiculo_id=%s AND data_infracao>=%s AND data_infracao<=%s', (vid, data_inicio, data_fim))
+                    custo_mul = float(cur.fetchone()[0])
 
-            total_custos = custo_m + custo_a + custo_mul
-            lucro = receita - total_custos
+                total_custos = custo_m + custo_a + custo_mul
+                lucro = receita - total_custos
 
-            resultados.append({
-                'veiculo': {'id': v['id'], 'placa': v['placa'], 'marca': v['marca'], 'modelo': v['modelo'], 'ano': v['ano'] or 0},
-                'receita': round(receita, 2),
-                'custo_manutencao': round(custo_m, 2),
-                'custo_abastecimento': round(custo_a, 2),
-                'custo_multas': round(custo_mul, 2),
-                'total_custos': round(total_custos, 2),
-                'lucro': round(lucro, 2),
-                'margem': round(lucro / receita * 100, 2) if receita > 0 else 0
-            })
+                resultados.append({
+                    'veiculo': {'id': v['id'], 'placa': v['placa'], 'marca': v['marca'], 'modelo': v['modelo'], 'ano': v['ano'] or 0},
+                    'receita': round(receita, 2),
+                    'custo_manutencao': round(custo_m, 2),
+                    'custo_abastecimento': round(custo_a, 2),
+                    'custo_multas': round(custo_mul, 2),
+                    'total_custos': round(total_custos, 2),
+                    'lucro': round(lucro, 2),
+                    'margem': round(lucro / receita * 100, 2) if receita > 0 else 0
+                })
 
-        dados_mensais = []
-        for mes in meses:
-            cur.execute("SELECT COALESCE(SUM(total),0) FROM locacoes WHERE TO_CHAR(data_inicio,'YYYY-MM')=%s", (mes,))
-            mr = float(cur.fetchone()[0])
-            mm = ma = mmul = 0.0
-            if inc_manut:
-                cur.execute("SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE TO_CHAR(data_manutencao,'YYYY-MM')=%s", (mes,))
-                mm = float(cur.fetchone()[0])
-            if inc_abast:
-                cur.execute("SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE TO_CHAR(data_abastecimento,'YYYY-MM')=%s", (mes,))
-                ma = float(cur.fetchone()[0])
-            if inc_multas:
-                cur.execute("SELECT COALESCE(SUM(valor),0) FROM multas WHERE TO_CHAR(data_infracao,'YYYY-MM')=%s AND status='pago'", (mes,))
-                mmul = float(cur.fetchone()[0])
-            dados_mensais.append({'mes': mes, 'receita': round(mr, 2), 'custos': round(mm + ma + mmul, 2), 'lucro': round(mr - mm - ma - mmul, 2)})
+            dados_mensais = []
+            for mes in meses:
+                cur.execute("SELECT COALESCE(SUM(total),0) FROM locacoes WHERE TO_CHAR(data_inicio,'YYYY-MM')=%s", (mes,))
+                mr = float(cur.fetchone()[0])
+                mm = ma = mmul = 0.0
+                if inc_manut:
+                    cur.execute("SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE TO_CHAR(data_manutencao,'YYYY-MM')=%s", (mes,))
+                    mm = float(cur.fetchone()[0])
+                if inc_abast:
+                    cur.execute("SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE TO_CHAR(data_abastecimento,'YYYY-MM')=%s", (mes,))
+                    ma = float(cur.fetchone()[0])
+                if inc_multas:
+                    cur.execute("SELECT COALESCE(SUM(valor),0) FROM multas WHERE TO_CHAR(data_infracao,'YYYY-MM')=%s AND status='pago'", (mes,))
+                    mmul = float(cur.fetchone()[0])
+                dados_mensais.append({'mes': mes, 'receita': round(mr, 2), 'custos': round(mm + ma + mmul, 2), 'lucro': round(mr - mm - ma - mmul, 2)})
 
-        cur.close()
-        conn.close()
         return jsonify({'resultados': resultados, 'dados_mensais': dados_mensais, 'periodo': {'inicio': data_inicio, 'fim': data_fim}})
 
     except Exception as e:
@@ -3214,40 +2998,36 @@ def get_relatorio_fornecedor():
         if not data_inicio or not data_fim:
             return jsonify({'error': 'Parâmetros inválidos'}), 400
 
-        conn = get_conn()
-        cur = conn.cursor()
+        with _db() as (conn, cur):
+            if not fornecedor_id:
+                # Agrupa por fornecedor cadastrado (via fornecedor_id) ou por nome da oficina (texto livre)
+                cur.execute('''
+                    SELECT
+                        COALESCE(f.nome, NULLIF(m.oficina,''), 'Sem fornecedor') AS nome,
+                        COUNT(*)                          AS qtd,
+                        COALESCE(SUM(m.custo), 0)         AS total
+                    FROM manutencoes m
+                    LEFT JOIN fornecedores f ON f.id = m.fornecedor_id
+                    WHERE m.data_manutencao >= %s AND m.data_manutencao <= %s
+                      AND COALESCE(m.custo, 0) > 0
+                    GROUP BY COALESCE(f.nome, NULLIF(m.oficina,''), 'Sem fornecedor')
+                    ORDER BY total DESC
+                ''', (data_inicio, data_fim))
+                rows = cur.fetchall()
+                resultados = [{'nome': r[0], 'qtd_servicos': r[1], 'total_gasto': round(float(r[2]), 2)} for r in rows]
+            else:
+                cur.execute('SELECT nome FROM fornecedores WHERE id=%s', (fornecedor_id,))
+                f = cur.fetchone()
+                nome = f[0] if f else ''
+                # Busca por fornecedor_id OU por nome no campo oficina (retrocompatibilidade)
+                cur.execute('''
+                    SELECT COUNT(*), COALESCE(SUM(custo), 0) FROM manutencoes
+                    WHERE (fornecedor_id = %s OR oficina = %s)
+                      AND data_manutencao >= %s AND data_manutencao <= %s
+                ''', (fornecedor_id, nome, data_inicio, data_fim))
+                r = cur.fetchone()
+                resultados = [{'id': fornecedor_id, 'nome': nome, 'qtd_servicos': r[0], 'total_gasto': round(float(r[1]), 2)}]
 
-        if not fornecedor_id:
-            # Agrupa por fornecedor cadastrado (via fornecedor_id) ou por nome da oficina (texto livre)
-            cur.execute('''
-                SELECT
-                    COALESCE(f.nome, NULLIF(m.oficina,''), 'Sem fornecedor') AS nome,
-                    COUNT(*)                          AS qtd,
-                    COALESCE(SUM(m.custo), 0)         AS total
-                FROM manutencoes m
-                LEFT JOIN fornecedores f ON f.id = m.fornecedor_id
-                WHERE m.data_manutencao >= %s AND m.data_manutencao <= %s
-                  AND COALESCE(m.custo, 0) > 0
-                GROUP BY COALESCE(f.nome, NULLIF(m.oficina,''), 'Sem fornecedor')
-                ORDER BY total DESC
-            ''', (data_inicio, data_fim))
-            rows = cur.fetchall()
-            resultados = [{'nome': r[0], 'qtd_servicos': r[1], 'total_gasto': round(float(r[2]), 2)} for r in rows]
-        else:
-            cur.execute('SELECT nome FROM fornecedores WHERE id=%s', (fornecedor_id,))
-            f = cur.fetchone()
-            nome = f[0] if f else ''
-            # Busca por fornecedor_id OU por nome no campo oficina (retrocompatibilidade)
-            cur.execute('''
-                SELECT COUNT(*), COALESCE(SUM(custo), 0) FROM manutencoes
-                WHERE (fornecedor_id = %s OR oficina = %s)
-                  AND data_manutencao >= %s AND data_manutencao <= %s
-            ''', (fornecedor_id, nome, data_inicio, data_fim))
-            r = cur.fetchone()
-            resultados = [{'id': fornecedor_id, 'nome': nome, 'qtd_servicos': r[0], 'total_gasto': round(float(r[1]), 2)}]
-
-        cur.close()
-        conn.close()
         return jsonify({'resultados': resultados, 'periodo': {'inicio': data_inicio, 'fim': data_fim}})
 
     except Exception as e:
@@ -3258,29 +3038,26 @@ def get_relatorio_fornecedor():
 @app.route('/api/alertas-manutencao')
 @login_required
 def get_alertas_manutencao():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT v.id, v.placa, v.marca, v.modelo, v.km_atual,
-               m.proxima_manutencao_km, m.proxima_manutencao_data, m.tipo,
-               (m.proxima_manutencao_km - v.km_atual) as km_restante
-        FROM veiculos v
-        LEFT JOIN LATERAL (
-            SELECT proxima_manutencao_km, proxima_manutencao_data, tipo
-            FROM manutencoes
-            WHERE veiculo_id = v.id
-              AND proxima_manutencao_km IS NOT NULL
-              AND proxima_manutencao_km > v.km_atual
-            ORDER BY proxima_manutencao_km ASC
-            LIMIT 1
-        ) m ON TRUE
-        WHERE m.proxima_manutencao_km IS NOT NULL
-          AND (m.proxima_manutencao_km - v.km_atual) <= 1000
-        ORDER BY km_restante ASC
-    ''')
-    alertas = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT v.id, v.placa, v.marca, v.modelo, v.km_atual,
+                   m.proxima_manutencao_km, m.proxima_manutencao_data, m.tipo,
+                   (m.proxima_manutencao_km - v.km_atual) as km_restante
+            FROM veiculos v
+            LEFT JOIN LATERAL (
+                SELECT proxima_manutencao_km, proxima_manutencao_data, tipo
+                FROM manutencoes
+                WHERE veiculo_id = v.id
+                  AND proxima_manutencao_km IS NOT NULL
+                  AND proxima_manutencao_km > v.km_atual
+                ORDER BY proxima_manutencao_km ASC
+                LIMIT 1
+            ) m ON TRUE
+            WHERE m.proxima_manutencao_km IS NOT NULL
+              AND (m.proxima_manutencao_km - v.km_atual) <= 1000
+            ORDER BY km_restante ASC
+        ''')
+        alertas = rows_to_dict(cur)
     return jsonify(alertas)
 
 
@@ -3289,30 +3066,24 @@ def get_alertas_manutencao():
 @app.route('/api/clientes/<int:id>/locacoes')
 @login_required
 def get_locacoes_cliente(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT l.*, v.placa, v.marca, v.modelo
-        FROM locacoes l
-        LEFT JOIN veiculos v ON l.veiculo_id = v.id
-        WHERE l.cliente_id = %s
-        ORDER BY l.data_inicio DESC
-    ''', (id,))
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT l.*, v.placa, v.marca, v.modelo
+            FROM locacoes l
+            LEFT JOIN veiculos v ON l.veiculo_id = v.id
+            WHERE l.cliente_id = %s
+            ORDER BY l.data_inicio DESC
+        ''', (id,))
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
 @app.route('/api/clientes/<int:id>', methods=['GET'])
 @login_required
 def get_cliente(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM clientes WHERE id = %s', (id,))
-    result = row_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('SELECT * FROM clientes WHERE id = %s', (id,))
+        result = row_to_dict(cur)
     if not result:
         return jsonify({'error': 'Cliente não encontrado'}), 404
     return jsonify(result)
@@ -3325,12 +3096,9 @@ def get_cliente(id):
 def get_usuarios():
     if current_user.nivel != 'admin':
         return jsonify({'error': 'Acesso negado'}), 403
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('SELECT id, nome, email, nivel, ativo, data_cadastro FROM usuarios ORDER BY nome')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('SELECT id, nome, email, nivel, ativo, data_cadastro FROM usuarios ORDER BY nome')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
@@ -3341,19 +3109,13 @@ def add_usuario():
         return jsonify({'error': 'Acesso negado'}), 403
     data = request.json
     try:
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute(
-            'INSERT INTO usuarios (nome, email, senha_hash, nivel) VALUES (%s, %s, %s, %s)',
-            (data['nome'], data['email'].lower(), generate_password_hash(data['senha']), data.get('nivel', 'operador'))
-        )
-        conn.commit()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            cur.execute(
+                'INSERT INTO usuarios (nome, email, senha_hash, nivel) VALUES (%s, %s, %s, %s)',
+                (data['nome'], data['email'].lower(), generate_password_hash(data['senha']), data.get('nivel', 'operador'))
+            )
         return jsonify({'success': True})
     except psycopg2.IntegrityError:
-        conn.rollback()
-        conn.close()
         return jsonify({'error': 'E-mail já cadastrado!'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -3366,26 +3128,20 @@ def update_usuario(id):
         return jsonify({'error': 'Acesso negado'}), 403
     data = request.json
     try:
-        conn = get_conn()
-        cur = conn.cursor()
-        if data.get('senha'):
-            cur.execute(
-                'UPDATE usuarios SET nome=%s, email=%s, nivel=%s, ativo=%s, senha_hash=%s WHERE id=%s',
-                (data['nome'], data['email'].lower(), data['nivel'], data.get('ativo', True),
-                 generate_password_hash(data['senha']), id)
-            )
-        else:
-            cur.execute(
-                'UPDATE usuarios SET nome=%s, email=%s, nivel=%s, ativo=%s WHERE id=%s',
-                (data['nome'], data['email'].lower(), data['nivel'], data.get('ativo', True), id)
-            )
-        conn.commit()
-        cur.close()
-        conn.close()
+        with _db() as (conn, cur):
+            if data.get('senha'):
+                cur.execute(
+                    'UPDATE usuarios SET nome=%s, email=%s, nivel=%s, ativo=%s, senha_hash=%s WHERE id=%s',
+                    (data['nome'], data['email'].lower(), data['nivel'], data.get('ativo', True),
+                     generate_password_hash(data['senha']), id)
+                )
+            else:
+                cur.execute(
+                    'UPDATE usuarios SET nome=%s, email=%s, nivel=%s, ativo=%s WHERE id=%s',
+                    (data['nome'], data['email'].lower(), data['nivel'], data.get('ativo', True), id)
+                )
         return jsonify({'success': True})
     except psycopg2.IntegrityError:
-        conn.rollback()
-        conn.close()
         return jsonify({'error': 'E-mail já cadastrado!'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -3398,12 +3154,8 @@ def delete_usuario(id):
         return jsonify({'error': 'Acesso negado'}), 403
     if id == current_user.id:
         return jsonify({'error': 'Não é possível excluir o próprio usuário'}), 400
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('UPDATE usuarios SET ativo=FALSE WHERE id=%s', (id,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('UPDATE usuarios SET ativo=FALSE WHERE id=%s', (id,))
     return jsonify({'success': True})
 
 
@@ -3476,66 +3228,59 @@ def gerar_periodos_pendentes():
     """Cria registros pendentes para contratos recorrentes com períodos já vencidos."""
     hoje = _date.today()
     freq_dias = {'semanal': 7, 'quinzenal': 15, 'mensal': 30}
-    conn = get_conn()
-    cur = conn.cursor()
     try:
-        cur.execute('''
-            SELECT l.id, l.data_inicio, l.data_fim, l.diaria, l.frequencia_cobranca
-            FROM locacoes l
-            WHERE l.status = 'ativa'
-              AND l.frequencia_cobranca IN ('semanal', 'quinzenal', 'mensal')
-        ''')
-        contratos = cur.fetchall()
-        gerados = 0
-        for loc_id, data_inicio, data_fim_loc, diaria, freq in contratos:
-            if not data_inicio:
-                continue
-            if isinstance(data_inicio, str):
-                data_inicio = _date.fromisoformat(data_inicio)
-            if data_fim_loc and isinstance(data_fim_loc, str):
-                data_fim_loc = _date.fromisoformat(str(data_fim_loc))
-            n_dias = freq_dias[freq]
-            diaria_f = float(diaria or 0)
-            periodo_ini = data_inicio
-            while True:
-                periodo_fim = periodo_ini + timedelta(days=n_dias - 1)
-                if data_fim_loc:
-                    if periodo_ini > data_fim_loc:
+        with _db() as (conn, cur):
+            cur.execute('''
+                SELECT l.id, l.data_inicio, l.data_fim, l.diaria, l.frequencia_cobranca
+                FROM locacoes l
+                WHERE l.status = 'ativa'
+                  AND l.frequencia_cobranca IN ('semanal', 'quinzenal', 'mensal')
+            ''')
+            contratos = cur.fetchall()
+            gerados = 0
+            for loc_id, data_inicio, data_fim_loc, diaria, freq in contratos:
+                if not data_inicio:
+                    continue
+                if isinstance(data_inicio, str):
+                    data_inicio = _date.fromisoformat(data_inicio)
+                if data_fim_loc and isinstance(data_fim_loc, str):
+                    data_fim_loc = _date.fromisoformat(str(data_fim_loc))
+                n_dias = freq_dias[freq]
+                diaria_f = float(diaria or 0)
+                periodo_ini = data_inicio
+                while True:
+                    periodo_fim = periodo_ini + timedelta(days=n_dias - 1)
+                    if data_fim_loc:
+                        if periodo_ini > data_fim_loc:
+                            break
+                        if periodo_fim > data_fim_loc:
+                            periodo_fim = data_fim_loc
+                    # Só gera períodos cujo fim já passou (período vencido)
+                    if periodo_fim >= hoje:
                         break
-                    if periodo_fim > data_fim_loc:
-                        periodo_fim = data_fim_loc
-                # Só gera períodos cujo fim já passou (período vencido)
-                if periodo_fim >= hoje:
-                    break
-                # Verifica se já existe registro cobrindo este período
-                cur.execute('''
-                    SELECT COUNT(*) FROM pagamentos_locacao
-                    WHERE locacao_id=%s AND data_inicio <= %s AND data_fim >= %s
-                ''', (loc_id, periodo_fim, periodo_ini))
-                if cur.fetchone()[0] == 0:
-                    dias = (periodo_fim - periodo_ini).days + 1
-                    valor_prev = round(diaria_f * dias, 2)
-                    cur.execute(
-                        'SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s',
-                        (loc_id,)
-                    )
-                    next_seq = cur.fetchone()[0]
+                    # Verifica se já existe registro cobrindo este período
                     cur.execute('''
-                        INSERT INTO pagamentos_locacao
-                            (locacao_id, semana_numero, data_inicio, data_fim,
-                             valor_previsto, valor_pago, desconto, status)
-                        VALUES (%s, %s, %s, %s, %s, 0, 0, 'pendente')
-                    ''', (loc_id, next_seq, periodo_ini, periodo_fim, valor_prev))
-                    gerados += 1
-                periodo_ini = periodo_fim + timedelta(days=1)
-        if gerados:
-            conn.commit()
+                        SELECT COUNT(*) FROM pagamentos_locacao
+                        WHERE locacao_id=%s AND data_inicio <= %s AND data_fim >= %s
+                    ''', (loc_id, periodo_fim, periodo_ini))
+                    if cur.fetchone()[0] == 0:
+                        dias = (periodo_fim - periodo_ini).days + 1
+                        valor_prev = round(diaria_f * dias, 2)
+                        cur.execute(
+                            'SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s',
+                            (loc_id,)
+                        )
+                        next_seq = cur.fetchone()[0]
+                        cur.execute('''
+                            INSERT INTO pagamentos_locacao
+                                (locacao_id, semana_numero, data_inicio, data_fim,
+                                 valor_previsto, valor_pago, desconto, status)
+                            VALUES (%s, %s, %s, %s, %s, 0, 0, 'pendente')
+                        ''', (loc_id, next_seq, periodo_ini, periodo_fim, valor_prev))
+                        gerados += 1
+                    periodo_ini = periodo_fim + timedelta(days=1)
     except Exception as e:
         print(f'[gerar_periodos_pendentes] {e}')
-        conn.rollback()
-    finally:
-        cur.close()
-        conn.close()
 
 
 @app.route('/api/projecao-cobrancas')
@@ -3551,52 +3296,48 @@ def projecao_cobrancas():
         mes_fim = _date(mes_ini.year, mes_ini.month + 1, 1) - timedelta(days=1)
     semana_fim = hoje + timedelta(days=6)
 
-    conn = get_conn()
-    cur  = conn.cursor()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT pl.data_fim, pl.valor_previsto
+            FROM pagamentos_locacao pl WHERE pl.status = 'pendente'
+        ''')
+        pendentes = [(r[0] if isinstance(r[0], _date) else (_date.fromisoformat(str(r[0])) if r[0] else None),
+                      float(r[1] or 0)) for r in cur.fetchall()]
 
-    cur.execute('''
-        SELECT pl.data_fim, pl.valor_previsto
-        FROM pagamentos_locacao pl WHERE pl.status = 'pendente'
-    ''')
-    pendentes = [(r[0] if isinstance(r[0], _date) else (_date.fromisoformat(str(r[0])) if r[0] else None),
-                  float(r[1] or 0)) for r in cur.fetchall()]
+        vence_hoje   = sum(v for d, v in pendentes if d == hoje)
+        vence_semana = sum(v for d, v in pendentes if d and hoje <= d <= semana_fim)
+        projecao_mes = sum(v for d, v in pendentes if d and mes_ini <= d <= mes_fim)
 
-    vence_hoje   = sum(v for d, v in pendentes if d == hoje)
-    vence_semana = sum(v for d, v in pendentes if d and hoje <= d <= semana_fim)
-    projecao_mes = sum(v for d, v in pendentes if d and mes_ini <= d <= mes_fim)
+        # Adiciona períodos futuros ainda não gerados
+        cur.execute('''
+            SELECT l.id, l.data_inicio, l.data_fim, l.diaria, l.frequencia_cobranca
+            FROM locacoes l
+            WHERE l.status = 'ativa' AND l.frequencia_cobranca IN ('semanal', 'quinzenal', 'mensal')
+        ''')
+        for loc_id, di, df, diaria, freq in cur.fetchall():
+            if not di: continue
+            if isinstance(di, str): di = _date.fromisoformat(di)
+            if df and isinstance(df, str): df = _date.fromisoformat(str(df))
+            n_dias = freq_dias[freq]
+            diaria_f = float(diaria or 0)
+            periodo_ini = di
+            while True:
+                periodo_fim = periodo_ini + timedelta(days=n_dias - 1)
+                if df:
+                    if periodo_ini > df: break
+                    if periodo_fim > df: periodo_fim = df
+                if periodo_ini > mes_fim: break
+                # Período ainda não vencido e termina neste mês
+                if periodo_fim >= hoje and mes_ini <= periodo_fim <= mes_fim:
+                    cur.execute('''
+                        SELECT COUNT(*) FROM pagamentos_locacao
+                        WHERE locacao_id=%s AND data_inicio <= %s AND data_fim >= %s
+                    ''', (loc_id, periodo_fim, periodo_ini))
+                    if cur.fetchone()[0] == 0:
+                        dias = (periodo_fim - periodo_ini).days + 1
+                        projecao_mes += round(diaria_f * dias, 2)
+                periodo_ini = periodo_fim + timedelta(days=1)
 
-    # Adiciona períodos futuros ainda não gerados
-    cur.execute('''
-        SELECT l.id, l.data_inicio, l.data_fim, l.diaria, l.frequencia_cobranca
-        FROM locacoes l
-        WHERE l.status = 'ativa' AND l.frequencia_cobranca IN ('semanal', 'quinzenal', 'mensal')
-    ''')
-    for loc_id, di, df, diaria, freq in cur.fetchall():
-        if not di: continue
-        if isinstance(di, str): di = _date.fromisoformat(di)
-        if df and isinstance(df, str): df = _date.fromisoformat(str(df))
-        n_dias = freq_dias[freq]
-        diaria_f = float(diaria or 0)
-        periodo_ini = di
-        while True:
-            periodo_fim = periodo_ini + timedelta(days=n_dias - 1)
-            if df:
-                if periodo_ini > df: break
-                if periodo_fim > df: periodo_fim = df
-            if periodo_ini > mes_fim: break
-            # Período ainda não vencido e termina neste mês
-            if periodo_fim >= hoje and mes_ini <= periodo_fim <= mes_fim:
-                cur.execute('''
-                    SELECT COUNT(*) FROM pagamentos_locacao
-                    WHERE locacao_id=%s AND data_inicio <= %s AND data_fim >= %s
-                ''', (loc_id, periodo_fim, periodo_ini))
-                if cur.fetchone()[0] == 0:
-                    dias = (periodo_fim - periodo_ini).days + 1
-                    projecao_mes += round(diaria_f * dias, 2)
-            periodo_ini = periodo_fim + timedelta(days=1)
-
-    cur.close()
-    conn.close()
     return jsonify({
         'vence_hoje':   round(vence_hoje, 2),
         'vence_semana': round(vence_semana, 2),
@@ -3608,25 +3349,22 @@ def projecao_cobrancas():
 @login_required
 def alertas_cobranca():
     """Retorna cobranças recorrentes com período vencido e sem pagamento."""
-    conn = get_conn()
-    cur  = conn.cursor()
-    cur.execute('''
-        SELECT pl.id, pl.data_fim, pl.valor_previsto,
-               c.nome AS cliente, v.placa, v.marca, v.modelo,
-               l.frequencia_cobranca
-        FROM pagamentos_locacao pl
-        JOIN locacoes l ON l.id = pl.locacao_id
-        JOIN veiculos v ON v.id = l.veiculo_id
-        JOIN clientes c ON c.id = l.cliente_id
-        WHERE pl.status = 'pendente'
-          AND pl.data_fim < CURRENT_DATE
-          AND l.frequencia_cobranca IN ('semanal','quinzenal','mensal')
-        ORDER BY pl.data_fim ASC
-        LIMIT 20
-    ''')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT pl.id, pl.data_fim, pl.valor_previsto,
+                   c.nome AS cliente, v.placa, v.marca, v.modelo,
+                   l.frequencia_cobranca
+            FROM pagamentos_locacao pl
+            JOIN locacoes l ON l.id = pl.locacao_id
+            JOIN veiculos v ON v.id = l.veiculo_id
+            JOIN clientes c ON c.id = l.cliente_id
+            WHERE pl.status = 'pendente'
+              AND pl.data_fim < CURRENT_DATE
+              AND l.frequencia_cobranca IN ('semanal','quinzenal','mensal')
+            ORDER BY pl.data_fim ASC
+            LIMIT 20
+        ''')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 
@@ -3634,9 +3372,8 @@ def alertas_cobranca():
 @login_required
 def get_contas_receber():
     gerar_periodos_pendentes()
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
+    with _db() as (conn, cur):
+        cur.execute('''
         SELECT tipo, id, cliente, cliente_cpf, cliente_telefone, cliente_email,
                descricao, valor, desconto, justificativa_desconto,
                data_recebimento, data_vencimento,
@@ -3711,57 +3448,43 @@ def get_contas_receber():
             LEFT JOIN clientes c ON ca.cliente_id = c.id
         ) sub
         ORDER BY data_cadastro DESC NULLS LAST
-    ''')
-    result = rows_to_dict(cur)
-    cur.close()
-    conn.close()
+        ''')
+        result = rows_to_dict(cur)
     return jsonify(result)
 
 @app.route('/api/cobrancas-avulsas', methods=['POST'])
 @login_required
 def create_cobranca_avulsa():
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        INSERT INTO cobrancas_avulsas (cliente_id, descricao, valor, data_vencimento, status, observacoes)
-        VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
-    ''', (data.get('cliente_id'), data.get('descricao'), float(data.get('valor') or 0),
-          data.get('data_vencimento'), data.get('status', 'pendente'), data.get('observacoes')))
-    new_id = cur.fetchone()[0]
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            INSERT INTO cobrancas_avulsas (cliente_id, descricao, valor, data_vencimento, status, observacoes)
+            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+        ''', (data.get('cliente_id'), data.get('descricao'), float(data.get('valor') or 0),
+              data.get('data_vencimento'), data.get('status', 'pendente'), data.get('observacoes')))
+        new_id = cur.fetchone()[0]
     return jsonify({'success': True, 'id': new_id})
 
 @app.route('/api/cobrancas-avulsas/<int:id>', methods=['PUT'])
 @login_required
 def update_cobranca_avulsa(id):
     data = request.json
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('''
-        UPDATE cobrancas_avulsas
-        SET cliente_id=%s, descricao=%s, valor=%s, data_vencimento=%s,
-            status=%s, data_recebimento=%s, observacoes=%s
-        WHERE id=%s
-    ''', (data.get('cliente_id'), data.get('descricao'), float(data.get('valor') or 0),
-          data.get('data_vencimento'), data.get('status'), data.get('data_recebimento'),
-          data.get('observacoes'), id))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('''
+            UPDATE cobrancas_avulsas
+            SET cliente_id=%s, descricao=%s, valor=%s, data_vencimento=%s,
+                status=%s, data_recebimento=%s, observacoes=%s
+            WHERE id=%s
+        ''', (data.get('cliente_id'), data.get('descricao'), float(data.get('valor') or 0),
+              data.get('data_vencimento'), data.get('status'), data.get('data_recebimento'),
+              data.get('observacoes'), id))
     return jsonify({'success': True})
 
 @app.route('/api/cobrancas-avulsas/<int:id>', methods=['DELETE'])
 @login_required
 def delete_cobranca_avulsa(id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM cobrancas_avulsas WHERE id=%s', (id,))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM cobrancas_avulsas WHERE id=%s', (id,))
     return jsonify({'success': True})
 
 @app.route('/api/cobrar-asaas-avulsa', methods=['POST'])
@@ -3780,74 +3503,65 @@ def cobrar_asaas_avulsa():
     if not cliente_id:
         return jsonify({'error': 'Selecione um cliente para cobrar via Asaas'}), 400
 
-    conn = get_conn()
-    cur  = conn.cursor()
+    with _db() as (conn, cur):
+        cur.execute('SELECT nome, cpf, telefone, email FROM clientes WHERE id=%s', (cliente_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Cliente não encontrado'}), 404
+        cli_nome, cli_cpf, cli_tel, cli_email = row
 
-    cur.execute('SELECT nome, cpf, telefone, email FROM clientes WHERE id=%s', (cliente_id,))
-    row = cur.fetchone()
-    if not row:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Cliente não encontrado'}), 404
-    cli_nome, cli_cpf, cli_tel, cli_email = row
+        if not cli_cpf:
+            return jsonify({'error': 'Cliente sem CPF cadastrado — necessário para Asaas'}), 400
 
-    if not cli_cpf:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Cliente sem CPF cadastrado — necessário para Asaas'}), 400
+        customer_id, err = _asaas_get_or_create_customer(cli_cpf, cli_nome, cli_email or '', cli_tel or '')
+        if err:
+            return jsonify({'error': f'Asaas: {err}'}), 500
 
-    customer_id, err = _asaas_get_or_create_customer(cli_cpf, cli_nome, cli_email or '', cli_tel or '')
-    if err:
-        cur.close(); conn.close()
-        return jsonify({'error': f'Asaas: {err}'}), 500
+        if parcelas and len(parcelas) > 1:
+            n = len(parcelas)
+            itens = [{'due_date': p.get('data_vencimento') or str(_date.today()),
+                      'valor': round(float(p.get('valor') or 0), 2),
+                      'parcela_num': i + 1, 'total': n,
+                      'descricao': f'{descricao} — Parcela {i+1}/{n}'}
+                     for i, p in enumerate(parcelas)]
+        else:
+            due = (parcelas[0].get('data_vencimento') if parcelas else None) or str(_date.today())
+            itens = [{'due_date': due, 'valor': valor, 'parcela_num': 1, 'total': 1, 'descricao': descricao}]
 
-    if parcelas and len(parcelas) > 1:
-        n = len(parcelas)
-        itens = [{'due_date': p.get('data_vencimento') or str(_date.today()),
-                  'valor': round(float(p.get('valor') or 0), 2),
-                  'parcela_num': i + 1, 'total': n,
-                  'descricao': f'{descricao} — Parcela {i+1}/{n}'}
-                 for i, p in enumerate(parcelas)]
-    else:
-        due = (parcelas[0].get('data_vencimento') if parcelas else None) or str(_date.today())
-        itens = [{'due_date': due, 'valor': valor, 'parcela_num': 1, 'total': 1, 'descricao': descricao}]
+        resultados = []
+        for idx, item in enumerate(itens):
+            charge, sc = _asaas_req('POST', '/payments', {
+                'customer':    customer_id,
+                'billingType': billing,
+                'dueDate':     item['due_date'],
+                'value':       item['valor'],
+                'description': item['descricao'],
+            })
+            if sc not in (200, 201):
+                errs = charge.get('errors', [{}])
+                raise Exception(f"Parcela {item['parcela_num']}: {errs[0].get('description','Erro Asaas')}")
 
-    resultados = []
-    for idx, item in enumerate(itens):
-        charge, sc = _asaas_req('POST', '/payments', {
-            'customer':    customer_id,
-            'billingType': billing,
-            'dueDate':     item['due_date'],
-            'value':       item['valor'],
-            'description': item['descricao'],
-        })
-        if sc not in (200, 201):
-            conn.rollback(); cur.close(); conn.close()
-            errs = charge.get('errors', [{}])
-            return jsonify({'error': f"Parcela {item['parcela_num']}: {errs[0].get('description','Erro Asaas')}"}), 500
+            asaas_id   = charge.get('id')
+            asaas_link = charge.get('invoiceUrl', '')
 
-        asaas_id   = charge.get('id')
-        asaas_link = charge.get('invoiceUrl', '')
+            cur.execute('''
+                INSERT INTO cobrancas_avulsas
+                    (cliente_id, descricao, valor, data_vencimento, status, observacoes,
+                     asaas_id, asaas_link, asaas_status)
+                VALUES (%s,%s,%s,%s,'pendente',%s,%s,%s,'PENDING') RETURNING id
+            ''', (cliente_id, item['descricao'], item['valor'], item['due_date'],
+                  observacoes if idx == 0 else None, asaas_id, asaas_link))
+            new_id = cur.fetchone()[0]
 
-        cur.execute('''
-            INSERT INTO cobrancas_avulsas
-                (cliente_id, descricao, valor, data_vencimento, status, observacoes,
-                 asaas_id, asaas_link, asaas_status)
-            VALUES (%s,%s,%s,%s,'pendente',%s,%s,%s,'PENDING') RETURNING id
-        ''', (cliente_id, item['descricao'], item['valor'], item['due_date'],
-              observacoes if idx == 0 else None, asaas_id, asaas_link))
-        new_id = cur.fetchone()[0]
+            r = {'id': new_id, 'asaas_id': asaas_id, 'invoice_url': asaas_link,
+                 'bank_slip_url': charge.get('bankSlipUrl', ''),
+                 'parcela_num': item['parcela_num'], 'total': item['total'], 'valor': item['valor']}
+            if billing == 'PIX':
+                pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
+                r['pix_qrcode']  = pix.get('encodedImage', '')
+                r['pix_payload'] = pix.get('payload', '')
+            resultados.append(r)
 
-        r = {'id': new_id, 'asaas_id': asaas_id, 'invoice_url': asaas_link,
-             'bank_slip_url': charge.get('bankSlipUrl', ''),
-             'parcela_num': item['parcela_num'], 'total': item['total'], 'valor': item['valor']}
-        if billing == 'PIX':
-            pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
-            r['pix_qrcode']  = pix.get('encodedImage', '')
-            r['pix_payload'] = pix.get('payload', '')
-        resultados.append(r)
-
-    conn.commit()
-    cur.close()
-    conn.close()
     return jsonify({'parcelas': resultados, 'cliente_nome': cli_nome,
                     'cliente_tel': cli_tel or '', 'cliente_email': cli_email or ''})
 
@@ -3861,107 +3575,99 @@ def cobrar_asaas_contrato_pendente():
     billing    = data.get('billing_type', 'PIX')
     parcelas   = data.get('parcelas')  # [{data_vencimento, valor}]
 
-    conn = get_conn()
-    cur  = conn.cursor()
-    cur.execute('''
-        SELECT pl.id, pl.locacao_id, pl.data_inicio, pl.data_fim,
-               pl.valor_previsto, pl.valor_pago, pl.status,
-               c.nome, c.cpf, c.telefone, c.email,
-               v.placa, v.marca, v.modelo
-        FROM pagamentos_locacao pl
-        JOIN locacoes l ON l.id = pl.locacao_id
-        JOIN clientes c ON c.id  = l.cliente_id
-        JOIN veiculos v ON v.id  = l.veiculo_id
-        WHERE pl.id = %s
-    ''', (pag_id,))
-    row = cur.fetchone()
-    if not row:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Pagamento não encontrado'}), 404
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT pl.id, pl.locacao_id, pl.data_inicio, pl.data_fim,
+                   pl.valor_previsto, pl.valor_pago, pl.status,
+                   c.nome, c.cpf, c.telefone, c.email,
+                   v.placa, v.marca, v.modelo
+            FROM pagamentos_locacao pl
+            JOIN locacoes l ON l.id = pl.locacao_id
+            JOIN clientes c ON c.id  = l.cliente_id
+            JOIN veiculos v ON v.id  = l.veiculo_id
+            WHERE pl.id = %s
+        ''', (pag_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Pagamento não encontrado'}), 404
 
-    (pid, loc_id, d_ini, d_fim, val_prev, val_pago, status,
-     cli_nome, cli_cpf, cli_tel, cli_email,
-     placa, marca, modelo) = row
+        (pid, loc_id, d_ini, d_fim, val_prev, val_pago, status,
+         cli_nome, cli_cpf, cli_tel, cli_email,
+         placa, marca, modelo) = row
 
-    if not cli_cpf:
-        cur.close(); conn.close()
-        return jsonify({'error': 'Cliente sem CPF — necessário para Asaas'}), 400
+        if not cli_cpf:
+            return jsonify({'error': 'Cliente sem CPF — necessário para Asaas'}), 400
 
-    customer_id, err = _asaas_get_or_create_customer(
-        cli_cpf, cli_nome, cli_email or '', cli_tel or '')
-    if err:
-        cur.close(); conn.close()
-        return jsonify({'error': f'Asaas: {err}'}), 500
+        customer_id, err = _asaas_get_or_create_customer(
+            cli_cpf, cli_nome, cli_email or '', cli_tel or '')
+        if err:
+            return jsonify({'error': f'Asaas: {err}'}), 500
 
-    valor_total = float(val_prev or 0)
-    desc_base   = f'Locação {placa} {marca} {modelo} ({d_ini} a {d_fim})'
+        valor_total = float(val_prev or 0)
+        desc_base   = f'Locação {placa} {marca} {modelo} ({d_ini} a {d_fim})'
 
-    if parcelas and len(parcelas) > 1:
-        n    = len(parcelas)
-        itens = [{'due_date': p.get('data_vencimento') or str(_date.today()),
-                  'valor': round(float(p.get('valor') or 0), 2),
-                  'parcela_num': i + 1, 'total': n,
-                  'descricao': f'{desc_base} — Parcela {i+1}/{n}'}
-                 for i, p in enumerate(parcelas)]
-    else:
-        due = (parcelas[0].get('data_vencimento') if parcelas else None) or str(d_fim or _date.today())
-        itens = [{'due_date': due, 'valor': valor_total,
-                  'parcela_num': 1, 'total': 1, 'descricao': desc_base}]
-
-    resultados = []
-    first = True
-    for item in itens:
-        charge, sc = _asaas_req('POST', '/payments', {
-            'customer':    customer_id,
-            'billingType': billing,
-            'dueDate':     item['due_date'],
-            'value':       item['valor'],
-            'description': item['descricao'],
-        })
-        if sc not in (200, 201):
-            conn.rollback(); cur.close(); conn.close()
-            errs = charge.get('errors', [{}])
-            return jsonify({'error': errs[0].get('description', 'Erro Asaas')}), 500
-
-        asaas_id   = charge.get('id')
-        asaas_link = charge.get('invoiceUrl', '')
-
-        if first:
-            cur.execute('''UPDATE pagamentos_locacao
-                           SET asaas_id=%s, asaas_link=%s, asaas_status='PENDING',
-                               valor_pago=%s
-                           WHERE id=%s''',
-                        (asaas_id, asaas_link, item['valor'], pid))
-            first = False
+        if parcelas and len(parcelas) > 1:
+            n    = len(parcelas)
+            itens = [{'due_date': p.get('data_vencimento') or str(_date.today()),
+                      'valor': round(float(p.get('valor') or 0), 2),
+                      'parcela_num': i + 1, 'total': n,
+                      'descricao': f'{desc_base} — Parcela {i+1}/{n}'}
+                     for i, p in enumerate(parcelas)]
         else:
-            cur.execute('''SELECT COALESCE(MAX(semana_numero),0)+1
-                           FROM pagamentos_locacao WHERE locacao_id=%s''', (loc_id,))
-            seq = cur.fetchone()[0]
-            cur.execute('''
-                INSERT INTO pagamentos_locacao
-                    (locacao_id, semana_numero, data_inicio, data_fim,
-                     valor_previsto, valor_pago, status,
-                     asaas_id, asaas_link, asaas_status,
-                     parcela_num, total_parcelas)
-                VALUES (%s,%s,%s,%s,%s,%s,'pendente',%s,%s,'PENDING',%s,%s)
-            ''', (loc_id, seq, d_ini, d_fim,
-                  item['valor'], item['valor'],
-                  asaas_id, asaas_link,
-                  item['parcela_num'], item['total']))
+            due = (parcelas[0].get('data_vencimento') if parcelas else None) or str(d_fim or _date.today())
+            itens = [{'due_date': due, 'valor': valor_total,
+                      'parcela_num': 1, 'total': 1, 'descricao': desc_base}]
 
-        r = {'asaas_id': asaas_id, 'invoice_url': asaas_link,
-             'bank_slip_url': charge.get('bankSlipUrl', ''),
-             'parcela_num': item['parcela_num'], 'total': item['total'],
-             'valor': item['valor']}
-        if billing == 'PIX':
-            pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
-            r['pix_qrcode']  = pix.get('encodedImage', '')
-            r['pix_payload'] = pix.get('payload', '')
-        resultados.append(r)
+        resultados = []
+        first = True
+        for item in itens:
+            charge, sc = _asaas_req('POST', '/payments', {
+                'customer':    customer_id,
+                'billingType': billing,
+                'dueDate':     item['due_date'],
+                'value':       item['valor'],
+                'description': item['descricao'],
+            })
+            if sc not in (200, 201):
+                errs = charge.get('errors', [{}])
+                raise Exception(errs[0].get('description', 'Erro Asaas'))
 
-    conn.commit()
-    cur.close()
-    conn.close()
+            asaas_id   = charge.get('id')
+            asaas_link = charge.get('invoiceUrl', '')
+
+            if first:
+                cur.execute('''UPDATE pagamentos_locacao
+                               SET asaas_id=%s, asaas_link=%s, asaas_status='PENDING',
+                                   valor_pago=%s
+                               WHERE id=%s''',
+                            (asaas_id, asaas_link, item['valor'], pid))
+                first = False
+            else:
+                cur.execute('''SELECT COALESCE(MAX(semana_numero),0)+1
+                               FROM pagamentos_locacao WHERE locacao_id=%s''', (loc_id,))
+                seq = cur.fetchone()[0]
+                cur.execute('''
+                    INSERT INTO pagamentos_locacao
+                        (locacao_id, semana_numero, data_inicio, data_fim,
+                         valor_previsto, valor_pago, status,
+                         asaas_id, asaas_link, asaas_status,
+                         parcela_num, total_parcelas)
+                    VALUES (%s,%s,%s,%s,%s,%s,'pendente',%s,%s,'PENDING',%s,%s)
+                ''', (loc_id, seq, d_ini, d_fim,
+                      item['valor'], item['valor'],
+                      asaas_id, asaas_link,
+                      item['parcela_num'], item['total']))
+
+            r = {'asaas_id': asaas_id, 'invoice_url': asaas_link,
+                 'bank_slip_url': charge.get('bankSlipUrl', ''),
+                 'parcela_num': item['parcela_num'], 'total': item['total'],
+                 'valor': item['valor']}
+            if billing == 'PIX':
+                pix, _ = _asaas_req('GET', f'/payments/{asaas_id}/pixQrCode')
+                r['pix_qrcode']  = pix.get('encodedImage', '')
+                r['pix_payload'] = pix.get('payload', '')
+            resultados.append(r)
+
     return jsonify({'parcelas': resultados, 'cliente_nome': cli_nome,
                     'cliente_tel': cli_tel or '', 'cliente_email': cli_email or ''})
 
@@ -3973,20 +3679,15 @@ def salvar_observacao_cr():
     tipo = data.get('tipo')
     id_  = data.get('id')
     obs  = data.get('observacao', '').strip() or None
-    conn = get_conn()
-    cur  = conn.cursor()
-    if tipo == 'contrato':
-        cur.execute('UPDATE pagamentos_locacao SET observacao=%s WHERE id=%s', (obs, id_))
-    elif tipo == 'multa':
-        cur.execute('UPDATE multas SET observacao=%s WHERE id=%s', (obs, id_))
-    elif tipo == 'avulsa':
-        cur.execute('UPDATE cobrancas_avulsas SET observacoes=%s WHERE id=%s', (obs, id_))
-    else:
-        cur.close(); conn.close()
-        return jsonify({'error': 'tipo inválido'}), 400
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        if tipo == 'contrato':
+            cur.execute('UPDATE pagamentos_locacao SET observacao=%s WHERE id=%s', (obs, id_))
+        elif tipo == 'multa':
+            cur.execute('UPDATE multas SET observacao=%s WHERE id=%s', (obs, id_))
+        elif tipo == 'avulsa':
+            cur.execute('UPDATE cobrancas_avulsas SET observacoes=%s WHERE id=%s', (obs, id_))
+        else:
+            return jsonify({'error': 'tipo inválido'}), 400
     return jsonify({'success': True})
 
 
@@ -3999,29 +3700,25 @@ def baixa_contas_receber():
     data_rec   = data.get('data_recebimento') or str(_date.today())
     desconto   = float(data.get('desconto') or 0)
     justific   = data.get('justificativa_desconto') or ''
-    conn = get_conn()
-    cur  = conn.cursor()
-    if tipo == 'contrato':
-        cur.execute('SELECT valor_previsto FROM pagamentos_locacao WHERE id=%s', (rid,))
-        row = cur.fetchone()
-        val_prev   = float(row[0] or 0) if row else 0
-        valor_pago = max(0, round(val_prev - desconto, 2))
-        cur.execute('''UPDATE pagamentos_locacao
-                       SET status='pago', data_pagamento=%s,
-                           valor_pago=%s, desconto=%s, justificativa_desconto=%s
-                       WHERE id=%s''',
-                    (data_rec, valor_pago, desconto, justific, rid))
-    elif tipo == 'multa':
-        cur.execute('''UPDATE multas SET status='pago', data_pagamento=%s,
-                           desconto=%s, justificativa_desconto=%s WHERE id=%s''',
-                    (data_rec, desconto, justific, rid))
-    elif tipo == 'avulsa':
-        cur.execute('''UPDATE cobrancas_avulsas SET status='recebido', data_recebimento=%s,
-                           desconto=%s, justificativa_desconto=%s WHERE id=%s''',
-                    (data_rec, desconto, justific, rid))
-    conn.commit()
-    cur.close()
-    conn.close()
+    with _db() as (conn, cur):
+        if tipo == 'contrato':
+            cur.execute('SELECT valor_previsto FROM pagamentos_locacao WHERE id=%s', (rid,))
+            row = cur.fetchone()
+            val_prev   = float(row[0] or 0) if row else 0
+            valor_pago = max(0, round(val_prev - desconto, 2))
+            cur.execute('''UPDATE pagamentos_locacao
+                           SET status='pago', data_pagamento=%s,
+                               valor_pago=%s, desconto=%s, justificativa_desconto=%s
+                           WHERE id=%s''',
+                        (data_rec, valor_pago, desconto, justific, rid))
+        elif tipo == 'multa':
+            cur.execute('''UPDATE multas SET status='pago', data_pagamento=%s,
+                               desconto=%s, justificativa_desconto=%s WHERE id=%s''',
+                        (data_rec, desconto, justific, rid))
+        elif tipo == 'avulsa':
+            cur.execute('''UPDATE cobrancas_avulsas SET status='recebido', data_recebimento=%s,
+                               desconto=%s, justificativa_desconto=%s WHERE id=%s''',
+                        (data_rec, desconto, justific, rid))
     return jsonify({'success': True})
 
 # Roda migrations no cold start do Vercel (e também localmente via __main__)
