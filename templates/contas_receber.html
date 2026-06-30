@@ -394,6 +394,8 @@ let filtroTipo   = 'todos';
 let pendenteBaixa = null;
 let _periodosSelecionados = [];
 let _obsCache = {};
+let _subSortCol = null, _subSortAsc = true;
+let _expandedGroups = new Set();
 
 const hoje = new Date().toISOString().split('T')[0];
 
@@ -574,6 +576,9 @@ function _badgesGrupo(s) {
 }
 
 const _thS = s=>`<th style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:#64748b;background:#f8fafc;font-weight:700;white-space:nowrap;">${s}</th>`;
+function _thC(col,label){const a=_subSortCol===col;return`<th onclick="event.stopPropagation();_subSort('${col}')" style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:${a?'#2563eb':'#64748b'};background:#f8fafc;font-weight:700;white-space:nowrap;cursor:pointer;user-select:none;">${label}${a?(_subSortAsc?' ↑':' ↓'):''}</th>`;}
+function _subSort(col){if(_subSortCol===col)_subSortAsc=!_subSortAsc;else{_subSortCol=col;_subSortAsc=true;}const was=new Set(_expandedGroups);renderizar();was.forEach(gId=>{const det=document.getElementById('det_'+gId);const chev=document.getElementById('chev_'+gId);if(det)det.style.display='table-row';if(chev)chev.style.transform='rotate(90deg)';});}
+function _sortSubItems(items){if(!_subSortCol)return items;return[...items].sort((a,b)=>{let va=a[_subSortCol],vb=b[_subSortCol];if(_subSortCol==='valor'){return _subSortAsc?(parseFloat(va)||0)-(parseFloat(vb)||0):(parseFloat(vb)||0)-(parseFloat(va)||0);}va=String(va||'').toLowerCase();vb=String(vb||'').toLowerCase();return _subSortAsc?va.localeCompare(vb,'pt-BR'):vb.localeCompare(va,'pt-BR');});}
 
 function renderTableContratos(lista, busca) {
     document.getElementById('badge-contratos').textContent = lista.length;
@@ -600,7 +605,7 @@ function renderTableContratos(lista, busca) {
         const tel=(g.itens[0]?.cliente_telefone||'').replace(/\D/g,'');
         const waMsg=encodeURIComponent(`Olá ${g.cliente}, você possui ${fmtCurrency(s.totalPend)} pendente com o Siqueirão Multimarcas.`);
         const hasObsGrupo=g.itens.some(d=>_obsCache[`contrato_${d.id}`]);
-        const subRows = g.itens.map(d=>{
+        const subRows = _sortSubItems(g.itens).map(d=>{
             const isPago=d.status==='pago'||d.status==='recebido';
             const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
             const desc=(d.descricao||'').replace(/'/g,"\\'");
@@ -656,7 +661,7 @@ function renderTableContratos(lista, busca) {
                     <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
                         <thead><tr style="border-bottom:1px solid #e2e8f0;">
                             <th style="padding:5px 10px;background:#f8fafc;width:32px;"></th>
-                            ${_thS('Placa')}${_thS('Descrição')}${_thS('Valor')}${_thS('Vencimento')}${_thS('Status')}${_thS('Recebido em')}${_thS('Ações')}
+                            ${_thC('placa','Placa')}${_thC('descricao','Descrição')}${_thC('valor','Valor')}${_thC('data_vencimento','Vencimento')}${_thC('status','Status')}${_thC('data_recebimento','Recebido em')}${_thS('Ações')}
                         </tr></thead>
                         <tbody>${subRows}</tbody>
                     </table>
@@ -692,7 +697,7 @@ function renderTableMultas(lista, busca) {
         const tel=(g.itens[0]?.cliente_telefone||'').replace(/\D/g,'');
         const waMsg=encodeURIComponent(`Olá ${g.cliente}, você possui ${fmtCurrency(s.totalPend)} em multas pendentes com o Siqueirão Multimarcas.`);
         const hasObsGrupo=g.itens.some(d=>_obsCache[`multa_${d.id}`]);
-        const subRows = g.itens.map(d=>{
+        const subRows = _sortSubItems(g.itens).map(d=>{
             const isPago=d.status==='pago'||d.status==='recebido';
             const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
             const desc=(d.descricao||'').replace(/'/g,"\\'");
@@ -743,7 +748,7 @@ function renderTableMultas(lista, busca) {
                 <div style="border-top:1px solid #e2e8f0;">
                     <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
                         <thead><tr style="border-bottom:1px solid #e2e8f0;">
-                            ${_thS('Placa')}${_thS('Descrição')}${_thS('Valor')}${_thS('Vencimento')}${_thS('Status')}${_thS('Recebido em')}${_thS('Ações')}
+                            ${_thC('placa','Placa')}${_thC('descricao','Descrição')}${_thC('valor','Valor')}${_thC('data_vencimento','Vencimento')}${_thC('status','Status')}${_thC('data_recebimento','Recebido em')}${_thS('Ações')}
                         </tr></thead>
                         <tbody>${subRows}</tbody>
                     </table>
@@ -778,7 +783,7 @@ function renderTableAvulsas(lista, busca) {
         const tel=(g.itens[0]?.cliente_telefone||'').replace(/\D/g,'');
         const waMsg=encodeURIComponent(`Olá ${g.cliente}, você possui ${fmtCurrency(s.totalPend)} em cobranças pendentes com o Siqueirão Multimarcas.`);
         const hasObsGrupo=g.itens.some(d=>_obsCache[`avulsa_${d.id}`]);
-        const subRows = g.itens.map(d=>{
+        const subRows = _sortSubItems(g.itens).map(d=>{
             const isPago=d.status==='pago'||d.status==='recebido';
             const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
             const desc=(d.descricao||'').replace(/'/g,"\\'");
@@ -827,7 +832,7 @@ function renderTableAvulsas(lista, busca) {
                 <div style="border-top:1px solid #e2e8f0;">
                     <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
                         <thead><tr style="border-bottom:1px solid #e2e8f0;">
-                            ${_thS('Descrição')}${_thS('Valor')}${_thS('Vencimento')}${_thS('Status')}${_thS('Recebido em')}${_thS('Ações')}
+                            ${_thC('descricao','Descrição')}${_thC('valor','Valor')}${_thC('data_vencimento','Vencimento')}${_thC('status','Status')}${_thC('data_recebimento','Recebido em')}${_thS('Ações')}
                         </tr></thead>
                         <tbody>${subRows}</tbody>
                     </table>
@@ -851,6 +856,7 @@ function toggleGrupoCard(gId) {
     const isOpen = det.style.display !== 'none';
     det.style.display = isOpen ? 'none' : 'table-row';
     if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+    if (isOpen) _expandedGroups.delete(gId); else _expandedGroups.add(gId);
 }
 function selecionarGrupo(gId, el) {
     const det  = document.getElementById('det_' + gId);
