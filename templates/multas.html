@@ -89,10 +89,13 @@
     </div>
 </div>
 
+<input type="file" id="pdfUploadInput" accept=".pdf" style="display:none" onchange="executarUploadPdf(this)">
+
 <script>
     let multas = [];
     let veiculos = [];
     let clientes = [];
+    let _pdfUploadId = null;
 
     async function carregarDados() {
         try {
@@ -197,14 +200,18 @@
                     <td style="padding:7px 10px;font-size:.8rem;">${m.pontos || 0} pts</td>
                     <td style="padding:7px 10px;">${getStatusBadge(m.status)}</td>
                     <td style="padding:7px 10px;text-align:center;">
-                        <div class="act-wrap">
-                            <button class="act-btn" onclick="toggleActMenu(event,${m.id})" title="Ações">⋯</button>
-                            <div id="actmenu_${m.id}" class="act-menu">
-                                <button onclick="toggleActMenu(event,-1);editarMulta(${m.id})"><i class="fas fa-edit"></i> Editar</button>
-                                ${m.status === 'pendente'
-                                    ? `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-check"></i> Dar Baixa</button>`
-                                    : `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-undo"></i> Desmarcar</button>`}
-                                <button class="danger" onclick="toggleActMenu(event,-1);confirmarExcluir(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
+                        <div style="display:flex;align-items:center;justify-content:center;gap:5px;">
+                            ${m.pdf_url ? `<a href="${m.pdf_url}" target="_blank" title="Ver PDF da Multa" style="display:inline-flex;align-items:center;gap:4px;color:#dc2626;font-size:.75rem;font-weight:600;text-decoration:none;background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:3px 8px;white-space:nowrap;"><i class="fas fa-file-pdf"></i> Ver</a>` : ''}
+                            <div class="act-wrap">
+                                <button class="act-btn" onclick="toggleActMenu(event,${m.id})" title="Ações">⋯</button>
+                                <div id="actmenu_${m.id}" class="act-menu">
+                                    <button onclick="toggleActMenu(event,-1);editarMulta(${m.id})"><i class="fas fa-edit"></i> Editar</button>
+                                    ${m.status === 'pendente'
+                                        ? `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-check"></i> Dar Baixa</button>`
+                                        : `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-undo"></i> Desmarcar</button>`}
+                                    <button onclick="toggleActMenu(event,-1);abrirUploadPdf(${m.id})"><i class="fas fa-file-pdf" style="color:#dc2626;"></i> ${m.pdf_url ? 'Trocar PDF' : 'Importar PDF'}</button>
+                                    <button class="danger" onclick="toggleActMenu(event,-1);confirmarExcluir(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
+                                </div>
                             </div>
                         </div>
                     </td>
@@ -704,6 +711,26 @@
             showToast(`${tipo} importada — revise os dados e salve`, 'success');
         } catch { showToast('Erro ao importar PDF', 'error'); }
         finally { if (status) status.style.display = 'none'; input.value = ''; }
+    }
+
+    function abrirUploadPdf(id) {
+        _pdfUploadId = id;
+        document.getElementById('pdfUploadInput').value = '';
+        document.getElementById('pdfUploadInput').click();
+    }
+
+    async function executarUploadPdf(input) {
+        if (!input.files[0] || !_pdfUploadId) return;
+        const fd = new FormData();
+        fd.append('pdf', input.files[0]);
+        showToast('Enviando PDF...', 'info');
+        try {
+            const r = await fetch(`/api/multas/${_pdfUploadId}/upload-pdf`, { method: 'POST', body: fd });
+            const d = await r.json();
+            if (!r.ok) { showToast(d.error || 'Erro ao enviar PDF', 'error'); return; }
+            showToast('PDF anexado com sucesso!', 'success');
+            carregarDados();
+        } catch { showToast('Erro ao enviar PDF', 'error'); }
     }
 
     window.addEventListener('load', carregarDados);

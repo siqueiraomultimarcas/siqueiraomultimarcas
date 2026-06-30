@@ -363,6 +363,7 @@ def init_db():
     cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS frequencia_cobranca TEXT DEFAULT 'avulso'")
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS observacao TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS observacao TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS pdf_url TEXT")
 
     # ── Índices — evita Seq Scan em JOINs e filtros frequentes ──────────────
     cur.execute("CREATE INDEX IF NOT EXISTS idx_locacoes_veiculo   ON locacoes(veiculo_id)")
@@ -2672,6 +2673,20 @@ def add_multa():
               data.get('data_limite_defesa') or None, data.get('numero_renainf') or None,
               data.get('hora_infracao') or None))
     return jsonify({'success': True})
+
+
+@app.route('/api/multas/<int:id>/upload-pdf', methods=['POST'])
+@login_required
+def upload_multa_pdf(id):
+    file = request.files.get('pdf')
+    if not file or not file.filename.lower().endswith('.pdf'):
+        return jsonify({'error': 'Envie um arquivo PDF'}), 400
+    public_id = f'siqueirao/multas/multa_{id}_{int(datetime.now().timestamp())}'
+    result = cloudinary.uploader.upload(file, public_id=public_id, resource_type='raw', overwrite=True)
+    pdf_url = result['secure_url']
+    with _db() as (conn, cur):
+        cur.execute('UPDATE multas SET pdf_url=%s WHERE id=%s', (pdf_url, id))
+    return jsonify({'success': True, 'pdf_url': pdf_url})
 
 
 @app.route('/api/multas/<int:id>', methods=['PUT'])
