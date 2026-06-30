@@ -113,14 +113,14 @@
     .kpi-card.purple .kpi-icon-bg { color: #8b5cf6; }
     .kpi-card.red    .kpi-icon-bg { color: #ef4444; }
 
-    /* ── Secondary stats row ─────────────────────────────── */
-    .secondary-grid {
+    /* ── Quick actions + ops row ─────────────────────────── */
+    .ops-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 14px;
         margin-bottom: 20px;
     }
-    .sec-card {
+    .qa-card {
         background: white;
         border-radius: 12px;
         padding: 14px 18px;
@@ -129,20 +129,41 @@
         display: flex;
         align-items: center;
         gap: 12px;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        transition: box-shadow 0.2s, transform 0.2s;
     }
-    .sec-icon {
-        width: 36px; height: 36px;
-        border-radius: 9px;
+    .qa-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); text-decoration: none; }
+    .qa-icon {
+        width: 38px; height: 38px;
+        border-radius: 10px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         flex-shrink: 0;
     }
-    .sec-icon.blue   { background: #eff6ff; color: #2563eb; }
-    .sec-icon.green  { background: #f0fdf4; color: #059669; }
-    .sec-icon.orange { background: #fffbeb; color: #d97706; }
-    .sec-icon.red    { background: #fff1f2; color: #dc2626; }
-    .sec-label { font-size: 0.7rem; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
-    .sec-value { font-size: 1rem; font-weight: 700; color: #1e293b; margin-top: 1px; }
+    .qa-icon.blue   { background: #eff6ff; color: #2563eb; }
+    .qa-icon.green  { background: #f0fdf4; color: #059669; }
+    .qa-icon.amber  { background: #fffbeb; color: #d97706; }
+    .qa-icon.red    { background: #fff1f2; color: #dc2626; }
+    .qa-label { font-size: 0.68rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .qa-value { font-size: 1rem; font-weight: 700; color: #1e293b; margin-top: 1px; }
+    .qa-arrow { margin-left: auto; color: #cbd5e1; font-size: 0.7rem; flex-shrink: 0; }
+
+    /* ── Trend badge on KPI ──────────────────────────────── */
+    .kpi-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 20px;
+        margin-top: 4px;
+    }
+    .kpi-trend.up   { background: #f0fdf4; color: #16a34a; }
+    .kpi-trend.down { background: #fff1f2; color: #dc2626; }
+    .kpi-trend.flat { background: #f8fafc; color: #64748b; }
 </style>
 {% endblock %}
 
@@ -172,6 +193,7 @@
         <div class="kpi-label">Faturamento do Mês</div>
         <div class="kpi-value" id="faturamentoMes" style="font-size:1.25rem;">—</div>
         <div class="kpi-sub"><span id="locacoesAtivas">—</span> locações ativas</div>
+        <div id="faturamentoTrend"></div>
         <i class="fas fa-dollar-sign kpi-icon-bg"></i>
     </div>
     <div class="kpi-card orange">
@@ -188,36 +210,40 @@
     </div>
 </div>
 
-<!-- Stats secundários -->
-<div class="secondary-grid">
-    <div class="sec-card">
-        <div class="sec-icon blue"><i class="fas fa-handshake"></i></div>
+<!-- Ações rápidas + ops -->
+<div class="ops-grid">
+    <a class="qa-card" href="/locacoes">
+        <div class="qa-icon blue"><i class="fas fa-plus"></i></div>
         <div>
-            <div class="sec-label">Locações Ativas</div>
-            <div class="sec-value" id="locacoesAtivasB">—</div>
+            <div class="qa-label">Ação Rápida</div>
+            <div class="qa-value">Nova Locação</div>
         </div>
-    </div>
-    <div class="sec-card">
-        <div class="sec-icon red"><i class="fas fa-tools"></i></div>
+        <i class="fas fa-chevron-right qa-arrow"></i>
+    </a>
+    <a class="qa-card" href="/operacional">
+        <div class="qa-icon amber"><i class="fas fa-clipboard-list"></i></div>
         <div>
-            <div class="sec-label">Manutenções</div>
-            <div class="sec-value" id="manutencoesPendentes">—</div>
+            <div class="qa-label">Devoluções Hoje</div>
+            <div class="qa-value" id="devHoje">—</div>
         </div>
-    </div>
-    <div class="sec-card">
-        <div class="sec-icon orange"><i class="fas fa-wrench"></i></div>
+        <i class="fas fa-chevron-right qa-arrow"></i>
+    </a>
+    <a class="qa-card" href="/contas-receber">
+        <div class="qa-icon red"><i class="fas fa-exclamation-triangle"></i></div>
         <div>
-            <div class="sec-label">Custo Manutenção</div>
-            <div class="sec-value" id="custoManutencao">—</div>
+            <div class="qa-label">Cobranças Vencidas</div>
+            <div class="qa-value" id="cobVencidas">—</div>
         </div>
-    </div>
-    <div class="sec-card">
-        <div class="sec-icon green"><i class="fas fa-check-circle"></i></div>
+        <i class="fas fa-chevron-right qa-arrow"></i>
+    </a>
+    <a class="qa-card" href="/manutencoes">
+        <div class="qa-icon green"><i class="fas fa-tools"></i></div>
         <div>
-            <div class="sec-label">Disponíveis</div>
-            <div class="sec-value" id="veiculosDisponiveisB">—</div>
+            <div class="qa-label">Manutenções</div>
+            <div class="qa-value" id="manutencoesPendentes">—</div>
         </div>
-    </div>
+        <i class="fas fa-chevron-right qa-arrow"></i>
+    </a>
 </div>
 
 <!-- Gráficos -->
@@ -244,8 +270,8 @@
         </div>
         <div class="table-container">
             <table id="tabelaVeiculosLocados">
-                <thead><tr><th>Veículo</th><th>Locações</th></tr></thead>
-                <tbody><tr><td colspan="2" style="text-align:center;color:#94a3b8;padding:24px;">Carregando...</td></tr></tbody>
+                <thead><tr><th style="width:32px;">#</th><th>Veículo</th><th style="text-align:center;">Locações</th></tr></thead>
+                <tbody><tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px;">Carregando...</td></tr></tbody>
             </table>
         </div>
     </div>
@@ -280,17 +306,28 @@
         try {
             const data = await fetch('/api/dashboard').then(r => r.json());
 
-            document.getElementById('totalVeiculos').textContent        = data.total_veiculos;
-            document.getElementById('veiculosDisponiveis').textContent   = data.veiculos_disponiveis;
-            document.getElementById('veiculosDisponiveisB').textContent  = data.veiculos_disponiveis;
-            document.getElementById('faturamentoMes').textContent        = formatCurrency(data.faturamento_mes);
-            document.getElementById('taxaOcupacao').textContent          = data.taxa_ocupacao + '%';
-            document.getElementById('totalClientes').textContent         = data.total_clientes;
-            document.getElementById('locacoesAtivas').textContent        = data.locacoes_ativas;
-            document.getElementById('locacoesAtivasB').textContent       = data.locacoes_ativas;
-            document.getElementById('manutencoesPendentes').textContent  = data.manutencoes_pendentes;
-            document.getElementById('custoManutencao').textContent       = formatCurrency(data.custo_manutencao);
+            document.getElementById('totalVeiculos').textContent       = data.total_veiculos;
+            document.getElementById('veiculosDisponiveis').textContent  = data.veiculos_disponiveis;
+            document.getElementById('faturamentoMes').textContent       = formatCurrency(data.faturamento_mes);
+            document.getElementById('taxaOcupacao').textContent         = data.taxa_ocupacao + '%';
+            document.getElementById('totalClientes').textContent        = data.total_clientes;
+            document.getElementById('locacoesAtivas').textContent       = data.locacoes_ativas;
+            document.getElementById('manutencoesPendentes').textContent = data.manutencoes_pendentes;
             window.multasPendentes = data.multas_pendentes;
+
+            // Trend: mês atual vs mês anterior
+            if (data.locacoes_mes && data.locacoes_mes.length >= 2) {
+                const sorted = [...data.locacoes_mes].sort((a,b) => b.mes.localeCompare(a.mes));
+                const atual = sorted[0].total || 0;
+                const anterior = sorted[1].total || 0;
+                const trendEl = document.getElementById('faturamentoTrend');
+                if (anterior > 0) {
+                    const pct = Math.round(((atual - anterior) / anterior) * 100);
+                    const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+                    const ico = pct > 0 ? 'fa-arrow-up' : pct < 0 ? 'fa-arrow-down' : 'fa-minus';
+                    trendEl.innerHTML = `<span class="kpi-trend ${cls}"><i class="fas ${ico}"></i> ${Math.abs(pct)}% vs mês ant.</span>`;
+                }
+            }
 
             atualizarGraficos(data);
             atualizarTabelaVeiculos(data.veiculos_mais_locados);
@@ -348,13 +385,15 @@
     function atualizarTabelaVeiculos(veiculos) {
         const tbody = document.querySelector('#tabelaVeiculosLocados tbody');
         if (!veiculos.length) {
-            tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:#94a3b8;padding:24px;">Nenhuma locação registrada</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px;">Nenhuma locação registrada</td></tr>';
             return;
         }
-        tbody.innerHTML = veiculos.map(v => `
+        const medals = ['🥇','🥈','🥉'];
+        tbody.innerHTML = veiculos.map((v, i) => `
             <tr>
+                <td style="color:#94a3b8;font-size:.78rem;font-weight:600;text-align:center;">${medals[i] || (i+1)}</td>
                 <td><strong>${v.placa}</strong> <span style="color:#64748b;">— ${v.marca} ${v.modelo}</span></td>
-                <td><span class="badge badge-info">${v.total_locacoes}</span></td>
+                <td style="text-align:center;"><span class="badge badge-info">${v.total_locacoes}</span></td>
             </tr>`).join('');
     }
 
@@ -421,10 +460,19 @@
         } catch {}
     }
 
+    async function carregarOpsSnippet() {
+        try {
+            const d = await fetch('/api/operacional').then(r => r.json());
+            document.getElementById('devHoje').textContent     = (d.devolucoes_hoje   || []).length;
+            document.getElementById('cobVencidas').textContent = (d.cobrancas_vencidas || []).length;
+        } catch {}
+    }
+
     window.addEventListener('load', async () => {
         await carregarDashboard();
-        await carregarAlertasRevisao();
-        await carregarAlertasCobranca();
+        carregarAlertasRevisao();
+        carregarAlertasCobranca();
+        carregarOpsSnippet();
     });
 </script>
 {% endblock %}
