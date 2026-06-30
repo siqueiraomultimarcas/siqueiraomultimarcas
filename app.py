@@ -3494,14 +3494,11 @@ def gerar_periodos_pendentes():
 @app.route('/api/projecao-cobrancas')
 @login_required
 def projecao_cobrancas():
-    """Retorna: vence_hoje, vence_semana, projecao_mes (pendentes + futuros projetados)."""
+    """Retorna: vence_hoje, vence_semana, projecao_mes (próximos 30 dias)."""
     hoje = _date.today()
     freq_dias = {'semanal': 7, 'quinzenal': 15, 'mensal': 30}
-    mes_ini = hoje.replace(day=1)
-    if mes_ini.month == 12:
-        mes_fim = _date(mes_ini.year + 1, 1, 1) - timedelta(days=1)
-    else:
-        mes_fim = _date(mes_ini.year, mes_ini.month + 1, 1) - timedelta(days=1)
+    mes_ini = hoje
+    mes_fim = hoje + timedelta(days=30)
     semana_fim = hoje + timedelta(days=6)
 
     with _db() as (conn, cur):
