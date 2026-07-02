@@ -216,7 +216,7 @@
                 fetch('/api/manutencoes'),
                 fetch('/api/veiculos'),
                 fetch('/api/fornecedores'),
-                fetch('/api/lserp/os?status=aberta').catch(() => null)
+                fetch('/api/lserp/os?status=todas').catch(() => null)
             ]);
             const locais = await respManut.json();
             veiculos     = await respVeic.json();
