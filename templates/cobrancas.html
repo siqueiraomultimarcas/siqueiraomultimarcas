@@ -365,7 +365,7 @@ function renderCalendario(loc) {
         if (!set) return;
         let d = new Date(p.data_inicio + 'T00:00:00');
         const fim = new Date(p.data_fim + 'T00:00:00');
-        while (d <= fim) {
+        while (d < fim) {  // data_fim é exclusiva — o último dia marcado é data_fim - 1
             if (d.getFullYear() === ano && d.getMonth() === mes)
                 set.add(d.getDate());
             d.setDate(d.getDate()+1);
@@ -567,7 +567,7 @@ function rangeTemDiaPago(loc, st) {
         if (!['pago','pendente'].includes(p.status) || !p.data_inicio || !p.data_fim) return false;
         const pi = new Date(p.data_inicio + 'T00:00:00');
         const pf = new Date(p.data_fim    + 'T00:00:00');
-        return pi <= d2 && pf >= d1;
+        return pi < d2 && pf > d1;  // data_fim exclusiva: [ini, fim) sobrepõe [d1, d2) se ini<d2 && fim>d1
     });
 }
 

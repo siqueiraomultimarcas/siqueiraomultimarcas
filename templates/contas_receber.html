@@ -638,6 +638,7 @@ function renderTableContratos(lista, busca) {
             const tpM    = pendM.reduce((s,d)=>s+parseFloat(d.valor||0),0);
             const trM    = pagosM.reduce((s,d)=>s+parseFloat(d.valor||0),0);
             const hasVencM = vencM.length > 0;
+            const locacaoIdMes = (itensM.find(d=>d.locacao_id)||{}).locacao_id || null;
 
             const periodoRows = itensM.map(d=>{
                 const isPago=d.status==='pago'||d.status==='recebido';
@@ -669,7 +670,10 @@ function renderTableContratos(lista, busca) {
 
             return `
             <tr onclick="toggleMesGrupo('${mesId}')" style="cursor:pointer;background:${hasVencM?'#fff7f7':'#f8fafc'};border-bottom:1px solid #e2e8f0;${hasVencM?'border-left:3px solid #fca5a5;':'border-left:3px solid transparent;'}">
-                <td colspan="9" style="padding:8px 16px 8px 32px;">
+                <td style="padding:8px 8px 8px 16px;width:32px;text-align:center;" onclick="event.stopPropagation()">
+                    <input type="checkbox" id="chkMes_${mesId}" onchange="selecionarMes('${mesId}',this)" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">
+                </td>
+                <td colspan="8" style="padding:8px 16px 8px 8px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
                         <div style="display:flex;align-items:center;gap:8px;">
                             <i class="fas fa-chevron-right" id="chev_${mesId}" style="transition:transform .2s;color:#94a3b8;font-size:.7rem;width:10px;"></i>
@@ -677,7 +681,7 @@ function renderTableContratos(lista, busca) {
                             <span style="font-size:.72rem;color:#94a3b8;">${itensM.length} período${itensM.length>1?'s':''}</span>
                             ${vencM.length>0?`<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:1px 6px;font-size:.65rem;font-weight:600;">${vencM.length} vencido${vencM.length>1?'s':''}</span>`:''}
                         </div>
-                        <div style="display:flex;gap:14px;align-items:center;">
+                        <div style="display:flex;gap:10px;align-items:center;">
                             ${tpM>0?`<span style="font-size:.78rem;font-weight:700;color:#d97706;">${fmtCurrency(tpM)} pendente</span>`:''}
                             ${trM>0?`<span style="font-size:.78rem;font-weight:700;color:#16a34a;">${fmtCurrency(trM)} recebido</span>`:''}
                         </div>
@@ -940,6 +944,19 @@ function selecionarGrupo(gId, el) {
     atualizarBtnCardContratos();
 }
 
+function selecionarMes(mesId, el) {
+    const det  = document.getElementById('det_' + mesId);
+    const chev = document.getElementById('chev_' + mesId);
+    if (!det) return;
+    // Expande o mês ao marcar
+    if (el.checked && det.style.display === 'none') {
+        det.style.display = 'table-row';
+        if (chev) chev.style.transform = 'rotate(90deg)';
+    }
+    det.querySelectorAll('.chk-contrato').forEach(c => c.checked = el.checked);
+    atualizarBtnCardContratos();
+}
+
 function atualizarBtnCardContratos() {
     const checked = Array.from(document.querySelectorAll('.chk-contrato:checked'));
     const n       = checked.length;
@@ -1089,6 +1106,34 @@ async function confirmarBaixa() {
 }
 
 // ── Excluir Período (contrato) ────────────────────────────────────────────────
+function excluirMes(locacaoId, ano, mes, mesLbl) {
+    abrirModal('Excluir Mês Inteiro', `
+        <div style="text-align:center;padding:20px 0">
+            <i class="fas fa-calendar-times" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
+            <p style="margin-bottom:6px;font-weight:600;">Excluir todos os períodos pendentes de:</p>
+            <p style="font-size:1.05rem;font-weight:700;color:#1e293b;margin-bottom:8px;">${mesLbl}</p>
+            <p style="font-size:.8rem;color:#64748b;margin-bottom:20px;">Apenas períodos com status <strong>Pendente</strong> serão excluídos.<br>Períodos já pagos não serão afetados.</p>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+                <button class="btn btn-danger" onclick="confirmarExcluirMes(${locacaoId},${ano},${mes})"><i class="fas fa-trash-alt"></i> Excluir mês</button>
+            </div>
+        </div>`);
+}
+
+async function confirmarExcluirMes(locacaoId, ano, mes) {
+    try {
+        const r = await fetch(`/api/cobrancas/mes/${locacaoId}/${ano}/${mes}`, {method:'DELETE'});
+        const data = await r.json();
+        if (r.ok) {
+            fecharModal();
+            showToast(`${data.deletados} período(s) excluído(s)`, 'success');
+            carregarDados();
+        } else {
+            showToast('Erro ao excluir mês', 'error');
+        }
+    } catch { showToast('Erro de conexão', 'error'); }
+}
+
 function excluirPeriodo(id) {
     abrirModal('Excluir Período',`
         <div style="text-align:center;padding:20px 0">
