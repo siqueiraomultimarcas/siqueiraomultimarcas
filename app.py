@@ -1104,6 +1104,7 @@ def get_cobrancas():
                        asaas_id, asaas_link, asaas_status, parcela_num, total_parcelas
                 FROM pagamentos_locacao
                 WHERE locacao_id IN ({ph})
+                  AND status != 'cancelado'
                 ORDER BY locacao_id, data_inicio
             ''', ids)
             for p in rows_to_dict(cur):
