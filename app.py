@@ -2537,8 +2537,8 @@ def gerar_cobrancas_locacao(id):
                 return jsonify({'error': 'Contrato avulso não gera contas a receber automáticas'}), 400
             if data_fim:
                 return jsonify({'error': 'Contrato com data fim definida não gera períodos recorrentes'}), 400
-            # Remove pendentes e cancelados para limpar bloqueios antes de regenerar
-            cur.execute("DELETE FROM pagamentos_locacao WHERE locacao_id=%s AND status IN ('pendente','cancelado')", (id,))
+            # Remove todos os registros (limpa histórico completo antes de regenerar)
+            cur.execute("DELETE FROM pagamentos_locacao WHERE locacao_id=%s", (id,))
             # Gera desde o início do contrato (períodos já pagos são protegidos pelo overlap check)
             criados = _gerar_periodos_futuros(cur, id, data_inicio, freq, diaria, valor_semanal, desde_inicio=True)
         return jsonify({'success': True, 'criados': criados})
