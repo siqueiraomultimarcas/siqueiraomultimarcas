@@ -3216,6 +3216,7 @@ def get_relatorio_lucratividade():
                 resultados.append({
                     'veiculo': {'id': v['id'], 'placa': v['placa'], 'marca': v['marca'], 'modelo': v['modelo'], 'ano': v['ano'] or 0},
                     'receita': round(receita, 2),
+                    'qtd_locacoes': rec_row[1],
                     'custo_manutencao': round(custo_m, 2),
                     'custo_abastecimento': round(custo_a, 2),
                     'custo_multas': round(custo_mul, 2),
@@ -3225,18 +3226,19 @@ def get_relatorio_lucratividade():
                 })
 
             dados_mensais = []
+            ph_v = ','.join(['%s'] * len(veiculos_ids))
             for mes in meses:
-                cur.execute("SELECT COALESCE(SUM(total),0) FROM locacoes WHERE TO_CHAR(data_inicio,'YYYY-MM')=%s", (mes,))
+                cur.execute(f"SELECT COALESCE(SUM(total),0) FROM locacoes WHERE veiculo_id IN ({ph_v}) AND TO_CHAR(data_inicio,'YYYY-MM')=%s", tuple(veiculos_ids) + (mes,))
                 mr = float(cur.fetchone()[0])
                 mm = ma = mmul = 0.0
                 if inc_manut:
-                    cur.execute("SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE TO_CHAR(data_manutencao,'YYYY-MM')=%s", (mes,))
+                    cur.execute(f"SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE veiculo_id IN ({ph_v}) AND TO_CHAR(data_manutencao,'YYYY-MM')=%s", tuple(veiculos_ids) + (mes,))
                     mm = float(cur.fetchone()[0])
                 if inc_abast:
-                    cur.execute("SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE TO_CHAR(data_abastecimento,'YYYY-MM')=%s", (mes,))
+                    cur.execute(f"SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE veiculo_id IN ({ph_v}) AND TO_CHAR(data_abastecimento,'YYYY-MM')=%s", tuple(veiculos_ids) + (mes,))
                     ma = float(cur.fetchone()[0])
                 if inc_multas:
-                    cur.execute("SELECT COALESCE(SUM(valor),0) FROM multas WHERE TO_CHAR(data_infracao,'YYYY-MM')=%s AND status='pago'", (mes,))
+                    cur.execute(f"SELECT COALESCE(SUM(valor),0) FROM multas WHERE veiculo_id IN ({ph_v}) AND TO_CHAR(data_infracao,'YYYY-MM')=%s AND status='pago'", tuple(veiculos_ids) + (mes,))
                     mmul = float(cur.fetchone()[0])
                 dados_mensais.append({'mes': mes, 'receita': round(mr, 2), 'custos': round(mm + ma + mmul, 2), 'lucro': round(mr - mm - ma - mmul, 2)})
 
@@ -3265,17 +3267,19 @@ def get_relatorio_fornecedor():
                 cur.execute('''
                     SELECT
                         COALESCE(f.nome, NULLIF(m.oficina,''), 'Sem fornecedor') AS nome,
-                        COUNT(*)                          AS qtd,
-                        COALESCE(SUM(m.custo), 0)         AS total
+                        COALESCE(tf.nome, '') AS tipo_nome,
+                        COUNT(*)              AS qtd,
+                        COALESCE(SUM(m.custo), 0) AS total
                     FROM manutencoes m
                     LEFT JOIN fornecedores f ON f.id = m.fornecedor_id
+                    LEFT JOIN tipos_fornecedor tf ON tf.id = f.tipo_id
                     WHERE m.data_manutencao >= %s AND m.data_manutencao <= %s
                       AND COALESCE(m.custo, 0) > 0
-                    GROUP BY COALESCE(f.nome, NULLIF(m.oficina,''), 'Sem fornecedor')
+                    GROUP BY COALESCE(f.nome, NULLIF(m.oficina,''), 'Sem fornecedor'), COALESCE(tf.nome, '')
                     ORDER BY total DESC
                 ''', (data_inicio, data_fim))
                 rows = cur.fetchall()
-                resultados = [{'nome': r[0], 'qtd_servicos': r[1], 'total_gasto': round(float(r[2]), 2)} for r in rows]
+                resultados = [{'nome': r[0], 'tipo_nome': r[1], 'qtd_servicos': r[2], 'total_gasto': round(float(r[3]), 2)} for r in rows]
             else:
                 cur.execute('SELECT nome FROM fornecedores WHERE id=%s', (fornecedor_id,))
                 f = cur.fetchone()
@@ -3294,6 +3298,81 @@ def get_relatorio_fornecedor():
     except Exception as e:
         app.logger.error('Erro em get_relatorio_fornecedor: %s', e)
         return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
+
+@app.route('/api/relatorio-locacoes', methods=['POST'])
+@login_required
+def get_relatorio_locacoes():
+    try:
+        data = request.json
+        data_inicio = data.get('data_inicio')
+        data_fim = data.get('data_fim')
+        if not data_inicio or not data_fim:
+            return jsonify({'error': 'Parâmetros inválidos'}), 400
+
+        with _db() as (conn, cur):
+            # Stats gerais
+            cur.execute('''
+                SELECT COUNT(*),
+                       COALESCE(SUM(total), 0),
+                       COALESCE(AVG(total), 0),
+                       COALESCE(AVG(EXTRACT(EPOCH FROM (data_fim - data_inicio)) / 86400), 0)
+                FROM locacoes
+                WHERE data_inicio >= %s AND data_inicio <= %s
+                  AND status != 'cancelada'
+            ''', (data_inicio, data_fim))
+            sr = cur.fetchone()
+            stats = {
+                'total_locacoes': sr[0] or 0,
+                'receita_total': round(float(sr[1]), 2),
+                'ticket_medio': round(float(sr[2]), 2),
+                'duracao_media': round(float(sr[3]), 1)
+            }
+
+            # Top 10 clientes por receita
+            cur.execute('''
+                SELECT c.id, c.nome, COUNT(l.id), COALESCE(SUM(l.total), 0), MAX(l.data_inicio)
+                FROM locacoes l
+                JOIN clientes c ON c.id = l.cliente_id
+                WHERE l.data_inicio >= %s AND l.data_inicio <= %s
+                  AND l.status != 'cancelada'
+                GROUP BY c.id, c.nome
+                ORDER BY SUM(l.total) DESC
+                LIMIT 10
+            ''', (data_inicio, data_fim))
+            top_clientes = [
+                {'id': r[0], 'nome': r[1], 'qtd': r[2],
+                 'receita': round(float(r[3]), 2),
+                 'ultima_locacao': str(r[4]) if r[4] else None}
+                for r in cur.fetchall()
+            ]
+
+            # Ranking veículos por qtd de locações
+            cur.execute('''
+                SELECT v.placa, v.marca, v.modelo,
+                       COUNT(l.id),
+                       COALESCE(SUM(l.total), 0),
+                       COALESCE(SUM(EXTRACT(EPOCH FROM (l.data_fim - l.data_inicio)) / 86400), 0)
+                FROM locacoes l
+                JOIN veiculos v ON v.id = l.veiculo_id
+                WHERE l.data_inicio >= %s AND l.data_inicio <= %s
+                  AND l.status != 'cancelada'
+                GROUP BY v.id, v.placa, v.marca, v.modelo
+                ORDER BY COUNT(l.id) DESC
+            ''', (data_inicio, data_fim))
+            ranking_veiculos = [
+                {'placa': r[0], 'marca': r[1], 'modelo': r[2],
+                 'qtd_locacoes': r[3],
+                 'receita': round(float(r[4]), 2),
+                 'dias_locado': int(round(float(r[5]), 0))}
+                for r in cur.fetchall()
+            ]
+
+        return jsonify({'stats': stats, 'top_clientes': top_clientes, 'ranking_veiculos': ranking_veiculos})
+
+    except Exception as e:
+        app.logger.error('Erro em get_relatorio_locacoes: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
+
 
 # ==================== API ALERTAS ====================
 

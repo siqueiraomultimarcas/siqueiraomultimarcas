@@ -444,14 +444,26 @@
             if (!alertas.length) return;
             const div = document.getElementById('alertas');
             const fmtR = v => 'R$ ' + parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-            const fmtD = s => { if (!s) return ''; const [y,m,d] = s.slice(0,10).split('-'); return `${d}/${m}/${y}`; };
-            const freqLabel = f => f === 'semanal' ? 'Semanal' : f === 'quinzenal' ? 'Quinzenal' : 'Mensal';
-            const extras = alertas.map(a => `
+
+            // Agrupar por cliente + placa
+            const grupos = {};
+            for (const a of alertas) {
+                const key = `${a.cliente}||${a.placa}`;
+                if (!grupos[key]) grupos[key] = { cliente: a.cliente, placa: a.placa, marca: a.marca, modelo: a.modelo, total: 0, count: 0 };
+                grupos[key].total += parseFloat(a.valor_previsto || 0);
+                grupos[key].count++;
+            }
+
+            const extras = Object.values(grupos).map(g => `
                 <div class="alert-item danger" onclick="location.href='/contas-receber'" style="cursor:pointer;">
                     <i class="fas fa-money-bill-wave alert-icon"></i>
-                    <div class="alert-text">
-                        <strong>${a.cliente} — ${a.placa} ${a.marca} ${a.modelo}</strong>
-                        <small>${freqLabel(a.frequencia_cobranca)} vencida em ${fmtD(a.data_fim)} · ${fmtR(a.valor_previsto)}</small>
+                    <div class="alert-text" style="flex:1;">
+                        <strong style="color:#0f172a;">${g.cliente}</strong>
+                        <small style="display:block;color:#374151;">
+                            <span style="font-family:monospace;font-weight:700;background:#1e293b;color:#f8fafc;border-radius:4px;padding:1px 6px;font-size:.72rem;margin-right:6px;">${g.placa}</span>
+                            ${g.marca} ${g.modelo}
+                        </small>
+                        <small style="color:#dc2626;font-weight:600;">${g.count} cobrança${g.count > 1 ? 's' : ''} vencida${g.count > 1 ? 's' : ''} · ${fmtR(g.total)}</small>
                     </div>
                     <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.7rem;"></i>
                 </div>`).join('');
