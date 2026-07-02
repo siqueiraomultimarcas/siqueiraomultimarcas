@@ -2516,6 +2516,29 @@ def delete_locacao(id):
         return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 
+@app.route('/api/locacoes/<int:id>/gerar-cobrancas', methods=['POST'])
+@login_required
+def gerar_cobrancas_locacao(id):
+    """Gera/regenera contas a receber pendentes para um contrato específico."""
+    try:
+        with _db() as (conn, cur):
+            cur.execute('''SELECT data_inicio, data_fim, frequencia_cobranca, diaria, valor_semanal
+                           FROM locacoes WHERE id=%s AND status='ativa' ''', (id,))
+            row = cur.fetchone()
+            if not row:
+                return jsonify({'error': 'Contrato não encontrado ou já encerrado'}), 404
+            data_inicio, data_fim, freq, diaria, valor_semanal = row
+            if freq not in ('semanal', 'quinzenal', 'mensal'):
+                return jsonify({'error': 'Contrato avulso não gera contas a receber automáticas'}), 400
+            if data_fim:
+                return jsonify({'error': 'Contrato com data fim definida não gera períodos recorrentes'}), 400
+            _gerar_periodos_futuros(cur, id, data_inicio, freq, diaria, valor_semanal)
+        return jsonify({'success': True})
+    except Exception as e:
+        app.logger.error('Erro em gerar_cobrancas_locacao: %s', e)
+        return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
+
+
 @app.route('/api/locacoes/<int:id>/devolver', methods=['PUT'])
 @login_required
 def devolver_locacao(id):
