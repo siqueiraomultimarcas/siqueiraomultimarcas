@@ -3148,6 +3148,26 @@ def get_custos_veiculos():
 
 # ==================== API RELATÓRIOS ====================
 
+@app.route('/api/debug/manutencoes-resumo')
+@login_required
+def debug_manutencoes_resumo():
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT m.veiculo_id, v.placa,
+                   COUNT(*) AS total_registros,
+                   COUNT(m.custo) AS com_custo,
+                   COUNT(m.data_manutencao) AS com_data,
+                   COALESCE(SUM(m.custo), 0) AS soma_custo,
+                   MIN(m.data_manutencao)::text AS data_min,
+                   MAX(m.data_manutencao)::text AS data_max
+            FROM manutencoes m
+            JOIN veiculos v ON v.id = m.veiculo_id
+            GROUP BY m.veiculo_id, v.placa
+            ORDER BY v.placa
+        ''')
+        rows = rows_to_dict(cur)
+    return jsonify(rows)
+
 @app.route('/api/relatorio-lucratividade', methods=['POST'])
 @login_required
 def get_relatorio_lucratividade():
