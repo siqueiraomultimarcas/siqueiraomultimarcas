@@ -2528,10 +2528,10 @@ def gerar_cobrancas_locacao(id):
     try:
         with _db() as (conn, cur):
             cur.execute('''SELECT data_inicio, data_fim, frequencia_cobranca, diaria, valor_semanal
-                           FROM locacoes WHERE id=%s AND status='ativa' ''', (id,))
+                           FROM locacoes WHERE id=%s''', (id,))
             row = cur.fetchone()
             if not row:
-                return jsonify({'error': 'Contrato não encontrado ou já encerrado'}), 404
+                return jsonify({'error': 'Contrato não encontrado'}), 404
             data_inicio, data_fim, freq, diaria, valor_semanal = row
             if freq not in ('semanal', 'quinzenal', 'mensal'):
                 return jsonify({'error': 'Contrato avulso não gera contas a receber automáticas'}), 400
