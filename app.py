@@ -2365,22 +2365,24 @@ def get_locacao(id):
     return jsonify(result)
 
 
-def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria, valor_semanal=None):
-    """Gera pagamentos pendentes do período atual até 31/dez do ano vigente."""
+def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria, valor_semanal=None, desde_inicio=False):
+    """Gera pagamentos pendentes até 31/dez do ano vigente. Retorna contagem de períodos criados."""
     freq_dias = {'semanal': 7, 'quinzenal': 14, 'mensal': 28}
     n_dias = freq_dias.get(freq)
     if not n_dias:
-        return
+        return 0
     hoje = _date.today()
     fim_ano = _date(hoje.year, 12, 31)
     diaria_f = float(diaria or 0)
     valor_semanal_f = float(valor_semanal or 0)
     if isinstance(data_inicio, str):
         data_inicio = _date.fromisoformat(data_inicio)
-    # avança até o primeiro período que ainda não terminou
     periodo_ini = data_inicio
-    while periodo_ini + timedelta(days=n_dias - 1) < hoje:
-        periodo_ini += timedelta(days=n_dias)
+    if not desde_inicio:
+        # avança até o primeiro período que ainda não terminou
+        while periodo_ini + timedelta(days=n_dias - 1) < hoje:
+            periodo_ini += timedelta(days=n_dias)
+    criados = 0
     while periodo_ini <= fim_ano:
         periodo_fim = min(periodo_ini + timedelta(days=n_dias - 1), fim_ano)
         cur.execute('''SELECT COUNT(*) FROM pagamentos_locacao
@@ -2400,7 +2402,9 @@ def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria, valor_se
                                 valor_previsto, valor_pago, desconto, status)
                            VALUES (%s,%s,%s,%s,%s,0,0,'pendente')''',
                         (locacao_id, seq, periodo_ini, periodo_fim, valor_prev))
+            criados += 1
         periodo_ini = periodo_fim + timedelta(days=1)
+    return criados
 
 
 @app.route('/api/locacoes', methods=['POST'])
@@ -2519,7 +2523,7 @@ def delete_locacao(id):
 @app.route('/api/locacoes/<int:id>/gerar-cobrancas', methods=['POST'])
 @login_required
 def gerar_cobrancas_locacao(id):
-    """Gera/regenera contas a receber pendentes para um contrato específico."""
+    """Apaga pendentes e regenera todas as contas a receber do contrato."""
     try:
         with _db() as (conn, cur):
             cur.execute('''SELECT data_inicio, data_fim, frequencia_cobranca, diaria, valor_semanal
@@ -2532,8 +2536,11 @@ def gerar_cobrancas_locacao(id):
                 return jsonify({'error': 'Contrato avulso não gera contas a receber automáticas'}), 400
             if data_fim:
                 return jsonify({'error': 'Contrato com data fim definida não gera períodos recorrentes'}), 400
-            _gerar_periodos_futuros(cur, id, data_inicio, freq, diaria, valor_semanal)
-        return jsonify({'success': True})
+            # Remove pendentes existentes para evitar duplicatas
+            cur.execute("DELETE FROM pagamentos_locacao WHERE locacao_id=%s AND status='pendente'", (id,))
+            # Gera desde o início do contrato (períodos já pagos são protegidos pelo overlap check)
+            criados = _gerar_periodos_futuros(cur, id, data_inicio, freq, diaria, valor_semanal, desde_inicio=True)
+        return jsonify({'success': True, 'criados': criados})
     except Exception as e:
         app.logger.error('Erro em gerar_cobrancas_locacao: %s', e)
         return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
