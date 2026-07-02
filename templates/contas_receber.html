@@ -583,7 +583,7 @@ function renderTableContratos(lista, busca) {
         </td></tr>`;
         return;
     }
-    let grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||''), d=>d.cliente||'—');
+    let grupos = _agrupar(lista, d=>d.placa||'—', d=>d.placa||'—');
     // vencidos primeiro, depois por pendente decrescente
     grupos.sort((a,b)=>{
         const sa=_grupoSummary(a), sb=_grupoSummary(b);
@@ -593,8 +593,13 @@ function renderTableContratos(lista, busca) {
     tbody.innerHTML = grupos.map((g,idx)=>{
         const gId='cg_'+idx; const s=_grupoSummary(g);
         const autoExpand = !!(busca && busca.length>0);
-        const tel=(g.itens[0]?.cliente_telefone||'').replace(/\D/g,'');
-        const waMsg=encodeURIComponent(`Olá ${g.cliente}, você possui ${fmtCurrency(s.totalPend)} pendente com o Siqueirão Multimarcas.`);
+        const primeiro = g.itens[0] || {};
+        const placa = primeiro.placa || '—';
+        const descParts = (primeiro.descricao||'').split(/\s*[—\-]\s*/);
+        const veiculoDesc = descParts.length > 1 ? descParts.slice(1).join(' ') : '';
+        const clienteNome = primeiro.cliente || '—';
+        const tel=(primeiro.cliente_telefone||'').replace(/\D/g,'');
+        const waMsg=encodeURIComponent(`Olá ${clienteNome}, você possui ${fmtCurrency(s.totalPend)} pendente com o Siqueirão Multimarcas.`);
         const hasObsGrupo=g.itens.some(d=>_obsCache[`contrato_${d.id}`]);
         const subRows = _sortSubItems(g.itens).map(d=>{
             const isPago=d.status==='pago'||d.status==='recebido';
@@ -632,8 +637,11 @@ function renderTableContratos(lista, busca) {
                             <input type="checkbox" id="chkG_${gId}" onchange="selecionarGrupo('${gId}',this)" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">
                         </div>
                         <div>
-                            <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${_esc(g.cliente)}${hasObsGrupo?' <span title="Grupo tem observações" style="font-size:.85rem;">💬</span>':''}</div>
-                            <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} período${g.itens.length>1?'s':''}</div>
+                            <span style="background:#1e3a5f;color:#60a5fa;font-size:.82rem;font-weight:800;padding:3px 10px;border-radius:6px;font-family:monospace;letter-spacing:.04em;">${_esc(placa)}</span>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:.88rem;color:#0f172a;">${_esc(veiculoDesc)}${hasObsGrupo?' <span title="Grupo tem observações" style="font-size:.85rem;">💬</span>':''}</div>
+                            <div style="font-size:.72rem;color:#64748b;margin-top:2px;">${_esc(clienteNome)} · ${g.itens.length} período${g.itens.length>1?'s':''}</div>
                         </div>
                         <div>${_badgesGrupo(s)}</div>
                     </div>
