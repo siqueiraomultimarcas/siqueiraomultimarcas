@@ -2331,7 +2331,7 @@ def get_locacao(id):
 
 def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria):
     """Gera pagamentos pendentes do período atual até 31/dez do ano vigente."""
-    freq_dias = {'semanal': 7, 'quinzenal': 15, 'mensal': 30}
+    freq_dias = {'semanal': 7, 'quinzenal': 14, 'mensal': 28}
     n_dias = freq_dias.get(freq)
     if not n_dias:
         return
@@ -3495,7 +3495,7 @@ def contas_receber_page():
 def gerar_periodos_pendentes():
     """Cria registros pendentes para contratos recorrentes com períodos já vencidos."""
     hoje = _date.today()
-    freq_dias = {'semanal': 7, 'quinzenal': 15, 'mensal': 30}
+    freq_dias = {'semanal': 7, 'quinzenal': 14, 'mensal': 28}
     try:
         with _db() as (conn, cur):
             cur.execute('''
@@ -3556,7 +3556,7 @@ def gerar_periodos_pendentes():
 def projecao_cobrancas():
     """Retorna: vence_hoje, vence_semana, projecao_mes (próximos 30 dias)."""
     hoje = _date.today()
-    freq_dias = {'semanal': 7, 'quinzenal': 15, 'mensal': 30}
+    freq_dias = {'semanal': 7, 'quinzenal': 14, 'mensal': 28}
     mes_ini = hoje
     mes_fim = hoje + timedelta(days=30)
     semana_fim = hoje + timedelta(days=6)
