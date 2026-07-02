@@ -488,18 +488,14 @@
         try {
             const resp = await fetch('/api/locacoes/' + id + '/gerar-cobrancas', { method: 'POST' });
             const data = await resp.json();
+            const label = '<i class="fas fa-file-invoice-dollar" style="margin-right:6px"></i>Gerar Contas a Receber';
             if (data.success) {
                 const n = data.criados || 0;
-                if (n > 0) {
-                    showToast(n + ' período' + (n > 1 ? 's gerados' : ' gerado') + ' com sucesso!', 'success');
-                } else {
-                    showToast('Nenhum período novo — todos já foram gerados ou estão pagos.', 'warning');
-                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-invoice-dollar" style="margin-right:6px"></i>Gerar Contas a Receber'; }
-                }
+                showToast(n > 0 ? n + ' período' + (n > 1 ? 's gerados' : ' gerado') + ' com sucesso!' : 'Nenhum período novo gerado.', n > 0 ? 'success' : 'warning');
             } else {
                 showToast(data.error || 'Erro ao gerar contas a receber', 'error');
-                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-invoice-dollar" style="margin-right:6px"></i>Gerar Contas a Receber'; }
             }
+            if (btn) { btn.disabled = false; btn.innerHTML = label; }
         } catch (e) {
             showToast('Erro de conexão', 'error');
             if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-invoice-dollar" style="margin-right:6px"></i>Gerar Contas a Receber'; }
