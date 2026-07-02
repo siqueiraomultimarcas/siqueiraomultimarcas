@@ -3189,9 +3189,15 @@ def get_relatorio_lucratividade():
                     continue
                 v = dict(zip(cols, vrow))
 
+                # Receita = pagamentos do período (overlapping) exceto cancelados
                 cur.execute('''
-                    SELECT COALESCE(SUM(total), 0), COUNT(*)
-                    FROM locacoes WHERE veiculo_id=%s AND data_inicio>=%s AND data_inicio<=%s
+                    SELECT COALESCE(SUM(COALESCE(pl.valor_previsto,0) - COALESCE(pl.desconto,0)), 0),
+                           COUNT(DISTINCT pl.locacao_id)
+                    FROM pagamentos_locacao pl
+                    JOIN locacoes l ON l.id = pl.locacao_id
+                    WHERE l.veiculo_id = %s
+                      AND pl.data_fim >= %s AND pl.data_inicio <= %s
+                      AND pl.status != 'cancelado'
                 ''', (vid, data_inicio, data_fim))
                 rec_row = cur.fetchone()
                 receita = float(rec_row[0])
@@ -3228,7 +3234,14 @@ def get_relatorio_lucratividade():
             dados_mensais = []
             ph_v = ','.join(['%s'] * len(veiculos_ids))
             for mes in meses:
-                cur.execute(f"SELECT COALESCE(SUM(total),0) FROM locacoes WHERE veiculo_id IN ({ph_v}) AND TO_CHAR(data_inicio,'YYYY-MM')=%s", tuple(veiculos_ids) + (mes,))
+                cur.execute(f"""
+                    SELECT COALESCE(SUM(COALESCE(pl.valor_previsto,0) - COALESCE(pl.desconto,0)), 0)
+                    FROM pagamentos_locacao pl
+                    JOIN locacoes l ON l.id = pl.locacao_id
+                    WHERE l.veiculo_id IN ({ph_v})
+                      AND TO_CHAR(pl.data_fim,'YYYY-MM') = %s
+                      AND pl.status != 'cancelado'
+                """, tuple(veiculos_ids) + (mes,))
                 mr = float(cur.fetchone()[0])
                 mm = ma = mmul = 0.0
                 if inc_manut:
@@ -3310,33 +3323,39 @@ def get_relatorio_locacoes():
             return jsonify({'error': 'Parâmetros inválidos'}), 400
 
         with _db() as (conn, cur):
-            # Stats gerais
+            # Stats gerais — receita vem de pagamentos_locacao
             cur.execute('''
-                SELECT COUNT(*),
-                       COALESCE(SUM(total), 0),
-                       COALESCE(AVG(total), 0),
-                       COALESCE(AVG(EXTRACT(EPOCH FROM (data_fim - data_inicio)) / 86400), 0)
-                FROM locacoes
-                WHERE data_inicio >= %s AND data_inicio <= %s
-                  AND status != 'cancelada'
+                SELECT COUNT(DISTINCT l.id),
+                       COALESCE(SUM(COALESCE(pl.valor_previsto,0) - COALESCE(pl.desconto,0)), 0),
+                       COALESCE(AVG(EXTRACT(EPOCH FROM (l.data_fim - l.data_inicio)) / 86400), 0)
+                FROM pagamentos_locacao pl
+                JOIN locacoes l ON l.id = pl.locacao_id
+                WHERE pl.data_fim >= %s AND pl.data_inicio <= %s
+                  AND pl.status != 'cancelado'
             ''', (data_inicio, data_fim))
             sr = cur.fetchone()
+            total_loc = sr[0] or 0
+            receita_total = round(float(sr[1]), 2)
             stats = {
-                'total_locacoes': sr[0] or 0,
-                'receita_total': round(float(sr[1]), 2),
-                'ticket_medio': round(float(sr[2]), 2),
-                'duracao_media': round(float(sr[3]), 1)
+                'total_locacoes': total_loc,
+                'receita_total': receita_total,
+                'ticket_medio': round(receita_total / total_loc, 2) if total_loc > 0 else 0,
+                'duracao_media': round(float(sr[2]), 1)
             }
 
-            # Top 10 clientes por receita
+            # Top 10 clientes — receita de pagamentos no período
             cur.execute('''
-                SELECT c.id, c.nome, COUNT(l.id), COALESCE(SUM(l.total), 0), MAX(l.data_inicio)
-                FROM locacoes l
+                SELECT c.id, c.nome,
+                       COUNT(DISTINCT l.id),
+                       COALESCE(SUM(COALESCE(pl.valor_previsto,0) - COALESCE(pl.desconto,0)), 0),
+                       MAX(l.data_inicio)
+                FROM pagamentos_locacao pl
+                JOIN locacoes l ON l.id = pl.locacao_id
                 JOIN clientes c ON c.id = l.cliente_id
-                WHERE l.data_inicio >= %s AND l.data_inicio <= %s
-                  AND l.status != 'cancelada'
+                WHERE pl.data_fim >= %s AND pl.data_inicio <= %s
+                  AND pl.status != 'cancelado'
                 GROUP BY c.id, c.nome
-                ORDER BY SUM(l.total) DESC
+                ORDER BY SUM(COALESCE(pl.valor_previsto,0) - COALESCE(pl.desconto,0)) DESC
                 LIMIT 10
             ''', (data_inicio, data_fim))
             top_clientes = [
@@ -3346,24 +3365,25 @@ def get_relatorio_locacoes():
                 for r in cur.fetchall()
             ]
 
-            # Ranking veículos por qtd de locações
+            # Ranking veículos — receita e dias de pagamentos no período
             cur.execute('''
                 SELECT v.placa, v.marca, v.modelo,
-                       COUNT(l.id),
-                       COALESCE(SUM(l.total), 0),
-                       COALESCE(SUM(EXTRACT(EPOCH FROM (l.data_fim - l.data_inicio)) / 86400), 0)
-                FROM locacoes l
+                       COUNT(DISTINCT l.id),
+                       COALESCE(SUM(COALESCE(pl.valor_previsto,0) - COALESCE(pl.desconto,0)), 0),
+                       COALESCE(SUM(pl.data_fim - pl.data_inicio), 0)
+                FROM pagamentos_locacao pl
+                JOIN locacoes l ON l.id = pl.locacao_id
                 JOIN veiculos v ON v.id = l.veiculo_id
-                WHERE l.data_inicio >= %s AND l.data_inicio <= %s
-                  AND l.status != 'cancelada'
+                WHERE pl.data_fim >= %s AND pl.data_inicio <= %s
+                  AND pl.status != 'cancelado'
                 GROUP BY v.id, v.placa, v.marca, v.modelo
-                ORDER BY COUNT(l.id) DESC
+                ORDER BY COUNT(DISTINCT l.id) DESC
             ''', (data_inicio, data_fim))
             ranking_veiculos = [
                 {'placa': r[0], 'marca': r[1], 'modelo': r[2],
                  'qtd_locacoes': r[3],
                  'receita': round(float(r[4]), 2),
-                 'dias_locado': int(round(float(r[5]), 0))}
+                 'dias_locado': int(r[5] or 0)}
                 for r in cur.fetchall()
             ]
 
