@@ -53,9 +53,6 @@
             <input type="text" class="form-control" id="filtroPlaca" placeholder="Placa" oninput="filtrarManutencoes()" style="width:110px;" maxlength="8">
             <input type="date" class="form-control" id="filtroDe" onchange="filtrarManutencoes()" style="width:145px;" title="Data de">
             <input type="date" class="form-control" id="filtroAte" onchange="filtrarManutencoes()" style="width:145px;" title="Data até">
-            <select class="form-control" id="filtroVeiculo" onchange="filtrarManutencoes()" style="width: 200px;">
-                <option value="todos">Todos os Veículos</option>
-            </select>
             <select class="form-control" id="filtroTipo" onchange="filtrarManutencoes()" style="width: 150px;">
                 <option value="todos">Todos os Tipos</option>
                 <option value="Preventiva">Preventiva</option>
@@ -260,11 +257,6 @@
             // Merge: LSERP primeiro (destaque), depois locais
             manutencoes = [...osLserp, ...locais];
 
-            // Preencher filtro de veículos
-            const selectVeic = document.getElementById('filtroVeiculo');
-            veiculos.forEach(v => {
-                selectVeic.innerHTML += `<option value="${v.id}">${v.placa} - ${v.marca} ${v.modelo}</option>`;
-            });
 
             // Preencher filtro de prestadores (inclui AF CAR + oficinas locais)
             const prestadores = [...new Set(manutencoes.map(m => m.oficina).filter(Boolean))].sort();
@@ -590,7 +582,6 @@
     }
 
     function filtrarManutencoes() {
-        const veiculo   = document.getElementById('filtroVeiculo').value;
         const tipo      = document.getElementById('filtroTipo').value;
         const status    = document.getElementById('filtroStatusManut').value;
         const prestador = document.getElementById('filtroPrestador').value;
@@ -599,7 +590,6 @@
         const ate       = document.getElementById('filtroAte').value;
 
         const filtradas = manutencoes.filter(m => {
-            const matchVeiculo   = veiculo === 'todos' || m.veiculo_id == veiculo;
             const matchTipo      = tipo === 'todos' || m.tipo === tipo;
             const matchStatus    = status === 'todos' || m.status === status;
             const matchPrestador = prestador === 'todos' || m.oficina === prestador;
@@ -607,7 +597,7 @@
             const dataM          = (m.data_manutencao || '').substring(0, 10);
             const matchDe        = !de  || dataM >= de;
             const matchAte       = !ate || dataM <= ate;
-            return matchVeiculo && matchTipo && matchStatus && matchPrestador && matchPlaca && matchDe && matchAte;
+            return matchTipo && matchStatus && matchPrestador && matchPlaca && matchDe && matchAte;
         });
 
         renderizarManutencoes(filtradas);
