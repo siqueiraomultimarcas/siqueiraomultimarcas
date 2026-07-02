@@ -739,7 +739,7 @@ def get_operacional():
             JOIN locacoes l ON l.id = pl.locacao_id
             JOIN veiculos v ON v.id = l.veiculo_id
             JOIN clientes c ON c.id = l.cliente_id
-            WHERE pl.status = 'pendente' AND pl.data_fim < CURRENT_DATE
+            WHERE pl.status = 'pendente' AND pl.data_fim + 1 < CURRENT_DATE
             UNION ALL
             SELECT 'multa', m.id,
                    COALESCE(c.nome,'Sem motorista'), COALESCE(c.telefone,''),
@@ -818,7 +818,7 @@ def get_operacional_badge():
         cur.execute('''
             SELECT
                 (SELECT COUNT(*) FROM locacoes WHERE status='ativa' AND data_fim <= CURRENT_DATE) +
-                (SELECT COUNT(*) FROM pagamentos_locacao WHERE status='pendente' AND data_fim < CURRENT_DATE) +
+                (SELECT COUNT(*) FROM pagamentos_locacao WHERE status='pendente' AND data_fim + 1 < CURRENT_DATE) +
                 (SELECT COUNT(*) FROM cobrancas_avulsas
                  WHERE status='pendente' AND data_vencimento IS NOT NULL AND data_vencimento < CURRENT_DATE)
             AS total
@@ -3955,7 +3955,7 @@ def get_contas_receber():
                 COALESCE(pl.desconto,0) AS desconto,
                 pl.justificativa_desconto,
                 pl.data_pagamento AS data_recebimento,
-                pl.data_fim AS data_vencimento,
+                (pl.data_fim + INTERVAL '1 day')::date AS data_vencimento,
                 pl.status, pl.data_cadastro,
                 l.cliente_id AS cliente_id,
                 pl.locacao_id AS locacao_id,
