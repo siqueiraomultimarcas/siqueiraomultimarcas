@@ -390,6 +390,7 @@ def init_db():
             updated_at   TIMESTAMP DEFAULT NOW()
         )
     """)
+    cur.execute("ALTER TABLE os_lserp_meta ADD COLUMN IF NOT EXISTS oculto BOOLEAN DEFAULT FALSE")
 
     # ── Índices — evita Seq Scan em JOINs e filtros frequentes ──────────────
     cur.execute("CREATE INDEX IF NOT EXISTS idx_locacoes_veiculo   ON locacoes(veiculo_id)")
@@ -4368,6 +4369,28 @@ def patch_lserp_os_meta(os_id):
             ON CONFLICT (lserp_os_id) DO UPDATE
               SET tipo_servico = EXCLUDED.tipo_servico, updated_at = NOW()
         """, (os_id, tipo))
+    return jsonify({'success': True})
+
+
+@app.route('/api/lserp/os/ocultos')
+@login_required
+def get_lserp_os_ocultos():
+    with _db() as (conn, cur):
+        cur.execute("SELECT lserp_os_id FROM os_lserp_meta WHERE oculto = TRUE")
+        rows = cur.fetchall()
+    return jsonify([r[0] for r in rows])
+
+
+@app.route('/api/lserp/os/<int:os_id>', methods=['DELETE'])
+@login_required
+def ocultar_lserp_os(os_id):
+    with _db() as (conn, cur):
+        cur.execute("""
+            INSERT INTO os_lserp_meta (lserp_os_id, oculto)
+            VALUES (%s, TRUE)
+            ON CONFLICT (lserp_os_id) DO UPDATE
+              SET oculto = TRUE, updated_at = NOW()
+        """, (os_id,))
     return jsonify({'success': True})
 
 

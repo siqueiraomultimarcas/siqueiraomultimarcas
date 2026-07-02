@@ -219,17 +219,22 @@
             veiculos     = await respVeic.json();
             fornecedores = await respFornec.json();
 
-            // Metadados locais das OS LSERP (tipo_servico)
+            // Metadados locais das OS LSERP (tipo_servico) e lista de ocultas
             let metaLserp = {};
+            let ocultos   = new Set();
             try {
-                const respMeta = await fetch('/api/lserp/os/meta');
-                if (respMeta.ok) metaLserp = await respMeta.json();
+                const [respMeta, respOcult] = await Promise.all([
+                    fetch('/api/lserp/os/meta'),
+                    fetch('/api/lserp/os/ocultos')
+                ]);
+                if (respMeta.ok)  metaLserp = await respMeta.json();
+                if (respOcult.ok) ocultos   = new Set(await respOcult.json());
             } catch(e) {}
 
             // Normalizar OS LSERP para mesmo formato
             let osLserp = [];
             if (respOS && respOS.ok) {
-                const rawOS = await respOS.json();
+                const rawOS = (await respOS.json()).filter(os => !ocultos.has(os.id));
                 osLserp = rawOS.map(os => {
                     const veicLocal = veiculos.find(v => v.placa === (os.veic_placa || ''));
                     return {
@@ -355,6 +360,8 @@
                                 <button onclick="toggleActMenu(event,-1);definirTipoOS(${m.id})"><i class="fas fa-tag" style="color:#8b5cf6;"></i> Definir Tipo</button>
                                 <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
                                 <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${m.placa}')"><i class="fas fa-car" style="color:#16a34a;"></i> Status do Veículo</button>
+                                <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
+                                <button class="danger" onclick="toggleActMenu(event,-1);ocultarOSLSERP(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
                             </div>
                         </div>
                     </td>
@@ -489,6 +496,32 @@
         abrirModal(`${m.numero_pedido ? 'Pedido Nº ' + m.numero_pedido + ' — ' : ''}${m.oficina || 'Manutenção'}`, content);
     }
     
+    function ocultarOSLSERP(osId) {
+        abrirModal('Excluir OS da lista', `
+            <div style="text-align:center;padding:16px 0 8px;">
+                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ef4444;margin-bottom:12px;display:block;"></i>
+                <p style="color:#374151;font-size:.95rem;">Deseja remover a <strong>OS #${osId}</strong> da lista de manutenções?</p>
+                <p style="color:#64748b;font-size:.8rem;margin-top:4px;">A OS continuará existindo no AF Car Center. Esta ação pode ser desfeita pelo suporte.</p>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                <button class="btn btn-danger" onclick="fecharModal();_confirmarOcultarOS(${osId})"><i class="fas fa-trash"></i> Excluir</button>
+            </div>`);
+    }
+
+    async function _confirmarOcultarOS(osId) {
+        try {
+            const resp = await fetch(`/api/lserp/os/${osId}`, { method: 'DELETE' });
+            if (!resp.ok) throw new Error('Falha ao remover');
+            manutencoes = manutencoes.filter(m => !(m._fonte === 'lserp' && m.id === osId));
+            renderizarManutencoes(manutencoes);
+            filtrarManutencoes();
+            showToast(`OS #${osId} removida da lista`, 'success');
+        } catch(e) {
+            showToast('Erro ao remover OS: ' + e.message, 'error');
+        }
+    }
+
     function mostrarObsOS(osId) {
         const m = manutencoes.find(x => x._fonte === 'lserp' && x.id === osId);
         const obs = m && m._obs ? m._obs : '—';
