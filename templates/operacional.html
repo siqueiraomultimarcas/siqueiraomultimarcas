@@ -250,34 +250,86 @@ function renderCobVencidas(lista) {
         el.innerHTML = '<div class="empty-state-inline"><i class="fas fa-check-circle" style="color:#4ade80;font-size:1.5rem;"></i><br>Nenhuma cobrança vencida</div>';
         return;
     }
+
     const tipoLabel = {contrato:'Contrato', multa:'Multa', avulsa:'Avulsa'};
-    el.innerHTML = `<div style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
-        <thead>
-            <tr style="border-bottom:1px solid rgba(255,255,255,.08);color:#64748b;">
-                <th style="padding:7px 12px;text-align:left;font-weight:600;">Tipo</th>
-                <th style="padding:7px 12px;text-align:left;font-weight:600;">Cliente</th>
-                <th style="padding:7px 12px;text-align:left;font-weight:600;">Descrição</th>
-                <th style="padding:7px 12px;text-align:left;font-weight:600;">Vencimento</th>
-                <th style="padding:7px 12px;text-align:right;font-weight:600;">Valor</th>
-                <th style="padding:7px 12px;text-align:center;font-weight:600;">Atraso</th>
-            </tr>
-        </thead>
-        <tbody>
-        ${lista.map(d => {
-            const dias = Number(d.dias_atraso) || 0;
-            const badgeClass = dias > 30 ? 'badge-red' : dias > 7 ? 'badge-amber' : 'badge-blue';
-            return `<tr style="border-bottom:1px solid rgba(255,255,255,.05);">
-                <td style="padding:7px 12px;"><span class="op-item-badge badge-purple">${tipoLabel[d.tipo]||d.tipo}</span></td>
-                <td style="padding:7px 12px;color:#e2e8f0;">${_esc(d.cliente)}</td>
-                <td style="padding:7px 12px;color:#94a3b8;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_esc(d.descricao)}</td>
-                <td style="padding:7px 12px;color:#94a3b8;">${_fmtDate(d.data_vencimento)}</td>
-                <td style="padding:7px 12px;text-align:right;color:#f59e0b;font-weight:600;">${_fmt.format(Number(d.valor)||0)}</td>
-                <td style="padding:7px 12px;text-align:center;"><span class="op-item-badge ${badgeClass}">${dias}d</span></td>
+    const tipoCor   = {contrato:'#7c3aed', multa:'#dc2626', avulsa:'#0891b2'};
+
+    // Agrupar por cliente
+    const gruposMap = {};
+    lista.forEach(d => {
+        const k = d.cliente || '—';
+        if (!gruposMap[k]) gruposMap[k] = { cliente: k, itens: [] };
+        gruposMap[k].itens.push(d);
+    });
+
+    const totalGeral = lista.reduce((s,d) => s + (Number(d.valor)||0), 0);
+
+    let idx = 0;
+    const grupoRows = Object.values(gruposMap).map(g => {
+        const gId     = 'cov_' + (idx++);
+        const total   = g.itens.reduce((s,d) => s + (Number(d.valor)||0), 0);
+        const maxAtrs = Math.max(...g.itens.map(d => Number(d.dias_atraso)||0));
+        const badgeCl = maxAtrs > 30 ? 'badge-red' : maxAtrs > 7 ? 'badge-amber' : 'badge-blue';
+
+        const subRows = g.itens.map(d => {
+            const dias = Number(d.dias_atraso)||0;
+            const bc   = dias > 30 ? 'badge-red' : dias > 7 ? 'badge-amber' : 'badge-blue';
+            const cor  = tipoCor[d.tipo] || '#64748b';
+            return `<tr style="background:#fafbfc;border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px 12px 6px 36px;">
+                    <span style="background:${cor}18;color:${cor};font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:4px;">${tipoLabel[d.tipo]||d.tipo}</span>
+                </td>
+                <td style="padding:6px 12px;color:#374151;font-size:.8rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(d.descricao||'').replace(/"/g,'&quot;')}">${d.descricao||'—'}</td>
+                <td style="padding:6px 12px;color:#64748b;font-size:.8rem;white-space:nowrap;">${_fmtDate(d.data_vencimento)}</td>
+                <td style="padding:6px 12px;text-align:right;color:#d97706;font-weight:700;">${_fmt.format(Number(d.valor)||0)}</td>
+                <td style="padding:6px 12px;text-align:center;"><span class="op-item-badge ${bc}">${dias}d</span></td>
             </tr>`;
-        }).join('')}
-        </tbody>
-    </table></div>`;
+        }).join('');
+
+        return `
+        <tr onclick="toggleCobVenc('${gId}')" style="cursor:pointer;border-bottom:1px solid #e2e8f0;background:#fff;">
+            <td colspan="5" style="padding:10px 14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.7rem;width:10px;flex-shrink:0;"></i>
+                        <div>
+                            <div style="font-weight:700;font-size:.88rem;color:#0f172a;">${g.cliente.replace(/</g,'&lt;')}</div>
+                            <div style="font-size:.7rem;color:#64748b;margin-top:1px;">${g.itens.length} cobrança${g.itens.length>1?'s':''}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span class="op-item-badge ${badgeCl}">${maxAtrs}d</span>
+                        <span style="font-weight:800;color:#dc2626;font-size:.9rem;">${_fmt.format(total)}</span>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        <tr id="det_${gId}" style="display:none;">
+            <td colspan="5" style="padding:0;border-bottom:1px solid #e2e8f0;">
+                <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+                    <tbody>${subRows}</tbody>
+                </table>
+            </td>
+        </tr>`;
+    }).join('');
+
+    el.innerHTML = `
+    <div style="padding:8px 14px 8px 16px;background:#fef2f2;border-bottom:1px solid #fecaca;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:.78rem;color:#dc2626;font-weight:600;">${lista.length} cobranças vencidas · ${Object.keys(gruposMap).length} clientes</span>
+        <span style="font-size:.9rem;font-weight:800;color:#dc2626;">${_fmt.format(totalGeral)}</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;">
+        <tbody>${grupoRows}</tbody>
+    </table>`;
+}
+
+function toggleCobVenc(gId) {
+    const det  = document.getElementById('det_'  + gId);
+    const chev = document.getElementById('chev_' + gId);
+    if (!det) return;
+    const isOpen = det.style.display !== 'none';
+    det.style.display = isOpen ? 'none' : 'table-row';
+    if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
 }
 
 function renderMultasPrazo(lista) {
