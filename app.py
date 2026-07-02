@@ -2386,7 +2386,8 @@ def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria, valor_se
     while periodo_ini <= fim_ano:
         periodo_fim = min(periodo_ini + timedelta(days=n_dias - 1), fim_ano)
         cur.execute('''SELECT COUNT(*) FROM pagamentos_locacao
-                       WHERE locacao_id=%s AND data_inicio <= %s AND data_fim >= %s''',
+                       WHERE locacao_id=%s AND status != 'cancelado'
+                         AND data_inicio <= %s AND data_fim >= %s''',
                     (locacao_id, periodo_fim, periodo_ini))
         if cur.fetchone()[0] == 0:
             dias = (periodo_fim - periodo_ini).days + 1
@@ -2536,8 +2537,8 @@ def gerar_cobrancas_locacao(id):
                 return jsonify({'error': 'Contrato avulso não gera contas a receber automáticas'}), 400
             if data_fim:
                 return jsonify({'error': 'Contrato com data fim definida não gera períodos recorrentes'}), 400
-            # Remove pendentes existentes para evitar duplicatas
-            cur.execute("DELETE FROM pagamentos_locacao WHERE locacao_id=%s AND status='pendente'", (id,))
+            # Remove pendentes e cancelados para limpar bloqueios antes de regenerar
+            cur.execute("DELETE FROM pagamentos_locacao WHERE locacao_id=%s AND status IN ('pendente','cancelado')", (id,))
             # Gera desde o início do contrato (períodos já pagos são protegidos pelo overlap check)
             criados = _gerar_periodos_futuros(cur, id, data_inicio, freq, diaria, valor_semanal, desde_inicio=True)
         return jsonify({'success': True, 'criados': criados})
