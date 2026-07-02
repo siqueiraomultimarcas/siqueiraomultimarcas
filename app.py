@@ -392,6 +392,25 @@ def init_db():
     """)
     cur.execute("ALTER TABLE os_lserp_meta ADD COLUMN IF NOT EXISTS oculto BOOLEAN DEFAULT FALSE")
 
+    # Backfill custo de manutenções que têm itens_json mas custo NULL
+    cur.execute("""
+        UPDATE manutencoes
+        SET custo = sub.total
+        FROM (
+            SELECT id,
+                   ROUND(CAST(
+                       (SELECT COALESCE(SUM((item->>'valor_total')::numeric), 0)
+                        FROM jsonb_array_elements(itens_json::jsonb) AS item
+                       ) AS numeric
+                   ), 2) AS total
+            FROM manutencoes
+            WHERE custo IS NULL
+              AND itens_json IS NOT NULL
+              AND itens_json NOT IN ('', '[]', 'null')
+        ) sub
+        WHERE manutencoes.id = sub.id AND sub.total > 0
+    """)
+
     # ── Índices — evita Seq Scan em JOINs e filtros frequentes ──────────────
     cur.execute("CREATE INDEX IF NOT EXISTS idx_locacoes_veiculo   ON locacoes(veiculo_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_locacoes_cliente   ON locacoes(cliente_id)")

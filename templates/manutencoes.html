@@ -692,10 +692,10 @@
                             oninput="document.querySelector('#formManutencao [name=numero_pedido]').value=this.value">
                     </div>
                     <div class="form-group">
-                        <label>Custo Total (R$)</label>
+                        <label>Custo Total (R$) <span style="color:#ef4444;font-size:0.75rem;">*obrigatório para relatório</span></label>
                         <input type="number" class="form-control" name="custo" id="custoManutInput"
                             value="${manutencao ? (manutencao.custo||'') : ''}" step="0.01" min="0"
-                            placeholder="Preenchido automaticamente pelos itens">
+                            placeholder="0,00 — ou preenchido pelos itens abaixo">
                     </div>
                 </div>
 
