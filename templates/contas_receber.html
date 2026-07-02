@@ -601,33 +601,88 @@ function renderTableContratos(lista, busca) {
         const tel=(primeiro.cliente_telefone||'').replace(/\D/g,'');
         const waMsg=encodeURIComponent(`Olá ${clienteNome}, você possui ${fmtCurrency(s.totalPend)} pendente com o Siqueirão Multimarcas.`);
         const hasObsGrupo=g.itens.some(d=>_obsCache[`contrato_${d.id}`]);
-        const subRows = _sortSubItems(g.itens).map(d=>{
-            const isPago=d.status==='pago'||d.status==='recebido';
-            const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
-            const desc=(d.descricao||'').replace(/'/g,"\\'");
-            const cliEsc=(d.cliente||'').replace(/'/g,"\\'");
-            const hasObs=!!_obsCache[`contrato_${d.id}`];
-            return `<tr style="background:#fafbfc;">
-                <td style="padding:7px 10px;width:32px;text-align:center;"><input type="checkbox" class="chk-contrato" data-id="${d.id}" data-valor="${parseFloat(d.valor||0)}" onchange="atualizarBtnCardContratos()" style="cursor:pointer;width:14px;height:14px;accent-color:#2563eb;"></td>
-                <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
-                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
-                <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
-                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['contrato_'+d.id])}" style="color:#f59e0b;cursor:help;" title="Tem observação"><i class="fas fa-comment-alt"></i></span>`:''}</td>
-                <td style="padding:7px 10px;text-align:center;">
-                    <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
-                        <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_contrato_${d.id}')" title="Ações">⋯</button>
-                        <div id="locmenu_cr_contrato_${d.id}" class="loc-menu" style="display:none;">
-                            ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('contrato',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
-                            ${!isPago?`<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>`:''}
-                            <button onclick="closeLocMenus();abrirObservacao('contrato',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
-                            <button class="danger" onclick="closeLocMenus();excluirPeriodo(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
+        // ── Agrupar itens por mês (baseado em data_vencimento) ──
+        const _porMes = {};
+        g.itens.forEach(d => {
+            const mk = (d.data_vencimento||'9999-99').slice(0,7);
+            if (!_porMes[mk]) _porMes[mk] = [];
+            _porMes[mk].push(d);
+        });
+        const _meses = Object.keys(_porMes).sort().reverse();
+
+        const mesRows = _meses.map((mk, mi) => {
+            const mesId = `${gId}_m${mi}`;
+            const itensM = _sortSubItems(_porMes[mk]);
+            const [ano, mes] = mk.split('-');
+            const mesLbl = isNaN(parseInt(mes)) ? 'Sem data' :
+                new Date(parseInt(ano), parseInt(mes)-1, 1)
+                    .toLocaleDateString('pt-BR', {month:'long', year:'numeric'})
+                    .replace(/^\w/, c=>c.toUpperCase());
+            const pendM  = itensM.filter(d=>d.status!=='pago'&&d.status!=='recebido');
+            const pagosM = itensM.filter(d=>d.status==='pago'||d.status==='recebido');
+            const vencM  = pendM.filter(d=>d.data_vencimento&&d.data_vencimento<hoje);
+            const tpM    = pendM.reduce((s,d)=>s+parseFloat(d.valor||0),0);
+            const trM    = pagosM.reduce((s,d)=>s+parseFloat(d.valor||0),0);
+            const hasVencM = vencM.length > 0;
+
+            const periodoRows = itensM.map(d=>{
+                const isPago=d.status==='pago'||d.status==='recebido';
+                const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
+                const desc=(d.descricao||'').replace(/'/g,"\\'");
+                const cliEsc=(d.cliente||'').replace(/'/g,"\\'");
+                const hasObs=!!_obsCache[`contrato_${d.id}`];
+                return `<tr style="background:#fafbfc;">
+                    <td style="padding:7px 10px;width:32px;text-align:center;"><input type="checkbox" class="chk-contrato" data-id="${d.id}" data-valor="${parseFloat(d.valor||0)}" onchange="atualizarBtnCardContratos()" style="cursor:pointer;width:14px;height:14px;accent-color:#2563eb;"></td>
+                    <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
+                    <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
+                    <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
+                    <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
+                    <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
+                    <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['contrato_'+d.id])}" style="color:#f59e0b;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
+                    <td style="padding:7px 10px;text-align:center;">
+                        <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
+                            <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_contrato_${d.id}')" title="Ações">⋯</button>
+                            <div id="locmenu_cr_contrato_${d.id}" class="loc-menu" style="display:none;">
+                                ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('contrato',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
+                                ${!isPago?`<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>`:''}
+                                <button onclick="closeLocMenus();abrirObservacao('contrato',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
+                                <button class="danger" onclick="closeLocMenus();excluirPeriodo(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            return `
+            <tr onclick="toggleMesGrupo('${mesId}')" style="cursor:pointer;background:${hasVencM?'#fff7f7':'#f8fafc'};border-bottom:1px solid #e2e8f0;${hasVencM?'border-left:3px solid #fca5a5;':'border-left:3px solid transparent;'}">
+                <td colspan="9" style="padding:8px 16px 8px 32px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-chevron-right" id="chev_${mesId}" style="transition:transform .2s;color:#94a3b8;font-size:.7rem;width:10px;"></i>
+                            <span style="font-weight:700;font-size:.84rem;color:#1e293b;">${mesLbl}</span>
+                            <span style="font-size:.72rem;color:#94a3b8;">${itensM.length} período${itensM.length>1?'s':''}</span>
+                            ${vencM.length>0?`<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:1px 6px;font-size:.65rem;font-weight:600;">${vencM.length} vencido${vencM.length>1?'s':''}</span>`:''}
+                        </div>
+                        <div style="display:flex;gap:14px;align-items:center;">
+                            ${tpM>0?`<span style="font-size:.78rem;font-weight:700;color:#d97706;">${fmtCurrency(tpM)} pendente</span>`:''}
+                            ${trM>0?`<span style="font-size:.78rem;font-weight:700;color:#16a34a;">${fmtCurrency(trM)} recebido</span>`:''}
                         </div>
                     </div>
                 </td>
+            </tr>
+            <tr id="det_${mesId}" style="display:none;">
+                <td colspan="9" style="padding:0;">
+                    <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+                        <thead><tr style="border-bottom:1px solid #e2e8f0;">
+                            <th style="padding:5px 10px;background:#f1f5f9;width:32px;"></th>
+                            ${_thC('placa','Placa')}${_thC('descricao','Descrição')}${_thC('valor','Valor')}${_thC('data_vencimento','Vencimento')}${_thC('status','Status')}${_thC('data_recebimento','Recebido em')}${_thS('Ações')}
+                        </tr></thead>
+                        <tbody>${periodoRows}</tbody>
+                    </table>
+                </td>
             </tr>`;
         }).join('');
+
         return `
         <tr class="grupo-row-card" onclick="toggleGrupoCard('${gId}')" style="cursor:pointer;border-bottom:1px solid #e2e8f0;${s.hasVenc?'border-left:3px solid #fca5a5;':''}">
             <td colspan="9" style="padding:12px 16px;">
@@ -655,16 +710,10 @@ function renderTableContratos(lista, busca) {
             </td>
         </tr>
         <tr id="det_${gId}" style="display:${autoExpand?'table-row':'none'};">
-            <td colspan="9" style="padding:0;">
-                <div style="border-top:1px solid #e2e8f0;">
-                    <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
-                        <thead><tr style="border-bottom:1px solid #e2e8f0;">
-                            <th style="padding:5px 10px;background:#f8fafc;width:32px;"></th>
-                            ${_thC('placa','Placa')}${_thC('descricao','Descrição')}${_thC('valor','Valor')}${_thC('data_vencimento','Vencimento')}${_thC('status','Status')}${_thC('data_recebimento','Recebido em')}${_thS('Ações')}
-                        </tr></thead>
-                        <tbody>${subRows}</tbody>
-                    </table>
-                </div>
+            <td colspan="9" style="padding:0;border-bottom:2px solid #e2e8f0;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <tbody>${mesRows}</tbody>
+                </table>
             </td>
         </tr>`;
     }).join('');
@@ -856,6 +905,14 @@ function toggleGrupoCard(gId) {
     det.style.display = isOpen ? 'none' : 'table-row';
     if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
     if (isOpen) _expandedGroups.delete(gId); else _expandedGroups.add(gId);
+}
+function toggleMesGrupo(mesId) {
+    const det  = document.getElementById('det_' + mesId);
+    const chev = document.getElementById('chev_' + mesId);
+    if (!det) return;
+    const isOpen = det.style.display !== 'none';
+    det.style.display = isOpen ? 'none' : 'table-row';
+    if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
 }
 function selecionarGrupo(gId, el) {
     const det  = document.getElementById('det_' + gId);
