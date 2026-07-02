@@ -2379,8 +2379,8 @@ def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria, valor_se
         data_inicio = _date.fromisoformat(data_inicio)
     periodo_ini = data_inicio
     if not desde_inicio:
-        # avança até o primeiro período que ainda não terminou
-        while periodo_ini + timedelta(days=n_dias - 1) < hoje:
+        # avança até o primeiro período que COMEÇA hoje ou no futuro
+        while periodo_ini < hoje:
             periodo_ini += timedelta(days=n_dias)
     criados = 0
     while periodo_ini <= fim_ano:
@@ -3780,21 +3780,21 @@ def gerar_periodos_pendentes(force=False):
                 )
                 next_seq = cur.fetchone()[0] + 1
 
+                # Avança até o primeiro período que começa hoje ou no futuro
                 periodo_ini = data_inicio
+                while periodo_ini < hoje:
+                    periodo_ini += timedelta(days=n_dias)
+
+                fim_ano = _date(hoje.year, 12, 31)
                 novos = []
-                while True:
-                    periodo_fim = periodo_ini + timedelta(days=n_dias - 1)
-                    if data_fim_loc:
-                        if periodo_ini > data_fim_loc:
-                            break
-                        if periodo_fim > data_fim_loc:
-                            periodo_fim = data_fim_loc
-                    if periodo_fim >= hoje:
+                while periodo_ini <= fim_ano:
+                    periodo_fim = min(periodo_ini + timedelta(days=n_dias - 1), fim_ano)
+                    if data_fim_loc and periodo_ini > data_fim_loc:
                         break
-                    # Verifica em memória — sem query extra
                     ja_existe = any(
                         ei <= periodo_fim and ef >= periodo_ini
                         for ei, ef in existentes
+                        if ei is not None and ef is not None
                     )
                     if not ja_existe:
                         dias = (periodo_fim - periodo_ini).days + 1
