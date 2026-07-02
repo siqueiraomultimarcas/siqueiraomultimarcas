@@ -3222,18 +3222,20 @@ def get_relatorio_lucratividade():
                 rec_row = cur.fetchone()
                 receita = float(rec_row[0])
 
+                # Custos: total histórico do veículo (sem filtro de data)
+                # Mostra o custo total acumulado vs a receita do período selecionado
                 custo_m = custo_a = custo_mul = 0.0
 
                 if inc_manut:
-                    cur.execute('SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE veiculo_id=%s AND data_manutencao>=%s AND data_manutencao<=%s', (vid, data_inicio, data_fim))
+                    cur.execute('SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE veiculo_id=%s', (vid,))
                     custo_m = float(cur.fetchone()[0])
 
                 if inc_abast:
-                    cur.execute('SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE veiculo_id=%s AND data_abastecimento>=%s AND data_abastecimento<=%s', (vid, data_inicio, data_fim))
+                    cur.execute('SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE veiculo_id=%s', (vid,))
                     custo_a = float(cur.fetchone()[0])
 
                 if inc_multas:
-                    cur.execute('SELECT COALESCE(SUM(valor),0) FROM multas WHERE veiculo_id=%s AND data_infracao>=%s AND data_infracao<=%s', (vid, data_inicio, data_fim))
+                    cur.execute('SELECT COALESCE(SUM(valor),0) FROM multas WHERE veiculo_id=%s', (vid,))
                     custo_mul = float(cur.fetchone()[0])
 
                 total_custos = custo_m + custo_a + custo_mul
