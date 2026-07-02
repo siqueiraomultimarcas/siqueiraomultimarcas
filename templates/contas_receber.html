@@ -1401,11 +1401,28 @@ function _acRenderParcelas(n) {
     }).join('');
 }
 
-async function confirmarAsaasContrato() {
-    const pagId=document.getElementById('asaasContratoPagId').value;
+function confirmarAsaasContrato() {
     const parcelas=Array.from(document.querySelectorAll('.ac-parc-data')).map((el,i)=>({
         data_vencimento:el.value,valor:parseFloat(document.querySelectorAll('.ac-parc-valor')[i]?.value)||0}));
     if(Math.min(...parcelas.map(p=>p.valor))<5){showToast('Valor mínimo por parcela no Asaas é R$ 5,00','warning',6000);return;}
+    const resumo=document.getElementById('resumoAsaasContrato').innerText;
+    const tipo=_acTipo==='PIX'?'PIX':'Boleto';
+    abrirModal('Confirmar Cobrança Asaas',`
+        <div style="text-align:center;padding:10px 0">
+            <i class="fas fa-bolt" style="font-size:36px;color:#1d4ed8;margin-bottom:12px;display:block"></i>
+            <p style="font-size:.9rem;color:#374151;margin-bottom:6px">${resumo.replace(/\n/g,'<br>')}</p>
+            <p style="font-size:.85rem;color:#64748b;margin-bottom:20px">Método: <strong>${tipo}</strong> — Esta ação criará uma cobrança real no Asaas.</p>
+            <div style="display:flex;gap:10px;justify-content:center">
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;padding:10px 20px">Cancelar</button>
+                <button class="btn" onclick="fecharModal();_executarAsaasContrato()" style="background:#1d4ed8;color:white;font-weight:700;padding:10px 20px"><i class="fas fa-paper-plane"></i> Confirmar</button>
+            </div>
+        </div>`);
+}
+
+async function _executarAsaasContrato() {
+    const pagId=document.getElementById('asaasContratoPagId').value;
+    const parcelas=Array.from(document.querySelectorAll('.ac-parc-data')).map((el,i)=>({
+        data_vencimento:el.value,valor:parseFloat(document.querySelectorAll('.ac-parc-valor')[i]?.value)||0}));
     const btn=document.getElementById('btnGerarAsaasContrato');
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Aguarde...';
     try {
