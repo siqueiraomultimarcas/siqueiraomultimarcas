@@ -29,7 +29,7 @@
         <i class="fas fa-check-circle kpi-icon-bg"></i>
     </div>
     <div class="kpi-card orange">
-        <div class="kpi-label">Pendentes</div>
+        <div class="kpi-label">Pendentes / Andamento</div>
         <div class="kpi-value" id="countPendente">0</div>
         <i class="fas fa-clock kpi-icon-bg"></i>
     </div>
@@ -38,13 +38,21 @@
         <div class="kpi-value" id="totalCusto">R$ 0,00</div>
         <i class="fas fa-dollar-sign kpi-icon-bg"></i>
     </div>
+    <div class="kpi-card" style="border-left:3px solid #1d4ed8;">
+        <div class="kpi-label">OS Abertas AF Car</div>
+        <div class="kpi-value" id="countAfCar" style="color:#1d4ed8;">0</div>
+        <i class="fas fa-wrench kpi-icon-bg" style="color:#1d4ed8;"></i>
+    </div>
 </div>
 
 <!-- Manutenções -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-tools"></i> Manutenções <span id="countManutBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+        <h3 class="card-title"><i class="fas fa-tools"></i> Manutenções — Painel Unificado <span id="countManutBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="text" class="form-control" id="filtroPlaca" placeholder="Placa" oninput="filtrarManutencoes()" style="width:110px;" maxlength="8">
+            <input type="date" class="form-control" id="filtroDe" onchange="filtrarManutencoes()" style="width:145px;" title="Data de">
+            <input type="date" class="form-control" id="filtroAte" onchange="filtrarManutencoes()" style="width:145px;" title="Data até">
             <select class="form-control" id="filtroVeiculo" onchange="filtrarManutencoes()" style="width: 200px;">
                 <option value="todos">Todos os Veículos</option>
             </select>
@@ -63,6 +71,9 @@
                 <option value="concluida">Concluída</option>
                 <option value="pendente">Pendente</option>
                 <option value="andamento">Em Andamento</option>
+            </select>
+            <select class="form-control" id="filtroPrestador" onchange="filtrarManutencoes()" style="width: 180px;">
+                <option value="todos">Todos os Prestadores</option>
             </select>
         </div>
     </div>
@@ -201,21 +212,65 @@
     // Carregar dados
     async function carregarDados() {
         try {
-            const [respManut, respVeic, respFornec] = await Promise.all([
+            const [respManut, respVeic, respFornec, respOS] = await Promise.all([
                 fetch('/api/manutencoes'),
                 fetch('/api/veiculos'),
-                fetch('/api/fornecedores')
+                fetch('/api/fornecedores'),
+                fetch('/api/lserp/os?status=aberta').catch(() => null)
             ]);
-            manutencoes = await respManut.json();
-            veiculos = await respVeic.json();
+            const locais = await respManut.json();
+            veiculos     = await respVeic.json();
             fornecedores = await respFornec.json();
-            
+
+            // Metadados locais das OS LSERP (tipo_servico)
+            let metaLserp = {};
+            try {
+                const respMeta = await fetch('/api/lserp/os/meta');
+                if (respMeta.ok) metaLserp = await respMeta.json();
+            } catch(e) {}
+
+            // Normalizar OS LSERP para mesmo formato
+            let osLserp = [];
+            if (respOS && respOS.ok) {
+                const rawOS = await respOS.json();
+                osLserp = rawOS.map(os => {
+                    const veicLocal = veiculos.find(v => v.placa === (os.veic_placa || ''));
+                    return {
+                    _fonte: 'lserp',
+                    id: os.id,
+                    veiculo_id: veicLocal ? veicLocal.id : null,
+                    placa: os.veic_placa || '—',
+                    marca: veicLocal ? veicLocal.marca : '',
+                    modelo: veicLocal ? veicLocal.modelo : '',
+                    tipo: metaLserp[String(os.id)] || null,
+                    descricao: (os.titulo || os.obs || `OS #${os.id}`).substring(0, 80),
+                    data_manutencao: os.data_abertura || null,
+                    km_manutencao: os.veic_km || null,
+                    custo: os.tt_liquido || 0,
+                    oficina: 'AF CAR CENTER',
+                    status: os.faturado === 'S' ? 'concluida' : 'andamento',
+                    numero_pedido: String(os.id),
+                    itens_json: null,
+                    _faturado: os.faturado,
+                    };
+                });
+            }
+
+            // Merge: LSERP primeiro (destaque), depois locais
+            manutencoes = [...osLserp, ...locais];
+
             // Preencher filtro de veículos
             const selectVeic = document.getElementById('filtroVeiculo');
             veiculos.forEach(v => {
                 selectVeic.innerHTML += `<option value="${v.id}">${v.placa} - ${v.marca} ${v.modelo}</option>`;
             });
-            
+
+            // Preencher filtro de prestadores (inclui AF CAR + oficinas locais)
+            const prestadores = [...new Set(manutencoes.map(m => m.oficina).filter(Boolean))].sort();
+            const selPrest = document.getElementById('filtroPrestador');
+            selPrest.innerHTML = '<option value="todos">Todos os Prestadores</option>';
+            prestadores.forEach(p => { selPrest.innerHTML += `<option value="${p}">${p}</option>`; });
+
             atualizarEstatisticas();
             renderizarManutencoes(manutencoes);
         } catch (error) {
@@ -238,12 +293,14 @@
     
     function atualizarEstatisticas() {
         const concluidas = manutencoes.filter(m => m.status === 'concluida').length;
-        const pendentes = manutencoes.filter(m => m.status !== 'concluida').length;
+        const pendentes  = manutencoes.filter(m => m.status !== 'concluida').length;
         const custoTotal = manutencoes.reduce((sum, m) => sum + (parseFloat(m.custo) || 0), 0);
-        
+        const afCar      = manutencoes.filter(m => m._fonte === 'lserp' && m.status !== 'concluida').length;
+
         document.getElementById('countConcluida').textContent = concluidas;
-        document.getElementById('countPendente').textContent = pendentes;
-        document.getElementById('totalCusto').textContent = formatCurrency(custoTotal);
+        document.getElementById('countPendente').textContent  = pendentes;
+        document.getElementById('totalCusto').textContent     = formatCurrency(custoTotal);
+        document.getElementById('countAfCar').textContent     = afCar;
     }
     
     function getStatusBadge(status) {
@@ -274,6 +331,41 @@
         }
 
         tbody.innerHTML = lista.map(m => {
+            // ── Linha de OS LSERP (AF Car Center) ──────────────────────────────
+            if (m._fonte === 'lserp') {
+                const tipoLbl  = m.tipo
+                    ? `<span style="background:#f0fdf4;color:#15803d;font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:4px;">${m.tipo}</span>`
+                    : `<span style="color:#94a3b8;font-size:.75rem;cursor:pointer;" onclick="definirTipoOS(${m.id})" title="Clique para definir o tipo"><i class="fas fa-tag"></i> Definir</span>`;
+                const statusStyle = m.status === 'andamento' ? 'color:#d97706;' : 'color:#059669;';
+                const statusLbl   = m.status === 'andamento' ? 'Em Andamento' : 'Concluída';
+                return `
+                <tr style="background:#f8fbff;">
+                    <td style="white-space:nowrap;">${formatDate(m.data_manutencao)}</td>
+                    <td>
+                        <span style="font-weight:600;color:#2563eb;cursor:pointer;text-decoration:underline;" onclick="buscarHistorico('${m.placa}')" title="Ver histórico do veículo">${m.placa || '—'}</span>
+                        ${(m.marca || m.modelo) ? `<span style="color:#64748b;font-size:0.8rem;"> ${m.marca||''} ${m.modelo||''}</span>` : ''}
+                    </td>
+                    <td>${tipoLbl}</td>
+                    <td style="color:#64748b;font-size:.82rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(m.descricao||'').replace(/"/g,'&quot;')}">${m.descricao || '—'}</td>
+                    <td style="white-space:nowrap;">${m.km_manutencao ? m.km_manutencao.toLocaleString() + ' km' : '-'}</td>
+                    <td style="font-weight:700;color:#1e293b;">${formatCurrency(m.custo)}</td>
+                    <td style="font-size:.82rem;font-weight:600;color:#1d4ed8;">AF CAR CENTER</td>
+                    <td><span style="font-size:.75rem;font-weight:600;${statusStyle}">${statusLbl}</span></td>
+                    <td style="white-space:nowrap;text-align:center;">
+                        <div class="act-wrap">
+                            <button class="act-btn" onclick="toggleActMenu(event,'lserp_${m.id}')" title="Ações">⋯</button>
+                            <div id="actmenu_lserp_${m.id}" class="act-menu" onclick="event.stopPropagation()">
+                                <button onclick="toggleActMenu(event,-1);verOSLSERP(${m.id})"><i class="fas fa-search" style="color:#2563eb;"></i> Ver OS</button>
+                                <button onclick="toggleActMenu(event,-1);definirTipoOS(${m.id})"><i class="fas fa-tag" style="color:#8b5cf6;"></i> Definir Tipo</button>
+                                <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
+                                <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${m.placa}')"><i class="fas fa-car" style="color:#16a34a;"></i> Status do Veículo</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>`;
+            }
+
+            // ── Linha de manutenção local ────────────────────────────────────
             const itens = _parseItens(m);
             const temItens = itens.length > 0;
 
@@ -285,10 +377,6 @@
                 ? ` <span style="display:inline-block;background:#dbeafe;color:#1d4ed8;font-size:0.62rem;font-weight:700;padding:2px 6px;border-radius:4px;vertical-align:middle;">${itens.length} ${itens.length===1?'item':'itens'}</span>`
                 : '';
             const descHtml = `<span style="color:#374151;">${m.descricao || '-'}</span>${itensBadge}`;
-
-            const btnDetalhes = temItens
-                ? `<button class="btn btn-sm btn-itens" onclick="verDetalhes(${m.id})" title="Ver itens do pedido"><i class="fas fa-list-ul"></i></button> `
-                : '';
 
             return `
                 <tr class="${temItens ? 'tr-tem-itens' : ''}">
@@ -307,9 +395,11 @@
                     <td style="white-space:nowrap;text-align:center;">
                         <div class="act-wrap">
                             <button class="act-btn" onclick="toggleActMenu(event,${m.id})" title="Ações">⋯</button>
-                            <div id="actmenu_${m.id}" class="act-menu">
+                            <div id="actmenu_${m.id}" class="act-menu" onclick="event.stopPropagation()">
                                 ${temItens ? `<button onclick="toggleActMenu(event,-1);verDetalhes(${m.id})"><i class="fas fa-list-ul"></i> Ver Itens</button>` : ''}
                                 <button onclick="toggleActMenu(event,-1);editarManutencao(${m.id})"><i class="fas fa-edit"></i> Editar</button>
+                                <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${m.placa}')"><i class="fas fa-car" style="color:#16a34a;"></i> Status do Veículo</button>
+                                <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
                                 <button class="danger" onclick="toggleActMenu(event,-1);excluirManutencao(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
                             </div>
                         </div>
@@ -403,18 +493,107 @@
         abrirModal(`${m.numero_pedido ? 'Pedido Nº ' + m.numero_pedido + ' — ' : ''}${m.oficina || 'Manutenção'}`, content);
     }
     
+    async function verOSLSERP(id) {
+        abrirModal(`OS #${id} — AF Car Center`, `
+            <div style="text-align:center;padding:32px;">
+                <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;color:#2563eb;"></i>
+                <p style="color:#64748b;margin-top:10px;">Carregando OS...</p>
+            </div>`);
+        try {
+            const resp = await fetch(`/api/lserp/os/${id}`);
+            if (!resp.ok) throw new Error('OS não encontrada');
+            const os = await resp.json();
+            const itens = os.itens || [];
+
+            const linhasItens = itens.map((it, i) => `
+                <tr style="${i%2===1?'background:#fafafa;':''}">
+                    <td style="padding:9px 14px;">
+                        <span style="font-size:.75rem;background:${it.tipo==='S'?'#eff6ff':'#f0fdf4'};color:${it.tipo==='S'?'#1d4ed8':'#16a34a'};font-weight:700;padding:1px 6px;border-radius:3px;margin-right:6px;">${it.tipo==='S'?'SERV':'PEÇA'}</span>
+                        ${it.descricao || '—'}
+                    </td>
+                    <td style="padding:9px 14px;text-align:center;color:#475569;">${it.qtd || 1}</td>
+                    <td style="padding:9px 14px;text-align:right;color:#475569;">${formatCurrency(it.vl_unitario)}</td>
+                    <td style="padding:9px 14px;text-align:right;font-weight:700;color:#059669;">${formatCurrency(it.vl_total)}</td>
+                </tr>`).join('');
+
+            const content = `
+                <div style="margin:-20px -20px 20px;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);padding:18px 24px;color:#fff;border-radius:0;">
+                    <div style="font-size:.72rem;color:#93c5fd;margin-bottom:6px;">
+                        <i class="fas fa-car"></i> ${os.veic_placa || '—'}
+                        &nbsp;·&nbsp;<i class="fas fa-calendar"></i> ${formatDate(os.dh_inc)}
+                        &nbsp;·&nbsp;<i class="fas fa-tag"></i> OS #${os.id}
+                    </div>
+                    <div style="font-size:.88rem;">${os.titulo || os.obs || 'Sem descrição'}</div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;text-align:center;">
+                        <div style="font-size:.62rem;color:#1d4ed8;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Total OS</div>
+                        <div style="font-size:1.3rem;font-weight:800;color:#1e3a8a;">${formatCurrency(os.tt_liquido)}</div>
+                    </div>
+                    <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px;text-align:center;">
+                        <div style="font-size:.62rem;color:#7c3aed;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Itens</div>
+                        <div style="font-size:1.3rem;font-weight:800;color:#6b21a8;">${itens.length}</div>
+                    </div>
+                </div>
+
+                ${itens.length > 0 ? `
+                <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:16px;">
+                    <div style="background:#f8fafc;padding:10px 14px;font-weight:700;font-size:.8rem;color:#475569;border-bottom:1px solid #e2e8f0;">
+                        <i class="fas fa-list-ul" style="color:#2563eb;margin-right:6px;"></i> Itens do Serviço
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;font-size:.83rem;">
+                        <thead>
+                            <tr style="background:#f8fafc;">
+                                <th style="padding:9px 14px;text-align:left;font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Descrição</th>
+                                <th style="padding:9px 14px;text-align:center;font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:60px;">Qtd</th>
+                                <th style="padding:9px 14px;text-align:right;font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:110px;">Unitário</th>
+                                <th style="padding:9px 14px;text-align:right;font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:110px;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${linhasItens}</tbody>
+                        <tfoot>
+                            <tr style="background:#f0fdf4;border-top:2px solid #bbf7d0;">
+                                <td colspan="3" style="padding:10px 14px;font-weight:700;color:#374151;">Total Geral</td>
+                                <td style="padding:10px 14px;text-align:right;font-weight:800;color:#059669;font-size:1rem;">${formatCurrency(os.tt_liquido)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>` : ''}
+
+                <div style="text-align:right;">
+                    <button class="btn btn-secondary" onclick="fecharModal()" style="margin-right:8px;">Fechar</button>
+                    <a href="/contas-pagar" class="btn btn-primary" style="text-decoration:none;">
+                        <i class="fas fa-file-invoice-dollar"></i> Ver em Contas a Pagar
+                    </a>
+                </div>`;
+            abrirModal(`OS #${id} — AF Car Center`, content);
+        } catch(e) {
+            abrirModal('Erro', `<p style="color:#dc2626;text-align:center;padding:20px;">${e.message}</p><div style="text-align:right;"><button class="btn" onclick="fecharModal()">Fechar</button></div>`);
+        }
+    }
+
     function filtrarManutencoes() {
-        const veiculo = document.getElementById('filtroVeiculo').value;
-        const tipo = document.getElementById('filtroTipo').value;
-        const status = document.getElementById('filtroStatusManut').value;
-        
+        const veiculo   = document.getElementById('filtroVeiculo').value;
+        const tipo      = document.getElementById('filtroTipo').value;
+        const status    = document.getElementById('filtroStatusManut').value;
+        const prestador = document.getElementById('filtroPrestador').value;
+        const placa     = (document.getElementById('filtroPlaca').value || '').trim().toUpperCase().replace(/[-\s]/g, '');
+        const de        = document.getElementById('filtroDe').value;
+        const ate       = document.getElementById('filtroAte').value;
+
         const filtradas = manutencoes.filter(m => {
-            const matchVeiculo = veiculo === 'todos' || m.veiculo_id == veiculo;
-            const matchTipo = tipo === 'todos' || m.tipo === tipo;
-            const matchStatus = status === 'todos' || m.status === status;
-            return matchVeiculo && matchTipo && matchStatus;
+            const matchVeiculo   = veiculo === 'todos' || m.veiculo_id == veiculo;
+            const matchTipo      = tipo === 'todos' || m.tipo === tipo;
+            const matchStatus    = status === 'todos' || m.status === status;
+            const matchPrestador = prestador === 'todos' || m.oficina === prestador;
+            const matchPlaca     = !placa || (m.placa || '').toUpperCase().replace(/[-\s]/g, '').includes(placa);
+            const dataM          = (m.data_manutencao || '').substring(0, 10);
+            const matchDe        = !de  || dataM >= de;
+            const matchAte       = !ate || dataM <= ate;
+            return matchVeiculo && matchTipo && matchStatus && matchPrestador && matchPlaca && matchDe && matchAte;
         });
-        
+
         renderizarManutencoes(filtradas);
     }
     
@@ -744,6 +923,94 @@
         }
     }
     
+    // ==================== DEFINIR TIPO OS LSERP ====================
+    function definirTipoOS(osId) {
+        const m = manutencoes.find(x => x._fonte === 'lserp' && x.id === osId);
+        const tipoAtual = m ? (m.tipo || '') : '';
+        const tipos = ['Preventiva','Corretiva','Revisão','Óleo','Pneus','Freios','Filtros'];
+        const opts  = tipos.map(t => `<option value="${t}" ${tipoAtual===t?'selected':''}>${t}</option>`).join('');
+        abrirModal(`OS #${osId} — Definir Tipo`, `
+            <div style="display:grid;gap:14px;">
+                <div>
+                    <label style="font-size:.7rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Tipo de Manutenção</label>
+                    <select id="selTipoOS" class="form-control">
+                        <option value="">— selecione —</option>
+                        ${opts}
+                    </select>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+                    <button class="btn btn-primary" onclick="_salvarTipoOS(${osId})">
+                        <i class="fas fa-check"></i> Salvar
+                    </button>
+                </div>
+            </div>`);
+    }
+
+    async function _salvarTipoOS(osId) {
+        const tipo = document.getElementById('selTipoOS').value;
+        try {
+            const resp = await fetch(`/api/lserp/os/${osId}/meta`, {
+                method: 'PATCH',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({tipo_servico: tipo})
+            });
+            const r = await resp.json();
+            if (!r.success) throw new Error('Erro');
+            fecharModal();
+            showToast('Tipo atualizado!', 'success');
+            const m = manutencoes.find(x => x._fonte === 'lserp' && x.id === osId);
+            if (m) m.tipo = tipo || null;
+            renderizarManutencoes(manutencoes);
+        } catch(e) {
+            showToast('Erro ao salvar tipo', 'error');
+        }
+    }
+
+    // ==================== ALTERAR STATUS DO VEÍCULO ====================
+    function alterarStatusVeic(placa) {
+        const veic = veiculos.find(v => v.placa === placa);
+        if (!veic) { showToast('Veículo não encontrado no cadastro', 'warning'); return; }
+        const statusAtual = veic.status || 'disponivel';
+        const statusOpts = [
+            {val:'disponivel', lbl:'Disponível',   cor:'#16a34a'},
+            {val:'manutencao', lbl:'Em Manutenção', cor:'#d97706'},
+            {val:'locado',     lbl:'Locado',        cor:'#2563eb'},
+            {val:'inativo',    lbl:'Inativo',       cor:'#dc2626'},
+        ];
+        const bts = statusOpts.map(s => `
+            <button onclick="_confirmarStatusVeic(${veic.id},'${s.val}',this)"
+                style="display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border:2px solid ${statusAtual===s.val?s.cor:'#e2e8f0'};background:${statusAtual===s.val?s.cor+'15':'#fff'};border-radius:10px;cursor:pointer;font-size:.85rem;font-weight:600;color:${statusAtual===s.val?s.cor:'#374151'};transition:.1s;">
+                <span style="width:10px;height:10px;border-radius:50%;background:${s.cor};flex-shrink:0;"></span>
+                ${s.lbl} ${statusAtual===s.val?'<span style="margin-left:auto;font-size:.7rem;opacity:.7;">atual</span>':''}
+            </button>`).join('');
+        abrirModal(`${placa} — Status do Veículo`, `
+            <div style="display:grid;gap:8px;">
+                ${bts}
+                <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;margin-top:4px;">Cancelar</button>
+            </div>`);
+    }
+
+    async function _confirmarStatusVeic(veicId, novoStatus, btn) {
+        if (btn) { btn.disabled = true; }
+        try {
+            const resp = await fetch(`/api/veiculos/${veicId}/status`, {
+                method: 'PATCH',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({status: novoStatus})
+            });
+            const r = await resp.json();
+            if (!r.success) throw new Error(r.error || 'Erro');
+            fecharModal();
+            showToast('Status do veículo atualizado!', 'success');
+            const v = veiculos.find(x => x.id === veicId);
+            if (v) v.status = novoStatus;
+        } catch(e) {
+            showToast('Erro: ' + e.message, 'error');
+            if (btn) btn.disabled = false;
+        }
+    }
+
     window.addEventListener('load', carregarDados);
 
     // ==================== HISTÓRICO POR PLACA ====================

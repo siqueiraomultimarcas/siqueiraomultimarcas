@@ -536,16 +536,21 @@
                     <i class="fas fa-key"></i> <span>Locações</span>
                 </a>
             </li>
-
-            <li class="nav-section">Financeiro</li>
             <li class="nav-item">
                 <a href="/cobrancas" class="nav-link {% if request.path == '/cobrancas' %}active{% endif %}">
                     <i class="fas fa-calendar-check"></i> <span>Calendário de Locações</span>
                 </a>
             </li>
+
+            <li class="nav-section">Financeiro</li>
             <li class="nav-item">
                 <a href="/contas-receber" class="nav-link {% if request.path == '/contas-receber' %}active{% endif %}">
                     <i class="fas fa-money-bill-wave"></i> <span>Contas a Receber</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/contas-pagar" class="nav-link {% if request.path == '/contas-pagar' %}active{% endif %}">
+                    <i class="fas fa-file-invoice-dollar"></i> <span>Contas a Pagar</span>
                 </a>
             </li>
 
@@ -642,8 +647,14 @@
             <a href="/veiculos"       class="mais-item {% if request.path == '/veiculos' %}active{% endif %}" onclick="fecharMais()">
                 <i class="fas fa-car"></i>Veículos
             </a>
+            <a href="/contas-pagar"   class="mais-item {% if request.path == '/contas-pagar' %}active{% endif %}" onclick="fecharMais()">
+                <i class="fas fa-file-invoice-dollar"></i>Contas Pagar
+            </a>
             <a href="/manutencoes"    class="mais-item {% if request.path == '/manutencoes' %}active{% endif %}" onclick="fecharMais()">
                 <i class="fas fa-tools"></i>Manutenções
+            </a>
+            <a href="/os-lserp"       class="mais-item {% if request.path == '/os-lserp' %}active{% endif %}" onclick="fecharMais()">
+                <i class="fas fa-wrench"></i>OS/Oficina
             </a>
             <a href="/abastecimentos" class="mais-item {% if request.path == '/abastecimentos' %}active{% endif %}" onclick="fecharMais()">
                 <i class="fas fa-gas-pump"></i>Abastec.

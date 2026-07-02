@@ -12,6 +12,7 @@ import time
 import io
 from contextlib import contextmanager
 from datetime import datetime, date as _date, timedelta
+from calendar import monthrange
 from dotenv import load_dotenv
 import requests
 import pdfplumber
@@ -250,6 +251,9 @@ def init_db():
         cur.execute(f"ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS {col} {tipo}")
     for col, tipo in [('numero_pedido','TEXT'), ('fornecedor_id','INTEGER'), ('itens_json','TEXT')]:
         cur.execute(f"ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS {col} {tipo}")
+    cur.execute("ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS pago BOOLEAN DEFAULT FALSE")
+    cur.execute("ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS data_pagamento DATE")
+    cur.execute("ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS forma_pagamento VARCHAR(100)")
     cur.execute("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cep TEXT")
     cur.execute("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS bairro TEXT")
 
@@ -364,6 +368,28 @@ def init_db():
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS observacao TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS observacao TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS pdf_url TEXT")
+
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS os_baixas (
+            id              SERIAL PRIMARY KEY,
+            lserp_os_id     INTEGER NOT NULL UNIQUE,
+            data_baixa      DATE NOT NULL,
+            forma_pagamento VARCHAR(100),
+            observacoes     TEXT,
+            usuario_id      INTEGER REFERENCES usuarios(id),
+            created_at      TIMESTAMP DEFAULT NOW()
+        )
+    ''')
+    cur.execute("ALTER TABLE os_baixas ADD COLUMN IF NOT EXISTS desconto NUMERIC(10,2) DEFAULT 0")
+    cur.execute("ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS obs_pagamento TEXT")
+    cur.execute("ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS desconto_pagamento NUMERIC(10,2) DEFAULT 0")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS os_lserp_meta (
+            lserp_os_id  INTEGER NOT NULL UNIQUE,
+            tipo_servico VARCHAR(50),
+            updated_at   TIMESTAMP DEFAULT NOW()
+        )
+    """)
 
     # ── Índices — evita Seq Scan em JOINs e filtros frequentes ──────────────
     cur.execute("CREATE INDEX IF NOT EXISTS idx_locacoes_veiculo   ON locacoes(veiculo_id)")
@@ -3986,6 +4012,375 @@ def baixa_contas_receber():
                                desconto=%s, justificativa_desconto=%s WHERE id=%s''',
                         (data_rec, desconto, justific, rid))
     return jsonify({'success': True})
+
+# ==================== CONTAS A PAGAR ====================
+
+def _fim_do_mes(data_str):
+    if not data_str: return None
+    try:
+        d = _date.fromisoformat(str(data_str)[:10])
+        return _date(d.year, d.month, monthrange(d.year, d.month)[1]).isoformat()
+    except Exception:
+        return None
+
+
+@app.route('/contas-pagar')
+@login_required
+def contas_pagar_page():
+    return render_template('contas_pagar.html')
+
+
+@app.route('/api/contas-pagar')
+@login_required
+def get_contas_pagar():
+    status_f   = request.args.get('status', 'todos')
+    prestador_f = (request.args.get('prestador') or '').strip().upper()
+    de_f       = request.args.get('de', '')
+    ate_f      = request.args.get('ate', '')
+
+    # ── 1. Manutenções locais com custo ──────────────────────────────────────
+    with _db() as (conn, cur):
+        cur.execute("""
+            SELECT m.id, m.tipo, m.descricao, m.data_manutencao, m.custo,
+                   m.oficina, m.pago, m.data_pagamento, m.forma_pagamento,
+                   m.obs_pagamento, m.desconto_pagamento,
+                   v.placa, v.marca, v.modelo
+            FROM manutencoes m
+            LEFT JOIN veiculos v ON v.id = m.veiculo_id
+            WHERE m.custo IS NOT NULL AND m.custo > 0
+              AND (m.pago IS NULL OR m.pago = FALSE)
+            ORDER BY m.data_manutencao DESC
+        """)
+        manutencoes_db = rows_to_dict(cur)
+
+    # ── 2. OS LSERP ──────────────────────────────────────────────────────────
+    os_lserp = []
+    try:
+        conn_l = get_lserp_conn()
+        cur_l  = conn_l.cursor()
+        cur_l.execute("""
+            SELECT p.id, p.veic_placa,
+                   ROUND(p.tt_liquido::numeric, 2) AS tt_liquido,
+                   p.dh_inc::date AS data_abertura,
+                   p.obs, p.titulo
+            FROM pepplow.pedido p
+            WHERE p.id_cliente = %s AND p.excluido = false
+              AND p.tt_liquido > 0
+              AND (p.faturado IS NULL OR p.faturado != 'S')
+            ORDER BY p.dh_inc DESC
+            LIMIT 500
+        """, (_LSERP_CLIENTE_ID,))
+        os_lserp = _lserp_rows(cur_l)
+        cur_l.close(); conn_l.close()
+    except Exception as e:
+        app.logger.warning(f'[contas_pagar] LSERP indisponível: {e}')
+
+    # ── 3. Baixas LSERP já registradas ────────────────────────────────────────
+    with _db() as (conn, cur):
+        cur.execute("SELECT lserp_os_id, data_baixa, forma_pagamento, observacoes, desconto FROM os_baixas")
+        baixas_lserp = {r['lserp_os_id']: r for r in rows_to_dict(cur)}
+
+    # ── 4. Montar lista unificada ─────────────────────────────────────────────
+    result = []
+
+    for m in manutencoes_db:
+        prestador = (m.get('oficina') or 'Sem prestador').strip()
+        venc      = _fim_do_mes(m.get('data_manutencao'))
+        pago      = bool(m.get('pago'))
+        result.append({
+            'fonte': 'manutencao', 'id': m['id'],
+            'prestador': prestador,
+            'descricao': m.get('tipo') or m.get('descricao') or '—',
+            'placa': m.get('placa') or '—',
+            'valor': float(m.get('custo') or 0),
+            'data': m.get('data_manutencao'),
+            'vencimento': venc,
+            'pago': pago,
+            'data_pagamento': m.get('data_pagamento') if pago else None,
+            'forma_pagamento': m.get('forma_pagamento') if pago else None,
+            'observacoes': m.get('obs_pagamento') if pago else None,
+            'desconto': float(m.get('desconto_pagamento') or 0),
+        })
+
+    for os in os_lserp:
+        b    = baixas_lserp.get(os['id'])
+        venc = _fim_do_mes(os.get('data_abertura'))
+        _titulo = (os.get('titulo') or os.get('obs') or '').strip()
+        desc = f"OS #{os['id']}" + (f" · {_titulo[:70]}" if _titulo else '')
+        result.append({
+            'fonte': 'lserp_os', 'id': os['id'],
+            'prestador': 'AF CAR CENTER',
+            'descricao': desc,
+            'placa': os.get('veic_placa') or '—',
+            'valor': float(os.get('tt_liquido') or 0),
+            'data': os.get('data_abertura'),
+            'vencimento': venc,
+            'pago': b is not None,
+            'data_pagamento': b.get('data_baixa') if b else None,
+            'forma_pagamento': b.get('forma_pagamento') if b else None,
+            'observacoes': b.get('observacoes') if b else None,
+            'desconto': float(b.get('desconto') or 0) if b else 0,
+        })
+
+    # ── 5. Filtros ────────────────────────────────────────────────────────────
+    if prestador_f:
+        result = [r for r in result if prestador_f in r['prestador'].upper()]
+    if status_f == 'pendente':
+        result = [r for r in result if not r['pago']]
+    elif status_f == 'pago':
+        result = [r for r in result if r['pago']]
+    if de_f:
+        result = [r for r in result if r.get('vencimento', '') >= de_f]
+    if ate_f:
+        result = [r for r in result if r.get('vencimento', '') <= ate_f]
+
+    result.sort(key=lambda x: x.get('vencimento') or '', reverse=True)
+    return jsonify(result)
+
+
+@app.route('/api/manutencoes/<int:id>/baixa', methods=['POST'])
+@login_required
+def dar_baixa_manutencao(id):
+    data     = request.json
+    data_pag = _normalize_date(data.get('data_pagamento'))
+    forma    = (data.get('forma_pagamento') or '').strip() or None
+    obs      = (data.get('observacoes') or '').strip() or None
+    desconto = float(data.get('desconto') or 0)
+    if not data_pag:
+        return jsonify({'error': 'Data de pagamento obrigatória'}), 400
+    with _db() as (conn, cur):
+        cur.execute("""
+            UPDATE manutencoes SET pago=TRUE, data_pagamento=%s, forma_pagamento=%s,
+                   obs_pagamento=%s, desconto_pagamento=%s
+            WHERE id=%s
+        """, (data_pag, forma, obs, desconto, id))
+    return jsonify({'success': True})
+
+
+@app.route('/api/manutencoes/<int:id>/baixa', methods=['DELETE'])
+@login_required
+def remover_baixa_manutencao(id):
+    with _db() as (conn, cur):
+        cur.execute("""
+            UPDATE manutencoes SET pago=FALSE, data_pagamento=NULL, forma_pagamento=NULL
+            WHERE id=%s
+        """, (id,))
+    return jsonify({'success': True})
+
+
+# ==================== OS LSERP ====================
+
+_LSERP_CLIENTE_ID = 92  # SIQUEIRAO MULTIMARCAS LTDA
+
+
+def get_lserp_conn():
+    url = os.environ.get('LSERP_DATABASE_URL')
+    if not url:
+        raise RuntimeError('LSERP_DATABASE_URL não configurada')
+    return psycopg2.connect(url, sslmode='disable', connect_timeout=10)
+
+
+def _lserp_rows(cur):
+    cols = [d[0] for d in cur.description]
+    result = []
+    for row in cur.fetchall():
+        d = {}
+        for c, v in zip(cols, row):
+            if isinstance(v, (datetime, _date)):
+                d[c] = v.isoformat()
+            elif hasattr(v, '__float__') and not isinstance(v, (int, float)):
+                d[c] = float(v)
+            else:
+                d[c] = v
+        result.append(d)
+    return result
+
+
+@app.route('/os-lserp')
+@login_required
+def os_lserp_page():
+    return render_template('os_lserp.html')
+
+
+@app.route('/api/lserp/os')
+@login_required
+def get_lserp_os():
+    status_f = request.args.get('status', 'todas')
+    placa_f  = (request.args.get('placa') or '').upper().strip()
+    de_f     = request.args.get('de', '')
+    ate_f    = request.args.get('ate', '')
+
+    where  = ['p.id_cliente = %s', 'p.excluido = false']
+    params = [_LSERP_CLIENTE_ID]
+
+    if status_f == 'aberta':
+        where.append("(p.faturado IS NULL OR p.faturado != 'S')")
+    elif status_f == 'fechada':
+        where.append("p.faturado = 'S'")
+
+    if placa_f:
+        where.append('UPPER(p.veic_placa) LIKE %s')
+        params.append(f'%{placa_f}%')
+
+    dt_col = "COALESCE(p.data_faturado::date, p.data_saida, p.dh_inc::date)"
+    if de_f:
+        where.append(f'{dt_col} >= %s')
+        params.append(de_f)
+    if ate_f:
+        where.append(f'{dt_col} <= %s')
+        params.append(ate_f)
+
+    sql = f"""
+        SELECT p.id, p.veic_placa,
+               ROUND(p.tt_liquido::numeric, 2) AS tt_liquido,
+               p.faturado,
+               {dt_col}          AS data_os,
+               p.dh_inc::date   AS data_abertura,
+               p.obs, p.titulo, p.responsavel, p.veic_km
+        FROM pepplow.pedido p
+        WHERE {' AND '.join(where)}
+        ORDER BY p.dh_inc DESC
+        LIMIT 300
+    """
+    try:
+        conn = get_lserp_conn()
+        cur  = conn.cursor()
+        cur.execute(sql, params)
+        rows = _lserp_rows(cur)
+        cur.close(); conn.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify(rows)
+
+
+@app.route('/api/lserp/os/baixas')
+@login_required
+def get_os_baixas():
+    with _db() as (conn, cur):
+        cur.execute("""
+            SELECT ob.lserp_os_id, ob.data_baixa, ob.forma_pagamento,
+                   ob.observacoes, ob.created_at, u.nome AS usuario_nome
+            FROM os_baixas ob
+            LEFT JOIN usuarios u ON u.id = ob.usuario_id
+            ORDER BY ob.created_at DESC
+        """)
+        result = rows_to_dict(cur)
+    return jsonify(result)
+
+
+@app.route('/api/lserp/os/<int:os_id>')
+@login_required
+def get_lserp_os_detail(os_id):
+    try:
+        conn = get_lserp_conn()
+        cur  = conn.cursor()
+        cur.execute("""
+            SELECT p.id, p.veic_placa,
+                   ROUND(p.tt_liquido::numeric, 2) AS tt_liquido,
+                   p.faturado,
+                   COALESCE(p.data_faturado::date, p.data_saida, p.dh_inc::date) AS data_os,
+                   p.dh_inc::date AS data_abertura,
+                   p.obs, p.titulo, p.responsavel, p.veic_km
+            FROM pepplow.pedido p
+            WHERE p.id = %s AND p.id_cliente = %s AND p.excluido = false
+        """, (os_id, _LSERP_CLIENTE_ID))
+        row = cur.fetchone()
+        if not row:
+            cur.close(); conn.close()
+            return jsonify({'error': 'OS não encontrada'}), 404
+        cols    = [d[0] for d in cur.description]
+        os_data = {}
+        for c, v in zip(cols, row):
+            if isinstance(v, (datetime, _date)):
+                os_data[c] = v.isoformat()
+            elif hasattr(v, '__float__') and not isinstance(v, (int, float)):
+                os_data[c] = float(v)
+            else:
+                os_data[c] = v
+
+        cur.execute("""
+            SELECT pi.descricao, pi.qtd, pi.vl_unit,
+                   ROUND((pi.qtd * pi.vl_unit)::numeric, 2) AS subtotal,
+                   pi.tipo
+            FROM pepplow.pedido_itens pi
+            WHERE pi.id_pai = %s AND pi.excluido = false
+            ORDER BY pi.tipo, pi.descricao
+        """, (os_id,))
+        itens = _lserp_rows(cur)
+        cur.close(); conn.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    os_data['itens'] = itens
+    return jsonify(os_data)
+
+
+@app.route('/api/lserp/os/<int:os_id>/baixa', methods=['POST'])
+@login_required
+def dar_baixa_os(os_id):
+    data       = request.json
+    data_baixa = _normalize_date(data.get('data_baixa'))
+    forma      = (data.get('forma_pagamento') or '').strip() or None
+    obs        = (data.get('observacoes') or '').strip() or None
+    desconto   = float(data.get('desconto') or 0)
+    if not data_baixa:
+        return jsonify({'error': 'Data de baixa obrigatória'}), 400
+    with _db() as (conn, cur):
+        cur.execute("""
+            INSERT INTO os_baixas (lserp_os_id, data_baixa, forma_pagamento, observacoes, desconto, usuario_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (lserp_os_id) DO UPDATE SET
+                data_baixa = EXCLUDED.data_baixa,
+                forma_pagamento = EXCLUDED.forma_pagamento,
+                observacoes = EXCLUDED.observacoes,
+                desconto = EXCLUDED.desconto,
+                usuario_id = EXCLUDED.usuario_id
+        """, (os_id, data_baixa, forma, obs, desconto, current_user.id))
+    return jsonify({'success': True})
+
+
+@app.route('/api/lserp/os/<int:os_id>/baixa', methods=['DELETE'])
+@login_required
+def remover_baixa_os(os_id):
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM os_baixas WHERE lserp_os_id = %s', (os_id,))
+    return jsonify({'success': True})
+
+
+@app.route('/api/lserp/os/meta')
+@login_required
+def get_lserp_os_meta():
+    with _db() as (conn, cur):
+        cur.execute("SELECT lserp_os_id, tipo_servico FROM os_lserp_meta")
+        rows = rows_to_dict(cur)
+    return jsonify({str(r['lserp_os_id']): r['tipo_servico'] for r in rows})
+
+
+@app.route('/api/lserp/os/<int:os_id>/meta', methods=['PATCH'])
+@login_required
+def patch_lserp_os_meta(os_id):
+    tipo = (request.json or {}).get('tipo_servico', '')
+    tipo = tipo.strip() or None
+    with _db() as (conn, cur):
+        cur.execute("""
+            INSERT INTO os_lserp_meta (lserp_os_id, tipo_servico)
+            VALUES (%s, %s)
+            ON CONFLICT (lserp_os_id) DO UPDATE
+              SET tipo_servico = EXCLUDED.tipo_servico, updated_at = NOW()
+        """, (os_id, tipo))
+    return jsonify({'success': True})
+
+
+@app.route('/api/veiculos/<int:id>/status', methods=['PATCH'])
+@login_required
+def patch_veiculo_status(id):
+    novo = (request.json or {}).get('status', '')
+    if novo not in ('disponivel', 'locado', 'manutencao', 'inativo'):
+        return jsonify({'error': 'Status inválido'}), 400
+    with _db() as (conn, cur):
+        cur.execute('UPDATE veiculos SET status=%s WHERE id=%s', (novo, id))
+    return jsonify({'success': True})
+
 
 # Roda migrations no cold start do Vercel (e também localmente via __main__)
 try:

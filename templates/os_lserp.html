@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+{% block title %}OS / Manutenções - Locadora{% endblock %}
+{% block content %}
+<style>
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
+.kpi-card { position:relative; background:#fff; border-radius:12px; padding:18px 20px;
+            box-shadow:0 1px 4px rgba(0,0,0,.08); overflow:hidden; }
+.kpi-card .kpi-label { font-size:.65rem; font-weight:700; text-transform:uppercase;
+                        letter-spacing:.07em; color:#64748b; margin-bottom:4px; }
+.kpi-card .kpi-value { font-size:1.4rem; font-weight:700; color:#0f172a; }
+.kpi-card .kpi-icon-bg { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
+.kpi-card.blue  { border-left:3px solid #2563eb; }  .kpi-card.blue  .kpi-value { color:#2563eb; }  .kpi-card.blue  .kpi-icon-bg { color:#2563eb; }
+.kpi-card.green { border-left:3px solid #16a34a; }  .kpi-card.green .kpi-value { color:#16a34a; }  .kpi-card.green .kpi-icon-bg { color:#16a34a; }
+.kpi-card.amber { border-left:3px solid #d97706; }  .kpi-card.amber .kpi-value { color:#d97706; }  .kpi-card.amber .kpi-icon-bg { color:#d97706; }
+.kpi-card.red   { border-left:3px solid #dc2626; }  .kpi-card.red   .kpi-value { color:#dc2626; }  .kpi-card.red   .kpi-icon-bg { color:#dc2626; }
+.tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+.tab-btn { padding:6px 16px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
+           font-size:.78rem; font-weight:600; cursor:pointer; color:#64748b; transition:all .15s; }
+.tab-btn:hover  { border-color:#2563eb; color:#2563eb; }
+.tab-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+.badge-status { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 9px;
+                border-radius:4px; border:1px solid transparent; }
+.badge-aberta  { background:#fffbeb; color:#92400e; border-color:#fde68a; }
+.badge-fechada { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
+.badge-baixada { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+.tipo-s { background:#e0f2fe; color:#0369a1; font-size:.65rem; padding:1px 6px; border-radius:3px; font-weight:600; }
+.tipo-p { background:#fef3c7; color:#92400e; font-size:.65rem; padding:1px 6px; border-radius:3px; font-weight:600; }
+.filtros-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; padding:12px 16px; }
+.cr-filter-label { font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:3px; }
+.sem-cad { color:#94a3b8; font-style:italic; font-size:.8rem; }
+.os-row:hover td { background:#f8fafc; cursor:pointer; }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-wrench"></i> OS / Manutenções</h1>
+        <p style="font-size:.8rem;color:#94a3b8;margin-top:2px;">Ordens de Serviço via AF Car Center · LSERP</p>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid" style="margin-bottom:20px;">
+    <div class="kpi-card red">
+        <div class="kpi-label">OS Abertas</div>
+        <div class="kpi-value" id="kpiAbertas">—</div>
+        <i class="fas fa-wrench kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card" style="border-left:3px solid #ef4444;">
+        <div class="kpi-label">Valor Pendente</div>
+        <div class="kpi-value" id="kpiValorPendente" style="color:#ef4444;font-size:1.1rem;">—</div>
+        <i class="fas fa-money-bill kpi-icon-bg" style="color:#ef4444;"></i>
+    </div>
+    <div class="kpi-card green">
+        <div class="kpi-label">OS Baixadas</div>
+        <div class="kpi-value" id="kpiBaixadas">—</div>
+        <i class="fas fa-check-circle kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card blue">
+        <div class="kpi-label">Total OS (lista)</div>
+        <div class="kpi-value" id="kpiTotal">—</div>
+        <i class="fas fa-list kpi-icon-bg"></i>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="mudarAba('manutencoes',this)">
+        <i class="fas fa-list-ul"></i> Manutenções
+    </button>
+    <button class="tab-btn" onclick="mudarAba('emmanutencao',this)">
+        <i class="fas fa-car-crash"></i> Em Manutenção
+    </button>
+</div>
+
+<!-- ====== ABA MANUTENÇÕES ====== -->
+<div id="aba-manutencoes">
+    <div class="card" style="margin-bottom:12px;">
+        <div class="filtros-bar">
+            <div>
+                <label class="cr-filter-label">Status</label>
+                <select id="filtroStatus" class="form-control" style="min-width:130px;" onchange="carregarOS()">
+                    <option value="todas">Todas</option>
+                    <option value="aberta">Abertas</option>
+                    <option value="fechada">Fechadas</option>
+                </select>
+            </div>
+            <div>
+                <label class="cr-filter-label">Placa</label>
+                <input type="text" id="filtroPlaca" class="form-control" placeholder="Ex: ABC1234"
+                       style="width:120px;" oninput="debounceCarregar()">
+            </div>
+            <div>
+                <label class="cr-filter-label">De</label>
+                <input type="date" id="filtroDe" class="form-control" style="width:140px;" onchange="carregarOS()">
+            </div>
+            <div>
+                <label class="cr-filter-label">Até</label>
+                <input type="date" id="filtroAte" class="form-control" style="width:140px;" onchange="carregarOS()">
+            </div>
+            <button class="btn" style="background:#e2e8f0;color:#475569;font-size:.78rem;" onclick="limparFiltros()">
+                <i class="fas fa-times"></i> Limpar
+            </button>
+        </div>
+    </div>
+    <div class="card">
+        <div class="table-container">
+            <table>
+                <thead><tr>
+                    <th>OS #</th><th>Placa</th><th>Data</th>
+                    <th>Descrição</th><th style="text-align:right;">Valor</th>
+                    <th>Status</th><th></th>
+                </tr></thead>
+                <tbody id="tbOS">
+                    <tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">
+                        <i class="fas fa-spinner fa-spin"></i> Carregando...
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ====== ABA EM MANUTENÇÃO ====== -->
+<div id="aba-emmanutencao" style="display:none;">
+    <div class="card">
+        <div style="padding:10px 16px;font-size:.75rem;color:#64748b;border-bottom:1px solid #f1f5f9;">
+            <i class="fas fa-info-circle" style="color:#2563eb;"></i>
+            Cruzamento automático pela placa — <strong>Mudar Status</strong> atualiza apenas o cadastro local, não o LSERP.
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr>
+                    <th>Placa</th><th>Veículo (local)</th><th>OS #</th>
+                    <th style="text-align:right;">Valor</th><th>Data</th>
+                    <th>Status Local</th><th></th>
+                </tr></thead>
+                <tbody id="tbEmManutencao">
+                    <tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalhe OS -->
+<div id="modalDetalheOS" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;" onclick="if(event.target===this)fecharDetalhe()">
+    <div style="background:#fff;border-radius:14px;width:90%;max-width:700px;max-height:88vh;overflow-y:auto;padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+            <h2 style="font-size:1rem;font-weight:700;" id="detalhe-titulo">OS #—</h2>
+            <button onclick="fecharDetalhe()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#94a3b8;line-height:1;">✕</button>
+        </div>
+        <div id="detalhe-body"></div>
+    </div>
+</div>
+
+<!-- Modal Dar Baixa -->
+<div id="modalBaixa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1001;align-items:center;justify-content:center;" onclick="if(event.target===this)fecharBaixa()">
+    <div style="background:#fff;border-radius:14px;width:90%;max-width:440px;padding:24px;">
+        <h3 style="font-size:.95rem;font-weight:700;margin-bottom:16px;">
+            <i class="fas fa-check-circle" style="color:#16a34a;"></i>
+            Dar Baixa — OS <span id="baixa-os-label">—</span>
+        </h3>
+        <input type="hidden" id="baixa-os-id">
+        <div style="display:grid;gap:12px;">
+            <div>
+                <label class="cr-filter-label">Data do Pagamento *</label>
+                <input type="date" id="baixa-data" class="form-control">
+            </div>
+            <div>
+                <label class="cr-filter-label">Forma de Pagamento</label>
+                <select id="baixa-forma" class="form-control">
+                    <option value="">— selecione —</option>
+                    <option>PIX</option><option>Boleto</option><option>Dinheiro</option>
+                    <option>Cartão de Crédito</option><option>Cartão de Débito</option>
+                    <option>Transferência</option><option>Outro</option>
+                </select>
+            </div>
+            <div>
+                <label class="cr-filter-label">Observações</label>
+                <textarea id="baixa-obs" class="form-control" rows="3" placeholder="Opcional..."></textarea>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+            <button class="btn" onclick="fecharBaixa()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+            <button class="btn btn-primary" onclick="confirmarBaixa()">
+                <i class="fas fa-check"></i> Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let _osDados    = [];
+let _baixasMapa = {};   // lserp_os_id → baixa
+let _veicLocais = {};   // UPPER(placa) → veiculo
+let _debTimer   = null;
+
+function debounceCarregar() {
+    clearTimeout(_debTimer);
+    _debTimer = setTimeout(carregarOS, 400);
+}
+
+async function carregarTudo() {
+    try {
+        const [baixas, veics] = await Promise.all([
+            fetch('/api/lserp/os/baixas').then(r => r.json()),
+            fetch('/api/veiculos').then(r => r.json()),
+        ]);
+        _baixasMapa = {};
+        (Array.isArray(baixas) ? baixas : []).forEach(b => { _baixasMapa[b.lserp_os_id] = b; });
+        _veicLocais = {};
+        (Array.isArray(veics) ? veics : []).forEach(v => { _veicLocais[(v.placa || '').toUpperCase()] = v; });
+    } catch(e) {
+        showToast('Erro ao carregar dados auxiliares', 'warning');
+    }
+    await carregarOS();
+}
+
+async function carregarOS() {
+    const status = document.getElementById('filtroStatus').value;
+    const placa  = document.getElementById('filtroPlaca').value.trim();
+    const de     = document.getElementById('filtroDe').value;
+    const ate    = document.getElementById('filtroAte').value;
+    const p      = new URLSearchParams({ status });
+    if (placa) p.set('placa', placa);
+    if (de)    p.set('de', de);
+    if (ate)   p.set('ate', ate);
+
+    document.getElementById('tbOS').innerHTML =
+        '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Carregando LSERP...</td></tr>';
+
+    try {
+        const resp = await fetch('/api/lserp/os?' + p.toString());
+        const data = await resp.json();
+        if (!Array.isArray(data)) throw new Error(data.error || 'Erro');
+        _osDados = data;
+    } catch(e) {
+        showToast('Erro ao carregar OS: ' + e.message, 'error');
+        document.getElementById('tbOS').innerHTML =
+            '<tr><td colspan="7" style="text-align:center;padding:30px;color:#ef4444;"><i class="fas fa-exclamation-triangle"></i> Falha ao conectar ao LSERP</td></tr>';
+        return;
+    }
+    renderizarKPIs();
+    renderizarManutencoes();
+    renderizarEmManutencao();
+}
+
+function renderizarKPIs() {
+    const abertas  = _osDados.filter(o => o.faturado !== 'S');
+    const baixadas = abertas.filter(o => _baixasMapa[o.id]);
+    const pendente = abertas.filter(o => !_baixasMapa[o.id]).reduce((s, o) => s + (o.tt_liquido || 0), 0);
+    document.getElementById('kpiAbertas').textContent      = abertas.length;
+    document.getElementById('kpiValorPendente').textContent = fmtR(pendente);
+    document.getElementById('kpiBaixadas').textContent     = baixadas.length;
+    document.getElementById('kpiTotal').textContent        = _osDados.length;
+}
+
+function renderizarManutencoes() {
+    const tb = document.getElementById('tbOS');
+    if (!_osDados.length) {
+        tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">Nenhuma OS encontrada.</td></tr>';
+        return;
+    }
+    tb.innerHTML = _osDados.map(o => `
+        <tr class="os-row" onclick="verDetalhe(${o.id})">
+            <td style="font-weight:700;color:#1d4ed8;">#${o.id}</td>
+            <td><strong>${escHtml(o.veic_placa || '—')}</strong></td>
+            <td style="white-space:nowrap;">${fmtData(o.data_os)}</td>
+            <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:.82rem;">
+                ${escHtml((o.titulo || o.obs || '—').substring(0, 70))}
+            </td>
+            <td style="text-align:right;font-weight:600;white-space:nowrap;">${fmtR(o.tt_liquido)}</td>
+            <td>${badgeOS(o)}</td>
+            <td>
+                <button class="btn" style="padding:2px 10px;font-size:.72rem;background:#f1f5f9;color:#475569;"
+                        onclick="event.stopPropagation();verDetalhe(${o.id})">Ver</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderizarContas() {
+    const abertas = _osDados.filter(o => o.faturado !== 'S');
+    const tb = document.getElementById('tbContas');
+    if (!abertas.length) {
+        tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">Nenhuma OS aberta no período selecionado.</td></tr>';
+        return;
+    }
+    tb.innerHTML = abertas.map(o => {
+        const b = _baixasMapa[o.id];
+        const badgePag = b
+            ? `<span class="badge-status badge-baixada"><i class="fas fa-check"></i> Baixada ${fmtData(b.data_baixa)}</span>`
+            : `<span class="badge-status badge-aberta">Pendente</span>`;
+        const btnAcao = b
+            ? `<button class="btn" style="padding:2px 10px;font-size:.72rem;background:#fef2f2;color:#dc2626;"
+                       onclick="removerBaixa(${o.id})">Remover Baixa</button>`
+            : `<button class="btn btn-primary" style="padding:2px 10px;font-size:.72rem;"
+                       onclick="abrirBaixa(${o.id})">Dar Baixa</button>`;
+        return `<tr class="os-row" onclick="verDetalhe(${o.id})">
+            <td style="font-weight:700;color:#1d4ed8;">#${o.id}</td>
+            <td><strong>${escHtml(o.veic_placa || '—')}</strong></td>
+            <td style="white-space:nowrap;">${fmtData(o.data_os)}</td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:.82rem;">
+                ${escHtml((o.titulo || o.obs || '—').substring(0, 60))}
+            </td>
+            <td style="text-align:right;font-weight:600;white-space:nowrap;">${fmtR(o.tt_liquido)}</td>
+            <td>${badgePag}</td>
+            <td onclick="event.stopPropagation();">${btnAcao}</td>
+        </tr>`;
+    }).join('');
+}
+
+function renderizarEmManutencao() {
+    const abertas = _osDados.filter(o => o.faturado !== 'S');
+    const tb = document.getElementById('tbEmManutencao');
+
+    // Agrupar por placa — manter OS com maior id (mais recente)
+    const porPlaca = {};
+    abertas.forEach(o => {
+        const pl = (o.veic_placa || '').toUpperCase();
+        if (!porPlaca[pl] || o.id > porPlaca[pl].id) porPlaca[pl] = o;
+    });
+
+    const linhas = Object.values(porPlaca);
+    if (!linhas.length) {
+        tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8;">Nenhum veículo em OS aberta no momento.</td></tr>';
+        return;
+    }
+
+    tb.innerHTML = linhas.map(o => {
+        const pl      = (o.veic_placa || '').toUpperCase();
+        const vLocal  = _veicLocais[pl];
+        const modeloTx = vLocal
+            ? `${escHtml(vLocal.marca)} ${escHtml(vLocal.modelo)}`
+            : '<span class="sem-cad">Não cadastrado</span>';
+        const statusTx = vLocal ? badgeStatusVeiculo(vLocal.status) :
+            '<span class="badge-status" style="background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;">—</span>';
+        const btnStatus = vLocal
+            ? (vLocal.status === 'manutencao'
+                ? `<button class="btn" style="padding:2px 10px;font-size:.72rem;background:#d1fae5;color:#065f46;"
+                           onclick="mudarStatusVeiculo(${vLocal.id},'disponivel','${escHtml(vLocal.placa)}')">
+                       <i class="fas fa-check"></i> Disponível
+                   </button>`
+                : `<button class="btn" style="padding:2px 10px;font-size:.72rem;background:#fee2e2;color:#991b1b;"
+                           onclick="mudarStatusVeiculo(${vLocal.id},'manutencao','${escHtml(vLocal.placa)}')">
+                       <i class="fas fa-tools"></i> Em Manutenção
+                   </button>`)
+            : '';
+        return `<tr>
+            <td><strong>${escHtml(o.veic_placa || '—')}</strong></td>
+            <td>${modeloTx}</td>
+            <td style="color:#1d4ed8;font-weight:700;">#${o.id}</td>
+            <td style="text-align:right;font-weight:600;white-space:nowrap;">${fmtR(o.tt_liquido)}</td>
+            <td style="white-space:nowrap;">${fmtData(o.data_os)}</td>
+            <td>${statusTx}</td>
+            <td>${btnStatus}</td>
+        </tr>`;
+    }).join('');
+}
+
+// ---- helpers de badge ----
+function badgeOS(o) {
+    if (o.faturado === 'S')    return '<span class="badge-status badge-fechada">Fechada</span>';
+    if (_baixasMapa[o.id])     return '<span class="badge-status badge-baixada">Baixada</span>';
+    return '<span class="badge-status badge-aberta">Aberta</span>';
+}
+
+function badgeStatusVeiculo(st) {
+    const map = {
+        disponivel: ['#dcfce7','#166534','Disponível'],
+        locado:     ['#dbeafe','#1e40af','Locado'],
+        manutencao: ['#fef3c7','#92400e','Em Manutenção'],
+        inativo:    ['#f1f5f9','#475569','Inativo'],
+    };
+    const [bg, cor, tx] = map[st] || ['#f1f5f9','#475569', st || '—'];
+    return `<span class="badge-status" style="background:${bg};color:${cor};border-color:${bg};">${tx}</span>`;
+}
+
+// ---- abas ----
+function mudarAba(aba, btn) {
+    ['manutencoes','emmanutencao'].forEach(a => {
+        document.getElementById('aba-' + a).style.display = (a === aba) ? '' : 'none';
+    });
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+function limparFiltros() {
+    ['filtroStatus','filtroPlaca','filtroDe','filtroAte'].forEach(id => {
+        const el = document.getElementById(id);
+        el.value = id === 'filtroStatus' ? 'todas' : '';
+    });
+    carregarOS();
+}
+
+// ---- detalhe OS ----
+async function verDetalhe(id) {
+    const modal = document.getElementById('modalDetalheOS');
+    modal.style.display = 'flex';
+    document.getElementById('detalhe-titulo').textContent = `OS #${id}`;
+    document.getElementById('detalhe-body').innerHTML =
+        '<div style="text-align:center;padding:40px;color:#94a3b8;"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+    try {
+        const resp = await fetch(`/api/lserp/os/${id}`);
+        const os   = await resp.json();
+        if (os.error) throw new Error(os.error);
+
+        const itensTipo = { S: 'Serviço', P: 'Peça' };
+        const itensHtml = os.itens && os.itens.length
+            ? `<table style="width:100%;font-size:.8rem;border-collapse:collapse;margin-top:8px;">
+                 <thead><tr style="background:#f8fafc;">
+                   <th style="padding:6px 8px;text-align:left;">Tipo</th>
+                   <th style="padding:6px 8px;text-align:left;">Descrição</th>
+                   <th style="padding:6px 8px;text-align:right;">Qtd</th>
+                   <th style="padding:6px 8px;text-align:right;">Vl. Unit</th>
+                   <th style="padding:6px 8px;text-align:right;">Subtotal</th>
+                 </tr></thead>
+                 <tbody>${os.itens.map(it => `
+                   <tr style="border-top:1px solid #f1f5f9;">
+                     <td style="padding:5px 8px;"><span class="tipo-${(it.tipo||'').toLowerCase()}">${itensTipo[it.tipo] || it.tipo || '—'}</span></td>
+                     <td style="padding:5px 8px;">${escHtml(it.descricao || '')}</td>
+                     <td style="padding:5px 8px;text-align:right;">${(it.qtd||0).toLocaleString('pt-BR',{maximumFractionDigits:2})}</td>
+                     <td style="padding:5px 8px;text-align:right;">${fmtR(it.vl_unit)}</td>
+                     <td style="padding:5px 8px;text-align:right;font-weight:600;">${fmtR(it.subtotal)}</td>
+                   </tr>`).join('')}
+                 </tbody>
+               </table>`
+            : '<p style="color:#94a3b8;text-align:center;padding:10px 0;">Nenhum item registrado.</p>';
+
+        const b = _baixasMapa[id];
+        const baixaInfo = b
+            ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:.8rem;margin-top:12px;">
+                 <i class="fas fa-check-circle" style="color:#1d4ed8;"></i>
+                 <strong>Baixa registrada</strong> em ${fmtData(b.data_baixa)}
+                 ${b.forma_pagamento ? ' · ' + escHtml(b.forma_pagamento) : ''}
+                 ${b.observacoes ? '<br><span style="color:#64748b;">' + escHtml(b.observacoes) + '</span>' : ''}
+                 ${b.usuario_nome ? '<br><span style="color:#94a3b8;font-size:.75rem;">por ' + escHtml(b.usuario_nome) + '</span>' : ''}
+               </div>` : '';
+
+        const btnBaixa = (os.faturado !== 'S' && !b)
+            ? `<a href="/contas-pagar" class="btn btn-primary" style="margin-top:16px;font-size:.8rem;display:inline-flex;align-items:center;gap:6px;">
+                 <i class="fas fa-file-invoice-dollar"></i> Ir para Contas a Pagar
+               </a>` : '';
+
+        document.getElementById('detalhe-body').innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:16px;font-size:.82rem;">
+                <div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Placa</span><br><strong>${escHtml(os.veic_placa||'—')}</strong></div>
+                <div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Status</span><br>${badgeOS(os)}</div>
+                <div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Data Abertura</span><br>${fmtData(os.data_abertura)}</div>
+                <div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Data OS</span><br>${fmtData(os.data_os)}</div>
+                ${os.veic_km ? `<div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">KM</span><br>${Number(os.veic_km).toLocaleString('pt-BR')} km</div>` : ''}
+                ${os.responsavel ? `<div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Responsável</span><br>${escHtml(os.responsavel)}</div>` : ''}
+            </div>
+            ${os.titulo ? `<p style="font-size:.85rem;color:#374151;margin-bottom:8px;"><strong>Título:</strong> ${escHtml(os.titulo)}</p>` : ''}
+            ${os.obs ? `<p style="font-size:.8rem;color:#64748b;margin-bottom:8px;background:#f8fafc;padding:8px 12px;border-radius:6px;">${escHtml(os.obs)}</p>` : ''}
+            <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <strong style="font-size:.82rem;">Itens da OS</strong>
+                <strong style="font-size:1rem;color:#0f172a;">${fmtR(os.tt_liquido)}</strong>
+            </div>
+            ${itensHtml}
+            ${baixaInfo}
+            ${btnBaixa}
+        `;
+    } catch(e) {
+        document.getElementById('detalhe-body').innerHTML =
+            `<p style="color:#ef4444;text-align:center;padding:20px;"><i class="fas fa-exclamation-triangle"></i> ${escHtml(e.message)}</p>`;
+    }
+}
+
+function fecharDetalhe() {
+    document.getElementById('modalDetalheOS').style.display = 'none';
+}
+
+// ---- dar baixa ----
+function abrirBaixa(id) {
+    document.getElementById('baixa-os-label').textContent = '#' + id;
+    document.getElementById('baixa-os-id').value          = id;
+    document.getElementById('baixa-data').value           = new Date().toISOString().slice(0, 10);
+    document.getElementById('baixa-forma').value          = '';
+    document.getElementById('baixa-obs').value            = '';
+    document.getElementById('modalBaixa').style.display   = 'flex';
+}
+
+function fecharBaixa() {
+    document.getElementById('modalBaixa').style.display = 'none';
+}
+
+async function confirmarBaixa() {
+    const id    = parseInt(document.getElementById('baixa-os-id').value);
+    const data  = document.getElementById('baixa-data').value;
+    const forma = document.getElementById('baixa-forma').value;
+    const obs   = document.getElementById('baixa-obs').value.trim();
+    if (!data) { showToast('Informe a data do pagamento', 'warning'); return; }
+    try {
+        const resp = await fetch(`/api/lserp/os/${id}/baixa`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data_baixa: data, forma_pagamento: forma, observacoes: obs }),
+        });
+        const r = await resp.json();
+        if (!r.success) throw new Error(r.error || 'Erro');
+        fecharBaixa();
+        showToast('Baixa registrada com sucesso!', 'success');
+        // Atualizar mapa local sem reload completo
+        const b = await fetch('/api/lserp/os/baixas').then(r => r.json());
+        _baixasMapa = {};
+        (Array.isArray(b) ? b : []).forEach(x => { _baixasMapa[x.lserp_os_id] = x; });
+        renderizarKPIs();
+        renderizarManutencoes();
+        renderizarContas();
+        renderizarEmManutencao();
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
+    }
+}
+
+function removerBaixa(id) {
+    abrirModal('Remover Baixa', `
+        <div style="text-align:center;padding:20px 0;">
+            <i class="fas fa-exclamation-triangle" style="font-size:44px;color:#ef4444;margin-bottom:14px;display:block;"></i>
+            <p>Remover a baixa da OS <strong>#${id}</strong>?</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
+                <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+                <button class="btn btn-danger" onclick="executarRemocaoBaixa(${id})">Remover</button>
+            </div>
+        </div>
+    `);
+}
+
+async function executarRemocaoBaixa(id) {
+    fecharModal();
+    try {
+        const resp = await fetch(`/api/lserp/os/${id}/baixa`, { method: 'DELETE' });
+        const r    = await resp.json();
+        if (!r.success) throw new Error(r.error || 'Erro');
+        showToast('Baixa removida.', 'success');
+        delete _baixasMapa[id];
+        renderizarKPIs();
+        renderizarManutencoes();
+        renderizarContas();
+        renderizarEmManutencao();
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
+    }
+}
+
+// ---- status veículo local ----
+function mudarStatusVeiculo(veicId, novoStatus, placa) {
+    const statusTx = { disponivel: 'disponível', manutencao: 'em manutenção' }[novoStatus] || novoStatus;
+    abrirModal('Confirmar Mudança de Status', `
+        <div style="text-align:center;padding:20px 0;">
+            <i class="fas fa-car" style="font-size:40px;color:#2563eb;margin-bottom:14px;display:block;"></i>
+            <p>Marcar <strong>${escHtml(placa)}</strong> como <strong>${statusTx}</strong>?</p>
+            <p style="font-size:.78rem;color:#94a3b8;margin-top:6px;">Isso <strong>não</strong> altera dados no LSERP — apenas o cadastro local.</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
+                <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+                <button class="btn btn-primary" onclick="executarMudancaStatus(${veicId},'${novoStatus}','${escHtml(placa)}')">Confirmar</button>
+            </div>
+        </div>
+    `);
+}
+
+async function executarMudancaStatus(veicId, novoStatus, placa) {
+    fecharModal();
+    try {
+        const resp = await fetch(`/api/veiculos/${veicId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: novoStatus }),
+        });
+        const r = await resp.json();
+        if (!r.success) throw new Error(r.error || 'Erro');
+        showToast('Status atualizado!', 'success');
+        // Atualizar mapa local
+        const pl = placa.toUpperCase();
+        if (_veicLocais[pl]) _veicLocais[pl].status = novoStatus;
+        renderizarEmManutencao();
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
+    }
+}
+
+// ---- utilitários ----
+function fmtR(v) {
+    if (v == null || isNaN(v)) return '—';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+}
+
+function fmtData(d) {
+    if (!d) return '—';
+    const dt = new Date(d.length === 10 ? d + 'T12:00:00' : d);
+    return dt.toLocaleDateString('pt-BR');
+}
+
+function escHtml(s) {
+    return (s || '').toString()
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+window.addEventListener('load', carregarTudo);
+</script>
+{% endblock %}

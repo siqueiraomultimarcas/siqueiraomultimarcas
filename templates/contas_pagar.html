@@ -1,0 +1,786 @@
+{% extends "base.html" %}
+{% block title %}Contas a Pagar - Locadora{% endblock %}
+{% block content %}
+<style>
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:14px; }
+.kpi-card { position:relative; background:#fff; border-radius:12px; padding:18px 20px;
+            box-shadow:0 1px 4px rgba(0,0,0,.08); overflow:hidden; }
+.kpi-card .kpi-label { font-size:.65rem; font-weight:700; text-transform:uppercase;
+                        letter-spacing:.07em; color:#64748b; margin-bottom:4px; }
+.kpi-card .kpi-value { font-size:1.35rem; font-weight:700; color:#0f172a; }
+.kpi-card .kpi-icon-bg { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
+.kpi-card.red   { border-left:3px solid #dc2626; } .kpi-card.red   .kpi-value { color:#dc2626; } .kpi-card.red   .kpi-icon-bg { color:#dc2626; }
+.kpi-card.green { border-left:3px solid #16a34a; } .kpi-card.green .kpi-value { color:#16a34a; } .kpi-card.green .kpi-icon-bg { color:#16a34a; }
+.kpi-card.amber { border-left:3px solid #d97706; } .kpi-card.amber .kpi-value { color:#d97706; } .kpi-card.amber .kpi-icon-bg { color:#d97706; }
+.kpi-card.blue  { border-left:3px solid #2563eb; } .kpi-card.blue  .kpi-value { color:#2563eb; } .kpi-card.blue  .kpi-icon-bg { color:#2563eb; }
+
+/* Badges */
+.badge-status { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 9px;
+                border-radius:4px; border:1px solid transparent; }
+.badge-pendente { background:#fffbeb; color:#92400e; border-color:#fde68a; }
+.badge-pago     { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
+.badge-vencido  { background:#fef2f2; color:#dc2626; border-color:#fecaca; font-weight:700; }
+.fonte-af  { background:#eff6ff; color:#1d4ed8; font-size:.6rem; padding:1px 6px; border-radius:3px; font-weight:700; }
+.fonte-loc { background:#f0fdf4; color:#166534; font-size:.6rem; padding:1px 6px; border-radius:3px; font-weight:700; }
+
+.filtros-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; padding:12px 16px; }
+.cr-filter-label { font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:3px; }
+
+/* Accordion */
+.grupo-card { background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.grupo-header { display:flex; justify-content:space-between; align-items:center;
+                padding:14px 18px; cursor:pointer; user-select:none; transition:background .15s;
+                border-radius:12px; }
+.grupo-header:hover { background:#f8fafc; }
+.grupo-header-left { display:flex; align-items:center; gap:10px; }
+.grupo-nome  { font-weight:700; font-size:.95rem; color:#0f172a; }
+.grupo-count { background:#f1f5f9; color:#64748b; font-size:.68rem; font-weight:600; padding:2px 8px; border-radius:20px; }
+.grupo-count.red { background:#fef2f2; color:#dc2626; }
+.grupo-header-right { display:flex; align-items:center; gap:14px; }
+.grupo-total { font-weight:700; color:#dc2626; font-size:1.1rem; }
+.grupo-icon { color:#94a3b8; transition:transform .2s; font-size:.85rem; }
+.grupo-icon.open { transform:rotate(180deg); }
+.grupo-body { border-top:1px solid #f1f5f9; display:none; overflow:visible; }
+.grupo-body.open { display:block; }
+.grupo-body table { width:100%; border-collapse:collapse; font-size:.83rem; }
+.grupo-body th { padding:9px 12px; text-align:left; font-size:.67rem; font-weight:700; color:#94a3b8;
+                 text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #f1f5f9; background:#fafafa; }
+.grupo-body td { padding:10px 12px; border-bottom:1px solid #f9fafb; vertical-align:middle; }
+.grupo-body tr:last-child td { border-bottom:none; }
+.grupo-body tr:hover td { background:#f8fafc; }
+.grupo-body tr.row-pago td { opacity:.55; }
+
+/* Cabeçalho ordenável */
+.grupo-body th.th-sort { cursor:pointer; user-select:none; transition:color .1s,background .1s; }
+.grupo-body th.th-sort:hover { color:#2563eb; background:#eff6ff; }
+.grupo-body th.th-sort.ativo { color:#2563eb; }
+
+/* Act menu */
+.act-wrap { position:relative; display:inline-block; }
+.act-btn { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:4px 10px;
+           cursor:pointer; color:#64748b; font-size:1rem; line-height:1; transition:.1s; }
+.act-btn:hover { background:#e2e8f0; }
+.act-menu { position:absolute; right:0; top:calc(100% + 4px); background:#fff;
+            border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,.12);
+            z-index:200; min-width:170px; overflow:hidden; display:none; }
+.act-menu.open { display:block; }
+.act-menu button { display:block; width:100%; text-align:left; padding:10px 14px; border:none;
+                   background:transparent; cursor:pointer; font-size:.83rem; color:#374151;
+                   display:flex; align-items:center; gap:8px; }
+.act-menu button:hover { background:#f8fafc; }
+.act-menu button.danger { color:#dc2626; }
+.act-menu .divider { height:1px; background:#f1f5f9; margin:2px 0; }
+
+/* Barra flutuante de seleção */
+#barraSel {
+    display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:#0f172a; color:#fff; border-radius:14px; padding:12px 20px;
+    box-shadow:0 8px 32px rgba(0,0,0,.35); align-items:center; gap:16px; z-index:500;
+    white-space:nowrap; flex-wrap:nowrap;
+}
+</style>
+
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-file-invoice-dollar"></i> Contas a Pagar</h1>
+        <p style="font-size:.8rem;color:#94a3b8;margin-top:2px;">OS e manutenções pendentes por prestador</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <button id="btnVerPagos" class="btn" style="background:#f1f5f9;color:#64748b;font-size:.8rem;" onclick="toggleVerPagos()">
+            <i class="fas fa-eye"></i> Ver Pagos
+        </button>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid" style="margin-bottom:20px;">
+    <div class="kpi-card red">
+        <div class="kpi-label">Total Pendente</div>
+        <div class="kpi-value" id="kpiPendente" style="font-size:1.1rem;">—</div>
+        <i class="fas fa-clock kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card" style="border-left:3px solid #ef4444;">
+        <div class="kpi-label">Vencido</div>
+        <div class="kpi-value" id="kpiVencido" style="color:#ef4444;font-size:1.1rem;">—</div>
+        <i class="fas fa-exclamation-triangle kpi-icon-bg" style="color:#ef4444;"></i>
+    </div>
+    <div class="kpi-card green">
+        <div class="kpi-label">Pago Este Mês</div>
+        <div class="kpi-value" id="kpiPagoMes" style="font-size:1.1rem;">—</div>
+        <i class="fas fa-check-circle kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card amber">
+        <div class="kpi-label">Qtd Pendente</div>
+        <div class="kpi-value" id="kpiQtdPendente">—</div>
+        <i class="fas fa-list kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card blue">
+        <div class="kpi-label">Prestadores</div>
+        <div class="kpi-value" id="kpiPrestadores">—</div>
+        <i class="fas fa-store kpi-icon-bg"></i>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card" style="margin-bottom:16px;">
+    <div class="filtros-bar">
+        <div>
+            <label class="cr-filter-label">Vencimento De</label>
+            <input type="date" id="filtroDe" class="form-control" style="width:140px;" onchange="renderizar()">
+        </div>
+        <div>
+            <label class="cr-filter-label">Vencimento Até</label>
+            <input type="date" id="filtroAte" class="form-control" style="width:140px;" onchange="renderizar()">
+        </div>
+        <div>
+            <label class="cr-filter-label">Placa</label>
+            <input type="text" id="filtroPlaca" class="form-control" style="width:110px;" placeholder="Ex: ABC1234" oninput="renderizar()">
+        </div>
+        <button class="btn" style="background:#e2e8f0;color:#475569;font-size:.78rem;" onclick="limparFiltros()">
+            <i class="fas fa-times"></i> Limpar
+        </button>
+        <div id="semLserp" style="display:none;background:#fff3cd;color:#92400e;border:1px solid #fde68a;border-radius:8px;padding:6px 12px;font-size:.75rem;">
+            <i class="fas fa-exclamation-triangle"></i> AF Car Center indisponível no momento
+        </div>
+    </div>
+</div>
+
+<!-- Acordeon -->
+<div id="acordeon" style="display:flex;flex-direction:column;gap:10px;">
+    <div style="text-align:center;padding:48px;color:#94a3b8;">
+        <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;margin-bottom:12px;display:block;"></i>
+        Carregando contas a pagar...
+    </div>
+</div>
+
+<!-- Barra flutuante de seleção múltipla -->
+<div id="barraSel" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+     background:#0f172a;color:#fff;border-radius:14px;padding:12px 20px;
+     box-shadow:0 8px 32px rgba(0,0,0,.35);align-items:center;gap:14px;z-index:500;white-space:nowrap;">
+    <div style="display:flex;align-items:center;gap:8px;">
+        <span id="selCountBadge" style="background:#2563eb;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;padding:0 5px;">0</span>
+        <span style="font-size:.85rem;">selecionados</span>
+    </div>
+    <div style="width:1px;height:22px;background:#334155;flex-shrink:0;"></div>
+    <span id="selPendente" style="font-size:.85rem;color:#94a3b8;"></span>
+    <button onclick="abrirBaixaLote()"
+        style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;
+               cursor:pointer;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-check"></i> Dar Baixa (<span id="selCountBaixa">0</span>)
+    </button>
+    <button onclick="excluirEmLote()"
+        style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:7px 14px;
+               cursor:pointer;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:6px;"
+        id="btnExcluirLote">
+        <i class="fas fa-trash"></i> Excluir (<span id="selCountExcluir">0</span>)
+    </button>
+    <button onclick="limparSel()"
+        style="background:transparent;border:none;color:#64748b;cursor:pointer;font-size:1rem;padding:2px 6px;"
+        title="Cancelar seleção">✕</button>
+</div>
+
+<!-- Modal Baixa individual -->
+<div id="modalBaixa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;" onclick="if(event.target===this)fecharBaixa()">
+    <div style="background:#fff;border-radius:14px;width:90%;max-width:440px;padding:24px;">
+        <h3 style="font-size:.95rem;font-weight:700;margin-bottom:16px;">
+            <i class="fas fa-check-circle" style="color:#16a34a;"></i>
+            Dar Baixa — <span id="baixa-label">—</span>
+        </h3>
+        <input type="hidden" id="baixa-fonte">
+        <input type="hidden" id="baixa-id">
+        <input type="hidden" id="baixa-valor-orig" value="0">
+        <div style="display:grid;gap:12px;">
+            <div>
+                <label class="cr-filter-label">Data do Pagamento *</label>
+                <input type="date" id="baixa-data" class="form-control">
+            </div>
+            <div>
+                <label class="cr-filter-label">Forma de Pagamento</label>
+                <select id="baixa-forma" class="form-control">
+                    <option value="">— selecione —</option>
+                    <option>PIX</option><option>Boleto</option><option>Dinheiro</option>
+                    <option>Cartão de Crédito</option><option>Cartão de Débito</option>
+                    <option>Transferência</option><option>Outro</option>
+                </select>
+            </div>
+            <div>
+                <label class="cr-filter-label">Desconto (R$) — opcional</label>
+                <input type="number" id="baixa-desconto" class="form-control" min="0" step="0.01" value="0" oninput="calcValorFinal()" placeholder="0,00">
+                <div style="margin-top:6px;font-size:.8rem;color:#475569;background:#f8fafc;padding:8px 12px;border-radius:8px;display:flex;gap:8px;align-items:center;">
+                    <span>Valor original: <strong id="baixa-orig-txt">—</strong></span>
+                    <span style="color:#94a3b8;">→</span>
+                    <span>A pagar: <strong id="baixa-final-txt" style="color:#16a34a;">—</strong></span>
+                </div>
+            </div>
+            <div>
+                <label class="cr-filter-label">Observações — opcional</label>
+                <textarea id="baixa-obs" class="form-control" rows="2" style="resize:vertical;" placeholder="Ex: Permuta com cliente, pagamento com desconto combinado..."></textarea>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+            <button class="btn" onclick="fecharBaixa()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+            <button class="btn btn-primary" onclick="confirmarBaixa()">
+                <i class="fas fa-check"></i> Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let _dados    = [];
+let _verPagos = false;
+let _selected = new Set(); // "fonte:id"
+const _hoje   = new Date().toISOString().slice(0,10);
+let _sortCol  = 'vencimento';
+let _sortDir  = 'asc';
+
+// ── Fechar menus ao clicar fora ─────────────────────────────────────────────
+document.addEventListener('click', () => {
+    document.querySelectorAll('.act-menu.open').forEach(m => m.classList.remove('open'));
+});
+
+function toggleActCP(e) {
+    e.stopPropagation();
+    const wrap    = e.currentTarget.closest('.act-wrap');
+    const menu    = wrap && wrap.querySelector('.act-menu');
+    const wasOpen = menu && menu.classList.contains('open');
+    document.querySelectorAll('.act-menu.open').forEach(m => m.classList.remove('open'));
+    if (menu && !wasOpen) menu.classList.add('open');
+}
+
+// ── Carregar ─────────────────────────────────────────────────────────────────
+async function carregarTudo() {
+    try {
+        const resp = await fetch('/api/contas-pagar');
+        const data = await resp.json();
+        if (!Array.isArray(data)) throw new Error(data.error || 'Erro');
+        _dados = data;
+        if (!data.some(r => r.fonte === 'lserp_os')) {
+            document.getElementById('semLserp').style.display = 'block';
+        }
+        renderizar();
+    } catch(e) {
+        showToast('Erro ao carregar contas: ' + e.message, 'error');
+        document.getElementById('acordeon').innerHTML =
+            '<div style="text-align:center;padding:48px;background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);color:#ef4444;"><i class="fas fa-exclamation-circle" style="font-size:2rem;display:block;margin-bottom:12px;"></i>Falha ao carregar dados. Tente recarregar.</div>';
+    }
+}
+
+function filtrados() {
+    const de    = document.getElementById('filtroDe').value;
+    const ate   = document.getElementById('filtroAte').value;
+    const placa = (document.getElementById('filtroPlaca').value || '').trim().toUpperCase().replace(/[-\s]/g,'');
+    return _dados.filter(r => {
+        if (de    && (r.vencimento||'') < de)  return false;
+        if (ate   && (r.vencimento||'') > ate) return false;
+        if (!_verPagos && r.pago)              return false;
+        if (placa && !(r.placa||'').toUpperCase().replace(/[-\s]/g,'').includes(placa)) return false;
+        return true;
+    });
+}
+
+function renderizar() {
+    const lista = filtrados();
+    renderizarKPIs(lista);
+    renderizarAcordeon(lista);
+}
+
+function renderizarKPIs(lista) {
+    const pendentes = lista.filter(r => !r.pago);
+    const vencidos  = pendentes.filter(r => (r.vencimento||'') < _hoje);
+    const pagosMes  = lista.filter(r => r.pago && (r.data_pagamento||'').startsWith(_hoje.slice(0,7)));
+    document.getElementById('kpiPendente').textContent    = fmtR(pendentes.reduce((s,r) => s+r.valor, 0));
+    document.getElementById('kpiVencido').textContent     = fmtR(vencidos.reduce((s,r) => s+r.valor, 0));
+    document.getElementById('kpiPagoMes').textContent     = fmtR(pagosMes.reduce((s,r) => s+r.valor, 0));
+    document.getElementById('kpiQtdPendente').textContent = pendentes.length;
+    document.getElementById('kpiPrestadores').textContent = new Set(pendentes.map(r => r.prestador)).size;
+}
+
+// ── Ordenação de colunas ─────────────────────────────────────────────────────
+function setSort(col) {
+    if (_sortCol === col) {
+        _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        _sortCol = col;
+        _sortDir = col === 'valor' ? 'desc' : 'asc';
+    }
+    renderizar();
+}
+
+function sortItens(itens) {
+    return [...itens].sort((a, b) => {
+        let va = a[_sortCol] ?? '';
+        let vb = b[_sortCol] ?? '';
+        if (_sortCol === 'valor') {
+            va = parseFloat(va) || 0;
+            vb = parseFloat(vb) || 0;
+        } else {
+            va = va.toString().toLowerCase();
+            vb = vb.toString().toLowerCase();
+        }
+        if (va < vb) return _sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return _sortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+}
+
+function sortIcon(col) {
+    if (_sortCol !== col)
+        return '<i class="fas fa-sort" style="color:#cbd5e1;margin-left:4px;font-size:.6rem;vertical-align:middle;"></i>';
+    return _sortDir === 'asc'
+        ? '<i class="fas fa-sort-up"   style="color:#2563eb;margin-left:4px;font-size:.6rem;vertical-align:middle;"></i>'
+        : '<i class="fas fa-sort-down" style="color:#2563eb;margin-left:4px;font-size:.6rem;vertical-align:middle;"></i>';
+}
+
+function renderizarAcordeon(lista) {
+    const grupos = {};
+    lista.forEach(r => {
+        if (!grupos[r.prestador]) grupos[r.prestador] = { itens:[], totalPend:0 };
+        grupos[r.prestador].itens.push(r);
+        if (!r.pago) grupos[r.prestador].totalPend += r.valor;
+    });
+
+    const el = document.getElementById('acordeon');
+    if (!Object.keys(grupos).length) {
+        el.innerHTML = `
+            <div style="text-align:center;padding:48px;background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+                <i class="fas fa-check-circle" style="font-size:2.5rem;color:#16a34a;display:block;margin-bottom:12px;"></i>
+                <p style="color:#374151;font-weight:600;">Nenhuma conta pendente!</p>
+                <p style="color:#94a3b8;font-size:.85rem;margin-top:4px;">Todas as OS e manutenções estão em dia.</p>
+            </div>`;
+        return;
+    }
+
+    const sorted = Object.entries(grupos).sort((a,b) => b[1].totalPend - a[1].totalPend);
+
+    el.innerHTML = sorted.map(([prestador, g], idx) => {
+        const pendentes = g.itens.filter(r => !r.pago);
+        const isAF = prestador === 'AF CAR CENTER';
+        const allSel = pendentes.length > 0 && pendentes.every(r => _selected.has(`${r.fonte}:${r.id}`));
+
+        const rows = sortItens(g.itens).map(r => {
+            const key = `${r.fonte}:${r.id}`;
+            const vencido = !r.pago && (r.vencimento||'') < _hoje;
+            const fonteBadge = r.fonte === 'lserp_os'
+                ? `<span class="fonte-af">AF CAR</span>`
+                : `<span class="fonte-loc">LOCAL</span>`;
+            const descInfo = r.desconto > 0 ? ` · -${fmtR(r.desconto)}` : '';
+            const obsTitle = r.observacoes ? ` title="${escHtml(r.observacoes)}"` : '';
+            const badgeSit = r.pago
+                ? `<span class="badge-status badge-pago"${obsTitle}><i class="fas fa-check"></i> Pago ${fmtData(r.data_pagamento)}${r.forma_pagamento?' · '+escHtml(r.forma_pagamento):''}${descInfo}${r.observacoes?' <i class="fas fa-comment-alt" style="font-size:.6rem;opacity:.6;"></i>':''}</span>`
+                : vencido
+                    ? `<span class="badge-status badge-vencido"><i class="fas fa-exclamation-triangle"></i> Vencido</span>`
+                    : `<span class="badge-status badge-pendente">Pendente</span>`;
+
+            const menuItems = (r.pago
+                ? `<button class="danger" onclick="removerBaixa('${r.fonte}',${r.id})"><i class="fas fa-undo"></i> Remover Baixa</button>`
+                : `<button onclick="abrirBaixa('${r.fonte}',${r.id},'${escHtml(r.prestador)}',${r.valor})"><i class="fas fa-check-circle" style="color:#16a34a;"></i> Dar Baixa</button>`)
+                + (r.fonte === 'manutencao'
+                    ? `<div class="divider"></div><button class="danger" onclick="excluirConta(${r.id})"><i class="fas fa-trash"></i> Excluir</button>`
+                    : '');
+
+            return `<tr class="${r.pago ? 'row-pago' : ''}">
+                <td style="width:36px;text-align:center;padding-right:4px;">
+                    ${!r.pago ? `<input type="checkbox" id="cb_${key}" ${_selected.has(key)?'checked':''} onchange="toggleSel('${key}')" style="width:15px;height:15px;cursor:pointer;accent-color:#2563eb;">` : ''}
+                </td>
+                <td style="width:55px;">${fonteBadge}</td>
+                <td style="font-weight:600;color:#2563eb;white-space:nowrap;">${escHtml(r.placa)}</td>
+                <td style="color:#374151;font-size:.82rem;" title="${escHtml(r.descricao)}">
+                    <span style="font-weight:600;color:#1e293b;">${escHtml((r.descricao||'').split(' · ')[0])}</span>
+                    ${(r.descricao||'').includes(' · ') ? `<span style="color:#94a3b8;"> · ${escHtml((r.descricao||'').split(' · ').slice(1).join(' · ').substring(0,55))}</span>` : ''}
+                </td>
+                <td style="white-space:nowrap;color:${vencido?'#dc2626':'#374151'};font-weight:${vencido?'700':'400'};">${fmtData(r.vencimento)}</td>
+                <td style="text-align:right;font-weight:700;white-space:nowrap;color:${vencido?'#dc2626':'#1e293b'};">${fmtR(r.valor)}</td>
+                <td>${badgeSit}</td>
+                <td style="white-space:nowrap;text-align:center;">
+                    <div class="act-wrap">
+                        <button class="act-btn" onclick="toggleActCP(event)" title="Ações">⋯</button>
+                        <div class="act-menu" onclick="event.stopPropagation()">
+                            ${menuItems}
+                        </div>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        return `
+        <div class="grupo-card" id="grupo_${idx}">
+            <div class="grupo-header" onclick="toggleGrupo(${idx})">
+                <div class="grupo-header-left">
+                    ${isAF
+                        ? `<div style="width:28px;height:28px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-wrench" style="color:#2563eb;font-size:.8rem;"></i></div>`
+                        : `<div style="width:28px;height:28px;background:#f0fdf4;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-store" style="color:#16a34a;font-size:.8rem;"></i></div>`}
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="grupo-nome">${escHtml(prestador)}</span>
+                        <span class="grupo-count ${pendentes.length>0?'red':''}">${pendentes.length} pendente${pendentes.length!==1?'s':''}</span>
+                    </div>
+                </div>
+                <div class="grupo-header-right">
+                    <span class="grupo-total">${fmtR(g.totalPend)}</span>
+                    <i class="fas fa-chevron-down grupo-icon open" id="icon_${idx}"></i>
+                </div>
+            </div>
+            <div class="grupo-body open" id="body_${idx}">
+                <table>
+                    <thead><tr>
+                        <th style="width:36px;padding-right:4px;">
+                            ${pendentes.length > 0 ? `<input type="checkbox" ${allSel?'checked':''} title="Selecionar todos" onchange="toggleSelGrupo('${escHtml(prestador)}',this)" style="width:15px;height:15px;cursor:pointer;accent-color:#2563eb;" onclick="event.stopPropagation()">` : ''}
+                        </th>
+                        <th style="width:55px;">Fonte</th>
+                        <th class="th-sort ${_sortCol==='placa'?'ativo':''}" onclick="setSort('placa')">Placa ${sortIcon('placa')}</th>
+                        <th class="th-sort ${_sortCol==='descricao'?'ativo':''}" onclick="setSort('descricao')">Descrição ${sortIcon('descricao')}</th>
+                        <th class="th-sort ${_sortCol==='vencimento'?'ativo':''}" onclick="setSort('vencimento')">Vencimento ${sortIcon('vencimento')}</th>
+                        <th class="th-sort ${_sortCol==='valor'?'ativo':''}" onclick="setSort('valor')" style="text-align:right;">Valor ${sortIcon('valor')}</th>
+                        <th>Situação</th>
+                        <th style="width:48px;">Ações</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function toggleGrupo(idx) {
+    const body = document.getElementById('body_' + idx);
+    const icon = document.getElementById('icon_' + idx);
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    icon.classList.toggle('open', !isOpen);
+}
+
+// ── Seleção ──────────────────────────────────────────────────────────────────
+function toggleSel(key) {
+    if (_selected.has(key)) _selected.delete(key);
+    else _selected.add(key);
+    const cb = document.getElementById('cb_' + key);
+    if (cb) cb.checked = _selected.has(key);
+    atualizarBarra();
+}
+
+function toggleSelGrupo(prestador, checkEl) {
+    const lista = filtrados().filter(r => r.prestador === prestador && !r.pago);
+    const allSel = lista.every(r => _selected.has(`${r.fonte}:${r.id}`));
+    lista.forEach(r => {
+        const key = `${r.fonte}:${r.id}`;
+        if (allSel) _selected.delete(key);
+        else _selected.add(key);
+        const cb = document.getElementById('cb_' + key);
+        if (cb) cb.checked = !allSel;
+    });
+    if (checkEl) checkEl.checked = !allSel;
+    atualizarBarra();
+}
+
+function limparSel() {
+    _selected.clear();
+    document.querySelectorAll('#acordeon input[type=checkbox]').forEach(cb => cb.checked = false);
+    atualizarBarra();
+}
+
+function atualizarBarra() {
+    const barra      = document.getElementById('barraSel');
+    const pendentes  = _dados.filter(r => _selected.has(`${r.fonte}:${r.id}`) && !r.pago);
+    const excluiveis = pendentes.filter(r => r.fonte === 'manutencao');
+
+    if (!pendentes.length) { barra.style.display = 'none'; return; }
+
+    const total = pendentes.reduce((s,r) => s+r.valor, 0);
+    document.getElementById('selCountBadge').textContent    = pendentes.length;
+    document.getElementById('selPendente').textContent      = `Total: ${fmtR(total)}`;
+    document.getElementById('selCountBaixa').textContent    = pendentes.length;
+    document.getElementById('selCountExcluir').textContent  = excluiveis.length;
+
+    const btnExc = document.getElementById('btnExcluirLote');
+    if (btnExc) btnExc.style.display = excluiveis.length ? 'flex' : 'none';
+
+    barra.style.display = 'flex';
+}
+
+// ── Baixa individual ─────────────────────────────────────────────────────────
+function calcValorFinal() {
+    const orig = parseFloat(document.getElementById('baixa-valor-orig').value || 0);
+    const desc = parseFloat(document.getElementById('baixa-desconto').value || 0);
+    const final = Math.max(0, orig - desc);
+    document.getElementById('baixa-orig-txt').textContent  = fmtR(orig);
+    document.getElementById('baixa-final-txt').textContent = fmtR(final);
+    document.getElementById('baixa-final-txt').style.color = (desc > 0 && desc < orig) ? '#d97706' : '#16a34a';
+}
+
+function abrirBaixa(fonte, id, prestador, valorOrig) {
+    document.getElementById('baixa-label').textContent     = prestador + (fonte==='lserp_os' ? ` · OS #${id}` : ` · Manutenção #${id}`);
+    document.getElementById('baixa-fonte').value           = fonte;
+    document.getElementById('baixa-id').value              = id;
+    document.getElementById('baixa-valor-orig').value      = valorOrig || 0;
+    document.getElementById('baixa-data').value            = _hoje;
+    document.getElementById('baixa-forma').value           = '';
+    document.getElementById('baixa-desconto').value        = '0';
+    document.getElementById('baixa-obs').value             = '';
+    calcValorFinal();
+    document.getElementById('modalBaixa').style.display    = 'flex';
+}
+
+function fecharBaixa() { document.getElementById('modalBaixa').style.display = 'none'; }
+
+async function confirmarBaixa() {
+    const fonte    = document.getElementById('baixa-fonte').value;
+    const id       = parseInt(document.getElementById('baixa-id').value);
+    const data     = document.getElementById('baixa-data').value;
+    const forma    = document.getElementById('baixa-forma').value;
+    const desconto = parseFloat(document.getElementById('baixa-desconto').value || 0);
+    const obs      = (document.getElementById('baixa-obs').value || '').trim();
+    if (!data) { showToast('Informe a data do pagamento', 'warning'); return; }
+
+    const url  = fonte==='lserp_os' ? `/api/lserp/os/${id}/baixa` : `/api/manutencoes/${id}/baixa`;
+    const body = fonte==='lserp_os'
+        ? {data_baixa:data, forma_pagamento:forma, observacoes:obs, desconto}
+        : {data_pagamento:data, forma_pagamento:forma, observacoes:obs, desconto};
+    try {
+        const resp = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        const r = await resp.json();
+        if (!r.success) throw new Error(r.error||'Erro');
+        fecharBaixa();
+        showToast('Baixa registrada!', 'success');
+        const item = _dados.find(x => x.fonte===fonte && x.id===id);
+        if (item) {
+            item.pago=true; item.data_pagamento=data; item.forma_pagamento=forma;
+            item.observacoes=obs||null; item.desconto=desconto;
+        }
+        _selected.delete(`${fonte}:${id}`);
+        renderizar();
+        atualizarBarra();
+    } catch(e) { showToast('Erro: '+e.message, 'error'); }
+}
+
+// ── Baixa em lote ────────────────────────────────────────────────────────────
+function calcValorFinalLote() {
+    const total = parseFloat(document.getElementById('lote-total-val').value || 0);
+    const desc  = parseFloat(document.getElementById('lote-desconto').value || 0);
+    const final = Math.max(0, total - desc);
+    document.getElementById('lote-final-txt').textContent = fmtR(final);
+    document.getElementById('lote-final-txt').style.color = (desc > 0 && desc < total) ? '#d97706' : '#16a34a';
+}
+
+function abrirBaixaLote() {
+    const lista = _dados.filter(r => _selected.has(`${r.fonte}:${r.id}`) && !r.pago);
+    if (!lista.length) { showToast('Nenhuma OS pendente selecionada', 'warning'); return; }
+    const total = lista.reduce((s,r) => s+r.valor, 0);
+
+    abrirModal('Dar Baixa em Lote', `
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
+            <i class="fas fa-check-double" style="font-size:1.6rem;color:#16a34a;"></i>
+            <div>
+                <div style="font-weight:700;color:#15803d;font-size:.95rem;">${lista.length} OS selecionadas</div>
+                <div style="font-size:.82rem;color:#166534;">Total original: <strong>${fmtR(total)}</strong></div>
+            </div>
+        </div>
+        <input type="hidden" id="lote-total-val" value="${total}">
+        <div style="display:grid;gap:12px;">
+            <div>
+                <label class="cr-filter-label">Data do Pagamento *</label>
+                <input type="date" id="lote-data" class="form-control" value="${_hoje}">
+            </div>
+            <div>
+                <label class="cr-filter-label">Forma de Pagamento</label>
+                <select id="lote-forma" class="form-control">
+                    <option value="">— selecione —</option>
+                    <option>PIX</option><option>Boleto</option><option>Dinheiro</option>
+                    <option>Cartão de Crédito</option><option>Cartão de Débito</option>
+                    <option>Transferência</option><option>Outro</option>
+                </select>
+            </div>
+            <div>
+                <label class="cr-filter-label">Desconto Total (R$) — opcional</label>
+                <input type="number" id="lote-desconto" class="form-control" min="0" step="0.01" value="0" oninput="calcValorFinalLote()" placeholder="0,00">
+                <div style="margin-top:6px;font-size:.8rem;color:#475569;background:#f8fafc;padding:8px 12px;border-radius:8px;display:flex;gap:8px;align-items:center;">
+                    <span>Total original: <strong>${fmtR(total)}</strong></span>
+                    <span style="color:#94a3b8;">→</span>
+                    <span>A pagar: <strong id="lote-final-txt" style="color:#16a34a;">${fmtR(total)}</strong></span>
+                </div>
+            </div>
+            <div>
+                <label class="cr-filter-label">Observações — opcional</label>
+                <textarea id="lote-obs" class="form-control" rows="2" style="resize:vertical;" placeholder="Ex: Permuta com cliente, pagamento em conjunto..."></textarea>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+            <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+            <button class="btn btn-primary" id="btnConfLote" onclick="confirmarBaixaLote()">
+                <i class="fas fa-check-double"></i> Confirmar ${lista.length} Baixas
+            </button>
+        </div>
+    `);
+}
+
+async function confirmarBaixaLote() {
+    const data         = document.getElementById('lote-data').value;
+    const forma        = document.getElementById('lote-forma').value;
+    const obs          = (document.getElementById('lote-obs').value || '').trim();
+    const descontoTotal = parseFloat(document.getElementById('lote-desconto').value || 0);
+    if (!data) { showToast('Informe a data do pagamento', 'warning'); return; }
+
+    const lista      = _dados.filter(r => _selected.has(`${r.fonte}:${r.id}`) && !r.pago);
+    const totalValor = lista.reduce((s,r) => s+r.valor, 0);
+    const btn        = document.getElementById('btnConfLote');
+    if (btn) { btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Processando...'; }
+
+    let ok=0, err=0;
+    await Promise.all(lista.map(async r => {
+        // Distribui desconto proporcional ao valor de cada item
+        const descontoItem = totalValor > 0 ? Math.round((descontoTotal * r.valor / totalValor) * 100) / 100 : 0;
+        try {
+            const url  = r.fonte==='lserp_os' ? `/api/lserp/os/${r.id}/baixa` : `/api/manutencoes/${r.id}/baixa`;
+            const body = r.fonte==='lserp_os'
+                ? {data_baixa:data, forma_pagamento:forma, observacoes:obs, desconto:descontoItem}
+                : {data_pagamento:data, forma_pagamento:forma, observacoes:obs, desconto:descontoItem};
+            const resp = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+            const j    = await resp.json();
+            if (j.success) {
+                r.pago=true; r.data_pagamento=data; r.forma_pagamento=forma;
+                r.observacoes=obs||null; r.desconto=descontoItem;
+                ok++;
+            } else err++;
+        } catch { err++; }
+    }));
+
+    _selected.clear();
+    fecharModal();
+    if (ok > 0) showToast(`${ok} baixa${ok>1?'s':''} registrada${ok>1?'s':''}!`, 'success');
+    if (err > 0) showToast(`${err} erro${err>1?'s':''} ao registrar`, 'error');
+    renderizar();
+    atualizarBarra();
+}
+
+// ── Remover baixa ────────────────────────────────────────────────────────────
+function removerBaixa(fonte, id) {
+    abrirModal('Remover Baixa', `
+        <div style="text-align:center;padding:20px 0;">
+            <i class="fas fa-exclamation-triangle" style="font-size:44px;color:#ef4444;margin-bottom:14px;display:block;"></i>
+            <p>Remover pagamento registrado?</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
+                <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+                <button class="btn btn-danger" onclick="executarRemocao('${fonte}',${id})">Remover</button>
+            </div>
+        </div>`);
+}
+
+async function executarRemocao(fonte, id) {
+    fecharModal();
+    const url = fonte==='lserp_os' ? `/api/lserp/os/${id}/baixa` : `/api/manutencoes/${id}/baixa`;
+    try {
+        const resp = await fetch(url, { method:'DELETE' });
+        const r    = await resp.json();
+        if (!r.success) throw new Error(r.error||'Erro');
+        showToast('Baixa removida.', 'success');
+        const item = _dados.find(x => x.fonte===fonte && x.id===id);
+        if (item) { item.pago=false; item.data_pagamento=null; item.forma_pagamento=null; }
+        renderizar();
+    } catch(e) { showToast('Erro: '+e.message, 'error'); }
+}
+
+// ── Excluir em lote (só manutenções locais) ──────────────────────────────────
+function excluirEmLote() {
+    const lista = _dados.filter(r => _selected.has(`${r.fonte}:${r.id}`) && r.fonte === 'manutencao' && !r.pago);
+    if (!lista.length) { showToast('Nenhuma manutenção local selecionada para excluir', 'warning'); return; }
+    abrirModal('Excluir em Lote', `
+        <div style="text-align:center;padding:10px 0 20px;">
+            <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ef4444;margin-bottom:14px;display:block;"></i>
+            <p style="color:#374151;">Excluir <strong>${lista.length} manutenção${lista.length>1?'ões':''}</strong>?</p>
+            <p style="font-size:.8rem;color:#94a3b8;margin-top:6px;">Esta ação não pode ser desfeita.</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
+                <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+                <button class="btn btn-danger" id="btnConfExcLote" onclick="_confirmaExcluirLote()">
+                    <i class="fas fa-trash"></i> Excluir ${lista.length}
+                </button>
+            </div>
+        </div>`);
+}
+
+async function _confirmaExcluirLote() {
+    const lista = _dados.filter(r => _selected.has(`${r.fonte}:${r.id}`) && r.fonte === 'manutencao' && !r.pago);
+    const btn   = document.getElementById('btnConfExcLote');
+    if (btn) { btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Excluindo...'; }
+
+    let ok=0, err=0;
+    await Promise.all(lista.map(async r => {
+        try {
+            const resp = await fetch(`/api/manutencoes/${r.id}`, { method:'DELETE' });
+            if (resp.ok) { ok++; _selected.delete(`manutencao:${r.id}`); }
+            else err++;
+        } catch { err++; }
+    }));
+
+    _dados = _dados.filter(r => !(r.fonte==='manutencao' && lista.some(x=>x.id===r.id)));
+    fecharModal();
+    if (ok > 0) showToast(`${ok} manutenção${ok>1?'ões':''} excluída${ok>1?'s':''}!`, 'success');
+    if (err > 0) showToast(`${err} erro${err>1?'s':''}`, 'error');
+    renderizar();
+    atualizarBarra();
+}
+
+// ── Excluir manutenção local (individual) ────────────────────────────────────
+function excluirConta(id) {
+    const item = _dados.find(x => x.fonte === 'manutencao' && x.id === id);
+    const label = item ? `${item.placa} — ${(item.descricao||'').substring(0,40)}` : `#${id}`;
+    abrirModal('Excluir Manutenção', `
+        <div style="text-align:center;padding:10px 0 20px;">
+            <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ef4444;margin-bottom:14px;display:block;"></i>
+            <p style="color:#374151;">Excluir <strong>${escHtml(label)}</strong>?</p>
+            <p style="font-size:.8rem;color:#94a3b8;margin-top:6px;">Esta ação não pode ser desfeita.</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
+                <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
+                <button class="btn btn-danger" onclick="_confirmaExcluir(${id})">
+                    <i class="fas fa-trash"></i> Excluir
+                </button>
+            </div>
+        </div>`);
+}
+
+async function _confirmaExcluir(id) {
+    fecharModal();
+    try {
+        const resp = await fetch(`/api/manutencoes/${id}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('Erro ao excluir');
+        showToast('Manutenção excluída.', 'success');
+        _dados = _dados.filter(x => !(x.fonte === 'manutencao' && x.id === id));
+        _selected.delete(`manutencao:${id}`);
+        renderizar();
+        atualizarBarra();
+    } catch(e) {
+        showToast('Erro: ' + e.message, 'error');
+    }
+}
+
+// ── Outros ───────────────────────────────────────────────────────────────────
+function toggleVerPagos() {
+    _verPagos = !_verPagos;
+    const btn = document.getElementById('btnVerPagos');
+    btn.style.background = _verPagos ? '#eff6ff' : '#f1f5f9';
+    btn.style.color      = _verPagos ? '#2563eb'  : '#64748b';
+    btn.innerHTML = `<i class="fas fa-eye${_verPagos?'':'-slash'}"></i> ${_verPagos?'Ocultar Pagos':'Ver Pagos'}`;
+    renderizar();
+}
+
+function limparFiltros() {
+    document.getElementById('filtroDe').value    = '';
+    document.getElementById('filtroAte').value   = '';
+    document.getElementById('filtroPlaca').value = '';
+    renderizar();
+}
+
+function fmtR(v) {
+    if (v==null||isNaN(v)) return '—';
+    return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
+}
+function fmtData(d) {
+    if (!d||d==='—') return '—';
+    const dt = new Date(d.length===10 ? d+'T12:00:00' : d);
+    return dt.toLocaleDateString('pt-BR');
+}
+function escHtml(s) {
+    return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+window.addEventListener('load', carregarTudo);
+</script>
+{% endblock %}
