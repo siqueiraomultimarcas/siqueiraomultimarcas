@@ -243,7 +243,8 @@
                     marca: veicLocal ? veicLocal.marca : '',
                     modelo: veicLocal ? veicLocal.modelo : '',
                     tipo: metaLserp[String(os.id)] || null,
-                    descricao: (os.titulo || os.obs || `OS #${os.id}`).substring(0, 80),
+                    descricao: `OS #${os.id}`,
+                    _obs: (os.titulo || os.obs || '').trim() || null,
                     data_manutencao: os.data_abertura || null,
                     km_manutencao: os.veic_km || null,
                     custo: os.tt_liquido || 0,
@@ -346,7 +347,10 @@
                         ${(m.marca || m.modelo) ? `<span style="color:#64748b;font-size:0.8rem;"> ${m.marca||''} ${m.modelo||''}</span>` : ''}
                     </td>
                     <td>${tipoLbl}</td>
-                    <td style="color:#64748b;font-size:.82rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(m.descricao||'').replace(/"/g,'&quot;')}">${m.descricao || '—'}</td>
+                    <td style="white-space:nowrap;">
+                        <span style="font-weight:600;color:#1e293b;font-size:.85rem;">OS #${m.id}</span>
+                        ${m._obs ? `<button onclick="event.stopPropagation();mostrarObsOS(${m.id})" title="${m._obs.replace(/"/g,'&quot;')}" style="margin-left:6px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:800;cursor:pointer;padding:0;line-height:18px;">!</button>` : ''}
+                    </td>
                     <td style="white-space:nowrap;">${m.km_manutencao ? m.km_manutencao.toLocaleString() + ' km' : '-'}</td>
                     <td style="font-weight:700;color:#1e293b;">${formatCurrency(m.custo)}</td>
                     <td style="font-size:.82rem;font-weight:600;color:#1d4ed8;">AF CAR CENTER</td>
@@ -493,6 +497,18 @@
         abrirModal(`${m.numero_pedido ? 'Pedido Nº ' + m.numero_pedido + ' — ' : ''}${m.oficina || 'Manutenção'}`, content);
     }
     
+    function mostrarObsOS(osId) {
+        const m = manutencoes.find(x => x._fonte === 'lserp' && x.id === osId);
+        const obs = m && m._obs ? m._obs : '—';
+        abrirModal(`OS #${osId} — Observação`, `
+            <div style="padding:8px 0 16px;">
+                <p style="color:#374151;line-height:1.6;white-space:pre-wrap;">${obs}</p>
+            </div>
+            <div style="text-align:right;">
+                <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
+            </div>`);
+    }
+
     async function verOSLSERP(id) {
         abrirModal(`OS #${id} — AF Car Center`, `
             <div style="text-align:center;padding:32px;">
