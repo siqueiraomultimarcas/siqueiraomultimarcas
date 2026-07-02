@@ -3246,8 +3246,26 @@ def get_relatorio_lucratividade():
                 custo_m = custo_a = custo_mul = 0.0
 
                 if inc_manut:
+                    # Custo local
                     cur.execute('SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE veiculo_id=%s', (vid,))
                     custo_m = float(cur.fetchone()[0])
+                    # Custo LSERP OS (AF Car Center) — busca por placa
+                    try:
+                        conn_l = get_lserp_conn()
+                        cur_l  = conn_l.cursor()
+                        cur_l.execute("""
+                            SELECT COALESCE(SUM(ROUND(tt_liquido::numeric, 2)), 0)
+                            FROM pepplow.pedido
+                            WHERE veic_placa = %s
+                              AND excluido = false
+                              AND tt_liquido > 0
+                              AND id_cliente = %s
+                        """, (v['placa'], _LSERP_CLIENTE_ID))
+                        custo_m += float(cur_l.fetchone()[0])
+                        cur_l.close()
+                        conn_l.close()
+                    except Exception as e_lserp:
+                        app.logger.warning('LSERP custo falhou placa %s: %s', v['placa'], e_lserp)
 
                 if inc_abast:
                     cur.execute('SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE veiculo_id=%s', (vid,))
