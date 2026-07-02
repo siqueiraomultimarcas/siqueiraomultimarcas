@@ -365,6 +365,7 @@ def init_db():
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS asaas_link TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS asaas_status TEXT")
     cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS frequencia_cobranca TEXT DEFAULT 'avulso'")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS valor_semanal NUMERIC(10,2)")
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS observacao TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS observacao TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS pdf_url TEXT")
@@ -1100,7 +1101,7 @@ def cobrancas_page():
 def get_cobrancas():
     with _db() as (conn, cur):
         cur.execute('''
-            SELECT l.id, l.data_inicio, l.data_fim, l.diaria,
+            SELECT l.id, l.data_inicio, l.data_fim, l.diaria, l.valor_semanal,
                    v.placa, v.marca, v.modelo,
                    c.nome AS cliente_nome, c.cpf AS cliente_cpf,
                    c.telefone AS cliente_telefone, c.email AS cliente_email
@@ -1170,7 +1171,7 @@ def get_cobrancas():
             'data_inicio':       str(loc['data_inicio']),
             'data_fim':          str(loc['data_fim']) if loc['data_fim'] else None,
             'diaria':            diaria,
-            'valor_semanal':     round(diaria * 7),
+            'valor_semanal':     float(loc['valor_semanal']) if loc.get('valor_semanal') else None,
             'pagamentos':        pagamentos,
             'total_pago':        total_pago,
             'n_pagamentos':      len(pagamentos),
@@ -1206,7 +1207,7 @@ def registrar_pagamento():
         cur.execute('''
             SELECT id, data_inicio, data_fim FROM pagamentos_locacao
             WHERE locacao_id = %s AND status IN ('pago','pendente')
-              AND data_inicio <= %s AND data_fim >= %s
+              AND data_inicio < %s AND data_fim > %s
         ''', (locacao_id, d_fim, d_ini))
         overlap = cur.fetchone()
         if overlap:
@@ -1473,6 +1474,22 @@ def cancelar_pagamento(pagamento_id):
     with _db() as (conn, cur):
         cur.execute("UPDATE pagamentos_locacao SET status='cancelado' WHERE id=%s", (pagamento_id,))
     return jsonify({'success': True})
+
+
+@app.route('/api/cobrancas/mes/<int:locacao_id>/<int:ano>/<int:mes>', methods=['DELETE'])
+@login_required
+def excluir_mes_cobrancas(locacao_id, ano, mes):
+    """Exclui todos os períodos pendentes de um mês específico de um contrato."""
+    with _db() as (conn, cur):
+        cur.execute('''
+            DELETE FROM pagamentos_locacao
+            WHERE locacao_id = %s
+              AND status = 'pendente'
+              AND EXTRACT(year FROM data_fim)  = %s
+              AND EXTRACT(month FROM data_fim) = %s
+        ''', (locacao_id, ano, mes))
+        deletados = cur.rowcount
+    return jsonify({'success': True, 'deletados': deletados})
 
 # ==================== API VEÍCULOS ====================
 
@@ -2348,7 +2365,7 @@ def get_locacao(id):
     return jsonify(result)
 
 
-def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria):
+def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria, valor_semanal=None):
     """Gera pagamentos pendentes do período atual até 31/dez do ano vigente."""
     freq_dias = {'semanal': 7, 'quinzenal': 14, 'mensal': 28}
     n_dias = freq_dias.get(freq)
@@ -2357,6 +2374,7 @@ def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria):
     hoje = _date.today()
     fim_ano = _date(hoje.year, 12, 31)
     diaria_f = float(diaria or 0)
+    valor_semanal_f = float(valor_semanal or 0)
     if isinstance(data_inicio, str):
         data_inicio = _date.fromisoformat(data_inicio)
     # avança até o primeiro período que ainda não terminou
@@ -2370,7 +2388,11 @@ def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria):
                     (locacao_id, periodo_fim, periodo_ini))
         if cur.fetchone()[0] == 0:
             dias = (periodo_fim - periodo_ini).days + 1
-            valor_prev = round(diaria_f * dias, 2)
+            # Período cheio: usa valor_semanal direto para evitar erro de arredondamento
+            if valor_semanal_f > 0 and dias == n_dias:
+                valor_prev = valor_semanal_f
+            else:
+                valor_prev = round(diaria_f * dias, 2)
             cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
             seq = cur.fetchone()[0]
             cur.execute('''INSERT INTO pagamentos_locacao
@@ -2399,17 +2421,18 @@ def add_locacao():
             fotos_saida = json.dumps(fotos_saida)
 
         freq = data.get('frequencia_cobranca') or 'avulso'
+        valor_semanal = float(data.get('valor_semanal') or 0) or None
         with _db() as (conn, cur):
             cur.execute('''
-                INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida, status, checklist, fotos_saida, observacoes, frequencia_cobranca)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+                INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida, status, checklist, fotos_saida, observacoes, frequencia_cobranca, valor_semanal)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
             ''', (data['veiculo_id'], data['cliente_id'], data['data_inicio'], data_fim,
                   diaria or None, total, data.get('km_saida') or None, data.get('status', 'ativa'),
-                  data.get('checklist'), fotos_saida, data.get('observacoes'), freq))
+                  data.get('checklist'), fotos_saida, data.get('observacoes'), freq, valor_semanal))
             new_id = cur.fetchone()[0]
             cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (data['veiculo_id'],))
             if freq in ('semanal', 'quinzenal', 'mensal') and not data_fim:
-                _gerar_periodos_futuros(cur, new_id, data['data_inicio'], freq, diaria)
+                _gerar_periodos_futuros(cur, new_id, data['data_inicio'], freq, diaria, valor_semanal)
         return jsonify({'success': True})
     except Exception as e:
         app.logger.error('Erro em add_locacao: %s', e)
@@ -2439,16 +2462,17 @@ def update_locacao(id):
             if total == '' or total is None:
                 total = None
 
+            valor_semanal_upd = float(data.get('valor_semanal') or 0) or None
             cur.execute('''
                 UPDATE locacoes SET veiculo_id=%s, cliente_id=%s, data_inicio=%s, data_fim=%s,
                 diaria=%s, total=%s, km_saida=%s, checklist=%s, fotos_saida=%s, observacoes=%s,
-                frequencia_cobranca=%s
+                frequencia_cobranca=%s, valor_semanal=%s
                 WHERE id=%s
             ''', (data.get('veiculo_id'), data.get('cliente_id'), data.get('data_inicio'),
                   data_fim, data.get('diaria'), total,
                   data.get('km_saida') or None, data.get('checklist'),
                   fotos_saida, data.get('observacoes'),
-                  data.get('frequencia_cobranca') or 'avulso', id))
+                  data.get('frequencia_cobranca') or 'avulso', valor_semanal_upd, id))
 
             veiculo_novo = data.get('veiculo_id')
             if veiculo_antigo != veiculo_novo and status_antigo == 'ativa':
@@ -2457,11 +2481,16 @@ def update_locacao(id):
 
             freq_edit = data.get('frequencia_cobranca') or 'avulso'
             if freq_edit in ('semanal', 'quinzenal', 'mensal') and not data_fim:
-                _gerar_periodos_futuros(cur, id, data.get('data_inicio'), freq_edit, data.get('diaria'))
+                _gerar_periodos_futuros(cur, id, data.get('data_inicio'), freq_edit, data.get('diaria'), valor_semanal_upd)
 
     except Exception as e:
         app.logger.error('Erro em update_locacao: %s', e)
         return jsonify({'error': 'Erro ao atualizar locação. Tente novamente.'}), 500
+
+    # Regenera períodos passados que possam ter sido excluídos
+    freq_edit = data.get('frequencia_cobranca') or 'avulso'
+    if freq_edit in ('semanal', 'quinzenal', 'mensal'):
+        gerar_periodos_pendentes(force=True)
 
     return jsonify({'success': True})
 
@@ -3219,69 +3248,92 @@ def get_relatorio_lucratividade():
         meses = _meses_periodo(data_inicio, data_fim)
 
         with _db() as (conn, cur):
+            ph_ids = ','.join(['%s'] * len(veiculos_ids))
+
+            # 1) Todos os veículos de uma vez
+            cur.execute(f'SELECT id, placa, marca, modelo, ano FROM veiculos WHERE id IN ({ph_ids})', tuple(veiculos_ids))
+            veiculos_map = {row[0]: {'id': row[0], 'placa': row[1], 'marca': row[2], 'modelo': row[3], 'ano': row[4] or 0}
+                            for row in cur.fetchall()}
+
+            # 2) Receitas agrupadas por veículo — 1 query
+            cur.execute(f'''
+                SELECT l.veiculo_id,
+                       COALESCE(SUM(COALESCE(pl.valor_previsto,0) - COALESCE(pl.desconto,0)), 0),
+                       COUNT(DISTINCT pl.locacao_id)
+                FROM pagamentos_locacao pl
+                JOIN locacoes l ON l.id = pl.locacao_id
+                WHERE l.veiculo_id IN ({ph_ids})
+                  AND pl.data_fim >= %s AND pl.data_inicio <= %s
+                  AND pl.status != 'cancelado'
+                GROUP BY l.veiculo_id
+            ''', tuple(veiculos_ids) + (data_inicio, data_fim))
+            rec_map  = {row[0]: (float(row[1]), row[2]) for row in cur.fetchall()}
+
+            # 3) Custos locais agrupados — 1 query cada
+            manut_map = {}
+            if inc_manut:
+                cur.execute(f'''SELECT veiculo_id, COALESCE(SUM(custo),0) FROM manutencoes
+                                WHERE veiculo_id IN ({ph_ids})
+                                  AND data_manutencao >= %s AND data_manutencao <= %s
+                                GROUP BY veiculo_id''', tuple(veiculos_ids) + (data_inicio, data_fim))
+                manut_map = {row[0]: float(row[1]) for row in cur.fetchall()}
+
+            abast_map = {}
+            if inc_abast:
+                cur.execute(f'''SELECT veiculo_id, COALESCE(SUM(total),0) FROM abastecimentos
+                                WHERE veiculo_id IN ({ph_ids})
+                                  AND data_abastecimento >= %s AND data_abastecimento <= %s
+                                GROUP BY veiculo_id''', tuple(veiculos_ids) + (data_inicio, data_fim))
+                abast_map = {row[0]: float(row[1]) for row in cur.fetchall()}
+
+            multas_map = {}
+            if inc_multas:
+                cur.execute(f'''SELECT veiculo_id, COALESCE(SUM(valor),0) FROM multas
+                                WHERE veiculo_id IN ({ph_ids})
+                                  AND data_infracao >= %s AND data_infracao <= %s
+                                GROUP BY veiculo_id''', tuple(veiculos_ids) + (data_inicio, data_fim))
+                multas_map = {row[0]: float(row[1]) for row in cur.fetchall()}
+
+            # 4) LSERP — 1 conexão, 1 query para todas as placas
+            lserp_map = {}
+            if inc_manut:
+                try:
+                    placas = [v['placa'] for v in veiculos_map.values()]
+                    conn_l = get_lserp_conn()
+                    cur_l  = conn_l.cursor()
+                    cur_l.execute("""
+                        SELECT veic_placa, COALESCE(SUM(ROUND(tt_liquido::numeric, 2)), 0)
+                        FROM pepplow.pedido
+                        WHERE veic_placa = ANY(%s)
+                          AND excluido = false
+                          AND tt_liquido > 0
+                          AND id_cliente = %s
+                          AND COALESCE(data_faturado::date, data_saida, dh_inc::date) >= %s
+                          AND COALESCE(data_faturado::date, data_saida, dh_inc::date) <= %s
+                        GROUP BY veic_placa
+                    """, (placas, _LSERP_CLIENTE_ID, data_inicio, data_fim))
+                    lserp_map = {row[0]: float(row[1]) for row in cur_l.fetchall()}
+                    cur_l.close()
+                    conn_l.close()
+                except Exception as e_lserp:
+                    app.logger.warning('LSERP batch falhou: %s', e_lserp)
+
+            # 5) Montar resultados — só lookups em dicts, sem queries
             resultados = []
             for vid in veiculos_ids:
-                cur.execute('SELECT * FROM veiculos WHERE id = %s', (vid,))
-                cols = [d[0] for d in cur.description]
-                vrow = cur.fetchone()
-                if not vrow:
+                v = veiculos_map.get(vid)
+                if not v:
                     continue
-                v = dict(zip(cols, vrow))
-
-                # Receita = pagamentos do período (overlapping) exceto cancelados
-                cur.execute('''
-                    SELECT COALESCE(SUM(COALESCE(pl.valor_previsto,0) - COALESCE(pl.desconto,0)), 0),
-                           COUNT(DISTINCT pl.locacao_id)
-                    FROM pagamentos_locacao pl
-                    JOIN locacoes l ON l.id = pl.locacao_id
-                    WHERE l.veiculo_id = %s
-                      AND pl.data_fim >= %s AND pl.data_inicio <= %s
-                      AND pl.status != 'cancelado'
-                ''', (vid, data_inicio, data_fim))
-                rec_row = cur.fetchone()
-                receita = float(rec_row[0])
-
-                # Custos: total histórico do veículo (sem filtro de data)
-                # Mostra o custo total acumulado vs a receita do período selecionado
-                custo_m = custo_a = custo_mul = 0.0
-
-                if inc_manut:
-                    # Custo local
-                    cur.execute('SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE veiculo_id=%s', (vid,))
-                    custo_m = float(cur.fetchone()[0])
-                    # Custo LSERP OS (AF Car Center) — busca por placa
-                    try:
-                        conn_l = get_lserp_conn()
-                        cur_l  = conn_l.cursor()
-                        cur_l.execute("""
-                            SELECT COALESCE(SUM(ROUND(tt_liquido::numeric, 2)), 0)
-                            FROM pepplow.pedido
-                            WHERE veic_placa = %s
-                              AND excluido = false
-                              AND tt_liquido > 0
-                              AND id_cliente = %s
-                        """, (v['placa'], _LSERP_CLIENTE_ID))
-                        custo_m += float(cur_l.fetchone()[0])
-                        cur_l.close()
-                        conn_l.close()
-                    except Exception as e_lserp:
-                        app.logger.warning('LSERP custo falhou placa %s: %s', v['placa'], e_lserp)
-
-                if inc_abast:
-                    cur.execute('SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE veiculo_id=%s', (vid,))
-                    custo_a = float(cur.fetchone()[0])
-
-                if inc_multas:
-                    cur.execute('SELECT COALESCE(SUM(valor),0) FROM multas WHERE veiculo_id=%s', (vid,))
-                    custo_mul = float(cur.fetchone()[0])
-
+                receita, qtd_loc = rec_map.get(vid, (0.0, 0))
+                custo_m   = manut_map.get(vid, 0.0) + lserp_map.get(v['placa'], 0.0)
+                custo_a   = abast_map.get(vid, 0.0)
+                custo_mul = multas_map.get(vid, 0.0)
                 total_custos = custo_m + custo_a + custo_mul
                 lucro = receita - total_custos
-
                 resultados.append({
-                    'veiculo': {'id': v['id'], 'placa': v['placa'], 'marca': v['marca'], 'modelo': v['modelo'], 'ano': v['ano'] or 0},
+                    'veiculo': v,
                     'receita': round(receita, 2),
-                    'qtd_locacoes': rec_row[1],
+                    'qtd_locacoes': qtd_loc,
                     'custo_manutencao': round(custo_m, 2),
                     'custo_abastecimento': round(custo_a, 2),
                     'custo_multas': round(custo_mul, 2),
@@ -3650,9 +3702,18 @@ def contas_receber_page():
 
 # ==================== GERAÇÃO AUTOMÁTICA DE PERÍODOS RECORRENTES ====================
 
-def gerar_periodos_pendentes():
-    """Cria registros pendentes para contratos recorrentes com períodos já vencidos."""
+_gerar_periodos_last_run = None  # cache diário — evita rodar em todo request
+
+def gerar_periodos_pendentes(force=False):
+    """Cria registros pendentes para contratos recorrentes com períodos já vencidos.
+    Executa no máximo 1x por dia por processo — cache em memória.
+    Passe force=True para ignorar o cache (ex: após editar um contrato)."""
+    global _gerar_periodos_last_run
     hoje = _date.today()
+    if not force and _gerar_periodos_last_run == hoje:
+        return  # já rodou hoje, pular
+    _gerar_periodos_last_run = hoje
+
     freq_dias = {'semanal': 7, 'quinzenal': 14, 'mensal': 28}
     try:
         with _db() as (conn, cur):
@@ -3673,7 +3734,23 @@ def gerar_periodos_pendentes():
                     data_fim_loc = _date.fromisoformat(str(data_fim_loc))
                 n_dias = freq_dias[freq]
                 diaria_f = float(diaria or 0)
+
+                # Carrega todos os períodos já existentes para este contrato de uma vez
+                cur.execute(
+                    'SELECT data_inicio, data_fim FROM pagamentos_locacao WHERE locacao_id=%s',
+                    (loc_id,)
+                )
+                existentes = {(r[0], r[1]) for r in cur.fetchall()}
+
+                # Calcula o próximo semana_numero
+                cur.execute(
+                    'SELECT COALESCE(MAX(semana_numero),0) FROM pagamentos_locacao WHERE locacao_id=%s',
+                    (loc_id,)
+                )
+                next_seq = cur.fetchone()[0] + 1
+
                 periodo_ini = data_inicio
+                novos = []
                 while True:
                     periodo_fim = periodo_ini + timedelta(days=n_dias - 1)
                     if data_fim_loc:
@@ -3681,32 +3758,36 @@ def gerar_periodos_pendentes():
                             break
                         if periodo_fim > data_fim_loc:
                             periodo_fim = data_fim_loc
-                    # Só gera períodos cujo fim já passou (período vencido)
                     if periodo_fim >= hoje:
                         break
-                    # Verifica se já existe registro cobrindo este período
-                    cur.execute('''
-                        SELECT COUNT(*) FROM pagamentos_locacao
-                        WHERE locacao_id=%s AND data_inicio <= %s AND data_fim >= %s
-                    ''', (loc_id, periodo_fim, periodo_ini))
-                    if cur.fetchone()[0] == 0:
+                    # Verifica em memória — sem query extra
+                    ja_existe = any(
+                        ei <= periodo_fim and ef >= periodo_ini
+                        for ei, ef in existentes
+                    )
+                    if not ja_existe:
                         dias = (periodo_fim - periodo_ini).days + 1
                         valor_prev = round(diaria_f * dias, 2)
-                        cur.execute(
-                            'SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s',
-                            (loc_id,)
-                        )
-                        next_seq = cur.fetchone()[0]
-                        cur.execute('''
-                            INSERT INTO pagamentos_locacao
-                                (locacao_id, semana_numero, data_inicio, data_fim,
-                                 valor_previsto, valor_pago, desconto, status)
-                            VALUES (%s, %s, %s, %s, %s, 0, 0, 'pendente')
-                        ''', (loc_id, next_seq, periodo_ini, periodo_fim, valor_prev))
-                        gerados += 1
+                        novos.append((loc_id, next_seq, periodo_ini, periodo_fim, valor_prev))
+                        existentes.add((periodo_ini, periodo_fim))
+                        next_seq += 1
                     periodo_ini = periodo_fim + timedelta(days=1)
+
+                # Insere todos os novos períodos de uma vez (batch)
+                if novos:
+                    cur.executemany('''
+                        INSERT INTO pagamentos_locacao
+                            (locacao_id, semana_numero, data_inicio, data_fim,
+                             valor_previsto, valor_pago, desconto, status)
+                        VALUES (%s, %s, %s, %s, %s, 0, 0, 'pendente')
+                    ''', novos)
+                    gerados += len(novos)
+
+            if gerados:
+                app.logger.info('[gerar_periodos_pendentes] %d períodos gerados', gerados)
     except Exception as e:
-        print(f'[gerar_periodos_pendentes] {e}')
+        _gerar_periodos_last_run = None  # permite tentar de novo se falhou
+        app.logger.error('[gerar_periodos_pendentes] %s', e)
 
 
 @app.route('/api/projecao-cobrancas')
