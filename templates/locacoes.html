@@ -400,7 +400,7 @@
                 '<div class="form-group"><label>Cliente *</label><select class="form-control" name="cliente_id" required>' + optCli + '</select></div>' +
             '</div>' +
             '<div class="grid-2">' +
-                '<div class="form-group"><label>Data Início *</label><input type="date" class="form-control" name="data_inicio" id="dataInicio" value="' + (isEdit ? locacao.data_inicio : '') + '" required onchange="calcularTotal()"></div>' +
+                '<div class="form-group"><label>Data Início *</label><input type="date" class="form-control" name="data_inicio" id="dataInicio" value="' + (isEdit ? locacao.data_inicio : new Date().toISOString().slice(0,10)) + '" required onchange="calcularTotal()"></div>' +
                 '<div class="form-group"><label>Data Fim <span style="font-size:0.7rem;color:#94a3b8;font-weight:400">(opcional)</span></label><input type="date" class="form-control" name="data_fim" id="dataFim" value="' + (isEdit ? (locacao.data_fim || '') : '') + '" onchange="calcularTotal()"></div>' +
             '</div>' +
             '<div class="form-group">' +
