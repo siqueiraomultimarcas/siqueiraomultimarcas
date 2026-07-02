@@ -116,6 +116,13 @@
         </select>
         <input type="text" id="busca" class="form-control" placeholder="Buscar por nome, placa, descrição..."
                oninput="renderizar()" style="max-width:200px;">
+        <div class="cr-filter-sep"></div>
+        <div style="display:flex;align-items:center;gap:6px;">
+            <span class="cr-filter-label">Vencimento</span>
+            <input type="date" id="filtroDe"  class="form-control" onchange="renderizar()" style="width:140px;" title="De">
+            <span style="color:#94a3b8;font-size:.8rem;">até</span>
+            <input type="date" id="filtroAte" class="form-control" onchange="renderizar()" style="width:140px;" title="Até">
+        </div>
         <div style="margin-left:auto;display:flex;gap:6px;">
             <button class="btn" onclick="limparFiltros()" style="font-size:.78rem;padding:6px 12px;" title="Limpar filtros">
                 <i class="fas fa-times"></i> Limpar
@@ -396,6 +403,8 @@ const _esc = s => (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/
 function limparFiltros() {
     document.getElementById('busca').value = '';
     document.getElementById('filtroCliente').value = '';
+    document.getElementById('filtroDe').value = '';
+    document.getElementById('filtroAte').value = '';
     document.querySelectorAll('#tabsStatus .tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
     document.querySelectorAll('#tabsTipo .tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
     filtroStatus='todos'; filtroTipo='todos';
@@ -506,6 +515,8 @@ function setTab(btn, group) {
 function renderizar() {
     const busca     = document.getElementById('busca').value.toLowerCase();
     const cliFilter = document.getElementById('filtroCliente').value;
+    const filtroDe  = document.getElementById('filtroDe').value;
+    const filtroAte = document.getElementById('filtroAte').value;
 
     // rebuild obs cache para evitar XSS via onclick
     _obsCache = {};
@@ -520,6 +531,9 @@ function renderizar() {
         if (busca && !(d.cliente||'').toLowerCase().includes(busca) &&
                      !(d.descricao||'').toLowerCase().includes(busca) &&
                      !(d.placa||'').toLowerCase().includes(busca)) return false;
+        const dv = d.data_vencimento || '';
+        if (filtroDe  && dv < filtroDe)  return false;
+        if (filtroAte && dv > filtroAte) return false;
         return true;
     });
 
