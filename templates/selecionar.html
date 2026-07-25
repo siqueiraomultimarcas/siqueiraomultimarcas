@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selecionar Sistema — Siqueirão Multimarcas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            min-height: 100vh;
+            background: #05060d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 700px 500px at 20% 80%, rgba(37,99,235,0.07), transparent),
+                radial-gradient(ellipse 500px 400px at 80% 20%, rgba(96,165,250,0.05), transparent);
+            pointer-events: none;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 560px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Topo */
+        .top {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .top img {
+            width: 180px;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px;
+        }
+        .greeting {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #2563eb;
+            margin-bottom: 6px;
+        }
+        .top h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 6px;
+        }
+        .top p {
+            font-size: 0.82rem;
+            color: #4b5563;
+        }
+
+        /* Cards */
+        .cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+            padding: 28px 22px;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0;
+            transition: border-color 0.2s, background 0.2s, transform 0.18s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #2563eb, transparent);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .card:hover {
+            border-color: rgba(37,99,235,0.45);
+            background: rgba(37,99,235,0.06);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 36px rgba(37,99,235,0.15);
+        }
+        .card:hover::before { opacity: 1; }
+        .card.disabled {
+            cursor: default;
+            opacity: 0.5;
+        }
+        .card.disabled:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: rgba(255,255,255,0.07);
+            background: rgba(255,255,255,0.03);
+        }
+        .card.disabled:hover::before { opacity: 0; }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(37,99,235,0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            font-size: 1.2rem;
+            color: #2563eb;
+            flex-shrink: 0;
+        }
+        .card-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 6px;
+        }
+        .card-desc {
+            font-size: 0.76rem;
+            color: #4b5563;
+            line-height: 1.55;
+            flex: 1;
+        }
+        .card-cta {
+            margin-top: 18px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .badge-soon {
+            margin-top: 18px;
+            display: inline-block;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #374151;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        /* Rodapé */
+        .bottom {
+            text-align: center;
+        }
+        .bottom a {
+            font-size: 0.78rem;
+            color: #374151;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s;
+        }
+        .bottom a:hover { color: #2563eb; }
+
+        @media (max-width: 480px) {
+            .cards { grid-template-columns: 1fr; }
+            .top h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="box">
+
+    <div class="top">
+        <img src="/static/logo_nova.png" alt="Siqueirão Multimarcas">
+        <p class="greeting">Bem-vindo de volta</p>
+        <h1>Onde você quer entrar?</h1>
+        <p>Selecione o sistema que deseja acessar.</p>
+    </div>
+
+    <div class="cards">
+
+        <!-- LOCADORA -->
+        <a class="card" href="/painel">
+            <div class="card-icon">
+                <i class="fas fa-car-side"></i>
+            </div>
+            <p class="card-name">Locadora</p>
+            <p class="card-desc">Sistema de gestão de contratos, veículos, cobranças e clientes da locadora.</p>
+            <span class="card-cta">
+                Entrar <i class="fas fa-arrow-right" style="font-size:.65rem"></i>
+            </span>
+        </a>
+
+        <!-- WEBSITE -->
+        <a class="card" href="/website">
+            <div class="card-icon">
+                <i class="fas fa-globe"></i>
+            </div>
+            <p class="card-name">Website</p>
+            <p class="card-desc">Painel de edição do site, anúncios de veículos e configurações da página pública.</p>
+            <span class="card-cta">
+                Entrar <i class="fas fa-arrow-right" style="font-size:.65rem"></i>
+            </span>
+        </a>
+
+    </div>
+
+    <div class="bottom">
+        <a href="/logout">
+            <i class="fas fa-arrow-right-from-bracket" style="font-size:.7rem"></i>
+            Sair da conta
+        </a>
+    </div>
+</div>
+</body>
+</html>

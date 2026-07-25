@@ -559,7 +559,7 @@ def manifest():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('selecionar'))
 
     if request.method == 'POST':
         ip = request.remote_addr or '0.0.0.0'
@@ -588,7 +588,7 @@ def login():
             from urllib.parse import urlparse
             if urlparse(next_url).netloc:
                 next_url = ''
-            return redirect(next_url or url_for('index'))
+            return redirect(next_url or url_for('selecionar'))
 
         _brute_record(ip)
         return render_template('login.html', erro='E-mail ou senha incorretos.')
@@ -601,6 +601,12 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+
+@app.route('/selecionar')
+@login_required
+def selecionar():
+    return render_template('selecionar.html')
 
 
 @app.route('/setup', methods=['GET', 'POST'])
@@ -640,9 +646,22 @@ def setup():
 # ==================== ROTAS DE PÁGINAS ====================
 
 @app.route('/')
+def home():
+    if current_user.is_authenticated:
+        return redirect(url_for('selecionar'))
+    return render_template('home.html')
+
+
+@app.route('/painel')
 @login_required
 def index():
     return render_template('index.html')
+
+
+@app.route('/website')
+@login_required
+def website():
+    return render_template('website.html')
 
 
 @app.route('/clientes')

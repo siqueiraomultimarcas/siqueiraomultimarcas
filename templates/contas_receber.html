@@ -119,9 +119,10 @@
         <div class="cr-filter-sep"></div>
         <div style="display:flex;align-items:center;gap:6px;">
             <span class="cr-filter-label">Vencimento</span>
-            <input type="date" id="filtroDe"  class="form-control" onchange="renderizar()" style="width:140px;" title="De">
+            <button id="btnVigente" class="tab-btn active" onclick="filtrarVigente()" style="font-size:.78rem;padding:5px 10px;">Vigente</button>
+            <input type="date" id="filtroDe"  class="form-control" onchange="onFiltroDataChange()" style="width:140px;" title="De">
             <span style="color:#94a3b8;font-size:.8rem;">até</span>
-            <input type="date" id="filtroAte" class="form-control" onchange="renderizar()" style="width:140px;" title="Até">
+            <input type="date" id="filtroAte" class="form-control" onchange="onFiltroDataChange()" style="width:140px;" title="Até">
         </div>
         <div style="margin-left:auto;display:flex;gap:6px;">
             <button class="btn" onclick="limparFiltros()" style="font-size:.78rem;padding:6px 12px;" title="Limpar filtros">
@@ -400,11 +401,25 @@ const hoje = new Date().toISOString().split('T')[0];
 // Encode seguro para atributos HTML — evita XSS via interpolação
 const _esc = s => (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+function filtrarVigente() {
+    const ano = new Date().getFullYear();
+    document.getElementById('filtroDe').value  = ano + '-01-01';
+    document.getElementById('filtroAte').value = ano + '-12-31';
+    document.getElementById('btnVigente').classList.add('active');
+    renderizar();
+}
+
+function onFiltroDataChange() {
+    document.getElementById('btnVigente').classList.remove('active');
+    renderizar();
+}
+
 function limparFiltros() {
     document.getElementById('busca').value = '';
     document.getElementById('filtroCliente').value = '';
     document.getElementById('filtroDe').value = '';
     document.getElementById('filtroAte').value = '';
+    document.getElementById('btnVigente').classList.remove('active');
     document.querySelectorAll('#tabsStatus .tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
     document.querySelectorAll('#tabsTipo .tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
     filtroStatus='todos'; filtroTipo='todos';
@@ -1526,7 +1541,7 @@ function toggleLocMenu(e, id) {
 function closeLocMenus(){document.querySelectorAll('.loc-menu').forEach(m=>m.style.display='none');}
 document.addEventListener('click',closeLocMenus);
 
-window.addEventListener('load', carregarDados);
+window.addEventListener('load', async () => { await carregarDados(); filtrarVigente(); });
 
 // Esconder barra ao recarregar dados
 const _origCarregarDados = carregarDados;

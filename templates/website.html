@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor do Website — Siqueirão Multimarcas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            min-height: 100vh;
+            background: #05060d;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 24px;
+            color: #f1f5f9;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(ellipse 700px 500px at 20% 80%, rgba(37,99,235,0.07), transparent),
+                radial-gradient(ellipse 500px 400px at 80% 20%, rgba(96,165,250,0.05), transparent);
+            pointer-events: none;
+        }
+        .box {
+            width: 100%; max-width: 480px;
+            text-align: center; position: relative; z-index: 1;
+        }
+        .logo { height: 56px; width: auto; margin: 0 auto 32px; display: block; }
+        .icon-wrap {
+            width: 80px; height: 80px; border-radius: 20px;
+            background: rgba(37,99,235,0.1);
+            border: 1px solid rgba(37,99,235,0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; color: #2563eb;
+            margin: 0 auto 28px;
+        }
+        h1 { font-size: 1.6rem; font-weight: 700; color: #f1f5f9; margin-bottom: 12px; }
+        p { font-size: 0.88rem; color: #4b5563; line-height: 1.7; max-width: 360px; margin: 0 auto 36px; }
+        .btn-back {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 22px; border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #94a3b8; font-size: 0.82rem; font-weight: 600;
+            text-decoration: none;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-back:hover { border-color: rgba(37,99,235,0.4); color: #2563eb; }
+    </style>
+</head>
+<body>
+<div class="box">
+    <img src="/static/logo_nova.png" alt="Siqueirão Multimarcas" class="logo">
+    <div class="icon-wrap"><i class="fas fa-globe"></i></div>
+    <h1>Editor do Website</h1>
+    <p>O painel de edição do site público, anúncios de veículos e configurações estão em desenvolvimento. Em breve você poderá gerenciar tudo por aqui.</p>
+    <a class="btn-back" href="/selecionar">
+        <i class="fas fa-arrow-left" style="font-size:.75rem"></i> Voltar à seleção
+    </a>
+</div>
+</body>
+</html>

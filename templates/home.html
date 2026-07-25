@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siqueirão Multimarcas · Veículos Seminovos Selecionados</title>
+    <meta name="description" content="Estoque selecionado de carros seminovos e usados com procedência, documentação em dia e as melhores condições.">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --dark:   #0d1117;
+            --dark2:  #161c28;
+            --blue:   #2563eb;
+            --blue-l: #60a5fa;
+            --bg:     #f8fafc;
+            --card:   #ffffff;
+            --border: #e2e8f0;
+            --text:   #1e293b;
+            --muted:  #64748b;
+            --shadow: 0 4px 20px -6px rgba(15,22,40,0.15);
+            --shadow-up: 0 10px 40px -10px rgba(15,22,40,0.25);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: inherit; text-decoration: none; }
+        img { max-width: 100%; display: block; }
+
+        .container {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ── HEADER ──────────────────────────────────────────── */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--dark);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .header-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 10px 24px;
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+        .header-logo img {
+            height: 52px;
+            width: auto;
+        }
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            flex: 1;
+            justify-content: center;
+        }
+        .header-nav a {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            color: rgba(255,255,255,0.7);
+            text-transform: uppercase;
+            transition: color 0.15s;
+        }
+        .header-nav a:hover { color: var(--blue-l); }
+        .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .btn-wa {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 16px; border-radius: 8px;
+            background: #22c55e; color: #fff;
+            font-size: 0.75rem; font-weight: 600;
+            transition: filter 0.15s; white-space: nowrap;
+        }
+        .btn-wa:hover { filter: brightness(1.08); }
+        .btn-sistema {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 16px; border-radius: 8px;
+            background: var(--blue); color: #fff;
+            font-size: 0.75rem; font-weight: 600;
+            box-shadow: 0 0 20px rgba(37,99,235,0.3);
+            transition: background 0.15s, transform 0.15s; white-space: nowrap;
+        }
+        .btn-sistema:hover { background: #1d4ed8; transform: scale(1.04); }
+        .header-sub {
+            border-top: 1px solid rgba(255,255,255,0.05);
+            background: rgba(0,0,0,0.35);
+            padding: 6px 24px;
+        }
+        .header-sub-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.67rem;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.05em;
+        }
+        .header-sub-inner span { display: flex; align-items: center; gap: 16px; }
+
+        /* ── HERO ────────────────────────────────────────────── */
+        .hero {
+            position: relative;
+            overflow: hidden;
+            background: var(--dark);
+            color: #fff;
+            min-height: 580px;
+            display: flex;
+            align-items: center;
+        }
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(90deg, rgba(10,12,20,0.95) 0%, rgba(10,12,20,0.6) 45%, rgba(10,12,20,0.15) 100%),
+                url('/static/img/hero-car.jpg');
+            background-size: cover;
+            background-position: center;
+            z-index: 0;
+        }
+        .hero .container {
+            position: relative;
+            z-index: 1;
+            padding-top: 80px;
+            padding-bottom: 80px;
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            border: 1px solid rgba(37,99,235,0.45);
+            background: rgba(37,99,235,0.1);
+            border-radius: 100px;
+            padding: 5px 16px;
+            font-size: 0.68rem; font-weight: 600;
+            letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--blue-l);
+            backdrop-filter: blur(4px);
+            margin-bottom: 22px;
+        }
+        .badge-dot {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--blue); box-shadow: 0 0 6px var(--blue);
+            animation: blink 2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.6rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            max-width: 640px;
+            margin-bottom: 18px;
+        }
+        .hero h1 .gradient-text {
+            background: linear-gradient(90deg, var(--blue), var(--blue-l));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-sub {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.65);
+            max-width: 480px;
+            margin-bottom: 32px;
+        }
+        .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 36px; }
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 13px 22px; border-radius: 8px;
+            background: var(--blue); color: #fff;
+            font-size: 0.86rem; font-weight: 600;
+            box-shadow: 0 6px 24px rgba(37,99,235,0.35);
+            transition: transform 0.15s;
+        }
+        .btn-primary:hover { transform: scale(1.04); }
+        .btn-outline-hero {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 22px; border-radius: 8px;
+            background: rgba(255,255,255,0.05); color: #fff;
+            font-size: 0.86rem; font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(4px);
+            transition: background 0.15s;
+        }
+        .btn-outline-hero:hover { background: rgba(255,255,255,0.1); }
+        .hero-search {
+            display: flex; align-items: center; gap: 10px;
+            max-width: 600px;
+            background: rgba(255,255,255,0.97);
+            border-radius: 12px;
+            padding: 8px 8px 8px 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .hero-search i { color: var(--muted); font-size: 0.88rem; flex-shrink: 0; }
+        .hero-search input {
+            flex: 1; border: none; outline: none; background: transparent;
+            font-size: 0.85rem; font-family: 'Poppins', sans-serif;
+            color: var(--text);
+        }
+        .hero-search input::placeholder { color: #94a3b8; }
+        .hero-search button {
+            padding: 10px 18px; border-radius: 8px;
+            background: var(--dark); color: #fff;
+            font-size: 0.8rem; font-weight: 600; font-family: 'Poppins', sans-serif;
+            border: none; cursor: pointer;
+            transition: background 0.15s;
+        }
+        .hero-search button:hover { background: var(--blue); }
+
+        /* ── BENEFITS ────────────────────────────────────────── */
+        .benefits {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+        }
+        .benefits .container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            padding-top: 36px;
+            padding-bottom: 36px;
+        }
+        .benefit {
+            display: flex; align-items: flex-start; gap: 16px;
+        }
+        .benefit-icon {
+            width: 46px; height: 46px; border-radius: 10px;
+            background: rgba(37,99,235,0.1);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--blue); font-size: 1.1rem; flex-shrink: 0;
+        }
+        .benefit h3 { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+        .benefit p { font-size: 0.8rem; color: var(--muted); line-height: 1.55; }
+
+        /* ── VEHICLES ────────────────────────────────────────── */
+        .vehicles-sec { padding: 64px 0; }
+        .section-head {
+            display: flex; align-items: flex-end; justify-content: space-between;
+            gap: 16px; flex-wrap: wrap; margin-bottom: 36px;
+        }
+        .section-eye {
+            font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--blue); margin-bottom: 4px;
+        }
+        .section-head h2 {
+            font-size: clamp(1.4rem, 3vw, 2rem);
+            font-weight: 700; letter-spacing: -0.02em; color: var(--text);
+        }
+        .link-all {
+            font-size: 0.82rem; font-weight: 600; color: var(--blue);
+            display: inline-flex; align-items: center; gap: 5px;
+            white-space: nowrap;
+            transition: gap 0.15s;
+        }
+        .link-all:hover { gap: 8px; }
+        .vehicle-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 20px;
+        }
+
+        /* ── VEHICLE CARD ─────────────────────────────────────── */
+        .v-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px; overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex; flex-direction: column;
+            text-decoration: none; color: inherit;
+        }
+        .v-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-up); }
+        .v-card-thumb {
+            position: relative;
+            aspect-ratio: 4/3;
+            overflow: hidden;
+            background: #e2e8f0;
+        }
+        .v-card-thumb img {
+            width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.5s;
+        }
+        .v-card:hover .v-card-thumb img { transform: scale(1.05); }
+        .v-card-year {
+            position: absolute; top: 10px; left: 10px;
+            background: var(--dark);
+            color: #fff; font-size: 0.65rem; font-weight: 700;
+            letter-spacing: 0.06em; text-transform: uppercase;
+            padding: 3px 8px; border-radius: 5px;
+        }
+        .v-card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+        .v-card-brand {
+            font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--blue); margin-bottom: 2px;
+        }
+        .v-card-name {
+            font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 12px;
+        }
+        .v-card-name span { font-weight: 400; color: var(--muted); }
+        .v-card-specs {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 6px; margin-bottom: 14px;
+        }
+        .v-spec {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.72rem; color: var(--muted);
+        }
+        .v-spec i { font-size: 0.7rem; color: var(--muted); width: 12px; text-align: center; }
+        .v-card-foot {
+            display: flex; align-items: center; justify-content: space-between;
+            border-top: 1px solid var(--border); padding-top: 12px; margin-top: auto;
+        }
+        .v-price-lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+        .v-price {
+            font-size: 1.2rem; font-weight: 800; color: var(--text);
+            letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+        }
+        .btn-ver {
+            display: inline-block;
+            padding: 8px 14px; border-radius: 7px;
+            background: var(--blue); color: #fff;
+            font-size: 0.73rem; font-weight: 600; font-family: 'Poppins', sans-serif;
+            border: none; cursor: pointer;
+            transition: background 0.15s;
+            text-decoration: none;
+        }
+        .v-card:hover .btn-ver { background: var(--dark); }
+
+        /* ── TRADE-IN ─────────────────────────────────────────── */
+        .tradein {
+            background: var(--dark);
+            color: #fff;
+            padding: 64px 0;
+        }
+        .tradein .container {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 32px; flex-wrap: wrap;
+        }
+        .tradein h2 { font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 700; margin-bottom: 8px; }
+        .tradein p { font-size: 0.9rem; color: rgba(255,255,255,0.6); max-width: 500px; }
+        .btn-gradient {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 13px 24px; border-radius: 8px;
+            background: linear-gradient(90deg, var(--blue), var(--blue-l));
+            color: #fff; font-size: 0.86rem; font-weight: 700;
+            white-space: nowrap; flex-shrink: 0;
+            box-shadow: 0 6px 24px rgba(37,99,235,0.35);
+            transition: transform 0.15s;
+        }
+        .btn-gradient:hover { transform: scale(1.04); }
+
+        /* ── FOOTER ──────────────────────────────────────────── */
+        .footer {
+            background: var(--dark);
+            border-top: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.6);
+            padding: 52px 0 0;
+        }
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 48px;
+        }
+        .footer-logo img { height: 48px; width: auto; margin-bottom: 16px; }
+        .footer-blurb { font-size: 0.8rem; line-height: 1.7; max-width: 280px; }
+        .footer-socials { display: flex; gap: 10px; margin-top: 20px; }
+        .footer-social {
+            width: 34px; height: 34px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.12);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.82rem; color: rgba(255,255,255,0.5);
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .footer-social:hover { border-color: var(--blue); color: var(--blue-l); }
+        .footer-col h4 {
+            font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.12em; color: #fff; margin-bottom: 16px;
+        }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+        .footer-col ul a { font-size: 0.8rem; color: rgba(255,255,255,0.55); transition: color 0.15s; }
+        .footer-col ul a:hover { color: var(--blue-l); }
+        .footer-contact-item { display: flex; align-items: flex-start; gap: 9px; font-size: 0.8rem; margin-bottom: 10px; }
+        .footer-contact-item i { color: var(--blue-l); margin-top: 2px; font-size: 0.75rem; flex-shrink: 0; }
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.07);
+            padding: 16px 0;
+        }
+        .footer-bottom .container {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.72rem; color: rgba(255,255,255,0.3);
+            flex-wrap: wrap; gap: 8px;
+        }
+
+        /* ── RESPONSIVE ──────────────────────────────────────── */
+        @media (max-width: 860px) {
+            .header-nav { display: none; }
+            .benefits .container { grid-template-columns: 1fr; }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+            .tradein .container { flex-direction: column; align-items: flex-start; }
+        }
+        @media (max-width: 600px) {
+            .vehicle-grid { grid-template-columns: 1fr; }
+            .footer-grid { grid-template-columns: 1fr; }
+            .header-sub { display: none; }
+            .hero .container { padding-top: 52px; padding-bottom: 52px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══ HEADER ════════════════════════════════════════════════ -->
+<header class="header">
+    <div class="header-main">
+        <a href="/" class="header-logo">
+            <img src="/static/logo_nova.png" alt="Siqueirão Multimarcas">
+        </a>
+        <nav class="header-nav">
+            <a href="/">INÍCIO</a>
+            <a href="#estoque">ESTOQUE</a>
+            <a href="#financiamento">FINANCIAMENTO</a>
+            <a href="#empresa">EMPRESA</a>
+            <a href="#contato">CONTATO</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn-wa" href="https://wa.me/554196411018" target="_blank" rel="noopener">
+                <i class="fab fa-whatsapp"></i> (41) 96411-0118
+            </a>
+            <a class="btn-sistema" href="{{ url_for('selecionar') if current_user.is_authenticated else url_for('login') }}">
+                <i class="fas fa-lock"></i> Acessar Sistema
+            </a>
+        </div>
+    </div>
+    <div class="header-sub">
+        <div class="header-sub-inner">
+            <span>SIQUEIRÃO MULTIMARCAS · CARROS SELECIONADOS</span>
+            <span>
+                <span><i class="fas fa-phone"></i> (41) 96411-0118</span>
+                <span>Seg–Sáb · 08h às 19h</span>
+            </span>
+        </div>
+    </div>
+</header>
+
+<!-- ══ HERO ══════════════════════════════════════════════════ -->
+<section class="hero">
+    <div class="hero-bg"></div>
+    <div class="container">
+        <span class="hero-badge">
+            <span class="badge-dot"></span>
+            Procedência garantida · Carros selecionados
+        </span>
+        <h1>
+            Carros selecionados<br>
+            <span class="gradient-text">para quem entende do negócio.</span>
+        </h1>
+        <p class="hero-sub">Veículos revisados e selecionados, com documentação em dia e condições especiais.</p>
+        <div class="hero-ctas">
+            <a class="btn-primary" href="#estoque">
+                Ver estoque completo <i class="fas fa-arrow-right"></i>
+            </a>
+            <a class="btn-outline-hero" href="https://wa.me/554196411018" target="_blank" rel="noopener">
+                Falar com um consultor
+            </a>
+        </div>
+        <form class="hero-search" onsubmit="return false">
+            <i class="fas fa-search"></i>
+            <input type="text" id="busca" placeholder="Pesquise por marca ou modelo (ex: Corolla, HB20, Golf...)" oninput="filtrarCarros(this.value)">
+            <button type="button" onclick="filtrarCarros(document.getElementById('busca').value)">Buscar</button>
+        </form>
+    </div>
+</section>
+
+<!-- ══ BENEFITS ══════════════════════════════════════════════ -->
+<section class="benefits" id="empresa">
+    <div class="container">
+        <div class="benefit">
+            <div class="benefit-icon"><i class="fas fa-shield-halved"></i></div>
+            <div>
+                <h3>Procedência garantida</h3>
+                <p>Todos os veículos vistoriados e com histórico verificado.</p>
+            </div>
+        </div>
+        <div class="benefit">
+            <div class="benefit-icon"><i class="fas fa-wallet"></i></div>
+            <div>
+                <h3>Melhores condições</h3>
+                <p>Financiamento em até 60x com aprovação facilitada.</p>
+            </div>
+        </div>
+        <div class="benefit">
+            <div class="benefit-icon"><i class="fas fa-handshake"></i></div>
+            <div>
+                <h3>Atendimento personalizado</h3>
+                <p>Atendimento consultivo e condições especiais para você.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ VEÍCULOS ═══════════════════════════════════════════════ -->
+<section class="vehicles-sec" id="estoque">
+    <div class="container">
+        <div class="section-head">
+            <div>
+                <p class="section-eye">Destaques do estoque</p>
+                <h2>Confira alguns modelos disponíveis</h2>
+            </div>
+            <a class="link-all" href="https://wa.me/554196411018" target="_blank">
+                Ver todos <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        <div class="vehicle-grid" id="vehicleGrid">
+            <!-- cards gerados pelo JS -->
+        </div>
+    </div>
+</section>
+
+<!-- ══ TRADE-IN ═══════════════════════════════════════════════ -->
+<section class="tradein" id="financiamento">
+    <div class="container">
+        <div>
+            <h2>Quer vender ou trocar seu carro?</h2>
+            <p>Fazemos avaliação rápida e pagamos o melhor preço do mercado. Traga o seu veículo até nossa loja.</p>
+        </div>
+        <a class="btn-gradient" href="https://wa.me/554196411018?text=Ol%C3%A1%2C+quero+avaliar+meu+ve%C3%ADculo" target="_blank">
+            Solicitar avaliação <i class="fas fa-arrow-right"></i>
+        </a>
+    </div>
+</section>
+
+<!-- ══ FOOTER ════════════════════════════════════════════════ -->
+<footer class="footer" id="contato">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-logo-col">
+                <div class="footer-logo">
+                    <img src="/static/logo_nova.png" alt="Siqueirão Multimarcas">
+                </div>
+                <p class="footer-blurb">Veículos seminovos e usados selecionados. Procedência garantida, documentação em dia e as melhores condições para você.</p>
+                <div class="footer-socials">
+                    <a class="footer-social" href="https://instagram.com/siqueiraomultimarcas" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a class="footer-social" href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a class="footer-social" href="https://wa.me/554196411018" target="_blank" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Navegação</h4>
+                <ul>
+                    <li><a href="/">Início</a></li>
+                    <li><a href="#estoque">Estoque</a></li>
+                    <li><a href="#financiamento">Financiamento</a></li>
+                    <li><a href="#empresa">Empresa</a></li>
+                    <li><a href="#contato">Contato</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contato</h4>
+                <div class="footer-contact-item"><i class="fas fa-map-marker-alt"></i> Curitiba – PR, Bairro Alto</div>
+                <div class="footer-contact-item"><i class="fas fa-phone"></i> (41) 96411-0118</div>
+                <div class="footer-contact-item"><i class="fas fa-envelope"></i> contato@siqueirao.com.br</div>
+                <div class="footer-contact-item"><i class="fas fa-clock"></i> Seg–Sáb · 08h às 19h</div>
+            </div>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <div class="container">
+            <span>© 2026 SIQUEIRÃO MULTIMARCAS LTDA · Todos os direitos reservados</span>
+            <span>CNPJ 55.779.028/0001-60</span>
+        </div>
+    </div>
+</footer>
+
+<script>
+const carros = [
+    { marca:'Volkswagen', modelo:'Golf', versao:'1.4 TSI Highline', ano:'2022/2023', km:28500, comb:'Flex',     trans:'Automático', preco:118900, img:'/static/img/car-1.jpg' },
+    { marca:'Honda',      modelo:'Civic',   versao:'2.0 Touring CVT',  ano:'2021/2022', km:42300, comb:'Gasolina', trans:'Automático', preco:139500, img:'/static/img/car-2.jpg' },
+    { marca:'Toyota',     modelo:'Corolla Cross', versao:'2.0 XRE',    ano:'2023/2024', km:15800, comb:'Flex',     trans:'Automático', preco:162900, img:'/static/img/car-3.jpg' },
+    { marca:'Chevrolet',  modelo:'S10',     versao:'2.8 LTZ 4x4 Diesel', ano:'2022/2023', km:55200, comb:'Diesel', trans:'Automático', preco:218900, img:'/static/img/car-4.jpg' },
+    { marca:'Volkswagen', modelo:'T-Cross', versao:'1.4 TSI Highline', ano:'2022/2022', km:38100, comb:'Flex',     trans:'Automático', preco:129900, img:'/static/img/car-5.jpg' },
+    { marca:'Hyundai',    modelo:'HB20',    versao:'1.0 Comfort Plus', ano:'2021/2022', km:47600, comb:'Flex',     trans:'Manual',     preco:72900,  img:'/static/img/car-6.jpg' },
+];
+
+function fmtKm(v){ return v.toLocaleString('pt-BR') + ' km'; }
+function fmtPreco(v){ return 'R$ ' + v.toLocaleString('pt-BR'); }
+
+function renderCard(c){
+    const wa = 'https://wa.me/554196411018?text=' + encodeURIComponent('Olá, tenho interesse no ' + c.marca + ' ' + c.modelo + ' ' + c.versao);
+    return `<a class="v-card" href="${wa}" target="_blank" rel="noopener">
+        <div class="v-card-thumb">
+            <img src="${c.img}" alt="${c.marca} ${c.modelo}" loading="lazy">
+            <span class="v-card-year">${c.ano.split('/')[1]}</span>
+        </div>
+        <div class="v-card-body">
+            <p class="v-card-brand">${c.marca}</p>
+            <h3 class="v-card-name">${c.modelo} <span>${c.versao}</span></h3>
+            <div class="v-card-specs">
+                <span class="v-spec"><i class="fas fa-calendar-alt"></i> ${c.ano}</span>
+                <span class="v-spec"><i class="fas fa-tachometer-alt"></i> ${fmtKm(c.km)}</span>
+                <span class="v-spec"><i class="fas fa-gas-pump"></i> ${c.comb}</span>
+                <span class="v-spec"><i class="fas fa-cog"></i> ${c.trans}</span>
+            </div>
+            <div class="v-card-foot">
+                <div>
+                    <p class="v-price-lbl">A partir de</p>
+                    <p class="v-price">${fmtPreco(c.preco)}</p>
+                </div>
+                <span class="btn-ver">Ver detalhes</span>
+            </div>
+        </div>
+    </a>`;
+}
+
+let carrosFiltrados = [...carros];
+
+function renderizar(){
+    document.getElementById('vehicleGrid').innerHTML = carrosFiltrados.length
+        ? carrosFiltrados.map(renderCard).join('')
+        : '<p style="color:var(--muted);grid-column:1/-1;text-align:center;padding:40px">Nenhum veículo encontrado.</p>';
+}
+
+function filtrarCarros(q){
+    const t = q.trim().toLowerCase();
+    carrosFiltrados = t ? carros.filter(c => (c.marca+' '+c.modelo+' '+c.versao).toLowerCase().includes(t)) : [...carros];
+    renderizar();
+}
+
+renderizar();
+
+/* smooth scroll */
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+        const el = document.querySelector(a.getAttribute('href'));
+        if(el){ e.preventDefault(); el.scrollIntoView({behavior:'smooth'}); }
+    });
+});
+</script>
+</body>
+</html>
