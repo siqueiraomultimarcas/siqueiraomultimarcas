@@ -643,6 +643,17 @@ def setup():
 
     return render_template('setup.html')
 
+# ==================== DADOS ESTÁTICOS DO SITE ====================
+
+VEICULOS_SITE = [
+    {'id':0,'marca':'Volkswagen','modelo':'Golf','versao':'1.4 TSI Highline','ano':'2022/2023','km':28500,'comb':'Flex','trans':'Automático','cor':'Prata','preco':118900,'img':'/static/img/car-1.jpg'},
+    {'id':1,'marca':'Honda','modelo':'Civic','versao':'2.0 Touring CVT','ano':'2021/2022','km':42300,'comb':'Gasolina','trans':'Automático','cor':'Preto','preco':139500,'img':'/static/img/car-2.jpg'},
+    {'id':2,'marca':'Toyota','modelo':'Corolla Cross','versao':'2.0 XRE','ano':'2023/2024','km':15800,'comb':'Flex','trans':'Automático','cor':'Branco','preco':162900,'img':'/static/img/car-3.jpg'},
+    {'id':3,'marca':'Chevrolet','modelo':'S10','versao':'2.8 LTZ 4x4 Diesel','ano':'2022/2023','km':55200,'comb':'Diesel','trans':'Automático','cor':'Azul','preco':218900,'img':'/static/img/car-4.jpg'},
+    {'id':4,'marca':'Volkswagen','modelo':'T-Cross','versao':'1.4 TSI Highline','ano':'2022/2022','km':38100,'comb':'Flex','trans':'Automático','cor':'Cinza','preco':129900,'img':'/static/img/car-5.jpg'},
+    {'id':5,'marca':'Hyundai','modelo':'HB20','versao':'1.0 Comfort Plus','ano':'2021/2022','km':47600,'comb':'Flex','trans':'Manual','cor':'Vermelho','preco':72900,'img':'/static/img/car-6.jpg'},
+]
+
 # ==================== ROTAS DE PÁGINAS ====================
 
 @app.route('/')
@@ -662,6 +673,34 @@ def index():
 @login_required
 def website():
     return render_template('website.html')
+
+
+@app.route('/estoque')
+def estoque():
+    return render_template('estoque.html')
+
+
+@app.route('/financiamento')
+def financiamento():
+    return render_template('financiamento.html')
+
+
+@app.route('/empresa')
+def empresa():
+    return render_template('empresa.html')
+
+
+@app.route('/contato')
+def contato():
+    return render_template('contato.html')
+
+
+@app.route('/veiculo/<int:vid>')
+def veiculo_detalhe(vid):
+    if vid < 0 or vid >= len(VEICULOS_SITE):
+        return redirect(url_for('estoque'))
+    v = VEICULOS_SITE[vid]
+    return render_template('veiculo.html', v=v)
 
 
 @app.route('/clientes')

@@ -1,0 +1,126 @@
+{% extends "base_public.html" %}
+{% block title %}{{ v.marca }} {{ v.modelo }} {{ v.versao }} · Siqueirão Multimarcas{% endblock %}
+
+{% block extra_css %}
+<style>
+.back-bar { padding: 16px 0; border-bottom: 1px solid var(--border); background: var(--card); }
+.back-link { display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; font-weight: 500; color: var(--muted); transition: color .15s; }
+.back-link:hover { color: var(--blue); }
+
+.detail-section { padding: 48px 0 72px; }
+.detail-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: start; }
+
+/* Foto */
+.photo-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+.photo-wrap img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+
+/* Info */
+.v-brand { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--blue); margin-bottom: 6px; }
+.v-name  { font-size: 2.4rem; font-weight: 800; letter-spacing: -.03em; color: var(--text); line-height: 1.1; }
+.v-version { font-size: 1rem; color: var(--muted); margin-top: 6px; margin-bottom: 24px; }
+
+/* Price card */
+.price-card { background: #0d1117; border-radius: 14px; padding: 24px; margin-bottom: 24px; }
+.price-lbl  { font-size: .65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: rgba(255,255,255,.5); margin-bottom: 6px; }
+.price-val  { font-size: 2.4rem; font-weight: 800; color: #fff; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; margin-bottom: 6px; }
+.price-info { font-size: .78rem; color: rgba(255,255,255,.45); margin-bottom: 20px; }
+.price-btns { display: flex; gap: 10px; }
+.btn-interest {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 16px; border-radius: 8px; background: var(--blue); color: #fff;
+    font-size: .85rem; font-weight: 600; font-family: 'Poppins',sans-serif;
+    border: none; cursor: pointer; transition: background .15s;
+}
+.btn-interest:hover { background: #1d4ed8; }
+.btn-finance {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 16px; border-radius: 8px;
+    background: rgba(255,255,255,.08); color: #fff;
+    font-size: .85rem; font-weight: 600; font-family: 'Poppins',sans-serif;
+    border: 1px solid rgba(255,255,255,.15); cursor: pointer; transition: background .15s;
+    text-decoration: none;
+}
+.btn-finance:hover { background: rgba(255,255,255,.14); }
+
+/* Specs */
+.specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.spec-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.spec-label { font-size: .62rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+.spec-label i { font-size: .7rem; }
+.spec-value { font-size: .92rem; font-weight: 600; color: var(--text); }
+
+@media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } .v-name { font-size: 1.8rem; } .price-val { font-size: 1.8rem; } }
+@media (max-width: 500px) { .price-btns { flex-direction: column; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="back-bar">
+    <div class="container">
+        <a class="back-link" href="/estoque">
+            <i class="fas fa-arrow-left"></i> Voltar ao estoque
+        </a>
+    </div>
+</div>
+
+<section class="detail-section">
+    <div class="container">
+        <div class="detail-grid">
+            <!-- FOTO -->
+            <div class="photo-wrap">
+                <img src="{{ v.img }}" alt="{{ v.marca }} {{ v.modelo }}">
+            </div>
+
+            <!-- INFO -->
+            <div>
+                <p class="v-brand">{{ v.marca }}</p>
+                <h1 class="v-name">{{ v.modelo }}</h1>
+                <p class="v-version">{{ v.versao }}</p>
+
+                <!-- PREÇO -->
+                <div class="price-card">
+                    <p class="price-lbl">Preço à vista</p>
+                    <p class="price-val">R$ {{ "{:,.0f}".format(v.preco).replace(",", ".") }}</p>
+                    <p class="price-info">ou em até 60x no financiamento</p>
+                    <div class="price-btns">
+                        <button class="btn-interest" onclick="window.open('https://wa.me/554196411018?text='+encodeURIComponent('Olá! Tenho interesse no {{ v.marca }} {{ v.modelo }} {{ v.versao }} ({{ v.ano }}) por R$ {{ "{:,.0f}".format(v.preco).replace(",", ".") }}'),'_blank')">
+                            <i class="fab fa-whatsapp"></i> Tenho interesse
+                        </button>
+                        <a class="btn-finance" href="/financiamento">
+                            Simular financiamento
+                        </a>
+                    </div>
+                </div>
+
+                <!-- SPECS -->
+                <div class="specs-grid">
+                    <div class="spec-card">
+                        <p class="spec-label"><i class="fas fa-calendar-alt"></i> Ano</p>
+                        <p class="spec-value">{{ v.ano }}</p>
+                    </div>
+                    <div class="spec-card">
+                        <p class="spec-label"><i class="fas fa-tachometer-alt"></i> Quilometragem</p>
+                        <p class="spec-value">{{ "{:,}".format(v.km).replace(",", ".") }} km</p>
+                    </div>
+                    <div class="spec-card">
+                        <p class="spec-label"><i class="fas fa-gas-pump"></i> Combustível</p>
+                        <p class="spec-value">{{ v.comb }}</p>
+                    </div>
+                    <div class="spec-card">
+                        <p class="spec-label"><i class="fas fa-cog"></i> Câmbio</p>
+                        <p class="spec-value">{{ v.trans }}</p>
+                    </div>
+                    <div class="spec-card">
+                        <p class="spec-label"><i class="fas fa-palette"></i> Cor</p>
+                        <p class="spec-value">{{ v.cor }}</p>
+                    </div>
+                    <div class="spec-card">
+                        <p class="spec-label"><i class="fas fa-shield-halved"></i> Procedência</p>
+                        <p class="spec-value">Verificada</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

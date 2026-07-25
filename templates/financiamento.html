@@ -1,0 +1,78 @@
+{% extends "base_public.html" %}
+{% block title %}Financiamento · Siqueirão Multimarcas{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-content{padding:64px 0}
+.fin-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+.fin-form{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;box-shadow:var(--shadow)}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px}
+.form-group input,.form-group select{width:100%;border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:11px 14px;font-size:.88rem;font-family:'Poppins',sans-serif;color:var(--text);outline:none;transition:border-color .15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--blue)}
+.form-group input::placeholder{color:#94a3b8}
+.btn-submit{width:100%;padding:13px;border-radius:8px;background:var(--blue);color:#fff;font-size:.9rem;font-weight:600;font-family:'Poppins',sans-serif;border:none;cursor:pointer;transition:transform .15s,background .15s}
+.btn-submit:hover{transform:scale(1.01);background:#1d4ed8}
+.why-title{font-size:1.4rem;font-weight:700;color:var(--text);margin-bottom:24px}
+.why-list{list-style:none;display:flex;flex-direction:column;gap:18px}
+.why-item{display:flex;align-items:flex-start;gap:14px;font-size:.9rem;color:var(--text)}
+.why-item i{color:var(--blue);font-size:1.1rem;margin-top:1px;flex-shrink:0}
+@media(max-width:860px){.fin-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-banner">
+    <div class="container">
+        <h1>Simule seu financiamento</h1>
+        <p class="sub">Trabalhamos com as principais instituições financeiras do país. Preencha os dados abaixo e nossa equipe entra em contato com a melhor proposta.</p>
+    </div>
+</section>
+
+<div class="page-content">
+    <div class="container">
+        <div class="fin-grid">
+            <form class="fin-form" onsubmit="enviarWA(event)">
+                <div class="form-group"><label>Nome completo</label><input type="text" id="nome" placeholder="Seu nome"></div>
+                <div class="form-group"><label>E-mail</label><input type="email" id="email" placeholder="voce@email.com"></div>
+                <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="telefone" placeholder="(41) 96411-0118"></div>
+                <div class="form-group"><label>Veículo de interesse</label><input type="text" id="veiculo" placeholder="Ex: Volkswagen Golf"></div>
+                <div class="form-group"><label>Valor da entrada (R$)</label><input type="text" id="entrada" placeholder="20.000"></div>
+                <div class="form-group">
+                    <label>Nº de parcelas</label>
+                    <select id="parcelas">
+                        <option>24x</option><option>36x</option><option>48x</option><option>60x</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit">Solicitar simulação</button>
+            </form>
+
+            <div>
+                <h2 class="why-title">Por que financiar com a Siqueirão?</h2>
+                <ul class="why-list">
+                    <li class="why-item"><i class="fas fa-circle-check"></i> Aprovação de crédito em até 24h</li>
+                    <li class="why-item"><i class="fas fa-circle-check"></i> Parcelas em até 60x com as melhores taxas</li>
+                    <li class="why-item"><i class="fas fa-circle-check"></i> Trabalhamos com Santander, Itaú, Bradesco, BV e mais</li>
+                    <li class="why-item"><i class="fas fa-circle-check"></i> Aceitamos seu carro como parte do pagamento</li>
+                    <li class="why-item"><i class="fas fa-circle-check"></i> Atendimento consultivo do início ao fim</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function enviarWA(e){
+    e.preventDefault();
+    const nome=document.getElementById('nome').value||'Não informado';
+    const veiculo=document.getElementById('veiculo').value||'Não informado';
+    const entrada=document.getElementById('entrada').value||'Não informado';
+    const parcelas=document.getElementById('parcelas').value;
+    const telefone=document.getElementById('telefone').value||'Não informado';
+    const msg=`Olá! Gostaria de simular um financiamento.\n\nNome: ${nome}\nVeículo: ${veiculo}\nEntrada: R$ ${entrada}\nParcelas: ${parcelas}\nTelefone: ${telefone}`;
+    window.open('https://wa.me/554196411018?text='+encodeURIComponent(msg),'_blank');
+}
+</script>
+{% endblock %}

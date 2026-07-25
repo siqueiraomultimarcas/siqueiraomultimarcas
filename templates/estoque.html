@@ -1,0 +1,118 @@
+{% extends "base_public.html" %}
+{% block title %}Estoque de Veículos · Siqueirão Multimarcas{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-content{background:var(--bg);padding:48px 0 64px}
+.filter-bar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 0}
+.filter-bar .container{display:flex;gap:12px;align-items:center}
+.search-wrap{flex:1;display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:0 12px}
+.search-wrap i{color:var(--muted);font-size:.85rem;flex-shrink:0}
+.search-wrap input{flex:1;border:none;outline:none;background:transparent;font-size:.85rem;font-family:'Poppins',sans-serif;color:var(--text);padding:11px 0}
+.search-wrap input::placeholder{color:#94a3b8}
+.brand-select{border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:11px 14px;font-size:.85rem;font-family:'Poppins',sans-serif;color:var(--text);outline:none;cursor:pointer;min-width:160px}
+.brand-select:focus{border-color:var(--blue)}
+.count-text{color:var(--muted);font-size:.82rem;margin-bottom:28px}
+.vehicle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}
+.v-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s;display:flex;flex-direction:column;text-decoration:none;color:inherit}
+.v-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-up)}
+.v-card-thumb{position:relative;aspect-ratio:4/3;overflow:hidden;background:#e2e8f0}
+.v-card-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+.v-card:hover .v-card-thumb img{transform:scale(1.05)}
+.v-card-year{position:absolute;top:10px;left:10px;background:var(--dark);color:#fff;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:5px}
+.v-card-body{padding:16px;flex:1;display:flex;flex-direction:column}
+.v-card-brand{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:2px}
+.v-card-name{font-size:1rem;font-weight:700;margin-bottom:12px}
+.v-card-name span{font-weight:400;color:var(--muted)}
+.v-card-specs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}
+.v-spec{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted)}
+.v-spec i{font-size:.7rem;width:12px;text-align:center}
+.v-card-foot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:12px;margin-top:auto}
+.v-price-lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.v-price{font-size:1.2rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.btn-ver{display:inline-block;padding:8px 14px;border-radius:7px;background:var(--blue);color:#fff;font-size:.73rem;font-weight:600;border:none;cursor:pointer;transition:background .15s}
+.v-card:hover .btn-ver{background:var(--dark)}
+.empty{text-align:center;padding:60px 0;color:var(--muted);font-size:.9rem}
+@media(max-width:600px){.vehicle-grid{grid-template-columns:1fr}.filter-bar .container{flex-direction:column}.brand-select{width:100%}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-banner">
+    <div class="container">
+        <p class="eyebrow">Nosso estoque</p>
+        <h1>Veículos disponíveis</h1>
+        <p class="sub" id="countText">6 veículo(s) encontrados</p>
+    </div>
+</section>
+
+<div class="filter-bar">
+    <div class="container">
+        <div class="search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="busca" placeholder="Buscar por marca ou modelo...">
+        </div>
+        <select class="brand-select" id="marcaSelect">
+            <option value="todas">Todas as marcas</option>
+            <option value="Volkswagen">Volkswagen</option>
+            <option value="Honda">Honda</option>
+            <option value="Toyota">Toyota</option>
+            <option value="Chevrolet">Chevrolet</option>
+            <option value="Hyundai">Hyundai</option>
+        </select>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="container">
+        <div class="vehicle-grid" id="vehicleGrid"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const carros=[
+    {id:0,marca:'Volkswagen',modelo:'Golf',versao:'1.4 TSI Highline',ano:'2022/2023',km:28500,comb:'Flex',trans:'Automático',preco:118900,img:'/static/img/car-1.jpg'},
+    {id:1,marca:'Honda',modelo:'Civic',versao:'2.0 Touring CVT',ano:'2021/2022',km:42300,comb:'Gasolina',trans:'Automático',preco:139500,img:'/static/img/car-2.jpg'},
+    {id:2,marca:'Toyota',modelo:'Corolla Cross',versao:'2.0 XRE',ano:'2023/2024',km:15800,comb:'Flex',trans:'Automático',preco:162900,img:'/static/img/car-3.jpg'},
+    {id:3,marca:'Chevrolet',modelo:'S10',versao:'2.8 LTZ 4x4 Diesel',ano:'2022/2023',km:55200,comb:'Diesel',trans:'Automático',preco:218900,img:'/static/img/car-4.jpg'},
+    {id:4,marca:'Volkswagen',modelo:'T-Cross',versao:'1.4 TSI Highline',ano:'2022/2022',km:38100,comb:'Flex',trans:'Automático',preco:129900,img:'/static/img/car-5.jpg'},
+    {id:5,marca:'Hyundai',modelo:'HB20',versao:'1.0 Comfort Plus',ano:'2021/2022',km:47600,comb:'Flex',trans:'Manual',preco:72900,img:'/static/img/car-6.jpg'},
+];
+function fmtKm(v){return v.toLocaleString('pt-BR')+' km'}
+function fmtP(v){return 'R$ '+v.toLocaleString('pt-BR')}
+function card(c){
+    return`<a class="v-card" href="/veiculo/${c.id}">
+    <div class="v-card-thumb"><img src="${c.img}" alt="${c.marca} ${c.modelo}" loading="lazy"><span class="v-card-year">${c.ano.split('/')[1]}</span></div>
+    <div class="v-card-body">
+        <p class="v-card-brand">${c.marca}</p>
+        <h3 class="v-card-name">${c.modelo} <span>${c.versao}</span></h3>
+        <div class="v-card-specs">
+            <span class="v-spec"><i class="fas fa-calendar-alt"></i> ${c.ano}</span>
+            <span class="v-spec"><i class="fas fa-tachometer-alt"></i> ${fmtKm(c.km)}</span>
+            <span class="v-spec"><i class="fas fa-gas-pump"></i> ${c.comb}</span>
+            <span class="v-spec"><i class="fas fa-cog"></i> ${c.trans}</span>
+        </div>
+        <div class="v-card-foot"><div><p class="v-price-lbl">A partir de</p><p class="v-price">${fmtP(c.preco)}</p></div><span class="btn-ver">Ver detalhes</span></div>
+    </div></a>`;
+}
+function filtrar(){
+    const q=document.getElementById('busca').value.trim().toLowerCase();
+    const m=document.getElementById('marcaSelect').value;
+    const r=carros.filter(c=>{
+        const matchQ=!q||(c.marca+' '+c.modelo+' '+c.versao).toLowerCase().includes(q);
+        const matchM=m==='todas'||c.marca===m;
+        return matchQ&&matchM;
+    });
+    document.getElementById('vehicleGrid').innerHTML=r.length?r.map(card).join(''):'<div class="empty"><i class="fas fa-car" style="font-size:2rem;margin-bottom:12px;display:block"></i>Nenhum veículo encontrado.</div>';
+    document.getElementById('countText').textContent=r.length+' veículo(s) encontrados';
+}
+document.getElementById('busca').addEventListener('input',filtrar);
+document.getElementById('marcaSelect').addEventListener('change',filtrar);
+// Ler query string ?q=
+const qs=new URLSearchParams(window.location.search);
+if(qs.get('q')){document.getElementById('busca').value=qs.get('q');}
+filtrar();
+</script>
+{% endblock %}

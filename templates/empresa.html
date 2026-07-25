@@ -1,0 +1,46 @@
+{% extends "base_public.html" %}
+{% block title %}A Empresa · Siqueirão Multimarcas{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-content{padding:64px 0}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:36px 24px;text-align:center;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
+.stat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-up)}
+.stat-card i{font-size:2.2rem;color:var(--blue);margin-bottom:16px;display:block}
+.stat-value{font-size:1.8rem;font-weight:800;color:var(--text);letter-spacing:-.02em;margin-bottom:6px}
+.stat-desc{font-size:.82rem;color:var(--muted)}
+@media(max-width:700px){.stats-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-banner">
+    <div class="container">
+        <h1>Sobre a Siqueirão Multimarcas</h1>
+        <p class="sub">Somos uma revenda multimarcas focada em oferecer veículos seminovos selecionados, com procedência verificada e atendimento consultivo. Trabalhamos com condições especiais para lojistas parceiros e também na venda direta ao cliente final.</p>
+    </div>
+</section>
+
+<div class="page-content">
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="fas fa-car"></i>
+                <p class="stat-value">+500 veículos</p>
+                <p class="stat-desc">Comercializados por ano</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-users"></i>
+                <p class="stat-value">+2.000 clientes</p>
+                <p class="stat-desc">Atendidos com excelência</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-award"></i>
+                <p class="stat-value">10+ anos</p>
+                <p class="stat-desc">De tradição no mercado</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

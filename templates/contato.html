@@ -1,0 +1,80 @@
+{% extends "base_public.html" %}
+{% block title %}Contato · Siqueirão Multimarcas{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-content{padding:64px 0}
+.contato-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+.info-cards{display:flex;flex-direction:column;gap:14px}
+.info-card{display:flex;align-items:flex-start;gap:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:var(--shadow)}
+.info-icon{width:40px;height:40px;border-radius:9px;background:rgba(37,99,235,.1);display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:.95rem;flex-shrink:0}
+.info-label{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px}
+.info-value{font-size:.9rem;font-weight:500;color:var(--text)}
+.contact-form{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;box-shadow:var(--shadow)}
+.contact-form h2{font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:20px}
+.contact-form input,.contact-form textarea{width:100%;border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:11px 14px;font-size:.88rem;font-family:'Poppins',sans-serif;color:var(--text);outline:none;transition:border-color .15s;margin-bottom:14px;display:block}
+.contact-form input:focus,.contact-form textarea:focus{border-color:var(--blue)}
+.contact-form input::placeholder,.contact-form textarea::placeholder{color:#94a3b8}
+.contact-form textarea{resize:vertical;min-height:130px}
+.btn-submit{width:100%;padding:13px;border-radius:8px;background:var(--blue);color:#fff;font-size:.9rem;font-weight:600;font-family:'Poppins',sans-serif;border:none;cursor:pointer;transition:transform .15s,background .15s}
+.btn-submit:hover{transform:scale(1.01);background:#1d4ed8}
+@media(max-width:860px){.contato-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-banner">
+    <div class="container">
+        <h1>Fale com a gente</h1>
+        <p class="sub">Nossa equipe está pronta para atender você de segunda a sábado.</p>
+    </div>
+</section>
+
+<div class="page-content">
+    <div class="container">
+        <div class="contato-grid">
+            <div class="info-cards">
+                <div class="info-card">
+                    <div class="info-icon"><i class="fas fa-map-marker-alt"></i></div>
+                    <div><p class="info-label">Endereço</p><p class="info-value">Curitiba - PR, Bairro Alto</p></div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon"><i class="fas fa-phone"></i></div>
+                    <div><p class="info-label">Telefone / WhatsApp</p><p class="info-value">(41) 96411-0118</p></div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon"><i class="fas fa-envelope"></i></div>
+                    <div><p class="info-label">E-mail</p><p class="info-value">contato@siqueirao.com.br</p></div>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon"><i class="fas fa-clock"></i></div>
+                    <div><p class="info-label">Horário</p><p class="info-value">Seg a Sex: 08h às 19h · Sáb: 08h às 14h</p></div>
+                </div>
+            </div>
+
+            <form class="contact-form" onsubmit="enviarWA(event)">
+                <h2>Envie sua mensagem</h2>
+                <input type="text" id="nome" placeholder="Nome">
+                <input type="email" id="email" placeholder="E-mail">
+                <input type="tel" id="telefone" placeholder="Telefone">
+                <textarea id="mensagem" placeholder="Mensagem"></textarea>
+                <button type="submit" class="btn-submit">Enviar mensagem</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function enviarWA(e){
+    e.preventDefault();
+    const nome=document.getElementById('nome').value||'Não informado';
+    const email=document.getElementById('email').value||'Não informado';
+    const telefone=document.getElementById('telefone').value||'Não informado';
+    const mensagem=document.getElementById('mensagem').value||'Sem mensagem';
+    const msg=`Olá! Mensagem via site.\n\nNome: ${nome}\nE-mail: ${email}\nTelefone: ${telefone}\n\n${mensagem}`;
+    window.open('https://wa.me/554196411018?text='+encodeURIComponent(msg),'_blank');
+}
+</script>
+{% endblock %}
