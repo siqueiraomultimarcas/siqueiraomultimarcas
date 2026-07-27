@@ -1,5 +1,5 @@
 flask==2.3.3
-psycopg2==2.9.9
+psycopg2-binary==2.9.9
 flask-login==0.6.3
 cloudinary==1.40.0
 python-dotenv==1.0.1
