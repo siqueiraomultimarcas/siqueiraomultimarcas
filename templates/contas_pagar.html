@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Contas a Pagar - Locadora{% endblock %}
 {% block content %}
 <style>
@@ -9,18 +9,18 @@
                         letter-spacing:.07em; color:#64748b; margin-bottom:4px; }
 .kpi-card .kpi-value { font-size:1.35rem; font-weight:700; color:#0f172a; }
 .kpi-card .kpi-icon-bg { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
-.kpi-card.red   { border-left:3px solid #dc2626; } .kpi-card.red   .kpi-value { color:#dc2626; } .kpi-card.red   .kpi-icon-bg { color:#dc2626; }
+.kpi-card.red   { border-left:3px solid #c73a2e; } .kpi-card.red   .kpi-value { color:#c73a2e; } .kpi-card.red   .kpi-icon-bg { color:#c73a2e; }
 .kpi-card.green { border-left:3px solid #16a34a; } .kpi-card.green .kpi-value { color:#16a34a; } .kpi-card.green .kpi-icon-bg { color:#16a34a; }
-.kpi-card.amber { border-left:3px solid #d97706; } .kpi-card.amber .kpi-value { color:#d97706; } .kpi-card.amber .kpi-icon-bg { color:#d97706; }
-.kpi-card.blue  { border-left:3px solid #2563eb; } .kpi-card.blue  .kpi-value { color:#2563eb; } .kpi-card.blue  .kpi-icon-bg { color:#2563eb; }
+.kpi-card.amber { border-left:3px solid #d4a800; } .kpi-card.amber .kpi-value { color:#d4a800; } .kpi-card.amber .kpi-icon-bg { color:#d4a800; }
+.kpi-card.blue  { border-left:3px solid #008cdd; } .kpi-card.blue  .kpi-value { color:#008cdd; } .kpi-card.blue  .kpi-icon-bg { color:#008cdd; }
 
 /* Badges */
 .badge-status { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 9px;
                 border-radius:4px; border:1px solid transparent; }
-.badge-pendente { background:#fffbeb; color:#92400e; border-color:#fde68a; }
+.badge-pendente { background:#fffbeb; color:#7a6000; border-color:#fde68a; }
 .badge-pago     { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
-.badge-vencido  { background:#fef2f2; color:#dc2626; border-color:#fecaca; font-weight:700; }
-.fonte-af  { background:#eff6ff; color:#1d4ed8; font-size:.6rem; padding:1px 6px; border-radius:3px; font-weight:700; }
+.badge-vencido  { background:#fef2f2; color:#c73a2e; border-color:#fecaca; font-weight:700; }
+.fonte-af  { background:#e8f5ff; color:#015e94; font-size:.6rem; padding:1px 6px; border-radius:3px; font-weight:700; }
 .fonte-loc { background:#f0fdf4; color:#166534; font-size:.6rem; padding:1px 6px; border-radius:3px; font-weight:700; }
 
 .filtros-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; padding:12px 16px; }
@@ -35,9 +35,9 @@
 .grupo-header-left { display:flex; align-items:center; gap:10px; }
 .grupo-nome  { font-weight:700; font-size:.95rem; color:#0f172a; }
 .grupo-count { background:#f1f5f9; color:#64748b; font-size:.68rem; font-weight:600; padding:2px 8px; border-radius:20px; }
-.grupo-count.red { background:#fef2f2; color:#dc2626; }
+.grupo-count.red { background:#fef2f2; color:#c73a2e; }
 .grupo-header-right { display:flex; align-items:center; gap:14px; }
-.grupo-total { font-weight:700; color:#dc2626; font-size:1.1rem; }
+.grupo-total { font-weight:700; color:#c73a2e; font-size:1.1rem; }
 .grupo-icon { color:#94a3b8; transition:transform .2s; font-size:.85rem; }
 .grupo-icon.open { transform:rotate(180deg); }
 .grupo-body { border-top:1px solid #f1f5f9; display:none; overflow:visible; }
@@ -52,8 +52,8 @@
 
 /* Cabeçalho ordenável */
 .grupo-body th.th-sort { cursor:pointer; user-select:none; transition:color .1s,background .1s; }
-.grupo-body th.th-sort:hover { color:#2563eb; background:#eff6ff; }
-.grupo-body th.th-sort.ativo { color:#2563eb; }
+.grupo-body th.th-sort:hover { color:#008cdd; background:#e8f5ff; }
+.grupo-body th.th-sort.ativo { color:#008cdd; }
 
 /* Act menu */
 .act-wrap { position:relative; display:inline-block; }
@@ -68,7 +68,7 @@
                    background:transparent; cursor:pointer; font-size:.83rem; color:#374151;
                    display:flex; align-items:center; gap:8px; }
 .act-menu button:hover { background:#f8fafc; }
-.act-menu button.danger { color:#dc2626; }
+.act-menu button.danger { color:#c73a2e; }
 .act-menu .divider { height:1px; background:#f1f5f9; margin:2px 0; }
 
 /* Barra flutuante de seleção */
@@ -99,10 +99,10 @@
         <div class="kpi-value" id="kpiPendente" style="font-size:1.1rem;">—</div>
         <i class="fas fa-clock kpi-icon-bg"></i>
     </div>
-    <div class="kpi-card" style="border-left:3px solid #ef4444;">
+    <div class="kpi-card" style="border-left:3px solid #ef473a;">
         <div class="kpi-label">Vencido</div>
-        <div class="kpi-value" id="kpiVencido" style="color:#ef4444;font-size:1.1rem;">—</div>
-        <i class="fas fa-exclamation-triangle kpi-icon-bg" style="color:#ef4444;"></i>
+        <div class="kpi-value" id="kpiVencido" style="color:#ef473a;font-size:1.1rem;">—</div>
+        <i class="fas fa-exclamation-triangle kpi-icon-bg" style="color:#ef473a;"></i>
     </div>
     <div class="kpi-card green">
         <div class="kpi-label">Pago Este Mês</div>
@@ -139,7 +139,7 @@
         <button class="btn" style="background:#e2e8f0;color:#475569;font-size:.78rem;" onclick="limparFiltros()">
             <i class="fas fa-times"></i> Limpar
         </button>
-        <div id="semLserp" style="display:none;background:#fff3cd;color:#92400e;border:1px solid #fde68a;border-radius:8px;padding:6px 12px;font-size:.75rem;">
+        <div id="semLserp" style="display:none;background:#fff3cd;color:#7a6000;border:1px solid #fde68a;border-radius:8px;padding:6px 12px;font-size:.75rem;">
             <i class="fas fa-exclamation-triangle"></i> AF Car Center indisponível no momento
         </div>
     </div>
@@ -158,7 +158,7 @@
      background:#0f172a;color:#fff;border-radius:14px;padding:12px 20px;
      box-shadow:0 8px 32px rgba(0,0,0,.35);align-items:center;gap:14px;z-index:500;white-space:nowrap;">
     <div style="display:flex;align-items:center;gap:8px;">
-        <span id="selCountBadge" style="background:#2563eb;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;padding:0 5px;">0</span>
+        <span id="selCountBadge" style="background:#008cdd;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;padding:0 5px;">0</span>
         <span style="font-size:.85rem;">selecionados</span>
     </div>
     <div style="width:1px;height:22px;background:#334155;flex-shrink:0;"></div>
@@ -169,7 +169,7 @@
         <i class="fas fa-check"></i> Dar Baixa (<span id="selCountBaixa">0</span>)
     </button>
     <button onclick="excluirEmLote()"
-        style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:7px 14px;
+        style="background:#c73a2e;color:#fff;border:none;border-radius:8px;padding:7px 14px;
                cursor:pointer;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:6px;"
         id="btnExcluirLote">
         <i class="fas fa-trash"></i> Excluir (<span id="selCountExcluir">0</span>)
@@ -262,7 +262,7 @@ async function carregarTudo() {
     } catch(e) {
         showToast('Erro ao carregar contas: ' + e.message, 'error');
         document.getElementById('acordeon').innerHTML =
-            '<div style="text-align:center;padding:48px;background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);color:#ef4444;"><i class="fas fa-exclamation-circle" style="font-size:2rem;display:block;margin-bottom:12px;"></i>Falha ao carregar dados. Tente recarregar.</div>';
+            '<div style="text-align:center;padding:48px;background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);color:#ef473a;"><i class="fas fa-exclamation-circle" style="font-size:2rem;display:block;margin-bottom:12px;"></i>Falha ao carregar dados. Tente recarregar.</div>';
     }
 }
 
@@ -328,8 +328,8 @@ function sortIcon(col) {
     if (_sortCol !== col)
         return '<i class="fas fa-sort" style="color:#cbd5e1;margin-left:4px;font-size:.6rem;vertical-align:middle;"></i>';
     return _sortDir === 'asc'
-        ? '<i class="fas fa-sort-up"   style="color:#2563eb;margin-left:4px;font-size:.6rem;vertical-align:middle;"></i>'
-        : '<i class="fas fa-sort-down" style="color:#2563eb;margin-left:4px;font-size:.6rem;vertical-align:middle;"></i>';
+        ? '<i class="fas fa-sort-up"   style="color:#008cdd;margin-left:4px;font-size:.6rem;vertical-align:middle;"></i>'
+        : '<i class="fas fa-sort-down" style="color:#008cdd;margin-left:4px;font-size:.6rem;vertical-align:middle;"></i>';
 }
 
 function renderizarAcordeon(lista) {
@@ -381,16 +381,16 @@ function renderizarAcordeon(lista) {
 
             return `<tr class="${r.pago ? 'row-pago' : ''}">
                 <td style="width:36px;text-align:center;padding-right:4px;">
-                    ${!r.pago ? `<input type="checkbox" id="cb_${key}" ${_selected.has(key)?'checked':''} onchange="toggleSel('${key}')" style="width:15px;height:15px;cursor:pointer;accent-color:#2563eb;">` : ''}
+                    ${!r.pago ? `<input type="checkbox" id="cb_${key}" ${_selected.has(key)?'checked':''} onchange="toggleSel('${key}')" style="width:15px;height:15px;cursor:pointer;accent-color:#008cdd;">` : ''}
                 </td>
                 <td style="width:55px;">${fonteBadge}</td>
-                <td style="font-weight:600;color:#2563eb;white-space:nowrap;">${escHtml(r.placa)}</td>
+                <td style="font-weight:600;color:#008cdd;white-space:nowrap;">${escHtml(r.placa)}</td>
                 <td style="color:#374151;font-size:.82rem;" title="${escHtml(r.descricao)}">
                     <span style="font-weight:600;color:#1e293b;">${escHtml((r.descricao||'').split(' · ')[0])}</span>
                     ${(r.descricao||'').includes(' · ') ? `<span style="color:#94a3b8;"> · ${escHtml((r.descricao||'').split(' · ').slice(1).join(' · ').substring(0,55))}</span>` : ''}
                 </td>
-                <td style="white-space:nowrap;color:${vencido?'#dc2626':'#374151'};font-weight:${vencido?'700':'400'};">${fmtData(r.vencimento)}</td>
-                <td style="text-align:right;font-weight:700;white-space:nowrap;color:${vencido?'#dc2626':'#1e293b'};">${fmtR(r.valor)}</td>
+                <td style="white-space:nowrap;color:${vencido?'#c73a2e':'#374151'};font-weight:${vencido?'700':'400'};">${fmtData(r.vencimento)}</td>
+                <td style="text-align:right;font-weight:700;white-space:nowrap;color:${vencido?'#c73a2e':'#1e293b'};">${fmtR(r.valor)}</td>
                 <td>${badgeSit}</td>
                 <td style="white-space:nowrap;text-align:center;">
                     <div class="act-wrap">
@@ -408,7 +408,7 @@ function renderizarAcordeon(lista) {
             <div class="grupo-header" onclick="toggleGrupo(${idx})">
                 <div class="grupo-header-left">
                     ${isAF
-                        ? `<div style="width:28px;height:28px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-wrench" style="color:#2563eb;font-size:.8rem;"></i></div>`
+                        ? `<div style="width:28px;height:28px;background:#e8f5ff;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-wrench" style="color:#008cdd;font-size:.8rem;"></i></div>`
                         : `<div style="width:28px;height:28px;background:#f0fdf4;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-store" style="color:#16a34a;font-size:.8rem;"></i></div>`}
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span class="grupo-nome">${escHtml(prestador)}</span>
@@ -424,7 +424,7 @@ function renderizarAcordeon(lista) {
                 <table>
                     <thead><tr>
                         <th style="width:36px;padding-right:4px;">
-                            ${pendentes.length > 0 ? `<input type="checkbox" ${allSel?'checked':''} title="Selecionar todos" onchange="toggleSelGrupo('${escHtml(prestador)}',this)" style="width:15px;height:15px;cursor:pointer;accent-color:#2563eb;" onclick="event.stopPropagation()">` : ''}
+                            ${pendentes.length > 0 ? `<input type="checkbox" ${allSel?'checked':''} title="Selecionar todos" onchange="toggleSelGrupo('${escHtml(prestador)}',this)" style="width:15px;height:15px;cursor:pointer;accent-color:#008cdd;" onclick="event.stopPropagation()">` : ''}
                         </th>
                         <th style="width:55px;">Fonte</th>
                         <th class="th-sort ${_sortCol==='placa'?'ativo':''}" onclick="setSort('placa')">Placa ${sortIcon('placa')}</th>
@@ -504,7 +504,7 @@ function calcValorFinal() {
     const final = Math.max(0, orig - desc);
     document.getElementById('baixa-orig-txt').textContent  = fmtR(orig);
     document.getElementById('baixa-final-txt').textContent = fmtR(final);
-    document.getElementById('baixa-final-txt').style.color = (desc > 0 && desc < orig) ? '#d97706' : '#16a34a';
+    document.getElementById('baixa-final-txt').style.color = (desc > 0 && desc < orig) ? '#d4a800' : '#16a34a';
 }
 
 function abrirBaixa(fonte, id, prestador, valorOrig) {
@@ -558,7 +558,7 @@ function calcValorFinalLote() {
     const desc  = parseFloat(document.getElementById('lote-desconto').value || 0);
     const final = Math.max(0, total - desc);
     document.getElementById('lote-final-txt').textContent = fmtR(final);
-    document.getElementById('lote-final-txt').style.color = (desc > 0 && desc < total) ? '#d97706' : '#16a34a';
+    document.getElementById('lote-final-txt').style.color = (desc > 0 && desc < total) ? '#d4a800' : '#16a34a';
 }
 
 function abrirBaixaLote() {
@@ -655,7 +655,7 @@ async function confirmarBaixaLote() {
 function removerBaixa(fonte, id) {
     abrirModal('Remover Baixa', `
         <div style="text-align:center;padding:20px 0;">
-            <i class="fas fa-exclamation-triangle" style="font-size:44px;color:#ef4444;margin-bottom:14px;display:block;"></i>
+            <i class="fas fa-exclamation-triangle" style="font-size:44px;color:#ef473a;margin-bottom:14px;display:block;"></i>
             <p>Remover pagamento registrado?</p>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
                 <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
@@ -684,7 +684,7 @@ function excluirEmLote() {
     if (!lista.length) { showToast('Nenhuma manutenção local selecionada para excluir', 'warning'); return; }
     abrirModal('Excluir em Lote', `
         <div style="text-align:center;padding:10px 0 20px;">
-            <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ef4444;margin-bottom:14px;display:block;"></i>
+            <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ef473a;margin-bottom:14px;display:block;"></i>
             <p style="color:#374151;">Excluir <strong>${lista.length} manutenção${lista.length>1?'ões':''}</strong>?</p>
             <p style="font-size:.8rem;color:#94a3b8;margin-top:6px;">Esta ação não pode ser desfeita.</p>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
@@ -724,7 +724,7 @@ function excluirConta(id) {
     const label = item ? `${item.placa} — ${(item.descricao||'').substring(0,40)}` : `#${id}`;
     abrirModal('Excluir Manutenção', `
         <div style="text-align:center;padding:10px 0 20px;">
-            <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ef4444;margin-bottom:14px;display:block;"></i>
+            <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ef473a;margin-bottom:14px;display:block;"></i>
             <p style="color:#374151;">Excluir <strong>${escHtml(label)}</strong>?</p>
             <p style="font-size:.8rem;color:#94a3b8;margin-top:6px;">Esta ação não pode ser desfeita.</p>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
@@ -755,8 +755,8 @@ async function _confirmaExcluir(id) {
 function toggleVerPagos() {
     _verPagos = !_verPagos;
     const btn = document.getElementById('btnVerPagos');
-    btn.style.background = _verPagos ? '#eff6ff' : '#f1f5f9';
-    btn.style.color      = _verPagos ? '#2563eb'  : '#64748b';
+    btn.style.background = _verPagos ? '#e8f5ff' : '#f1f5f9';
+    btn.style.color      = _verPagos ? '#008cdd'  : '#64748b';
     btn.innerHTML = `<i class="fas fa-eye${_verPagos?'':'-slash'}"></i> ${_verPagos?'Ocultar Pagos':'Ver Pagos'}`;
     renderizar();
 }

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Finanças - Locadora{% endblock %}
 {% block content %}
 
@@ -12,15 +12,15 @@
                           font-variant-numeric:tabular-nums; }
 .kpi-card .kpi-sub     { font-size:.72rem; color:#94a3b8; margin-top:2px; }
 .kpi-card .kpi-icon-bg { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
-.kpi-card.blue  { border-left:3px solid #2563eb; }
+.kpi-card.blue  { border-left:3px solid #008cdd; }
 .kpi-card.green { border-left:3px solid #16a34a; }
-.kpi-card.amber { border-left:3px solid #d97706; }
-.kpi-card.red   { border-left:3px solid #dc2626; }
+.kpi-card.amber { border-left:3px solid #d4a800; }
+.kpi-card.red   { border-left:3px solid #c73a2e; }
 .kpi-card.purple{ border-left:3px solid #7c3aed; }
-.kpi-card.blue   .kpi-value { color:#2563eb; } .kpi-card.blue   .kpi-icon-bg { color:#2563eb; }
+.kpi-card.blue   .kpi-value { color:#008cdd; } .kpi-card.blue   .kpi-icon-bg { color:#008cdd; }
 .kpi-card.green  .kpi-value { color:#16a34a; } .kpi-card.green  .kpi-icon-bg { color:#16a34a; }
-.kpi-card.amber  .kpi-value { color:#d97706; } .kpi-card.amber  .kpi-icon-bg { color:#d97706; }
-.kpi-card.red    .kpi-value { color:#dc2626; } .kpi-card.red    .kpi-icon-bg { color:#dc2626; }
+.kpi-card.amber  .kpi-value { color:#d4a800; } .kpi-card.amber  .kpi-icon-bg { color:#d4a800; }
+.kpi-card.red    .kpi-value { color:#c73a2e; } .kpi-card.red    .kpi-icon-bg { color:#c73a2e; }
 .kpi-card.purple .kpi-value { color:#7c3aed; } .kpi-card.purple .kpi-icon-bg { color:#7c3aed; }
 
 .taxa-bar-wrap { margin-top:8px; }
@@ -32,8 +32,8 @@
 .ev-cell .ev-mes   { font-size:.62rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
 .ev-cell .ev-val   { font-size:.95rem; font-weight:700; color:#0f172a; font-variant-numeric:tabular-nums; }
 .ev-cell .ev-rec   { font-size:.72rem; color:#16a34a; margin-top:2px; font-variant-numeric:tabular-nums; }
-.ev-cell.atual     { background:#eff6ff; border:1px solid #bfdbfe; }
-.ev-cell.atual .ev-mes { color:#2563eb; }
+.ev-cell.atual     { background:#e8f5ff; border:1px solid #b1dcfb; }
+.ev-cell.atual .ev-mes { color:#008cdd; }
 
 .veiculo-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f1f5f9; }
 .veiculo-row:last-child { border-bottom:none; }
@@ -59,7 +59,7 @@
                                   font-size:.82rem; font-family:'Poppins',sans-serif;
                                   color:#0f172a; background:#fff; outline:none; }
 .filter-row select:focus,
-.filter-row input:focus { border-color:#2563eb; }
+.filter-row input:focus { border-color:#008cdd; }
 </style>
 
 <div class="page-header">
@@ -155,7 +155,7 @@
     <div class="card">
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
             <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin:0;">
-                <i class="fas fa-chart-line" style="color:#2563eb;margin-right:6px;"></i>Evolução (6 meses)
+                <i class="fas fa-chart-line" style="color:#008cdd;margin-right:6px;"></i>Evolução (6 meses)
             </h3>
         </div>
         <div id="evolucaoGrid" class="evolucao-grid" style="padding:4px 0;">
@@ -191,7 +191,7 @@
             <div class="pk-lbl">Recebido</div>
         </div>
         <div class="periodo-kpi">
-            <div class="pk-val" id="perContratos" style="color:#2563eb;">—</div>
+            <div class="pk-val" id="perContratos" style="color:#008cdd;">—</div>
             <div class="pk-lbl">Contratos</div>
         </div>
         <div class="periodo-kpi">
@@ -223,7 +223,7 @@
         </div>
     </a>
     <a href="/locacoes" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(37,99,235,.1);display:flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0;">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(37,99,235,.1);display:flex;align-items:center;justify-content:center;color:#008cdd;flex-shrink:0;">
             <i class="fas fa-key"></i>
         </div>
         <div>
@@ -232,7 +232,7 @@
         </div>
     </a>
     <a href="/relatorios" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(217,119,6,.1);display:flex;align-items:center;justify-content:center;color:#d97706;flex-shrink:0;">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(217,119,6,.1);display:flex;align-items:center;justify-content:center;color:#d4a800;flex-shrink:0;">
             <i class="fas fa-chart-bar"></i>
         </div>
         <div>

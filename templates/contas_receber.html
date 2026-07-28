@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Contas a Receber - Locadora{% endblock %}
 {% block content %}
 
@@ -10,23 +10,23 @@
                           letter-spacing:.07em; color:#64748b; margin-bottom:4px; }
 .kpi-card .kpi-value    { font-size:1.5rem; font-weight:700; color:#0f172a; }
 .kpi-card .kpi-icon-bg  { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
-.kpi-card.blue  .kpi-value { color:#2563eb; } .kpi-card.blue  .kpi-icon-bg { color:#2563eb; }
+.kpi-card.blue  .kpi-value { color:#008cdd; } .kpi-card.blue  .kpi-icon-bg { color:#008cdd; }
 .kpi-card.green .kpi-value { color:#16a34a; } .kpi-card.green .kpi-icon-bg { color:#16a34a; }
-.kpi-card.amber .kpi-value { color:#d97706; } .kpi-card.amber .kpi-icon-bg { color:#d97706; }
-.kpi-card.red   .kpi-value { color:#dc2626; } .kpi-card.red   .kpi-icon-bg { color:#dc2626; }
-.kpi-card.blue  { border-left:3px solid #2563eb; }
+.kpi-card.amber .kpi-value { color:#d4a800; } .kpi-card.amber .kpi-icon-bg { color:#d4a800; }
+.kpi-card.red   .kpi-value { color:#c73a2e; } .kpi-card.red   .kpi-icon-bg { color:#c73a2e; }
+.kpi-card.blue  { border-left:3px solid #008cdd; }
 .kpi-card.green { border-left:3px solid #16a34a; }
-.kpi-card.amber { border-left:3px solid #d97706; }
-.kpi-card.red   { border-left:3px solid #dc2626; }
+.kpi-card.amber { border-left:3px solid #d4a800; }
+.kpi-card.red   { border-left:3px solid #c73a2e; }
 .tabs { display:flex; gap:6px; flex-wrap:wrap; }
 .tab-btn { padding:6px 16px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
            font-size:.78rem; font-weight:600; cursor:pointer; color:#64748b; transition:all .15s; }
-.tab-btn:hover  { border-color:#2563eb; color:#2563eb; }
-.tab-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+.tab-btn:hover  { border-color:#008cdd; color:#008cdd; }
+.tab-btn.active { background:#008cdd; border-color:#008cdd; color:#fff; }
 .badge-status { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 9px;
                 border-radius:4px; border:1px solid transparent; }
-.badge-status.pendente { background:#fffbeb; color:#92400e; border-color:#fde68a; }
-.badge-status.vencido  { background:#fef2f2; color:#dc2626; border-color:#fecaca; font-weight:700; }
+.badge-status.pendente { background:#fffbeb; color:#7a6000; border-color:#fde68a; }
+.badge-status.vencido  { background:#fef2f2; color:#c73a2e; border-color:#fecaca; font-weight:700; }
 .badge-status.pago,
 .badge-status.recebido { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
 .grupo-row-card td { transition: background .12s; }
@@ -72,15 +72,15 @@
         <div class="kpi-value" id="kpiDescontos" style="color:#7c3aed;font-size:1.1rem;">R$ 0,00</div>
         <i class="fas fa-tag kpi-icon-bg" style="color:#7c3aed;"></i>
     </div>
-    <div class="kpi-card" style="border-left:4px solid #dc2626;">
-        <div class="kpi-label" style="color:#dc2626;">Vence Hoje</div>
-        <div class="kpi-value" id="kpiVenceHoje" style="color:#dc2626;font-size:1.1rem;">R$ 0,00</div>
-        <i class="fas fa-calendar-day kpi-icon-bg" style="color:#dc2626;"></i>
+    <div class="kpi-card" style="border-left:4px solid #c73a2e;">
+        <div class="kpi-label" style="color:#c73a2e;">Vence Hoje</div>
+        <div class="kpi-value" id="kpiVenceHoje" style="color:#c73a2e;font-size:1.1rem;">R$ 0,00</div>
+        <i class="fas fa-calendar-day kpi-icon-bg" style="color:#c73a2e;"></i>
     </div>
-    <div class="kpi-card" style="border-left:4px solid #f59e0b;">
-        <div class="kpi-label" style="color:#d97706;">Vence esta Semana</div>
-        <div class="kpi-value" id="kpiVenceSemana" style="color:#d97706;font-size:1.1rem;">R$ 0,00</div>
-        <i class="fas fa-calendar-week kpi-icon-bg" style="color:#d97706;"></i>
+    <div class="kpi-card" style="border-left:4px solid #ffc900;">
+        <div class="kpi-label" style="color:#d4a800;">Vence esta Semana</div>
+        <div class="kpi-value" id="kpiVenceSemana" style="color:#d4a800;font-size:1.1rem;">R$ 0,00</div>
+        <i class="fas fa-calendar-week kpi-icon-bg" style="color:#d4a800;"></i>
     </div>
     <div class="kpi-card" style="border-left:4px solid #0891b2;">
         <div class="kpi-label" style="color:#0891b2;">Próximos 30 Dias</div>
@@ -166,7 +166,7 @@
 <div class="card" id="card-multas" style="margin-bottom:16px;">
     <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <h3 class="card-title" style="margin:0;">
-            <i class="fas fa-exclamation-triangle" style="color:#dc2626;"></i> Multas
+            <i class="fas fa-exclamation-triangle" style="color:#c73a2e;"></i> Multas
             <span id="badge-multas" class="badge badge-info" style="font-size:.7rem;margin-left:6px;">0</span>
         </h3>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -220,7 +220,7 @@
 <div id="modalBaixa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
     <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
         <div style="font-size:1.1rem;font-weight:700;color:#0f172a;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
-            <i class="fas fa-check-circle" style="color:#10b981;"></i> Dar Baixa
+            <i class="fas fa-check-circle" style="color:#33cd5f;"></i> Dar Baixa
         </div>
         <div id="resumoBaixa" style="background:#f1f5f9;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.82rem;color:#374151;"></div>
         <div style="margin-bottom:12px;">
@@ -233,14 +233,14 @@
                    oninput="document.getElementById('baixaJustWrap').style.display=parseFloat(this.value||0)>0?'block':'none'">
         </div>
         <div id="baixaJustWrap" style="display:none;margin-bottom:14px;">
-            <label style="font-size:.78rem;font-weight:600;color:#ef4444;display:block;margin-bottom:6px;">
+            <label style="font-size:.78rem;font-weight:600;color:#ef473a;display:block;margin-bottom:6px;">
                 <i class="fas fa-exclamation-circle"></i> Justificativa do Desconto *
             </label>
             <input type="text" id="baixaJustificativa" class="form-control" placeholder="Ex: Veículo ficou 2 dias na oficina">
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button class="btn" onclick="fecharModalBaixa()" style="background:#6b7280;color:#fff;">Cancelar</button>
-            <button class="btn" onclick="confirmarBaixa()" style="background:#10b981;color:#fff;font-weight:600;">
+            <button class="btn" onclick="confirmarBaixa()" style="background:#33cd5f;color:#fff;font-weight:600;">
                 <i class="fas fa-check"></i> Confirmar Baixa
             </button>
         </div>
@@ -263,13 +263,13 @@
 <div id="modalAsaasContrato" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
     <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;">
         <div style="font-size:1.05rem;font-weight:700;color:#0f172a;margin-bottom:6px;">
-            <i class="fas fa-bolt" style="color:#1d4ed8;"></i> Cobrar via Asaas
+            <i class="fas fa-bolt" style="color:#015e94;"></i> Cobrar via Asaas
         </div>
         <div id="resumoAsaasContrato" style="background:#f1f5f9;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#374151;margin-bottom:14px;"></div>
         <input type="hidden" id="asaasContratoPagId">
         <div style="display:flex;gap:8px;margin-bottom:12px;">
             <button id="btnACPix" onclick="acSetTipo('PIX')"
-                    style="flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">
+                    style="flex:1;padding:9px;border-radius:8px;border:2px solid #30a2e4;background:#30a2e4;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">
                 <i class="fas fa-qrcode"></i> PIX
             </button>
             <button id="btnACBoleto" onclick="acSetTipo('BOLETO_BANCARIO')"
@@ -280,7 +280,7 @@
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
             <span style="font-size:.78rem;font-weight:600;color:#374151;white-space:nowrap;">Parcelamento:</span>
             <button id="btnACP1" onclick="acSetParcelas(1)"
-                    style="padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">
+                    style="padding:5px 12px;border-radius:6px;border:2px solid #015e94;background:#015e94;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">
                 À vista
             </button>
             <button id="btnACPn" onclick="acSetParcelas(2)"
@@ -288,7 +288,7 @@
                 Parcelar
             </button>
             <select id="selACParcelas" onchange="acSetParcelas(parseInt(this.value))"
-                    style="display:none;padding:5px 8px;border-radius:6px;border:1px solid #bfdbfe;font-size:.78rem;background:#eff6ff;color:#1d4ed8;font-weight:700;">
+                    style="display:none;padding:5px 8px;border-radius:6px;border:1px solid #b1dcfb;font-size:.78rem;background:#e8f5ff;color:#015e94;font-weight:700;">
                 <option value="2">2x</option><option value="3">3x</option>
                 <option value="4">4x</option><option value="5">5x</option>
                 <option value="6">6x</option><option value="8">8x</option>
@@ -299,7 +299,7 @@
         <div id="acAsaasResultado" style="display:none;margin-top:12px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
             <button class="btn" onclick="document.getElementById('modalAsaasContrato').style.display='none'" style="background:#6b7280;color:#fff;">Cancelar</button>
-            <button class="btn" id="btnGerarAsaasContrato" onclick="confirmarAsaasContrato()" style="background:#1d4ed8;color:#fff;font-weight:700;">
+            <button class="btn" id="btnGerarAsaasContrato" onclick="confirmarAsaasContrato()" style="background:#015e94;color:#fff;font-weight:700;">
                 <i class="fas fa-paper-plane"></i> Gerar Cobrança
             </button>
         </div>
@@ -310,7 +310,7 @@
 <div id="modalAvulsa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
     <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;">
         <div style="font-size:1.1rem;font-weight:700;color:#0f172a;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
-            <i class="fas fa-bolt" style="color:#2563eb;"></i>
+            <i class="fas fa-bolt" style="color:#008cdd;"></i>
             <span id="tituloModalAvulsa">Nova Cobrança Avulsa</span>
         </div>
         <input type="hidden" id="avulsaId">
@@ -339,10 +339,10 @@
             </div>
         </div>
         <div id="avulsaAsaasWrap" style="display:none;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px;">
-            <div style="font-size:.82rem;font-weight:700;color:#1d4ed8;margin-bottom:10px;"><i class="fas fa-bolt"></i> Cobrar via Asaas</div>
+            <div style="font-size:.82rem;font-weight:700;color:#015e94;margin-bottom:10px;"><i class="fas fa-bolt"></i> Cobrar via Asaas</div>
             <div style="display:flex;gap:8px;margin-bottom:12px;">
                 <button id="btnAvPix" onclick="avulsaSetTipo('PIX')"
-                        style="flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">
+                        style="flex:1;padding:9px;border-radius:8px;border:2px solid #30a2e4;background:#30a2e4;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">
                     <i class="fas fa-qrcode"></i> PIX
                 </button>
                 <button id="btnAvBoleto" onclick="avulsaSetTipo('BOLETO_BANCARIO')"
@@ -353,7 +353,7 @@
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
                 <span style="font-size:.78rem;font-weight:600;color:#374151;white-space:nowrap;">Parcelamento:</span>
                 <button id="btnAvP1" onclick="avulsaSetParcelas(1)"
-                        style="padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">
+                        style="padding:5px 12px;border-radius:6px;border:2px solid #015e94;background:#015e94;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">
                     À vista
                 </button>
                 <button id="btnAvPn" onclick="avulsaSetParcelas(2)"
@@ -361,7 +361,7 @@
                     Parcelar
                 </button>
                 <select id="selAvParcelas" onchange="avulsaSetParcelas(parseInt(this.value))"
-                        style="display:none;padding:5px 8px;border-radius:6px;border:1px solid #bfdbfe;font-size:.78rem;background:#eff6ff;color:#1d4ed8;font-weight:700;">
+                        style="display:none;padding:5px 8px;border-radius:6px;border:1px solid #b1dcfb;font-size:.78rem;background:#e8f5ff;color:#015e94;font-weight:700;">
                     <option value="2">2x</option><option value="3">3x</option>
                     <option value="4">4x</option><option value="5">5x</option>
                     <option value="6">6x</option><option value="8">8x</option>
@@ -373,13 +373,13 @@
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
             <button class="btn" onclick="fecharModalAvulsa()" style="background:#6b7280;color:#fff;">Cancelar</button>
-            <button class="btn" onclick="salvarAvulsa()" style="background:#2563eb;color:#fff;">
+            <button class="btn" onclick="salvarAvulsa()" style="background:#008cdd;color:#fff;">
                 <i class="fas fa-save"></i> Salvar Pendente
             </button>
             <button class="btn" onclick="toggleAvulsaAsaas()" id="btnToggleAsaas" style="background:#7c3aed;color:#fff;">
                 <i class="fas fa-bolt"></i> Cobrar via Asaas
             </button>
-            <button class="btn" onclick="confirmarAsaasAvulsa()" id="btnGerarAsaas" style="display:none;background:#059669;color:#fff;font-weight:700;">
+            <button class="btn" onclick="confirmarAsaasAvulsa()" id="btnGerarAsaas" style="display:none;background:#27a84f;color:#fff;font-weight:700;">
                 <i class="fas fa-paper-plane"></i> Gerar Cobrança
             </button>
         </div>
@@ -564,7 +564,7 @@ function renderizar() {
 function _setSumRow(lista, pendEl, recEl) {
     const tp = lista.filter(d=>d.status!=='pago'&&d.status!=='recebido').reduce((s,d)=>s+parseFloat(d.valor||0),0);
     const tr = lista.filter(d=>d.status==='pago'||d.status==='recebido').reduce((s,d)=>s+parseFloat(d.valor||0),0);
-    document.getElementById(pendEl).innerHTML = tp>0 ? `<span style="color:#d97706;font-weight:700;margin-right:12px;">Pendente: ${fmtCurrency(tp)}</span>` : '';
+    document.getElementById(pendEl).innerHTML = tp>0 ? `<span style="color:#d4a800;font-weight:700;margin-right:12px;">Pendente: ${fmtCurrency(tp)}</span>` : '';
     document.getElementById(recEl).innerHTML  = tr>0 ? `<span style="color:#16a34a;font-weight:700;">Recebido: ${fmtCurrency(tr)}</span>` : '';
 }
 
@@ -590,13 +590,13 @@ function _grupoSummary(g) {
 }
 
 function _badgesGrupo(s) {
-    return (s.vencidos.length>0?`<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;margin-right:3px;">${s.vencidos.length} atrasad${s.vencidos.length>1?'os':'o'}</span>`:'')
+    return (s.vencidos.length>0?`<span style="background:#fef2f2;color:#c73a2e;border:1px solid #fecaca;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;margin-right:3px;">${s.vencidos.length} atrasad${s.vencidos.length>1?'os':'o'}</span>`:'')
          + ((s.pendentes.length-s.vencidos.length)>0?`<span style="background:#fefce8;color:#ca8a04;border:1px solid #fde68a;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;margin-right:3px;">${s.pendentes.length-s.vencidos.length} pendente${(s.pendentes.length-s.vencidos.length)>1?'s':''}</span>`:'')
          + (s.pagas.length>0?`<span style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;">${s.pagas.length} paga${s.pagas.length>1?'s':''}</span>`:'');
 }
 
 const _thS = s=>`<th style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:#64748b;background:#f8fafc;font-weight:700;white-space:nowrap;">${s}</th>`;
-function _thC(col,label){const a=_subSortCol===col;return`<th onclick="event.stopPropagation();_subSort('${col}')" style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:${a?'#2563eb':'#64748b'};background:#f8fafc;font-weight:700;white-space:nowrap;cursor:pointer;user-select:none;">${label}${a?(_subSortAsc?' ↑':' ↓'):''}</th>`;}
+function _thC(col,label){const a=_subSortCol===col;return`<th onclick="event.stopPropagation();_subSort('${col}')" style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:${a?'#008cdd':'#64748b'};background:#f8fafc;font-weight:700;white-space:nowrap;cursor:pointer;user-select:none;">${label}${a?(_subSortAsc?' ↑':' ↓'):''}</th>`;}
 function _subSort(col){if(_subSortCol===col)_subSortAsc=!_subSortAsc;else{_subSortCol=col;_subSortAsc=true;}const was=new Set(_expandedGroups);renderizar();was.forEach(gId=>{const det=document.getElementById('det_'+gId);const chev=document.getElementById('chev_'+gId);if(det)det.style.display='table-row';if(chev)chev.style.transform='rotate(90deg)';});}
 function _sortSubItems(items){if(!_subSortCol)return items;return[...items].sort((a,b)=>{let va=a[_subSortCol],vb=b[_subSortCol];if(_subSortCol==='valor'){return _subSortAsc?(parseFloat(va)||0)-(parseFloat(vb)||0):(parseFloat(vb)||0)-(parseFloat(va)||0);}va=String(va||'').toLowerCase();vb=String(vb||'').toLowerCase();return _subSortAsc?va.localeCompare(vb,'pt-BR'):vb.localeCompare(va,'pt-BR');});}
 
@@ -608,7 +608,7 @@ function renderTableContratos(lista, busca) {
         tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:36px;color:#94a3b8;">
             <i class="fas fa-file-contract" style="font-size:2rem;margin-bottom:10px;display:block;color:#cbd5e1;"></i>
             Nenhum contrato encontrado
-            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
+            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#008cdd;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
         </td></tr>`;
         return;
     }
@@ -662,13 +662,13 @@ function renderTableContratos(lista, busca) {
                 const cliEsc=(d.cliente||'').replace(/'/g,"\\'");
                 const hasObs=!!_obsCache[`contrato_${d.id}`];
                 return `<tr style="background:#fafbfc;">
-                    <td style="padding:7px 10px;width:32px;text-align:center;"><input type="checkbox" class="chk-contrato" data-id="${d.id}" data-valor="${parseFloat(d.valor||0)}" onchange="atualizarBtnCardContratos()" style="cursor:pointer;width:14px;height:14px;accent-color:#2563eb;"></td>
+                    <td style="padding:7px 10px;width:32px;text-align:center;"><input type="checkbox" class="chk-contrato" data-id="${d.id}" data-valor="${parseFloat(d.valor||0)}" onchange="atualizarBtnCardContratos()" style="cursor:pointer;width:14px;height:14px;accent-color:#008cdd;"></td>
                     <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
                     <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
                     <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                    <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
+                    <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#c73a2e;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
                     <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
-                    <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['contrato_'+d.id])}" style="color:#f59e0b;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
+                    <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['contrato_'+d.id])}" style="color:#ffc900;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
                     <td style="padding:7px 10px;text-align:center;">
                         <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
                             <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_contrato_${d.id}')" title="Ações">⋯</button>
@@ -686,7 +686,7 @@ function renderTableContratos(lista, busca) {
             return `
             <tr onclick="toggleMesGrupo('${mesId}')" style="cursor:pointer;background:${hasVencM?'#fff7f7':'#f8fafc'};border-bottom:1px solid #e2e8f0;${hasVencM?'border-left:3px solid #fca5a5;':'border-left:3px solid transparent;'}">
                 <td style="padding:8px 8px 8px 16px;width:32px;text-align:center;" onclick="event.stopPropagation()">
-                    <input type="checkbox" id="chkMes_${mesId}" onchange="selecionarMes('${mesId}',this)" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">
+                    <input type="checkbox" id="chkMes_${mesId}" onchange="selecionarMes('${mesId}',this)" style="cursor:pointer;width:15px;height:15px;accent-color:#008cdd;">
                 </td>
                 <td colspan="8" style="padding:8px 16px 8px 8px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
@@ -694,10 +694,10 @@ function renderTableContratos(lista, busca) {
                             <i class="fas fa-chevron-right" id="chev_${mesId}" style="transition:transform .2s;color:#94a3b8;font-size:.7rem;width:10px;"></i>
                             <span style="font-weight:700;font-size:.84rem;color:#1e293b;">${mesLbl}</span>
                             <span style="font-size:.72rem;color:#94a3b8;">${itensM.length} período${itensM.length>1?'s':''}</span>
-                            ${vencM.length>0?`<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:4px;padding:1px 6px;font-size:.65rem;font-weight:600;">${vencM.length} vencido${vencM.length>1?'s':''}</span>`:''}
+                            ${vencM.length>0?`<span style="background:#fef2f2;color:#c73a2e;border:1px solid #fecaca;border-radius:4px;padding:1px 6px;font-size:.65rem;font-weight:600;">${vencM.length} vencido${vencM.length>1?'s':''}</span>`:''}
                         </div>
                         <div style="display:flex;gap:10px;align-items:center;">
-                            ${tpM>0?`<span style="font-size:.78rem;font-weight:700;color:#d97706;">${fmtCurrency(tpM)} pendente</span>`:''}
+                            ${tpM>0?`<span style="font-size:.78rem;font-weight:700;color:#d4a800;">${fmtCurrency(tpM)} pendente</span>`:''}
                             ${trM>0?`<span style="font-size:.78rem;font-weight:700;color:#16a34a;">${fmtCurrency(trM)} recebido</span>`:''}
                         </div>
                     </div>
@@ -722,10 +722,10 @@ function renderTableContratos(lista, busca) {
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                         <div onclick="event.stopPropagation()">
-                            <input type="checkbox" id="chkG_${gId}" onchange="selecionarGrupo('${gId}',this)" style="cursor:pointer;width:15px;height:15px;accent-color:#2563eb;">
+                            <input type="checkbox" id="chkG_${gId}" onchange="selecionarGrupo('${gId}',this)" style="cursor:pointer;width:15px;height:15px;accent-color:#008cdd;">
                         </div>
                         <div>
-                            <span style="background:#1e3a5f;color:#60a5fa;font-size:.82rem;font-weight:800;padding:3px 10px;border-radius:6px;font-family:monospace;letter-spacing:.04em;">${_esc(placa)}</span>
+                            <span style="background:#1e3a5f;color:#7dc5ee;font-size:.82rem;font-weight:800;padding:3px 10px;border-radius:6px;font-family:monospace;letter-spacing:.04em;">${_esc(placa)}</span>
                         </div>
                         <div>
                             <div style="font-weight:600;font-size:.88rem;color:#0f172a;">${_esc(veiculoDesc)}${hasObsGrupo?' <span title="Grupo tem observações" style="font-size:.85rem;">💬</span>':''}</div>
@@ -734,8 +734,8 @@ function renderTableContratos(lista, busca) {
                         <div>${_badgesGrupo(s)}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-                        ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
-                        ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d97706;">${fmtCurrency(s.totalPend)}</div></div>`:''}
+                        ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#c73a2e;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
+                        ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d4a800;">${fmtCurrency(s.totalPend)}</div></div>`:''}
                         ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
                         <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
                     </div>
@@ -762,7 +762,7 @@ function renderTableMultas(lista, busca) {
         tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:36px;color:#94a3b8;">
             <i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:10px;display:block;color:#cbd5e1;"></i>
             Nenhuma multa encontrada
-            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
+            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#008cdd;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
         </td></tr>`;
         return;
     }
@@ -788,9 +788,9 @@ function renderTableMultas(lista, busca) {
                 <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
                 <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
                 <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
+                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#c73a2e;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
                 <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['multa_'+d.id])}" style="color:#f59e0b;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['multa_'+d.id])}" style="color:#ffc900;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
                 <td style="padding:7px 10px;text-align:center;">
                     <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
                         <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_multa_${d.id}')" title="Ações">⋯</button>
@@ -816,8 +816,8 @@ function renderTableMultas(lista, busca) {
                         <div>${_badgesGrupo(s)}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-                        ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
-                        ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d97706;">${fmtCurrency(s.totalPend)}</div></div>`:''}
+                        ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#c73a2e;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
+                        ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d4a800;">${fmtCurrency(s.totalPend)}</div></div>`:''}
                         ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
                         <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
                     </div>
@@ -848,7 +848,7 @@ function renderTableAvulsas(lista, busca) {
         tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:36px;color:#94a3b8;">
             <i class="fas fa-receipt" style="font-size:2rem;margin-bottom:10px;display:block;color:#cbd5e1;"></i>
             Nenhuma cobrança avulsa encontrada
-            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
+            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#008cdd;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
         </td></tr>`;
         return;
     }
@@ -872,9 +872,9 @@ function renderTableAvulsas(lista, busca) {
             return `<tr style="background:#fafbfc;">
                 <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
                 <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#dc2626;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
+                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#c73a2e;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
                 <td style="padding:7px 10px;"><span class="badge-status ${isPago?'recebido':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['avulsa_'+d.id])}" style="color:#f59e0b;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
+                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['avulsa_'+d.id])}" style="color:#ffc900;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
                 <td style="padding:7px 10px;text-align:center;">
                     <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
                         <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_avulsa_${d.id}')" title="Ações">⋯</button>
@@ -900,8 +900,8 @@ function renderTableAvulsas(lista, busca) {
                         <div>${_badgesGrupo(s)}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-                        ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#dc2626;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
-                        ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d97706;">${fmtCurrency(s.totalPend)}</div></div>`:''}
+                        ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#c73a2e;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
+                        ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d4a800;">${fmtCurrency(s.totalPend)}</div></div>`:''}
                         ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
                         <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
                     </div>
@@ -1033,7 +1033,7 @@ function excluirSelecionadosCard() {
     const n = _periodosSelecionados.length;
     abrirModal('Excluir Períodos', `
         <div style="text-align:center;padding:20px 0">
-            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
+            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef473a;margin-bottom:16px;display:block;"></i>
             <p style="margin-bottom:8px;font-weight:600;">Excluir ${n} período${n!==1?'s':''} selecionado${n!==1?'s':''}?</p>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
                 <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
@@ -1124,7 +1124,7 @@ async function confirmarBaixa() {
 function excluirMes(locacaoId, ano, mes, mesLbl) {
     abrirModal('Excluir Mês Inteiro', `
         <div style="text-align:center;padding:20px 0">
-            <i class="fas fa-calendar-times" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
+            <i class="fas fa-calendar-times" style="font-size:48px;color:#ef473a;margin-bottom:16px;display:block;"></i>
             <p style="margin-bottom:6px;font-weight:600;">Excluir todos os períodos pendentes de:</p>
             <p style="font-size:1.05rem;font-weight:700;color:#1e293b;margin-bottom:8px;">${mesLbl}</p>
             <p style="font-size:.8rem;color:#64748b;margin-bottom:20px;">Apenas períodos com status <strong>Pendente</strong> serão excluídos.<br>Períodos já pagos não serão afetados.</p>
@@ -1152,7 +1152,7 @@ async function confirmarExcluirMes(locacaoId, ano, mes) {
 function excluirPeriodo(id) {
     abrirModal('Excluir Período',`
         <div style="text-align:center;padding:20px 0">
-            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
+            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef473a;margin-bottom:16px;display:block;"></i>
             <p style="margin-bottom:8px;">Excluir este período da cobrança?</p>
             <p style="font-size:.8rem;color:#64748b;margin-bottom:20px;">Use quando o cliente devolveu o veículo antecipado.</p>
             <div style="display:flex;gap:10px;justify-content:center;">
@@ -1221,7 +1221,7 @@ function toggleAvulsaAsaas() {
 
 function avulsaSetTipo(tipo) {
     _avTipo=tipo;
-    const a='flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
+    const a='flex:1;padding:9px;border-radius:8px;border:2px solid #30a2e4;background:#30a2e4;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
     const i='flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;';
     document.getElementById('btnAvPix').style.cssText    = tipo==='PIX'?a:i;
     document.getElementById('btnAvBoleto').style.cssText = tipo==='BOLETO_BANCARIO'?a:i;
@@ -1229,7 +1229,7 @@ function avulsaSetTipo(tipo) {
 
 function avulsaSetParcelas(n) {
     _avNParcelas=n;
-    const aS='padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;';
+    const aS='padding:5px 12px;border-radius:6px;border:2px solid #015e94;background:#015e94;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;';
     const iS='padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;';
     document.getElementById('btnAvP1').style.cssText=n===1?aS:iS;
     document.getElementById('btnAvPn').style.cssText=n>1?aS:iS;
@@ -1286,7 +1286,7 @@ async function confirmarAsaasAvulsa() {
         const itens=data.parcelas||[]; const n=itens.length;
         const cliNome=data.cliente_nome||''; const cliTel=data.cliente_tel||''; const cliEmail=data.cliente_email||'';
         div.innerHTML=itens.map((p,i)=>{
-            const label=n>1?`<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtCurrency(p.valor)}</div>`:'';
+            const label=n>1?`<div style="font-size:.72rem;font-weight:700;color:#015e94;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtCurrency(p.valor)}</div>`:'';
             const tel=cliTel.replace(/\D/g,'');
             const msg=encodeURIComponent(`Olá ${cliNome}, segue o link de pagamento:\n${p.invoice_url}`);
             const wa=tel?`https://wa.me/55${tel}?text=${msg}`:`https://wa.me/?text=${msg}`;
@@ -1302,7 +1302,7 @@ async function confirmarAsaasAvulsa() {
                 </div>`;
             } else {
                 return `<div style="padding:8px 0;${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:12px;':''}">
-                    ${label}<a href="${p.bank_slip_url||p.invoice_url}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#1d4ed8;color:#fff;border-radius:8px;text-decoration:none;font-size:.82rem;font-weight:700;margin-bottom:6px;"><i class="fas fa-barcode"></i> Abrir Boleto</a>
+                    ${label}<a href="${p.bank_slip_url||p.invoice_url}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#015e94;color:#fff;border-radius:8px;text-decoration:none;font-size:.82rem;font-weight:700;margin-bottom:6px;"><i class="fas fa-barcode"></i> Abrir Boleto</a>
                     <a href="${wa}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:4px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
                 </div>`;
             }
@@ -1346,7 +1346,7 @@ async function salvarAvulsa() {
 async function excluirAvulsa(id) {
     abrirModal('Excluir Cobrança',`
         <div style="text-align:center;padding:20px 0">
-            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef4444;margin-bottom:16px;display:block;"></i>
+            <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef473a;margin-bottom:16px;display:block;"></i>
             <p style="margin-bottom:20px;">Deseja excluir esta cobrança avulsa?</p>
             <div style="display:flex;gap:10px;justify-content:center;">
                 <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
@@ -1382,7 +1382,7 @@ function abrirAsaasContrato(pagId,valor,descricao,cliente) {
 
 function acSetTipo(tipo) {
     _acTipo=tipo;
-    const a='flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
+    const a='flex:1;padding:9px;border-radius:8px;border:2px solid #30a2e4;background:#30a2e4;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
     const i='flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;';
     document.getElementById('btnACPix').style.cssText    = tipo==='PIX'?a:i;
     document.getElementById('btnACBoleto').style.cssText = tipo==='BOLETO_BANCARIO'?a:i;
@@ -1390,7 +1390,7 @@ function acSetTipo(tipo) {
 
 function acSetParcelas(n) {
     _acNParcelas=n;
-    const aS='padding:5px 12px;border-radius:6px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;';
+    const aS='padding:5px 12px;border-radius:6px;border:2px solid #015e94;background:#015e94;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;';
     const iS='padding:5px 12px;border-radius:6px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;';
     document.getElementById('btnACP1').style.cssText=n===1?aS:iS;
     document.getElementById('btnACPn').style.cssText=n>1?aS:iS;
@@ -1424,12 +1424,12 @@ function confirmarAsaasContrato() {
     const tipo=_acTipo==='PIX'?'PIX':'Boleto';
     abrirModal('Confirmar Cobrança Asaas',`
         <div style="text-align:center;padding:10px 0">
-            <i class="fas fa-bolt" style="font-size:36px;color:#1d4ed8;margin-bottom:12px;display:block"></i>
+            <i class="fas fa-bolt" style="font-size:36px;color:#015e94;margin-bottom:12px;display:block"></i>
             <p style="font-size:.9rem;color:#374151;margin-bottom:6px">${resumo.replace(/\n/g,'<br>')}</p>
             <p style="font-size:.85rem;color:#64748b;margin-bottom:20px">Método: <strong>${tipo}</strong> — Esta ação criará uma cobrança real no Asaas.</p>
             <div style="display:flex;gap:10px;justify-content:center">
                 <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;padding:10px 20px">Cancelar</button>
-                <button class="btn" onclick="fecharModal();_executarAsaasContrato()" style="background:#1d4ed8;color:white;font-weight:700;padding:10px 20px"><i class="fas fa-paper-plane"></i> Confirmar</button>
+                <button class="btn" onclick="fecharModal();_executarAsaasContrato()" style="background:#015e94;color:white;font-weight:700;padding:10px 20px"><i class="fas fa-paper-plane"></i> Confirmar</button>
             </div>
         </div>`);
 }
@@ -1452,7 +1452,7 @@ async function _executarAsaasContrato() {
             const tel=(data.cliente_tel||'').replace(/\D/g,'');
             const msg=encodeURIComponent(`Olá ${data.cliente_nome}, segue o link de pagamento:\n${p.invoice_url}`);
             const wa=tel?`https://wa.me/55${tel}?text=${msg}`:`https://wa.me/?text=${msg}`;
-            const label=n>1?`<div style="font-size:.72rem;font-weight:700;color:#1d4ed8;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtCurrency(p.valor)}</div>`:'';
+            const label=n>1?`<div style="font-size:.72rem;font-weight:700;color:#015e94;margin-bottom:6px;">Parcela ${p.parcela_num}/${p.total} — ${fmtCurrency(p.valor)}</div>`:'';
             if(_acTipo==='PIX'&&p.pix_qrcode){
                 return `<div style="text-align:center;${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:10px;padding-bottom:10px;':''}">
                     ${label}<img src="data:image/png;base64,${p.pix_qrcode}" style="width:160px;height:160px;border-radius:8px;border:1px solid #e2e8f0;">
@@ -1461,7 +1461,7 @@ async function _executarAsaasContrato() {
                 </div>`;
             } else {
                 return `<div style="${n>1?'border-bottom:1px solid #e2e8f0;margin-bottom:10px;padding-bottom:10px;':''}">
-                    ${label}<a href="${p.bank_slip_url||p.invoice_url}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:#1d4ed8;color:#fff;border-radius:7px;text-decoration:none;font-size:.82rem;font-weight:700;margin-bottom:6px;"><i class="fas fa-barcode"></i> Abrir Boleto</a>
+                    ${label}<a href="${p.bank_slip_url||p.invoice_url}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:9px 14px;background:#015e94;color:#fff;border-radius:7px;text-decoration:none;font-size:.82rem;font-weight:700;margin-bottom:6px;"><i class="fas fa-barcode"></i> Abrir Boleto</a>
                     <a href="${wa}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:5px;padding:7px;border-radius:6px;background:#22c55e;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
                 </div>`;
             }
@@ -1482,7 +1482,7 @@ function abrirAsaasMulta(multaId,valor,descricao,cliente) {
     abrirModal('Cobrar via ASAAS — Multa',`
         <p style="font-size:.85rem;color:#374151;margin-bottom:14px;"><strong>${cliente}</strong><br>${descricao}<br>Valor: <strong>R$ ${parseFloat(valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></p>
         <div style="display:flex;gap:8px;margin-bottom:14px;">
-            <button id="btnAMPix" onclick="_amSetTipo('PIX')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">PIX</button>
+            <button id="btnAMPix" onclick="_amSetTipo('PIX')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #30a2e4;background:#30a2e4;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;">PIX</button>
             <button id="btnAMBoleto" onclick="_amSetTipo('BOLETO_BANCARIO')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;">Boleto</button>
         </div>
         <div class="form-group"><label>Vencimento</label><input type="date" class="form-control" id="amVencimento" value="${venc}"></div>
@@ -1495,7 +1495,7 @@ function abrirAsaasMulta(multaId,valor,descricao,cliente) {
 
 function _amSetTipo(t) {
     _amTipo=t;
-    const a='flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
+    const a='flex:1;padding:9px;border-radius:8px;border:2px solid #30a2e4;background:#30a2e4;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;';
     const i='flex:1;padding:9px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.82rem;font-weight:700;cursor:pointer;';
     document.getElementById('btnAMPix').style.cssText    = t==='PIX'?a:i;
     document.getElementById('btnAMBoleto').style.cssText = t==='BOLETO_BANCARIO'?a:i;
@@ -1558,7 +1558,7 @@ carregarDados = async function(...args) {
 .loc-menu { position:absolute;right:0;top:calc(100% + 4px);z-index:200;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.10);min-width:150px;overflow:hidden; }
 .loc-menu button { display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;text-align:left;padding:9px 14px;font-size:.83rem;cursor:pointer;color:#374151; }
 .loc-menu button:hover { background:#f8fafc; }
-.loc-menu button.danger { color:#dc2626; }
+.loc-menu button.danger { color:#c73a2e; }
 .loc-menu button.danger:hover { background:#fef2f2; }
 .loc-menu button i { width:14px;text-align:center; }
 </style>
@@ -1568,7 +1568,7 @@ carregarDados = async function(...args) {
      background:#0f172a;color:#fff;border-radius:14px;padding:12px 20px;
      box-shadow:0 8px 32px rgba(0,0,0,.35);align-items:center;gap:14px;z-index:500;white-space:nowrap;">
     <div style="display:flex;align-items:center;gap:8px;">
-        <span id="crSelBadge" style="background:#2563eb;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;padding:0 5px;">0</span>
+        <span id="crSelBadge" style="background:#008cdd;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;padding:0 5px;">0</span>
         <span style="font-size:.85rem;">selecionados</span>
     </div>
     <div style="width:1px;height:22px;background:#334155;flex-shrink:0;"></div>
@@ -1584,7 +1584,7 @@ carregarDados = async function(...args) {
         <i class="fas fa-bolt"></i> Asaas (<span id="crLblAsaas">0</span>)
     </button>
     <button onclick="excluirSelecionadosCard()"
-        style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:7px 14px;
+        style="background:#c73a2e;color:#fff;border:none;border-radius:8px;padding:7px 14px;
                cursor:pointer;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:6px;">
         <i class="fas fa-trash"></i> Excluir (<span id="crLblExcluir">0</span>)
     </button>

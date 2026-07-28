@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Operacional — Siqueirão{% endblock %}
 {% block content %}
 
@@ -15,7 +15,7 @@
 <!-- KPIs -->
 <div class="stats-grid" style="margin-bottom:20px;">
     <div class="stat-card">
-        <div class="stat-icon" style="background:rgba(245,158,11,.15);color:#f59e0b;">
+        <div class="stat-icon" style="background:rgba(245,158,11,.15);color:#ffc900;">
             <i class="fas fa-car-side"></i>
         </div>
         <div class="stat-info">
@@ -24,7 +24,7 @@
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon" style="background:rgba(37,99,235,.12);color:#2563eb;">
+        <div class="stat-icon" style="background:rgba(37,99,235,.12);color:#008cdd;">
             <i class="fas fa-calendar-week"></i>
         </div>
         <div class="stat-info">
@@ -33,7 +33,7 @@
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon" style="background:rgba(220,38,38,.12);color:#dc2626;">
+        <div class="stat-icon" style="background:rgba(220,38,38,.12);color:#c73a2e;">
             <i class="fas fa-exclamation-triangle"></i>
         </div>
         <div class="stat-info">
@@ -58,7 +58,7 @@
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">
-                <i class="fas fa-car-side" style="color:#f59e0b;"></i>
+                <i class="fas fa-car-side" style="color:#ffc900;"></i>
                 Devoluções Hoje
             </h3>
         </div>
@@ -70,7 +70,7 @@
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">
-                <i class="fas fa-calendar-week" style="color:#2563eb;"></i>
+                <i class="fas fa-calendar-week" style="color:#008cdd;"></i>
                 Agenda — Próximos 7 Dias
             </h3>
         </div>
@@ -85,7 +85,7 @@
 <div class="card" style="margin-bottom:16px;">
     <div class="card-header">
         <h3 class="card-title">
-            <i class="fas fa-exclamation-triangle" style="color:#dc2626;"></i>
+            <i class="fas fa-exclamation-triangle" style="color:#c73a2e;"></i>
             Cobranças Vencidas
         </h3>
     </div>
@@ -146,7 +146,7 @@
 }
 .badge-red    { background:rgba(220,38,38,.18);  color:#f87171; }
 .badge-amber  { background:rgba(245,158,11,.18); color:#fbbf24; }
-.badge-blue   { background:rgba(37,99,235,.18);  color:#60a5fa; }
+.badge-blue   { background:rgba(37,99,235,.18);  color:#7dc5ee; }
 .badge-purple { background:rgba(124,58,237,.18); color:#a78bfa; }
 .badge-green  { background:rgba(34,197,94,.18);  color:#4ade80; }
 .op-action {
@@ -252,7 +252,7 @@ function renderCobVencidas(lista) {
     }
 
     const tipoLabel = {contrato:'Contrato', multa:'Multa', avulsa:'Avulsa'};
-    const tipoCor   = {contrato:'#7c3aed', multa:'#dc2626', avulsa:'#0891b2'};
+    const tipoCor   = {contrato:'#7c3aed', multa:'#c73a2e', avulsa:'#0891b2'};
 
     // Agrupar por cliente
     const gruposMap = {};
@@ -281,7 +281,7 @@ function renderCobVencidas(lista) {
                 </td>
                 <td style="padding:6px 12px;color:#374151;font-size:.8rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(d.descricao||'').replace(/"/g,'&quot;')}">${d.descricao||'—'}</td>
                 <td style="padding:6px 12px;color:#64748b;font-size:.8rem;white-space:nowrap;">${_fmtDate(d.data_vencimento)}</td>
-                <td style="padding:6px 12px;text-align:right;color:#d97706;font-weight:700;">${_fmt.format(Number(d.valor)||0)}</td>
+                <td style="padding:6px 12px;text-align:right;color:#d4a800;font-weight:700;">${_fmt.format(Number(d.valor)||0)}</td>
                 <td style="padding:6px 12px;text-align:center;"><span class="op-item-badge ${bc}">${dias}d</span></td>
             </tr>`;
         }).join('');
@@ -299,7 +299,7 @@ function renderCobVencidas(lista) {
                     </div>
                     <div style="display:flex;align-items:center;gap:12px;">
                         <span class="op-item-badge ${badgeCl}">${maxAtrs}d</span>
-                        <span style="font-weight:800;color:#dc2626;font-size:.9rem;">${_fmt.format(total)}</span>
+                        <span style="font-weight:800;color:#c73a2e;font-size:.9rem;">${_fmt.format(total)}</span>
                     </div>
                 </div>
             </td>
@@ -315,8 +315,8 @@ function renderCobVencidas(lista) {
 
     el.innerHTML = `
     <div style="padding:8px 14px 8px 16px;background:#fef2f2;border-bottom:1px solid #fecaca;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:.78rem;color:#dc2626;font-weight:600;">${lista.length} cobranças vencidas · ${Object.keys(gruposMap).length} clientes</span>
-        <span style="font-size:.9rem;font-weight:800;color:#dc2626;">${_fmt.format(totalGeral)}</span>
+        <span style="font-size:.78rem;color:#c73a2e;font-weight:600;">${lista.length} cobranças vencidas · ${Object.keys(gruposMap).length} clientes</span>
+        <span style="font-size:.9rem;font-weight:800;color:#c73a2e;">${_fmt.format(totalGeral)}</span>
     </div>
     <table style="width:100%;border-collapse:collapse;">
         <tbody>${grupoRows}</tbody>

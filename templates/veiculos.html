@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Veículos — Siqueirão Multimarcas{% endblock %}
 {% block content %}
 
@@ -113,7 +113,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;
                     padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
             <div style="display:flex;align-items:center;gap:10px;">
-                <i class="fas fa-file-alt" style="color:#60a5fa;font-size:1.1rem;"></i>
+                <i class="fas fa-file-alt" style="color:#7dc5ee;font-size:1.1rem;"></i>
                 <span style="color:#f1f5f9;font-size:0.95rem;font-weight:600;">CRLV — Certificado de Registro do Veículo</span>
             </div>
             <div style="display:flex;gap:10px;align-items:center;">
@@ -415,7 +415,7 @@ function _renderPageV() {
                 if (v.valor_compra && v.valor_compra > 0) {
                     const pct = ((v.valor_fipe - v.valor_compra) / v.valor_compra) * 100;
                     const positivo = pct >= 0;
-                    const cor = positivo ? '#15803d' : '#dc2626';
+                    const cor = positivo ? '#15803d' : '#c73a2e';
                     const bg  = positivo ? '#f0fdf4' : '#fef2f2';
                     const seta = positivo ? '▲' : '▼';
                     html += `<br><span style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:4px;font-size:0.68rem;font-weight:700;background:${bg};color:${cor};">${seta} ${Math.abs(pct).toFixed(1)}%</span>`;
@@ -449,7 +449,7 @@ function _renderPageV() {
     }).join('');
 
     if (totalPags <= 1) { pag.innerHTML = ''; return; }
-    const btnStyle = (ativo) => `style="border:1px solid rgba(255,255,255,.15);background:${ativo ? '#2563eb' : 'rgba(255,255,255,.05)'};color:${ativo ? '#fff' : '#94a3b8'};border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;"`;
+    const btnStyle = (ativo) => `style="border:1px solid rgba(255,255,255,.15);background:${ativo ? '#008cdd' : 'rgba(255,255,255,.05)'};color:${ativo ? '#fff' : '#94a3b8'};border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;"`;
     let html = `<span style="font-size:.75rem;color:#64748b;">${inicio+1}–${Math.min(inicio+_POR_PAG_V, _filtradosV.length)} de ${_filtradosV.length}</span>`;
     html += `<button ${btnStyle(false)} onclick="_irPagV(${_pagV-1})" ${_pagV===1?'disabled':''}>‹</button>`;
     for (let p = Math.max(1,_pagV-2); p <= Math.min(totalPags,_pagV+2); p++) {
@@ -632,16 +632,16 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
         </div>
 
         <!-- ── Defaults de Locação ── -->
-        <div style="border:1px solid #dbeafe;border-radius:8px;overflow:hidden;margin-bottom:14px;">
-            <div style="background:#eff6ff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;"
+        <div style="border:1px solid #ddf0fb;border-radius:8px;overflow:hidden;margin-bottom:14px;">
+            <div style="background:#e8f5ff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;"
                  onclick="toggleDefaultsSection()">
-                <span style="font-size:.82rem;font-weight:600;color:#1d4ed8;">
+                <span style="font-size:.82rem;font-weight:600;color:#015e94;">
                     <i class="fas fa-sliders-h" style="margin-right:6px;"></i>Padrões de Locação
                     <span style="font-size:.7rem;color:#64748b;font-weight:400;margin-left:8px;">pré-preenchem o formulário de nova locação</span>
                 </span>
-                <i id="defaultsChevron" class="fas fa-chevron-down" style="color:#3b82f6;font-size:.8rem;"></i>
+                <i id="defaultsChevron" class="fas fa-chevron-down" style="color:#30a2e4;font-size:.8rem;"></i>
             </div>
-            <div id="defaultsSection" style="display:none;padding:14px;border-top:1px solid #dbeafe;background:#fff;">
+            <div id="defaultsSection" style="display:none;padding:14px;border-top:1px solid #ddf0fb;background:#fff;">
                 <div class="grid-3">
                     <div class="form-group" style="margin-bottom:6px;">
                         <label style="font-size:.72rem;color:#64748b;">Caução Padrão (R$)</label>
@@ -677,16 +677,16 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
         <input type="hidden" name="referencia_fipe" value="${v ? (v.referencia_fipe||'') : ''}">
 
         <!-- ── Consulta FIPE ── -->
-        <div style="border:1px solid #bfdbfe;border-radius:8px;overflow:hidden;margin-bottom:14px;">
-            <div style="background:#eff6ff;padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;"
+        <div style="border:1px solid #b1dcfb;border-radius:8px;overflow:hidden;margin-bottom:14px;">
+            <div style="background:#e8f5ff;padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;"
                  onclick="toggleFipeSection()">
-                <span style="font-size:0.82rem;font-weight:600;color:#1d4ed8;">
+                <span style="font-size:0.82rem;font-weight:600;color:#015e94;">
                     <i class="fas fa-search-dollar" style="margin-right:6px;"></i>Consultar Tabela FIPE
-                    ${v && v.valor_fipe ? `<span style="margin-left:10px;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 8px;font-size:0.72rem;">${formatCurrency(v.valor_fipe)}</span>` : ''}
+                    ${v && v.valor_fipe ? `<span style="margin-left:10px;background:#ddf0fb;color:#015e94;border-radius:4px;padding:2px 8px;font-size:0.72rem;">${formatCurrency(v.valor_fipe)}</span>` : ''}
                 </span>
-                <i id="fipeChevronIcon" class="fas fa-chevron-down" style="color:#3b82f6;font-size:0.8rem;"></i>
+                <i id="fipeChevronIcon" class="fas fa-chevron-down" style="color:#30a2e4;font-size:0.8rem;"></i>
             </div>
-            <div id="fipeSection" style="display:none;padding:14px;border-top:1px solid #bfdbfe;background:#fff;">
+            <div id="fipeSection" style="display:none;padding:14px;border-top:1px solid #b1dcfb;background:#fff;">
                 <div class="grid-3" style="margin-bottom:10px;">
                     <div class="form-group" style="margin-bottom:6px;">
                         <label style="font-size:0.72rem;color:#64748b;">Tipo de Veículo</label>
@@ -1068,7 +1068,7 @@ function toggleFipeSection() {
             if (v.marca || v.modelo) {
                 const partes = [v.marca, v.modelo, v.ano, v.combustivel].filter(Boolean);
                 document.getElementById('fipeResultado').innerHTML =
-                    `<span style="color:#3b82f6;font-size:0.78rem;">
+                    `<span style="color:#30a2e4;font-size:0.78rem;">
                         <i class="fas fa-magic"></i> Preenchendo automaticamente com:
                         <strong>${partes.join(' · ')}</strong>
                     </span>`;
@@ -1105,7 +1105,7 @@ async function fipeCarregarMarcas(autoMarca='', autoModelo='', autoAno='', autoC
                 await fipeCarregarModelos(autoModelo, autoAno, autoComb);
             } else {
                 document.getElementById('fipeResultado').innerHTML =
-                    `<span style="color:#f59e0b;font-size:0.78rem;"><i class="fas fa-info-circle"></i>
+                    `<span style="color:#ffc900;font-size:0.78rem;"><i class="fas fa-info-circle"></i>
                     Marca "<strong>${autoMarca}</strong>" não encontrada na FIPE. Selecione manualmente.</span>`;
             }
         }
@@ -1141,7 +1141,7 @@ async function fipeCarregarModelos(autoModelo='', autoAno='', autoComb='') {
                 await fipeCarregarAnos(autoAno, autoComb);
             } else {
                 document.getElementById('fipeResultado').innerHTML =
-                    `<span style="color:#f59e0b;font-size:0.78rem;"><i class="fas fa-info-circle"></i>
+                    `<span style="color:#ffc900;font-size:0.78rem;"><i class="fas fa-info-circle"></i>
                     Modelo "<strong>${autoModelo}</strong>" não encontrado automaticamente.
                     Selecione o modelo na lista acima.</span>`;
             }
@@ -1211,12 +1211,12 @@ async function fipeBuscarPreco() {
                 <div style="font-size:0.68rem;color:#15803d;font-weight:600;letter-spacing:.04em;margin-bottom:2px;">
                     FIPE ${d.codigoFipe} · ${d.mesReferencia}
                 </div>
-                <div style="font-size:1.15rem;font-weight:800;color:#059669;">${d.valor}</div>
+                <div style="font-size:1.15rem;font-weight:800;color:#27a84f;">${d.valor}</div>
                 <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">${d.modelo}</div>
             </div>`;
         showToast(`FIPE: ${d.valor} — preenchida no formulário`, 'success');
     } catch(e) {
-        res.innerHTML = '<span style="color:#ef4444;font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> Erro ao consultar FIPE. Tente novamente.</span>';
+        res.innerHTML = '<span style="color:#ef473a;font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> Erro ao consultar FIPE. Tente novamente.</span>';
     }
 }
 </script>

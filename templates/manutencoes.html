@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Manutenções - Locadora{% endblock %}
 
@@ -38,10 +38,10 @@
         <div class="kpi-value" id="totalCusto">R$ 0,00</div>
         <i class="fas fa-dollar-sign kpi-icon-bg"></i>
     </div>
-    <div class="kpi-card" style="border-left:3px solid #1d4ed8;">
+    <div class="kpi-card" style="border-left:3px solid #015e94;">
         <div class="kpi-label">OS Abertas AF Car</div>
-        <div class="kpi-value" id="countAfCar" style="color:#1d4ed8;">0</div>
-        <i class="fas fa-wrench kpi-icon-bg" style="color:#1d4ed8;"></i>
+        <div class="kpi-value" id="countAfCar" style="color:#015e94;">0</div>
+        <i class="fas fa-wrench kpi-icon-bg" style="color:#015e94;"></i>
     </div>
 </div>
 
@@ -194,12 +194,12 @@
                             onchange="_updateItemManut(${idx},'valor_unitario',this.value)"
                             style="width:88px;border:1px solid #e2e8f0;border-radius:5px;padding:5px 4px;font-size:0.8rem;text-align:right;outline:none;">
                     </td>
-                    <td id="itemTotal_${idx}" style="padding:5px 8px;text-align:right;font-weight:700;color:#059669;font-size:0.82rem;white-space:nowrap;">
+                    <td id="itemTotal_${idx}" style="padding:5px 8px;text-align:right;font-weight:700;color:#27a84f;font-size:0.82rem;white-space:nowrap;">
                         ${formatCurrency(it.valor_total)}
                     </td>
                     <td style="padding:5px 4px;text-align:center;">
                         <button type="button" onclick="removerItemManut(${idx})"
-                            style="background:#fee2e2;color:#dc2626;border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:1rem;line-height:1;" title="Remover">×</button>
+                            style="background:#fde8e7;color:#c73a2e;border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:1rem;line-height:1;" title="Remover">×</button>
                     </td>
                 </tr>`).join('');
         }
@@ -334,29 +334,29 @@
                 const tipoLbl  = m.tipo
                     ? `<span style="background:#f0fdf4;color:#15803d;font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:4px;">${m.tipo}</span>`
                     : `<span style="color:#94a3b8;font-size:.75rem;cursor:pointer;" onclick="definirTipoOS(${m.id})" title="Clique para definir o tipo"><i class="fas fa-tag"></i> Definir</span>`;
-                const statusStyle = m.status === 'andamento' ? 'color:#d97706;' : 'color:#059669;';
+                const statusStyle = m.status === 'andamento' ? 'color:#d4a800;' : 'color:#27a84f;';
                 const statusLbl   = m.status === 'andamento' ? 'Em Andamento' : 'Concluída';
                 return `
                 <tr style="background:#f8fbff;">
                     <td style="white-space:nowrap;">${formatDate(m.data_manutencao)}</td>
                     <td>
-                        <span style="font-weight:600;color:#2563eb;cursor:pointer;text-decoration:underline;" onclick="buscarHistorico('${m.placa}')" title="Ver histórico do veículo">${m.placa || '—'}</span>
+                        <span style="font-weight:600;color:#008cdd;cursor:pointer;text-decoration:underline;" onclick="buscarHistorico('${m.placa}')" title="Ver histórico do veículo">${m.placa || '—'}</span>
                         ${(m.marca || m.modelo) ? `<span style="color:#64748b;font-size:0.8rem;"> ${m.marca||''} ${m.modelo||''}</span>` : ''}
                     </td>
                     <td>${tipoLbl}</td>
                     <td style="white-space:nowrap;">
                         <span style="font-weight:600;color:#1e293b;font-size:.85rem;">OS #${m.id}</span>
-                        ${m._obs ? `<button onclick="event.stopPropagation();mostrarObsOS(${m.id})" title="${m._obs.replace(/"/g,'&quot;')}" style="margin-left:6px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:800;cursor:pointer;padding:0;line-height:18px;">!</button>` : ''}
+                        ${m._obs ? `<button onclick="event.stopPropagation();mostrarObsOS(${m.id})" title="${m._obs.replace(/"/g,'&quot;')}" style="margin-left:6px;background:#fff8d0;border:1px solid #fcd34d;color:#7a6000;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:800;cursor:pointer;padding:0;line-height:18px;">!</button>` : ''}
                     </td>
                     <td style="white-space:nowrap;">${m.km_manutencao ? m.km_manutencao.toLocaleString() + ' km' : '-'}</td>
                     <td style="font-weight:700;color:#1e293b;">${formatCurrency(m.custo)}</td>
-                    <td style="font-size:.82rem;font-weight:600;color:#1d4ed8;">AF CAR CENTER</td>
+                    <td style="font-size:.82rem;font-weight:600;color:#015e94;">AF CAR CENTER</td>
                     <td><span style="font-size:.75rem;font-weight:600;${statusStyle}">${statusLbl}</span></td>
                     <td style="white-space:nowrap;text-align:center;">
                         <div class="act-wrap">
                             <button class="act-btn" onclick="toggleActMenu(event,'lserp_${m.id}')" title="Ações">⋯</button>
                             <div id="actmenu_lserp_${m.id}" class="act-menu" onclick="event.stopPropagation()">
-                                <button onclick="toggleActMenu(event,-1);verOSLSERP(${m.id})"><i class="fas fa-search" style="color:#2563eb;"></i> Ver OS</button>
+                                <button onclick="toggleActMenu(event,-1);verOSLSERP(${m.id})"><i class="fas fa-search" style="color:#008cdd;"></i> Ver OS</button>
                                 <button onclick="toggleActMenu(event,-1);definirTipoOS(${m.id})"><i class="fas fa-tag" style="color:#8b5cf6;"></i> Definir Tipo</button>
                                 <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
                                 <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${m.placa}')"><i class="fas fa-car" style="color:#16a34a;"></i> Status do Veículo</button>
@@ -373,11 +373,11 @@
             const temItens = itens.length > 0;
 
             const pedidoBadge = m.numero_pedido
-                ? `<div style="margin-bottom:3px;"><span style="background:#dbeafe;color:#1d4ed8;font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;">Ped. Nº ${m.numero_pedido}</span></div>`
+                ? `<div style="margin-bottom:3px;"><span style="background:#ddf0fb;color:#015e94;font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;">Ped. Nº ${m.numero_pedido}</span></div>`
                 : '';
 
             const itensBadge = temItens
-                ? ` <span style="display:inline-block;background:#dbeafe;color:#1d4ed8;font-size:0.62rem;font-weight:700;padding:2px 6px;border-radius:4px;vertical-align:middle;">${itens.length} ${itens.length===1?'item':'itens'}</span>`
+                ? ` <span style="display:inline-block;background:#ddf0fb;color:#015e94;font-size:0.62rem;font-weight:700;padding:2px 6px;border-radius:4px;vertical-align:middle;">${itens.length} ${itens.length===1?'item':'itens'}</span>`
                 : '';
             const descHtml = `<span style="color:#374151;">${m.descricao || '-'}</span>${itensBadge}`;
 
@@ -386,7 +386,7 @@
                     <td style="white-space:nowrap;">${formatDate(m.data_manutencao)}</td>
                     <td>
                         ${pedidoBadge}
-                        <span style="font-weight:600;color:#2563eb;cursor:pointer;text-decoration:underline;" onclick="buscarHistorico('${m.placa}')" title="Ver histórico do veículo">${m.placa || '-'}</span>
+                        <span style="font-weight:600;color:#008cdd;cursor:pointer;text-decoration:underline;" onclick="buscarHistorico('${m.placa}')" title="Ver histórico do veículo">${m.placa || '-'}</span>
                         <span style="color:#64748b;font-size:0.8rem;"> ${m.marca || ''} ${m.modelo || ''}</span>
                     </td>
                     <td>${m.tipo}</td>
@@ -426,7 +426,7 @@
                 <td style="padding:11px 16px;text-align:center;color:#475569;">${(it.quantidade||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
                 <td style="padding:11px 16px;text-align:center;color:#64748b;font-size:0.75rem;text-transform:uppercase;">${it.unidade||''}</td>
                 <td style="padding:11px 16px;text-align:right;color:#475569;">${formatCurrency(it.valor_unitario)}</td>
-                <td style="padding:11px 16px;text-align:right;font-weight:700;color:#059669;">${formatCurrency(it.valor_total)}</td>
+                <td style="padding:11px 16px;text-align:right;font-weight:700;color:#27a84f;">${formatCurrency(it.valor_total)}</td>
             </tr>`).join('');
 
         const content = `
@@ -437,19 +437,19 @@
                     &nbsp;·&nbsp;<i class="fas fa-calendar"></i> ${formatDate(m.data_manutencao)}
                 </div>
                 <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:0.85rem;">
-                    <span><i class="fas fa-store" style="color:#60a5fa;margin-right:5px;"></i>${m.oficina || 'Não informado'}</span>
-                    ${m.numero_pedido ? `<span><i class="fas fa-file-invoice" style="color:#60a5fa;margin-right:5px;"></i>Pedido Nº <strong>${m.numero_pedido}</strong></span>` : ''}
-                    <span><i class="fas fa-tag" style="color:#60a5fa;margin-right:5px;"></i>${m.tipo}</span>
+                    <span><i class="fas fa-store" style="color:#7dc5ee;margin-right:5px;"></i>${m.oficina || 'Não informado'}</span>
+                    ${m.numero_pedido ? `<span><i class="fas fa-file-invoice" style="color:#7dc5ee;margin-right:5px;"></i>Pedido Nº <strong>${m.numero_pedido}</strong></span>` : ''}
+                    <span><i class="fas fa-tag" style="color:#7dc5ee;margin-right:5px;"></i>${m.tipo}</span>
                 </div>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
                 <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center;">
-                    <div style="font-size:0.62rem;color:#059669;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Itens</div>
-                    <div style="font-size:1.6rem;font-weight:800;color:#065f46;">${itens.length}</div>
+                    <div style="font-size:0.62rem;color:#27a84f;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Itens</div>
+                    <div style="font-size:1.6rem;font-weight:800;color:#1a7a35;">${itens.length}</div>
                 </div>
-                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;text-align:center;">
-                    <div style="font-size:0.62rem;color:#1d4ed8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Valor Total</div>
+                <div style="background:#e8f5ff;border:1px solid #b1dcfb;border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:0.62rem;color:#015e94;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Valor Total</div>
                     <div style="font-size:1.2rem;font-weight:800;color:#1e3a8a;">${formatCurrency(valorTotal)}</div>
                 </div>
                 <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px;text-align:center;">
@@ -460,7 +460,7 @@
 
             <div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:16px;">
                 <div style="background:#f8fafc;padding:11px 16px;font-weight:700;font-size:0.8rem;color:#475569;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:6px;">
-                    <i class="fas fa-list-ul" style="color:#2563eb;"></i> Itens do Serviço
+                    <i class="fas fa-list-ul" style="color:#008cdd;"></i> Itens do Serviço
                 </div>
                 <table style="width:100%;border-collapse:collapse;font-size:0.83rem;">
                     <thead>
@@ -476,7 +476,7 @@
                     <tfoot>
                         <tr style="background:#f0fdf4;border-top:2px solid #bbf7d0;">
                             <td colspan="4" style="padding:12px 16px;font-weight:700;color:#374151;">Total Geral</td>
-                            <td style="padding:12px 16px;text-align:right;font-weight:800;color:#059669;font-size:1rem;">${formatCurrency(valorTotal)}</td>
+                            <td style="padding:12px 16px;text-align:right;font-weight:800;color:#27a84f;font-size:1rem;">${formatCurrency(valorTotal)}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -499,7 +499,7 @@
     function ocultarOSLSERP(osId) {
         abrirModal('Excluir OS da lista', `
             <div style="text-align:center;padding:16px 0 8px;">
-                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ef4444;margin-bottom:12px;display:block;"></i>
+                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ef473a;margin-bottom:12px;display:block;"></i>
                 <p style="color:#374151;font-size:.95rem;">Deseja remover a <strong>OS #${osId}</strong> da lista de manutenções?</p>
                 <p style="color:#64748b;font-size:.8rem;margin-top:4px;">A OS continuará existindo no AF Car Center. Esta ação pode ser desfeita pelo suporte.</p>
             </div>
@@ -537,7 +537,7 @@
     async function verOSLSERP(id) {
         abrirModal(`OS #${id} — AF Car Center`, `
             <div style="text-align:center;padding:32px;">
-                <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;color:#2563eb;"></i>
+                <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;color:#008cdd;"></i>
                 <p style="color:#64748b;margin-top:10px;">Carregando OS...</p>
             </div>`);
         try {
@@ -549,16 +549,16 @@
             const linhasItens = itens.map((it, i) => `
                 <tr style="${i%2===1?'background:#fafafa;':''}">
                     <td style="padding:9px 14px;">
-                        <span style="font-size:.75rem;background:${it.tipo==='S'?'#eff6ff':'#f0fdf4'};color:${it.tipo==='S'?'#1d4ed8':'#16a34a'};font-weight:700;padding:1px 6px;border-radius:3px;margin-right:6px;">${it.tipo==='S'?'SERV':'PEÇA'}</span>
+                        <span style="font-size:.75rem;background:${it.tipo==='S'?'#e8f5ff':'#f0fdf4'};color:${it.tipo==='S'?'#015e94':'#16a34a'};font-weight:700;padding:1px 6px;border-radius:3px;margin-right:6px;">${it.tipo==='S'?'SERV':'PEÇA'}</span>
                         ${it.descricao || '—'}
                     </td>
                     <td style="padding:9px 14px;text-align:center;color:#475569;">${it.qtd || 1}</td>
                     <td style="padding:9px 14px;text-align:right;color:#475569;">${formatCurrency(it.vl_unitario)}</td>
-                    <td style="padding:9px 14px;text-align:right;font-weight:700;color:#059669;">${formatCurrency(it.vl_total)}</td>
+                    <td style="padding:9px 14px;text-align:right;font-weight:700;color:#27a84f;">${formatCurrency(it.vl_total)}</td>
                 </tr>`).join('');
 
             const content = `
-                <div style="margin:-20px -20px 20px;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);padding:18px 24px;color:#fff;border-radius:0;">
+                <div style="margin:-20px -20px 20px;background:linear-gradient(135deg,#1e3a8a,#015e94);padding:18px 24px;color:#fff;border-radius:0;">
                     <div style="font-size:.72rem;color:#93c5fd;margin-bottom:6px;">
                         <i class="fas fa-car"></i> ${os.veic_placa || '—'}
                         &nbsp;·&nbsp;<i class="fas fa-calendar"></i> ${formatDate(os.dh_inc)}
@@ -568,8 +568,8 @@
                 </div>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
-                    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;text-align:center;">
-                        <div style="font-size:.62rem;color:#1d4ed8;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Total OS</div>
+                    <div style="background:#e8f5ff;border:1px solid #b1dcfb;border-radius:10px;padding:14px;text-align:center;">
+                        <div style="font-size:.62rem;color:#015e94;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Total OS</div>
                         <div style="font-size:1.3rem;font-weight:800;color:#1e3a8a;">${formatCurrency(os.tt_liquido)}</div>
                     </div>
                     <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px;text-align:center;">
@@ -581,7 +581,7 @@
                 ${itens.length > 0 ? `
                 <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:16px;">
                     <div style="background:#f8fafc;padding:10px 14px;font-weight:700;font-size:.8rem;color:#475569;border-bottom:1px solid #e2e8f0;">
-                        <i class="fas fa-list-ul" style="color:#2563eb;margin-right:6px;"></i> Itens do Serviço
+                        <i class="fas fa-list-ul" style="color:#008cdd;margin-right:6px;"></i> Itens do Serviço
                     </div>
                     <table style="width:100%;border-collapse:collapse;font-size:.83rem;">
                         <thead>
@@ -596,7 +596,7 @@
                         <tfoot>
                             <tr style="background:#f0fdf4;border-top:2px solid #bbf7d0;">
                                 <td colspan="3" style="padding:10px 14px;font-weight:700;color:#374151;">Total Geral</td>
-                                <td style="padding:10px 14px;text-align:right;font-weight:800;color:#059669;font-size:1rem;">${formatCurrency(os.tt_liquido)}</td>
+                                <td style="padding:10px 14px;text-align:right;font-weight:800;color:#27a84f;font-size:1rem;">${formatCurrency(os.tt_liquido)}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -610,7 +610,7 @@
                 </div>`;
             abrirModal(`OS #${id} — AF Car Center`, content);
         } catch(e) {
-            abrirModal('Erro', `<p style="color:#dc2626;text-align:center;padding:20px;">${e.message}</p><div style="text-align:right;"><button class="btn" onclick="fecharModal()">Fechar</button></div>`);
+            abrirModal('Erro', `<p style="color:#c73a2e;text-align:center;padding:20px;">${e.message}</p><div style="text-align:right;"><button class="btn" onclick="fecharModal()">Fechar</button></div>`);
         }
     }
 
@@ -692,7 +692,7 @@
                             oninput="document.querySelector('#formManutencao [name=numero_pedido]').value=this.value">
                     </div>
                     <div class="form-group">
-                        <label>Custo Total (R$) <span style="color:#ef4444;font-size:0.75rem;">*obrigatório para relatório</span></label>
+                        <label>Custo Total (R$) <span style="color:#ef473a;font-size:0.75rem;">*obrigatório para relatório</span></label>
                         <input type="number" class="form-control" name="custo" id="custoManutInput"
                             value="${manutencao ? (manutencao.custo||'') : ''}" step="0.01" min="0"
                             placeholder="0,00 — ou preenchido pelos itens abaixo">
@@ -704,7 +704,7 @@
                     <label style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
                         <span>Itens da Manutenção</span>
                         <button type="button" onclick="adicionarItemManut()"
-                            style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+                            style="background:#008cdd;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
                             <i class="fas fa-plus"></i> Item
                         </button>
                     </label>
@@ -724,7 +724,7 @@
                         </table>
                         <div id="itensManutFooter" style="display:none;justify-content:flex-end;align-items:center;gap:8px;padding:8px 12px;background:#f0fdf4;border-top:2px solid #bbf7d0;">
                             <span style="font-size:0.8rem;color:#374151;font-weight:600;">Total dos Itens:</span>
-                            <span id="itensManutTotalVal" style="font-weight:800;color:#059669;font-size:1rem;">R$ 0,00</span>
+                            <span id="itensManutTotalVal" style="font-weight:800;color:#27a84f;font-size:1rem;">R$ 0,00</span>
                         </div>
                     </div>
                 </div>
@@ -838,7 +838,7 @@
     function excluirManutencao(id) {
         const content = `
             <div style="text-align:center;padding:10px 0 20px;">
-                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#f59e0b;margin-bottom:14px;display:block;"></i>
+                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ffc900;margin-bottom:14px;display:block;"></i>
                 <p style="font-size:0.95rem;color:#374151;line-height:1.6;">Deseja excluir esta manutenção?<br>Esta ação não pode ser desfeita.</p>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
@@ -1013,9 +1013,9 @@
         const statusAtual = veic.status || 'disponivel';
         const statusOpts = [
             {val:'disponivel', lbl:'Disponível',   cor:'#16a34a'},
-            {val:'manutencao', lbl:'Em Manutenção', cor:'#d97706'},
-            {val:'locado',     lbl:'Locado',        cor:'#2563eb'},
-            {val:'inativo',    lbl:'Inativo',       cor:'#dc2626'},
+            {val:'manutencao', lbl:'Em Manutenção', cor:'#d4a800'},
+            {val:'locado',     lbl:'Locado',        cor:'#008cdd'},
+            {val:'inativo',    lbl:'Inativo',       cor:'#c73a2e'},
         ];
         const bts = statusOpts.map(s => `
             <button onclick="_confirmarStatusVeic(${veic.id},'${s.val}',this)"
@@ -1114,7 +1114,7 @@
         document.getElementById('histKpiKm').textContent = (ultimoKm || v.km_atual || 0).toLocaleString() + ' km';
 
         // Header do veículo
-        const statusColors = {disponivel:'#059669',alugado:'#2563eb',manutencao:'#d97706',inativo:'#dc2626'};
+        const statusColors = {disponivel:'#27a84f',alugado:'#008cdd',manutencao:'#d4a800',inativo:'#c73a2e'};
         const statusLabels = {disponivel:'Disponível',alugado:'Locado',manutencao:'Manutenção',inativo:'Inativo'};
         const stv = v.status || 'disponivel';
         document.getElementById('histVeicInfo').innerHTML = `
@@ -1125,13 +1125,13 @@
                 </div>
                 <div style="color:#94a3b8;font-size:0.85rem;">
                     ${v.marca||''} ${v.modelo||''} &nbsp;·&nbsp; ${v.ano_fabricacao||v.ano||''} &nbsp;·&nbsp;
-                    <strong style="color:#60a5fa;">Km atual: ${(v.km_atual||0).toLocaleString()}</strong>
+                    <strong style="color:#7dc5ee;">Km atual: ${(v.km_atual||0).toLocaleString()}</strong>
                     ${v.cor ? `&nbsp;·&nbsp; ${v.cor}` : ''}
                     ${v.combustivel ? `&nbsp;·&nbsp; ${v.combustivel}` : ''}
                 </div>
             </div>`;
 
-        const badgeStatus = {concluida:'#059669',pendente:'#d97706',andamento:'#2563eb'};
+        const badgeStatus = {concluida:'#27a84f',pendente:'#d4a800',andamento:'#008cdd'};
         const labelStatus = {concluida:'Concluída',pendente:'Pendente',andamento:'Em Andamento'};
 
         // Lista accordion: cabeçalho clicável + detalhe expansível
@@ -1173,12 +1173,12 @@
                         <!-- Pedido / nº -->
                         <div style="min-width:90px;padding-right:12px;">
                             ${m.numero_pedido
-                                ? `<span style="background:#1e3a5f;color:#60a5fa;font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:10px;border:1px solid #1d4ed840;white-space:nowrap;">Ped. Nº ${m.numero_pedido}</span>`
+                                ? `<span style="background:#1e3a5f;color:#7dc5ee;font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:10px;border:1px solid #015e9440;white-space:nowrap;">Ped. Nº ${m.numero_pedido}</span>`
                                 : `<span style="color:#334155;font-size:0.75rem;">—</span>`}
                         </div>
                         <!-- Data -->
                         <div style="min-width:90px;padding-right:12px;">
-                            <div style="font-size:0.78rem;color:#60a5fa;font-weight:600;">${formatDate(m.data_manutencao)}</div>
+                            <div style="font-size:0.78rem;color:#7dc5ee;font-weight:600;">${formatDate(m.data_manutencao)}</div>
                         </div>
                         <!-- Fornecedor + tipo -->
                         <div style="flex:1;padding-right:12px;">
@@ -1478,7 +1478,7 @@
         <!-- Header -->
         <div style="background:#0a0f1e;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e293b;">
             <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:38px;height:38px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                <div style="width:38px;height:38px;background:linear-gradient(135deg,#008cdd,#015e94);border-radius:10px;display:flex;align-items:center;justify-content:center;">
                     <i class="fas fa-history" style="color:#fff;"></i>
                 </div>
                 <div>
@@ -1502,7 +1502,7 @@
                 <datalist id="histPlacaList"></datalist>
             </div>
             <button onclick="executarBuscaHistorico(document.getElementById('histPlacaInput').value)"
-                style="padding:10px 20px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.85rem;display:flex;align-items:center;gap:6px;">
+                style="padding:10px 20px;background:linear-gradient(135deg,#008cdd,#015e94);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.85rem;display:flex;align-items:center;gap:6px;">
                 <i class="fas fa-search"></i> Buscar
             </button>
         </div>
@@ -1515,7 +1515,7 @@
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid #1e293b;">
                 <div style="padding:14px 24px;border-right:1px solid #1e293b;text-align:center;">
                     <div style="font-size:0.62rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Manutenções</div>
-                    <div id="histKpiManut" style="font-size:1.6rem;font-weight:800;color:#60a5fa;">0</div>
+                    <div id="histKpiManut" style="font-size:1.6rem;font-weight:800;color:#7dc5ee;">0</div>
                 </div>
                 <div style="padding:14px 24px;border-right:1px solid #1e293b;text-align:center;">
                     <div style="font-size:0.62rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Valor Total Gasto</div>
@@ -1533,7 +1533,7 @@
 
         <!-- Loading -->
         <div id="histLoading" style="display:none;padding:64px;flex-direction:column;align-items:center;gap:16px;">
-            <div style="width:48px;height:48px;border:3px solid #1e293b;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite;"></div>
+            <div style="width:48px;height:48px;border:3px solid #1e293b;border-top-color:#008cdd;border-radius:50%;animation:spin .8s linear infinite;"></div>
             <div style="color:#94a3b8;font-size:0.85rem;">Buscando histórico...</div>
         </div>
 
@@ -1598,7 +1598,7 @@
 
         <!-- State: Loading -->
         <div id="importLoadingState" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;gap:16px;">
-            <div style="width:56px;height:56px;border:4px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+            <div style="width:56px;height:56px;border:4px solid #e2e8f0;border-top-color:#008cdd;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
             <div style="font-weight:600;color:#1e293b;">Analisando o PDF...</div>
             <div style="font-size:0.82rem;color:#64748b;">Extraindo dados do pedido</div>
         </div>
@@ -1607,7 +1607,7 @@
         <div id="importReviewState" style="display:none;padding:0 24px 24px;">
             <!-- Sub-header -->
             <div style="padding:14px 0 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                <i class="fas fa-clipboard-check" style="color:#2563eb;"></i>
+                <i class="fas fa-clipboard-check" style="color:#008cdd;"></i>
                 <span style="font-weight:700;color:#1e293b;" id="rev_pedido_num">Revisão</span>
                 <span style="color:#94a3b8;font-size:0.8rem;margin-left:4px;">— Confirme os dados antes de salvar</span>
             </div>
@@ -1621,7 +1621,7 @@
             <!-- Items table -->
             <div id="rev_itens_section" style="display:none;margin-bottom:18px;">
                 <div style="font-weight:700;color:#1e293b;font-size:0.85rem;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-                    <i class="fas fa-list" style="color:#2563eb;"></i> Itens do Pedido
+                    <i class="fas fa-list" style="color:#008cdd;"></i> Itens do Pedido
                 </div>
                 <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
                     <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
@@ -1637,14 +1637,14 @@
                         <tbody id="rev_itens_tbody"></tbody>
                     </table>
                     <div style="padding:10px 12px;text-align:right;background:#f8fafc;border-top:2px solid #e2e8f0;font-weight:700;color:#1e293b;">
-                        Total: <span id="rev_total_val" style="color:#2563eb;"></span>
+                        Total: <span id="rev_total_val" style="color:#008cdd;"></span>
                     </div>
                 </div>
             </div>
 
             <!-- Form fields -->
             <div style="font-weight:700;color:#1e293b;font-size:0.85rem;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-                <i class="fas fa-edit" style="color:#2563eb;"></i> Dados da Manutenção
+                <i class="fas fa-edit" style="color:#008cdd;"></i> Dados da Manutenção
             </div>
             <input type="hidden" id="rev_veiculo_id">
             <input type="hidden" id="rev_fornecedor_id">
@@ -1736,8 +1736,8 @@
     background: #f8fafc;
 }
 .pdf-dropzone:hover, .pdf-dropzone.dragover {
-    border-color: #2563eb;
-    background: #eff6ff;
+    border-color: #008cdd;
+    background: #e8f5ff;
 }
 .pdf-dropzone.dragover { transform: scale(1.01); }
 
@@ -1749,15 +1749,15 @@
     gap: 12px;
 }
 .import-match-card.found {
-    background: linear-gradient(135deg, #059669, #10b981);
+    background: linear-gradient(135deg, #27a84f, #33cd5f);
     color: #fff;
 }
 .import-match-card.warn {
-    background: linear-gradient(135deg, #d97706, #f59e0b);
+    background: linear-gradient(135deg, #d4a800, #ffc900);
     color: #fff;
 }
 .import-match-card.not-found {
-    background: linear-gradient(135deg, #dc2626, #ef4444);
+    background: linear-gradient(135deg, #c73a2e, #ef473a);
     color: #fff;
 }
 .import-match-card .match-icon {
@@ -1797,14 +1797,14 @@
     border-bottom: 1px solid #f1f5f9;
 }
 .item-mini-row:last-child { border-bottom: none; }
-.item-mini-dot { color: #2563eb; flex-shrink: 0; font-size: 0.7rem; }
+.item-mini-dot { color: #008cdd; flex-shrink: 0; font-size: 0.7rem; }
 .item-mini-desc { color: #374151; flex: 1; font-size: 0.76rem; }
-.item-mini-val { color: #059669; font-weight: 700; font-size: 0.73rem; white-space: nowrap; }
+.item-mini-val { color: #27a84f; font-weight: 700; font-size: 0.73rem; white-space: nowrap; }
 .tr-tem-itens td { vertical-align: top; padding-top: 10px; }
 
 .btn-itens {
     background: #f0fdf4;
-    color: #059669;
+    color: #27a84f;
     border: 1px solid #bbf7d0;
 }
 .btn-itens:hover {
@@ -1827,7 +1827,7 @@
 
 /* Input histórico focus */
 #histPlacaInput:focus {
-    border-color: #2563eb !important;
+    border-color: #008cdd !important;
     box-shadow: 0 0 0 3px rgba(37,99,235,.2);
 }
 

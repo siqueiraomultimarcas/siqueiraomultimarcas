@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Relatórios — Siqueirão{% endblock %}
 
 {% block extra_css %}
@@ -23,8 +23,8 @@
 }
 .rel-tab:hover { color: #1e293b; }
 .rel-tab.active {
-    color: #2563eb;
-    border-bottom-color: #2563eb;
+    color: #008cdd;
+    border-bottom-color: #008cdd;
     font-weight: 700;
 }
 .rel-tab i { font-size: 0.82rem; }
@@ -35,7 +35,7 @@
 .rel-param-card {
     padding: 0 !important;
     overflow: hidden;
-    border-top: 3px solid #2563eb !important;
+    border-top: 3px solid #008cdd !important;
     margin-bottom: 20px;
 }
 .rel-param-header {
@@ -43,14 +43,14 @@
     align-items: center;
     justify-content: space-between;
     padding: 14px 22px;
-    background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 60%, #f8fafc 100%);
+    background: linear-gradient(135deg, #f8fafc 0%, #e8f5ff 60%, #f8fafc 100%);
     border-bottom: 1px solid #e2e8f0;
     flex-wrap: wrap;
     gap: 12px;
 }
 .rel-param-icon {
     width: 36px; height: 36px;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    background: linear-gradient(135deg, #008cdd, #015e94);
     color: white;
     border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
@@ -78,8 +78,8 @@
     color: #64748b; cursor: pointer;
     transition: all 0.18s; font-family: inherit;
 }
-.period-btn:hover { border-color: #2563eb; color: #2563eb; }
-.period-btn.active { background: #2563eb; border-color: #2563eb; color: white; }
+.period-btn:hover { border-color: #008cdd; color: #008cdd; }
+.period-btn.active { background: #008cdd; border-color: #008cdd; color: white; }
 
 /* ── Filter grid ──────────────────────────────────────────── */
 .filter-grid {
@@ -118,9 +118,9 @@
     transition: background 0.15s;
     user-select: none;
 }
-.veiculo-item:hover { background: #eff6ff; }
+.veiculo-item:hover { background: #e8f5ff; }
 .veiculo-item input[type=checkbox] {
-    accent-color: #2563eb;
+    accent-color: #008cdd;
     width: 14px; height: 14px;
     flex-shrink: 0; cursor: pointer;
 }
@@ -191,7 +191,7 @@
 .cost-item input[type=checkbox] { display: none; }
 .cost-icon {
     width: 28px; height: 28px; border-radius: 7px;
-    background: #eff6ff; color: #2563eb;
+    background: #e8f5ff; color: #008cdd;
     display: flex; align-items: center; justify-content: center;
     font-size: 0.7rem; flex-shrink: 0;
     transition: background 0.15s;
@@ -215,9 +215,9 @@
     transition: transform 0.2s;
     box-shadow: 0 1px 4px rgba(0,0,0,0.18);
 }
-.cost-item:has(input:checked) { border-color: #93c5fd; background: #eff6ff; }
-.cost-item:has(input:checked) .cost-icon { background: #dbeafe; }
-.cost-item:has(input:checked) .cost-toggle { background: #2563eb; }
+.cost-item:has(input:checked) { border-color: #93c5fd; background: #e8f5ff; }
+.cost-item:has(input:checked) .cost-icon { background: #ddf0fb; }
+.cost-item:has(input:checked) .cost-toggle { background: #008cdd; }
 .cost-item:has(input:checked) .cost-toggle::after { transform: translateX(16px); }
 
 /* ── Field section label ──────────────────────────────────── */
@@ -230,7 +230,7 @@
     gap: 6px;
     margin-bottom: 8px;
 }
-.field-label i { color: #2563eb; font-size: 0.7rem; }
+.field-label i { color: #008cdd; font-size: 0.7rem; }
 
 /* ── Empty state ──────────────────────────────────────────── */
 .rel-empty {
@@ -255,10 +255,10 @@
     margin-bottom: 16px;
 }
 .results-period-badge {
-    background: #eff6ff; color: #2563eb;
+    background: #e8f5ff; color: #008cdd;
     font-size: 0.72rem; font-weight: 600;
     padding: 4px 12px; border-radius: 20px;
-    border: 1px solid #bfdbfe;
+    border: 1px solid #b1dcfb;
 }
 
 /* ── Table enhancements ───────────────────────────────────── */
@@ -277,7 +277,7 @@
     flex: 1; height: 6px; background: #f1f5f9;
     border-radius: 3px; overflow: hidden; min-width: 60px;
 }
-.part-bar-fill { height: 100%; border-radius: 3px; background: #2563eb; }
+.part-bar-fill { height: 100%; border-radius: 3px; background: #008cdd; }
 .chart-wrap { height: 260px; padding: 4px 8px 16px; }
 .section-divider {
     font-size: 0.7rem; font-weight: 700;
@@ -315,7 +315,7 @@
 .print-header-logo {
     font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;
 }
-.print-header-logo span { color: #2563eb; }
+.print-header-logo span { color: #008cdd; }
 .print-header-info { text-align: right; font-size: 0.75rem; color: #64748b; }
 .print-header-info strong { display: block; font-size: 0.88rem; color: #0f172a; }
 </style>
@@ -381,7 +381,7 @@
                     <div class="field-label">
                         <i class="fas fa-car"></i> Veículos
                         <button type="button" id="btnTodosVeic" onclick="toggleTodosVeiculos()"
-                            style="margin-left:auto;font-size:0.68rem;color:#2563eb;background:none;border:none;cursor:pointer;font-weight:700;padding:0;">
+                            style="margin-left:auto;font-size:0.68rem;color:#008cdd;background:none;border:none;cursor:pointer;font-weight:700;padding:0;">
                             Desmarcar todos
                         </button>
                     </div>
@@ -924,7 +924,7 @@ function exibirResultados(data, di, df) {
     tbody.innerHTML = data.resultados.map(r => {
         const lucroPos = r.lucro >= 0;
         const margemPct = r.margem ?? (r.receita > 0 ? (r.lucro/r.receita)*100 : 0);
-        const barColor  = lucroPos ? '#10b981' : '#ef4444';
+        const barColor  = lucroPos ? '#33cd5f' : '#ef473a';
         const barWidth  = Math.min(Math.abs(margemPct), 100);
         return `<tr class="${lucroPos ? 'row-profit' : 'row-loss'}">
             <td>
@@ -932,15 +932,15 @@ function exibirResultados(data, di, df) {
                 <div style="font-size:0.75rem;color:#94a3b8;">${r.veiculo.marca} ${r.veiculo.modelo}</div>
             </td>
             <td style="text-align:center;font-weight:600;color:#374151;">${r.qtd_locacoes || 0}</td>
-            <td style="text-align:right;color:#059669;font-weight:600;">${fmtR(r.receita)}</td>
+            <td style="text-align:right;color:#27a84f;font-weight:600;">${fmtR(r.receita)}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(r.custo_manutencao)}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(r.custo_abastecimento)}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(r.custo_multas)}</td>
-            <td style="text-align:right;color:#dc2626;font-weight:600;">${fmtR(r.total_custos)}</td>
-            <td style="text-align:right;font-weight:700;color:${lucroPos ? '#059669' : '#dc2626'};">${fmtR(r.lucro)}</td>
+            <td style="text-align:right;color:#c73a2e;font-weight:600;">${fmtR(r.total_custos)}</td>
+            <td style="text-align:right;font-weight:700;color:${lucroPos ? '#27a84f' : '#c73a2e'};">${fmtR(r.lucro)}</td>
             <td>
                 <div class="margin-wrap">
-                    <span style="font-size:0.78rem;font-weight:600;color:${lucroPos?'#059669':'#dc2626'};min-width:40px;">${margemPct.toFixed(1)}%</span>
+                    <span style="font-size:0.78rem;font-weight:600;color:${lucroPos?'#27a84f':'#c73a2e'};min-width:40px;">${margemPct.toFixed(1)}%</span>
                     <div class="margin-bar-bg">
                         <div class="margin-bar-fill" style="width:${barWidth}%;background:${barColor};"></div>
                     </div>
@@ -955,11 +955,11 @@ function exibirResultados(data, di, df) {
         <tr class="row-total">
             <td><strong>TOTAL GERAL</strong></td>
             <td style="text-align:center;">${totalLocs}</td>
-            <td style="text-align:right;color:#059669;">${fmtR(totalReceita)}</td>
+            <td style="text-align:right;color:#27a84f;">${fmtR(totalReceita)}</td>
             <td style="text-align:right;" colspan="3"></td>
-            <td style="text-align:right;color:#dc2626;">${fmtR(totalCustos)}</td>
-            <td style="text-align:right;color:${totalLucro>=0?'#059669':'#dc2626'};">${fmtR(totalLucro)}</td>
-            <td><span style="font-weight:700;font-size:0.85rem;color:${totalLucro>=0?'#059669':'#dc2626'};">${margTotal.toFixed(1)}%</span></td>
+            <td style="text-align:right;color:#c73a2e;">${fmtR(totalCustos)}</td>
+            <td style="text-align:right;color:${totalLucro>=0?'#27a84f':'#c73a2e'};">${fmtR(totalLucro)}</td>
+            <td><span style="font-weight:700;font-size:0.85rem;color:${totalLucro>=0?'#27a84f':'#c73a2e'};">${margTotal.toFixed(1)}%</span></td>
         </tr>`;
 
     if (data.dados_mensais?.length) renderizarGrafico(data.dados_mensais);
@@ -980,7 +980,7 @@ function renderizarGrafico(dados) {
             datasets: [
                 { type:'bar',  label:'Receitas', data: dados.map(d=>d.receita), backgroundColor:'rgba(16,185,129,0.75)', borderRadius:5, order:2 },
                 { type:'bar',  label:'Custos',   data: dados.map(d=>d.custos),  backgroundColor:'rgba(239,68,68,0.7)',   borderRadius:5, order:2 },
-                { type:'line', label:'Lucro',    data: dados.map(d=>d.lucro),   borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.08)', borderWidth:2.5, tension:0.35, fill:true, pointBackgroundColor:'#2563eb', pointRadius:4, order:1 }
+                { type:'line', label:'Lucro',    data: dados.map(d=>d.lucro),   borderColor:'#008cdd', backgroundColor:'rgba(37,99,235,0.08)', borderWidth:2.5, tension:0.35, fill:true, pointBackgroundColor:'#008cdd', pointRadius:4, order:1 }
             ]
         },
         options: {
@@ -1056,10 +1056,10 @@ function exibirResultadosFornecedor(data) {
             <td><span class="badge badge-info" style="font-size:0.7rem;">${f.tipo_nome || 'Geral'}</span></td>
             <td style="text-align:center;font-weight:600;">${f.qtd_servicos}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(ticket)}</td>
-            <td style="text-align:right;font-weight:700;color:#dc2626;">${fmtR(f.total_gasto)}</td>
+            <td style="text-align:right;font-weight:700;color:#c73a2e;">${fmtR(f.total_gasto)}</td>
             <td>
                 <div class="part-wrap">
-                    <span style="font-size:0.78rem;font-weight:600;color:#2563eb;min-width:38px;">${part.toFixed(1)}%</span>
+                    <span style="font-size:0.78rem;font-weight:600;color:#008cdd;min-width:38px;">${part.toFixed(1)}%</span>
                     <div class="part-bar-bg">
                         <div class="part-bar-fill" style="width:${part}%;"></div>
                     </div>
@@ -1075,7 +1075,7 @@ function exibirResultadosFornecedor(data) {
 function renderizarGraficoFornecedor(resultados) {
     const ctx = document.getElementById('chartFornecedores').getContext('2d');
     if (chartFornecedores) chartFornecedores.destroy();
-    const cores = ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899'];
+    const cores = ['#008cdd','#33cd5f','#ffc900','#ef473a','#8b5cf6','#06b6d4','#ec4899'];
     chartFornecedores = new Chart(ctx, {
         type:'bar',
         data: {
@@ -1163,7 +1163,7 @@ function exibirResultadosLocacoes(data, di, df) {
             </td>
             <td style="text-align:center;font-weight:600;color:#374151;">${c.qtd}</td>
             <td style="text-align:right;">
-                <div style="font-weight:700;color:#059669;font-size:0.83rem;">${fmtR(c.receita)}</div>
+                <div style="font-weight:700;color:#27a84f;font-size:0.83rem;">${fmtR(c.receita)}</div>
                 <div style="font-size:0.68rem;color:#94a3b8;">${part}% do total</div>
             </td>
         </tr>`;
@@ -1181,11 +1181,11 @@ function exibirResultadosLocacoes(data, di, df) {
                 <div style="font-size:0.7rem;color:#94a3b8;margin-top:2px;">${v.marca} ${v.modelo}</div>
             </td>
             <td style="text-align:center;">
-                <div style="font-weight:700;color:#2563eb;">${v.qtd_locacoes}</div>
+                <div style="font-weight:700;color:#008cdd;">${v.qtd_locacoes}</div>
                 <div class="part-bar-bg" style="min-width:36px;margin-top:3px;"><div class="part-bar-fill" style="width:${barW}%;"></div></div>
             </td>
             <td style="text-align:center;color:#64748b;font-weight:600;">${v.dias_locado}d</td>
-            <td style="text-align:right;font-weight:600;color:#059669;font-size:0.83rem;">${fmtR(v.receita)}</td>
+            <td style="text-align:right;font-weight:600;color:#27a84f;font-size:0.83rem;">${fmtR(v.receita)}</td>
         </tr>`;
     }).join('') || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Sem dados</td></tr>';
 

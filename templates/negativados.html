@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Negativados — Siqueirão{% endblock %}
 
 {% block extra_css %}
 <style>
 .neg-card {
-    background: white; border: 1px solid #fee2e2; border-left: 4px solid #ef4444;
+    background: white; border: 1px solid #fde8e7; border-left: 4px solid #ef473a;
     border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
     display: flex; align-items: center; gap: 14px;
     transition: box-shadow .15s;
@@ -12,14 +12,14 @@
 .neg-card:hover { box-shadow: var(--card-shadow-hover); }
 .neg-avatar {
     width: 42px; height: 42px; border-radius: 10px;
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: linear-gradient(135deg, #ef473a, #c73a2e);
     display: flex; align-items: center; justify-content: center;
     font-size: 1rem; font-weight: 700; color: white; flex-shrink: 0;
 }
 .neg-info { flex: 1; min-width: 0; }
 .neg-info strong { font-size: .9rem; color: #0f172a; }
 .neg-info .neg-sub { font-size: .74rem; color: #64748b; margin-top: 2px; }
-.neg-motivo { font-size: .76rem; background: #fff1f2; color: #dc2626; padding: 4px 10px; border-radius: 6px; border: 1px solid #fee2e2; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+.neg-motivo { font-size: .76rem; background: #fff1f2; color: #c73a2e; padding: 4px 10px; border-radius: 6px; border: 1px solid #fde8e7; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
 .neg-data { font-size: .72rem; color: #94a3b8; flex-shrink: 0; white-space: nowrap; }
 
 /* Busca de cliente para negativar */
@@ -44,7 +44,7 @@
 
 <!-- Info card -->
 <div style="background:#fff1f2;border:1px solid #fecaca;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
-    <i class="fas fa-exclamation-triangle" style="color:#ef4444;font-size:1.1rem;flex-shrink:0;"></i>
+    <i class="fas fa-exclamation-triangle" style="color:#ef473a;font-size:1.1rem;flex-shrink:0;"></i>
     <div style="font-size:.82rem;color:#7f1d1d;">
         Clientes negativados recebem um <strong>alerta automático</strong> ao tentar criar uma nova locação. Remova a negativação apenas após a regularização da pendência.
     </div>
@@ -105,7 +105,7 @@ function renderizar(lista) {
     document.getElementById('countLabel').textContent = lista.length + ' cliente(s)';
     if (!lista.length) {
         el.innerHTML = `<div class="empty-state">
-            <i class="fas fa-check-circle" style="color:#10b981;font-size:2.5rem;display:block;margin-bottom:12px;"></i>
+            <i class="fas fa-check-circle" style="color:#33cd5f;font-size:2.5rem;display:block;margin-bottom:12px;"></i>
             <p style="font-size:.9rem;font-weight:500;">Nenhum cliente negativado</p>
             <p style="font-size:.8rem;color:#94a3b8;margin-top:4px;">A lista está limpa.</p>
         </div>`;
@@ -120,7 +120,7 @@ function renderizar(lista) {
                     ${n.cpf ? `<span style="font-family:monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:.72rem;">${n.cpf}</span>` : ''}
                     ${n.telefone ? `· ${n.telefone}` : ''}
                     ${n.total_locacoes > 0 ? `· <strong style="color:#0f172a;">${n.total_locacoes}</strong> locação(ões)` : ''}
-                    ${n.locacoes_ativas > 0 ? `<span style="background:#fef3c7;color:#92400e;padding:1px 8px;border-radius:10px;font-size:.68rem;font-weight:700;margin-left:6px;">${n.locacoes_ativas} ativa</span>` : ''}
+                    ${n.locacoes_ativas > 0 ? `<span style="background:#fff8d0;color:#7a6000;padding:1px 8px;border-radius:10px;font-size:.68rem;font-weight:700;margin-left:6px;">${n.locacoes_ativas} ativa</span>` : ''}
                 </div>
             </div>
             ${n.motivo_negativacao ? `<div class="neg-motivo" title="${n.motivo_negativacao}">
@@ -178,7 +178,7 @@ function filtrarClientes() {
     if (!filtrados.length) { el.innerHTML = '<div style="padding:12px;text-align:center;color:#94a3b8;font-size:.82rem;">Nenhum cliente encontrado</div>'; el.style.display='block'; return; }
     el.innerHTML = filtrados.map(c => `
         <div class="cliente-suggestion" onclick="selecionarCliente(${c.id}, '${(c.nome||'').replace("'","'")}', '${c.cpf||''}')">
-            <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#2563eb,#60a5fa);display:flex;align-items:center;justify-content:center;color:white;font-size:.8rem;font-weight:700;flex-shrink:0;">${(c.nome||'?')[0]}</div>
+            <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#008cdd,#30a2e4);display:flex;align-items:center;justify-content:center;color:white;font-size:.8rem;font-weight:700;flex-shrink:0;">${(c.nome||'?')[0]}</div>
             <div>
                 <div style="font-weight:600;color:#0f172a;">${c.nome}</div>
                 <div style="font-size:.72rem;color:#94a3b8;">${c.cpf||'Sem CPF'} ${c.telefone?'· '+c.telefone:''}</div>

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Dashboard — Siqueirão Multimarcas{% endblock %}
 
 {% block extra_css %}
@@ -69,13 +69,13 @@
         border-radius: 20px; margin-top: 5px;
     }
     .kpi-trend.up   { background: #f0fdf4; color: #16a34a; }
-    .kpi-trend.down { background: #fff1f2; color: #dc2626; }
+    .kpi-trend.down { background: #fff1f2; color: #c73a2e; }
     .kpi-trend.flat { background: #f8fafc; color: #64748b; }
-    .kpi-card.blue   { border-top-color: #2563eb; } .kpi-card.blue   .kpi-icon-bg { color: #2563eb; }
-    .kpi-card.green  { border-top-color: #10b981; } .kpi-card.green  .kpi-icon-bg { color: #10b981; }
-    .kpi-card.orange { border-top-color: #f59e0b; } .kpi-card.orange .kpi-icon-bg { color: #f59e0b; }
+    .kpi-card.blue   { border-top-color: #008cdd; } .kpi-card.blue   .kpi-icon-bg { color: #008cdd; }
+    .kpi-card.green  { border-top-color: #33cd5f; } .kpi-card.green  .kpi-icon-bg { color: #33cd5f; }
+    .kpi-card.orange { border-top-color: #ffc900; } .kpi-card.orange .kpi-icon-bg { color: #ffc900; }
     .kpi-card.purple { border-top-color: #8b5cf6; } .kpi-card.purple .kpi-icon-bg { color: #8b5cf6; }
-    .kpi-card.red    { border-top-color: #ef4444; } .kpi-card.red    .kpi-icon-bg { color: #ef4444; }
+    .kpi-card.red    { border-top-color: #ef473a; } .kpi-card.red    .kpi-icon-bg { color: #ef473a; }
     .kpi-card.teal   { border-top-color: #14b8a6; } .kpi-card.teal   .kpi-icon-bg { color: #14b8a6; }
 
     /* ── Ações rápidas ───────────────────────────────────── */
@@ -97,10 +97,10 @@
     }
     .qa-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); }
     .qa-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
-    .qa-icon.blue   { background: #eff6ff; color: #2563eb; }
-    .qa-icon.green  { background: #f0fdf4; color: #059669; }
-    .qa-icon.amber  { background: #fffbeb; color: #d97706; }
-    .qa-icon.red    { background: #fff1f2; color: #dc2626; }
+    .qa-icon.blue   { background: #e8f5ff; color: #008cdd; }
+    .qa-icon.green  { background: #f0fdf4; color: #27a84f; }
+    .qa-icon.amber  { background: #fffbeb; color: #d4a800; }
+    .qa-icon.red    { background: #fff1f2; color: #c73a2e; }
     .qa-icon.purple { background: #f5f3ff; color: #7c3aed; }
     .qa-label { font-size: .63rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
     .qa-value { font-size: .92rem; font-weight: 700; color: #1e293b; margin-top: 1px; white-space: nowrap; }
@@ -238,7 +238,7 @@
     <div class="card">
         <div class="card-header">
             <span class="card-title"><i class="fas fa-key"></i> Locações Ativas</span>
-            <a href="/locacoes" style="font-size:.72rem;color:#2563eb;text-decoration:none;font-weight:600;">Ver todas →</a>
+            <a href="/locacoes" style="font-size:.72rem;color:#008cdd;text-decoration:none;font-weight:600;">Ver todas →</a>
         </div>
         <div id="locacoesAtivasList">
             <div class="empty-state"><i class="fas fa-key"></i><p>Nenhuma locação ativa</p></div>
@@ -263,7 +263,7 @@
         </div>
         <div id="alertas">
             <div class="empty-state">
-                <i class="fas fa-check-circle" style="color:#10b981;"></i>
+                <i class="fas fa-check-circle" style="color:#33cd5f;"></i>
                 <p>Nenhuma pendência</p>
             </div>
         </div>
@@ -364,7 +364,7 @@
         const ctxFr = document.getElementById('chartFrota').getContext('2d');
         if (chartFrota) chartFrota.destroy();
         const frotaData = [data.veiculos_disponiveis, data.veiculos_locados, data.veiculos_manutencao];
-        const frotaColors = ['#10b981','#2563eb','#f59e0b'];
+        const frotaColors = ['#33cd5f','#008cdd','#ffc900'];
         const frotaLabels = ['Disponível','Locado','Manutenção'];
         chartFrota = new Chart(ctxFr, {
             type: 'doughnut',
@@ -438,7 +438,7 @@
 
         const div = document.getElementById('alertas');
         div.innerHTML = items.length === 0
-            ? `<div class="empty-state"><i class="fas fa-check-circle" style="color:#10b981;"></i><p>Nenhuma pendência</p></div>`
+            ? `<div class="empty-state"><i class="fas fa-check-circle" style="color:#33cd5f;"></i><p>Nenhuma pendência</p></div>`
             : items.map(a => `
                 <div class="alert-item ${a.type}" ${a.url ? `onclick="location.href='${a.url}'"` : ''}>
                     <i class="fas ${a.icon} alert-icon"></i>
@@ -491,7 +491,7 @@
                             <span style="font-family:monospace;font-weight:700;background:#1e293b;color:#f8fafc;border-radius:4px;padding:1px 6px;font-size:.72rem;margin-right:6px;">${g.placa}</span>
                             ${g.marca} ${g.modelo}
                         </small>
-                        <small style="color:#dc2626;font-weight:600;">${g.count} cobrança${g.count > 1 ? 's' : ''} vencida${g.count > 1 ? 's' : ''} · ${fmtR(g.total)}</small>
+                        <small style="color:#c73a2e;font-weight:600;">${g.count} cobrança${g.count > 1 ? 's' : ''} vencida${g.count > 1 ? 's' : ''} · ${fmtR(g.total)}</small>
                     </div>
                     <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.7rem;"></i>
                 </div>`).join('');

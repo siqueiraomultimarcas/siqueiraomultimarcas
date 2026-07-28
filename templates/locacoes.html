@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Locações - Siqueirão{% endblock %}
 
@@ -80,12 +80,12 @@
     .fotos-grid { display: flex; gap: 4px; flex-wrap: wrap; }
     .fotos-grid img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; }
     .foto-upload-area { border: 2px dashed #d1d5db; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; }
-    .foto-upload-area:hover { border-color: #2563eb; background: #f0f9ff; }
+    .foto-upload-area:hover { border-color: #008cdd; background: #f0f9ff; }
     .preview-fotos { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
     .preview-foto { position: relative; width: 80px; height: 80px; }
     .preview-foto img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
     .preview-foto .remove-btn { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; border: none; line-height: 20px; text-align: center; }
-    .upload-progress { background: #dbeafe; border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; color: #1e40af; display: none; margin-top: 8px; }
+    .upload-progress { background: #ddf0fb; border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; color: #015e94; display: none; margin-top: 8px; }
 </style>
 
 <script>
@@ -202,7 +202,7 @@
         document.getElementById('lbThumbs').innerHTML = _galFotos.map((f, i) =>
             `<img src="${thumbUrl(f)}" onclick="_galIdx=${i};renderGaleria()"
                   style="width:52px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;
-                         border:2px solid ${i===_galIdx?'#2563eb':'transparent'};opacity:${i===_galIdx?'1':'0.6'};">`
+                         border:2px solid ${i===_galIdx?'#008cdd':'transparent'};opacity:${i===_galIdx?'1':'0.6'};">`
         ).join('');
     }
 
@@ -248,13 +248,13 @@
     function confirmarExcluirLocacao(id, descricao) {
         abrirModal('Excluir Contrato', `
             <div style="text-align:center;padding:24px 0">
-                <i class="fas fa-exclamation-triangle" style="font-size:52px;color:#ef4444;display:block;margin-bottom:16px"></i>
+                <i class="fas fa-exclamation-triangle" style="font-size:52px;color:#ef473a;display:block;margin-bottom:16px"></i>
                 <p style="font-size:1rem;font-weight:600;color:#0f172a;margin-bottom:8px">Excluir este contrato?</p>
                 <p style="font-size:0.85rem;color:#64748b;margin-bottom:24px">${descricao.trim()}</p>
                 <p style="font-size:0.8rem;color:#94a3b8;margin-bottom:20px">Esta ação não pode ser desfeita. Fotos e pagamentos vinculados também serão removidos.</p>
                 <div style="display:flex;gap:10px;justify-content:center">
                     <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;padding:10px 20px">Cancelar</button>
-                    <button class="btn" onclick="excluirLocacao(${id})" style="background:#ef4444;color:white;padding:10px 20px"><i class="fas fa-trash" style="margin-right:6px"></i>Excluir</button>
+                    <button class="btn" onclick="excluirLocacao(${id})" style="background:#ef473a;color:white;padding:10px 20px"><i class="fas fa-trash" style="margin-right:6px"></i>Excluir</button>
                 </div>
             </div>
         `);
@@ -338,7 +338,7 @@
 
     function _toggle(nome, label, desc, val) {
         return '<label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;">' +
-            '<input type="checkbox" name="' + nome + '" id="' + nome + '" style="width:18px;height:18px;accent-color:#2563eb;" ' + (val ? 'checked' : '') + '>' +
+            '<input type="checkbox" name="' + nome + '" id="' + nome + '" style="width:18px;height:18px;accent-color:#008cdd;" ' + (val ? 'checked' : '') + '>' +
             '<div><div style="font-size:.82rem;font-weight:600;color:#0f172a;">' + label + '</div>' +
             '<div style="font-size:.72rem;color:#64748b;">' + desc + '</div></div></label>';
     }
@@ -400,8 +400,8 @@
         const freqBtnsHtml = _freqOpts.map(o => {
             const a = _freq === o.v;
             return '<button type="button" data-freq="' + o.v + '" onclick="setFreqLoc(\'' + o.v + '\')" '
-                + 'style="padding:6px 12px;border-radius:8px;border:2px solid ' + (a?'#2563eb':'#e2e8f0')
-                + ';background:' + (a?'#eff6ff':'#f8fafc') + ';color:' + (a?'#1d4ed8':'#64748b')
+                + 'style="padding:6px 12px;border-radius:8px;border:2px solid ' + (a?'#008cdd':'#e2e8f0')
+                + ';background:' + (a?'#e8f5ff':'#f8fafc') + ';color:' + (a?'#015e94':'#64748b')
                 + ';font-size:.76rem;font-weight:600;cursor:pointer;">' + o.l + '</button>';
         }).join('');
 
@@ -409,7 +409,7 @@
         const _sec = (title, icon) =>
             '<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#64748b;'
             + 'margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;">'
-            + '<i class="fas fa-' + icon + '" style="margin-right:6px;color:#2563eb;"></i>' + title + '</div>';
+            + '<i class="fas fa-' + icon + '" style="margin-right:6px;color:#008cdd;"></i>' + title + '</div>';
 
         const content = '<form id="formLocacao">' +
 
@@ -479,7 +479,7 @@
                 '<div class="form-group"><label>Valor por KM Excedente (R$)</label>' +
                 '<input type="number" class="form-control" name="km_excedente_valor" id="kmExcVal" value="' + _v('km_excedente_valor',0) + '" step="0.01" min="0" placeholder="Ex: 0.80" oninput="mostrarExemploKm()"></div>' +
             '</div>' +
-            '<div id="exemploKm" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;font-size:.78rem;color:#92400e;margin-bottom:10px;"></div>' +
+            '<div id="exemploKm" style="display:none;background:#fff8d0;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;font-size:.78rem;color:#7a6000;margin-bottom:10px;"></div>' +
             '<div class="form-group">' +
                 '<label>Raio de Circulação Permitido</label>' +
                 '<input type="text" class="form-control" name="raio_circulacao" value="' + _v('raio_circulacao','') + '" placeholder="Ex: Região Metropolitana de Curitiba"></div>' +
@@ -500,7 +500,7 @@
             // ─── Total Calculado ────────────────────────────────────────────
             '<div class="form-group" style="margin-top:8px;">' +
                 '<label>Total Calculado</label>' +
-                '<div id="totalCalculado" style="font-size:1.5rem;font-weight:bold;color:#2563eb;">' + (isEdit ? formatCurrency(locacao.total) : '—') + '</div>' +
+                '<div id="totalCalculado" style="font-size:1.5rem;font-weight:bold;color:#008cdd;">' + (isEdit ? formatCurrency(locacao.total) : '—') + '</div>' +
             '</div>' +
 
             // ─── Checklist ──────────────────────────────────────────────────
@@ -527,7 +527,7 @@
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;gap:8px;">' +
                 '<div>' +
                     (isEdit && locacao.frequencia_cobranca && locacao.frequencia_cobranca !== 'avulso' && !locacao.data_fim
-                        ? '<button type="button" class="btn" id="btnGerarCobrancas" onclick="gerarCobrancasContrato(' + locacao.id + ')" style="background:#0ea5e9;color:white;"><i class="fas fa-file-invoice-dollar" style="margin-right:6px"></i>Gerar Contas a Receber</button>'
+                        ? '<button type="button" class="btn" id="btnGerarCobrancas" onclick="gerarCobrancasContrato(' + locacao.id + ')" style="background:#28a0e5;color:white;"><i class="fas fa-file-invoice-dollar" style="margin-right:6px"></i>Gerar Contas a Receber</button>'
                         : '') +
                 '</div>' +
                 '<div style="display:flex;gap:8px;">' +
@@ -604,9 +604,9 @@
         document.getElementById('freqCobranca').value = freq;
         document.querySelectorAll('#freqBtns button').forEach(btn => {
             const a = btn.dataset.freq === freq;
-            btn.style.border      = '2px solid ' + (a ? '#2563eb' : '#e2e8f0');
-            btn.style.background  = a ? '#eff6ff' : '#f8fafc';
-            btn.style.color       = a ? '#1d4ed8' : '#64748b';
+            btn.style.border      = '2px solid ' + (a ? '#008cdd' : '#e2e8f0');
+            btn.style.background  = a ? '#e8f5ff' : '#f8fafc';
+            btn.style.color       = a ? '#015e94' : '#64748b';
         });
     }
 
@@ -763,7 +763,7 @@
                 '<p style="margin:4px 0 0;font-size:.9rem;"><strong>Cliente:</strong> ' + (loc.nome_cliente||'-') + '</p>' +
                 '<p style="margin:4px 0 0;font-size:.9rem;"><strong>Km na Saída:</strong> ' + (kmSaida ? kmSaida.toLocaleString()+'km' : '-') +
                 (temFranquia ? ' · <strong>Franquia:</strong> ' + loc.franquia_km_diaria + ' km/dia · <strong>Excedente:</strong> R$' + parseFloat(loc.km_excedente_valor).toFixed(2).replace('.',',') + '/km' : '') + '</p>' +
-                (loc.caucao > 0 ? '<p style="margin:4px 0 0;font-size:.9rem;"><strong>Caução:</strong> ' + formatCurrency(loc.caucao) + (loc.caucao_pendente ? ' <span style="color:#ef4444">(pendente)</span>' : ' <span style="color:#16a34a">(pago)</span>') + '</p>' : '') +
+                (loc.caucao > 0 ? '<p style="margin:4px 0 0;font-size:.9rem;"><strong>Caução:</strong> ' + formatCurrency(loc.caucao) + (loc.caucao_pendente ? ' <span style="color:#ef473a">(pendente)</span>' : ' <span style="color:#16a34a">(pago)</span>') + '</p>' : '') +
             '</div>' +
             '<div class="grid-2">' +
                 '<div class="form-group"><label>Data de Devolução *</label>' +
@@ -776,10 +776,10 @@
                 '<input class="form-control" value="' + combSaida + '" readonly style="background:#f8fafc;color:#64748b;"></div>' +
                 '<div class="form-group"><label>Nível Combustível Retorno</label>' + selCombRet + '</div>' +
             '</div>' +
-            '<div id="kmRodadoInfo" style="background:#dbeafe;border-radius:8px;padding:10px 14px;font-size:.85rem;color:#1e40af;margin-bottom:12px;display:none;">' +
+            '<div id="kmRodadoInfo" style="background:#ddf0fb;border-radius:8px;padding:10px 14px;font-size:.85rem;color:#015e94;margin-bottom:12px;display:none;">' +
                 '<i class="fas fa-road"></i> <span id="kmRodadoText"></span>' +
             '</div>' +
-            '<div id="kmExcedenteInfo" style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:.85rem;color:#92400e;margin-bottom:12px;display:none;">' +
+            '<div id="kmExcedenteInfo" style="background:#fff8d0;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:.85rem;color:#7a6000;margin-bottom:12px;display:none;">' +
                 '<i class="fas fa-exclamation-triangle"></i> <span id="kmExcedenteText"></span>' +
             '</div>' +
             '<div class="form-group">' +
@@ -917,17 +917,17 @@
             'h1{font-size:18px;text-align:center;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:4px;}' +
             '.sub{text-align:center;color:#555;font-size:11px;margin-bottom:18px;}' +
             '.section{margin-bottom:16px;}' +
-            '.section h2{font-size:11.5px;background:#f0f0f0;padding:4px 10px;margin:0 0 8px;border-left:4px solid #2563eb;text-transform:uppercase;letter-spacing:.5px;}' +
+            '.section h2{font-size:11.5px;background:#f0f0f0;padding:4px 10px;margin:0 0 8px;border-left:4px solid #008cdd;text-transform:uppercase;letter-spacing:.5px;}' +
             '.row{display:flex;gap:16px;margin-bottom:5px;}' +
             '.field{flex:1;}' +
             '.field label{display:block;font-size:10px;color:#666;margin-bottom:1px;}' +
             '.field span{display:block;font-weight:600;border-bottom:1px solid #ccc;padding-bottom:2px;min-height:17px;font-size:12px;}' +
             '.checklist-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;}' +
-            '.total-box{background:#f0f7ff;border:2px solid #2563eb;border-radius:6px;padding:12px 18px;text-align:center;margin-top:8px;}' +
-            '.total-box .valor{font-size:26px;font-weight:bold;color:#2563eb;}' +
+            '.total-box{background:#f0f7ff;border:2px solid #008cdd;border-radius:6px;padding:12px 18px;text-align:center;margin-top:8px;}' +
+            '.total-box .valor{font-size:26px;font-weight:bold;color:#008cdd;}' +
             '.badge{display:inline-block;padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700;}' +
             '.badge-ok{background:#dcfce7;color:#15803d;}' +
-            '.badge-pend{background:#fee2e2;color:#c41230;}' +
+            '.badge-pend{background:#fde8e7;color:#c41230;}' +
             '.assinaturas{display:flex;gap:60px;margin-top:48px;}' +
             '.assinatura{flex:1;text-align:center;}' +
             '.assinatura .linha{border-top:1px solid #333;margin-top:50px;padding-top:4px;font-size:11px;}' +
@@ -1052,7 +1052,7 @@
     padding: 9px 14px; font-size: .83rem; cursor: pointer; color: #374151;
 }
 .loc-menu button:hover { background: #f8fafc; }
-.loc-menu button.danger { color: #dc2626; }
+.loc-menu button.danger { color: #c73a2e; }
 .loc-menu button.danger:hover { background: #fef2f2; }
 .loc-menu button i { width: 14px; text-align: center; }
 </style>
