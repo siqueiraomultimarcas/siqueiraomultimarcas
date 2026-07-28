@@ -72,27 +72,23 @@
 
 {% block scripts %}
 <script>
-const carros=[
-    {id:0,marca:'Volkswagen',modelo:'Golf',versao:'1.4 TSI Highline',ano:'2022/2023',km:28500,comb:'Flex',trans:'Automático',preco:118900,img:'/static/img/car-1.jpg'},
-    {id:1,marca:'Honda',modelo:'Civic',versao:'2.0 Touring CVT',ano:'2021/2022',km:42300,comb:'Gasolina',trans:'Automático',preco:139500,img:'/static/img/car-2.jpg'},
-    {id:2,marca:'Toyota',modelo:'Corolla Cross',versao:'2.0 XRE',ano:'2023/2024',km:15800,comb:'Flex',trans:'Automático',preco:162900,img:'/static/img/car-3.jpg'},
-    {id:3,marca:'Chevrolet',modelo:'S10',versao:'2.8 LTZ 4x4 Diesel',ano:'2022/2023',km:55200,comb:'Diesel',trans:'Automático',preco:218900,img:'/static/img/car-4.jpg'},
-    {id:4,marca:'Volkswagen',modelo:'T-Cross',versao:'1.4 TSI Highline',ano:'2022/2022',km:38100,comb:'Flex',trans:'Automático',preco:129900,img:'/static/img/car-5.jpg'},
-    {id:5,marca:'Hyundai',modelo:'HB20',versao:'1.0 Comfort Plus',ano:'2021/2022',km:47600,comb:'Flex',trans:'Manual',preco:72900,img:'/static/img/car-6.jpg'},
-];
-function fmtKm(v){return v.toLocaleString('pt-BR')+' km'}
-function fmtP(v){return 'R$ '+v.toLocaleString('pt-BR')}
+const carros={{ veiculos|tojson }};
+function fmtKm(v){return (v||0).toLocaleString('pt-BR')+' km'}
+function fmtP(v){return 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}
 function card(c){
+    const ano=c.ano||'';
+    const anoFim=ano.includes('/')?ano.split('/')[1]:ano;
+    const img=c.foto||'/static/img/car-1.jpg';
     return`<a class="v-card" href="/veiculo/${c.id}">
-    <div class="v-card-thumb"><img src="${c.img}" alt="${c.marca} ${c.modelo}" loading="lazy"><span class="v-card-year">${c.ano.split('/')[1]}</span></div>
+    <div class="v-card-thumb"><img src="${img}" alt="${c.marca} ${c.modelo}" loading="lazy"><span class="v-card-year">${anoFim}</span></div>
     <div class="v-card-body">
         <p class="v-card-brand">${c.marca}</p>
-        <h3 class="v-card-name">${c.modelo} <span>${c.versao}</span></h3>
+        <h3 class="v-card-name">${c.modelo} <span>${c.versao||''}</span></h3>
         <div class="v-card-specs">
-            <span class="v-spec"><i class="fas fa-calendar-alt"></i> ${c.ano}</span>
+            <span class="v-spec"><i class="fas fa-calendar-alt"></i> ${ano}</span>
             <span class="v-spec"><i class="fas fa-tachometer-alt"></i> ${fmtKm(c.km)}</span>
-            <span class="v-spec"><i class="fas fa-gas-pump"></i> ${c.comb}</span>
-            <span class="v-spec"><i class="fas fa-cog"></i> ${c.trans}</span>
+            <span class="v-spec"><i class="fas fa-gas-pump"></i> ${c.combustivel||''}</span>
+            <span class="v-spec"><i class="fas fa-cog"></i> ${c.transmissao||''}</span>
         </div>
         <div class="v-card-foot"><div><p class="v-price-lbl">A partir de</p><p class="v-price">${fmtP(c.preco)}</p></div><span class="btn-ver">Ver detalhes</span></div>
     </div></a>`;
@@ -101,7 +97,7 @@ function filtrar(){
     const q=document.getElementById('busca').value.trim().toLowerCase();
     const m=document.getElementById('marcaSelect').value;
     const r=carros.filter(c=>{
-        const matchQ=!q||(c.marca+' '+c.modelo+' '+c.versao).toLowerCase().includes(q);
+        const matchQ=!q||((c.marca||'')+' '+(c.modelo||'')+' '+(c.versao||'')).toLowerCase().includes(q);
         const matchM=m==='todas'||c.marca===m;
         return matchQ&&matchM;
     });
@@ -110,7 +106,6 @@ function filtrar(){
 }
 document.getElementById('busca').addEventListener('input',filtrar);
 document.getElementById('marcaSelect').addEventListener('change',filtrar);
-// Ler query string ?q=
 const qs=new URLSearchParams(window.location.search);
 if(qs.get('q')){document.getElementById('busca').value=qs.get('q');}
 filtrar();

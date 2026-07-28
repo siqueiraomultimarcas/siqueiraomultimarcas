@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ titulo }} — Siqueirão</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--dark:#0d1117;--blue:#2563eb;--bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b}
+body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{color:inherit;text-decoration:none}
+.topbar{background:var(--dark);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;sticky top:0;z-index:50}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar-logo{height:38px;width:auto}
+.topbar-title{font-size:.8rem;font-weight:600;color:rgba(255,255,255,.5);letter-spacing:.06em}
+.btn-sm{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;font-size:.75rem;font-weight:600;font-family:'Poppins',sans-serif;cursor:pointer;border:none;transition:background .15s}
+.btn-outline{background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.12)}
+.btn-outline:hover{background:rgba(255,255,255,.12);color:#fff}
+
+.page{max-width:760px;margin:0 auto;padding:32px 24px}
+.page-head{margin-bottom:28px}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted);margin-bottom:16px;transition:color .15s}
+.back-link:hover{color:var(--blue)}
+.page-head h1{font-size:1.3rem;font-weight:700}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:20px}
+.card-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.field input,.field select,.field textarea{padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:.85rem;font-family:'Poppins',sans-serif;color:var(--text);background:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.field textarea{resize:vertical;min-height:80px}
+
+/* Foto upload */
+.foto-area{border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:border-color .15s;position:relative;background:#fafafa}
+.foto-area:hover{border-color:var(--blue)}
+.foto-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.foto-area i{font-size:2rem;color:#cbd5e1;margin-bottom:8px;display:block}
+.foto-area p{font-size:.8rem;color:var(--muted)}
+.foto-area small{font-size:.7rem;color:#94a3b8}
+.foto-preview{width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-bottom:12px;display:block}
+
+/* Toggle */
+.toggle-row{display:flex;align-items:center;gap:12px;padding:14px;background:#f8fafc;border-radius:10px;border:1px solid var(--border)}
+.toggle-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--blue);cursor:pointer}
+.toggle-label{font-size:.82rem;font-weight:500}
+.toggle-desc{font-size:.72rem;color:var(--muted);margin-top:1px}
+
+.form-footer{display:flex;gap:12px;justify-content:flex-end;margin-top:24px}
+.btn-save{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;border-radius:8px;background:var(--blue);color:#fff;font-size:.85rem;font-weight:600;border:none;cursor:pointer;font-family:'Poppins',sans-serif;transition:background .15s}
+.btn-save:hover{background:#1d4ed8}
+.btn-cancel-form{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;border-radius:8px;background:#f1f5f9;color:var(--text);font-size:.85rem;font-weight:600;border:1px solid var(--border)}
+.btn-cancel-form:hover{background:#e2e8f0}
+
+@media(max-width:600px){.grid-2,.grid-3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+    <div class="topbar-left">
+        <img class="topbar-logo" src="/static/logo_nova.png" alt="Siqueirão">
+        <span class="topbar-title">{{ titulo }}</span>
+    </div>
+    <div style="display:flex;gap:8px">
+        <a class="btn-sm btn-outline" href="/website"><i class="fas fa-arrow-left"></i> Voltar</a>
+    </div>
+</nav>
+
+<div class="page">
+    <div class="page-head">
+        <a class="back-link" href="/website"><i class="fas fa-arrow-left"></i> Voltar para o painel</a>
+        <h1>{{ titulo }}</h1>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+
+        <!-- FOTO -->
+        <div class="card">
+            <div class="card-title"><i class="fas fa-image"></i> Foto do Veículo</div>
+            {% if v and v.foto %}
+                <img class="foto-preview" id="fotoPreview" src="{{ v.foto }}" alt="">
+            {% else %}
+                <img class="foto-preview" id="fotoPreview" src="" alt="" style="display:none">
+            {% endif %}
+            <div class="foto-area">
+                <input type="file" name="foto" id="fotoInput" accept="image/*" onchange="previewFoto(this)">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Clique ou arraste uma foto aqui</p>
+                <small>JPG, PNG ou WEBP · Máx. 8MB</small>
+            </div>
+        </div>
+
+        <!-- DADOS PRINCIPAIS -->
+        <div class="card">
+            <div class="card-title"><i class="fas fa-car"></i> Dados do Veículo</div>
+            <div class="grid-2" style="margin-bottom:16px">
+                <div class="field">
+                    <label>Marca *</label>
+                    <input type="text" name="marca" value="{{ v.marca if v else '' }}" required placeholder="Ex: Volkswagen">
+                </div>
+                <div class="field">
+                    <label>Modelo *</label>
+                    <input type="text" name="modelo" value="{{ v.modelo if v else '' }}" required placeholder="Ex: Golf">
+                </div>
+            </div>
+            <div class="field" style="margin-bottom:16px">
+                <label>Versão</label>
+                <input type="text" name="versao" value="{{ v.versao if v else '' }}" placeholder="Ex: 1.4 TSI Highline">
+            </div>
+            <div class="grid-3" style="margin-bottom:16px">
+                <div class="field">
+                    <label>Ano</label>
+                    <input type="text" name="ano" value="{{ v.ano if v else '' }}" placeholder="Ex: 2022/2023">
+                </div>
+                <div class="field">
+                    <label>Quilometragem</label>
+                    <input type="number" name="km" value="{{ v.km if v else 0 }}" min="0" placeholder="Ex: 35000">
+                </div>
+                <div class="field">
+                    <label>Cor</label>
+                    <input type="text" name="cor" value="{{ v.cor if v else '' }}" placeholder="Ex: Prata">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="field">
+                    <label>Combustível</label>
+                    <select name="combustivel">
+                        <option value="">Selecione</option>
+                        {% for opt in ['Flex','Gasolina','Diesel','Elétrico','Híbrido'] %}
+                        <option value="{{ opt }}" {% if v and v.combustivel == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Câmbio</label>
+                    <select name="transmissao">
+                        <option value="">Selecione</option>
+                        {% for opt in ['Automático','Manual','CVT','Automatizado'] %}
+                        <option value="{{ opt }}" {% if v and v.transmissao == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- PREÇO -->
+        <div class="card">
+            <div class="card-title"><i class="fas fa-tag"></i> Preço</div>
+            <div class="field">
+                <label>Preço à vista (R$)</label>
+                <input type="number" name="preco" value="{{ v.preco if v else '' }}" step="0.01" min="0" placeholder="Ex: 89900.00">
+            </div>
+        </div>
+
+        <!-- CONFIGURAÇÕES -->
+        <div class="card">
+            <div class="card-title"><i class="fas fa-cog"></i> Configurações</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+                <div class="toggle-row">
+                    <input type="checkbox" name="destaque" id="chkDestaque" {% if v and v.destaque %}checked{% endif %}>
+                    <div>
+                        <div class="toggle-label">Destacar no site</div>
+                        <div class="toggle-desc">Aparece primeiro no estoque e na home</div>
+                    </div>
+                </div>
+                {% if v %}
+                <div class="toggle-row">
+                    <input type="checkbox" name="ativo" id="chkAtivo" {% if v.ativo %}checked{% endif %}>
+                    <div>
+                        <div class="toggle-label">Anúncio ativo</div>
+                        <div class="toggle-desc">Desmarque para ocultar sem excluir</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- OBSERVAÇÕES -->
+        <div class="card">
+            <div class="card-title"><i class="fas fa-comment"></i> Observações</div>
+            <div class="field">
+                <label>Informações adicionais (visível internamente)</label>
+                <textarea name="observacoes" placeholder="Ex: IPVA pago, revisão feita, segundo dono...">{{ v.observacoes if v else '' }}</textarea>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <a class="btn-cancel-form" href="/website">Cancelar</a>
+            <button type="submit" class="btn-save"><i class="fas fa-save"></i> Salvar Veículo</button>
+        </div>
+    </form>
+</div>
+
+<script>
+function previewFoto(input) {
+    const preview = document.getElementById('fotoPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+</body>
+</html>

@@ -412,6 +412,27 @@ def init_db():
         WHERE manutencoes.id = sub.id AND sub.total > 0
     """)
 
+    # ── Veículos do site (para venda) ────────────────────────────────────────
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS veiculos_site (
+            id SERIAL PRIMARY KEY,
+            marca TEXT NOT NULL,
+            modelo TEXT NOT NULL,
+            versao TEXT,
+            ano TEXT,
+            km INTEGER DEFAULT 0,
+            combustivel TEXT,
+            transmissao TEXT,
+            cor TEXT,
+            preco NUMERIC(12,2),
+            foto TEXT,
+            ativo BOOLEAN DEFAULT TRUE,
+            destaque BOOLEAN DEFAULT FALSE,
+            observacoes TEXT,
+            data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     # ── Índices — evita Seq Scan em JOINs e filtros frequentes ──────────────
     cur.execute("CREATE INDEX IF NOT EXISTS idx_locacoes_veiculo   ON locacoes(veiculo_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_locacoes_cliente   ON locacoes(cliente_id)")
@@ -643,24 +664,22 @@ def setup():
 
     return render_template('setup.html')
 
-# ==================== DADOS ESTÁTICOS DO SITE ====================
-
-VEICULOS_SITE = [
-    {'id':0,'marca':'Volkswagen','modelo':'Golf','versao':'1.4 TSI Highline','ano':'2022/2023','km':28500,'comb':'Flex','trans':'Automático','cor':'Prata','preco':118900,'img':'/static/img/car-1.jpg'},
-    {'id':1,'marca':'Honda','modelo':'Civic','versao':'2.0 Touring CVT','ano':'2021/2022','km':42300,'comb':'Gasolina','trans':'Automático','cor':'Preto','preco':139500,'img':'/static/img/car-2.jpg'},
-    {'id':2,'marca':'Toyota','modelo':'Corolla Cross','versao':'2.0 XRE','ano':'2023/2024','km':15800,'comb':'Flex','trans':'Automático','cor':'Branco','preco':162900,'img':'/static/img/car-3.jpg'},
-    {'id':3,'marca':'Chevrolet','modelo':'S10','versao':'2.8 LTZ 4x4 Diesel','ano':'2022/2023','km':55200,'comb':'Diesel','trans':'Automático','cor':'Azul','preco':218900,'img':'/static/img/car-4.jpg'},
-    {'id':4,'marca':'Volkswagen','modelo':'T-Cross','versao':'1.4 TSI Highline','ano':'2022/2022','km':38100,'comb':'Flex','trans':'Automático','cor':'Cinza','preco':129900,'img':'/static/img/car-5.jpg'},
-    {'id':5,'marca':'Hyundai','modelo':'HB20','versao':'1.0 Comfort Plus','ano':'2021/2022','km':47600,'comb':'Flex','trans':'Manual','cor':'Vermelho','preco':72900,'img':'/static/img/car-6.jpg'},
-]
-
 # ==================== ROTAS DE PÁGINAS ====================
+
+def _get_veiculos_site():
+    try:
+        with _db() as (conn, cur):
+            cur.execute('SELECT * FROM veiculos_site WHERE ativo=TRUE ORDER BY destaque DESC, id DESC')
+            return rows_to_dict(cur)
+    except Exception:
+        return []
 
 @app.route('/')
 def home():
     if current_user.is_authenticated:
         return redirect(url_for('selecionar'))
-    return render_template('home.html')
+    veiculos = _get_veiculos_site()
+    return render_template('home.html', veiculos=veiculos)
 
 
 @app.route('/painel')
@@ -672,12 +691,90 @@ def index():
 @app.route('/website')
 @login_required
 def website():
-    return render_template('website.html')
+    veiculos = _get_veiculos_site()
+    return render_template('website_admin.html', veiculos=veiculos)
+
+
+@app.route('/website/veiculo/novo', methods=['GET', 'POST'])
+@login_required
+def website_veiculo_novo():
+    if request.method == 'POST':
+        foto_url = ''
+        if 'foto' in request.files and request.files['foto'].filename:
+            up = cloudinary.uploader.upload(request.files['foto'], folder='siqueirao/site')
+            foto_url = up.get('secure_url', '')
+        with _db() as (conn, cur):
+            cur.execute('''
+                INSERT INTO veiculos_site (marca, modelo, versao, ano, km, combustivel, transmissao, cor, preco, foto, destaque, observacoes)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ''', (
+                request.form.get('marca','').strip(),
+                request.form.get('modelo','').strip(),
+                request.form.get('versao','').strip(),
+                request.form.get('ano','').strip(),
+                int(request.form.get('km',0) or 0),
+                request.form.get('combustivel','').strip(),
+                request.form.get('transmissao','').strip(),
+                request.form.get('cor','').strip(),
+                float(request.form.get('preco',0) or 0),
+                foto_url,
+                request.form.get('destaque') == 'on',
+                request.form.get('observacoes','').strip(),
+            ))
+        return redirect(url_for('website'))
+    return render_template('website_veiculo_form.html', v=None, titulo='Novo Veículo')
+
+
+@app.route('/website/veiculo/<int:vid>/editar', methods=['GET', 'POST'])
+@login_required
+def website_veiculo_editar(vid):
+    with _db() as (conn, cur):
+        cur.execute('SELECT * FROM veiculos_site WHERE id=%s', (vid,))
+        v = row_to_dict(cur)
+    if not v:
+        return redirect(url_for('website'))
+    if request.method == 'POST':
+        foto_url = v.get('foto', '')
+        if 'foto' in request.files and request.files['foto'].filename:
+            up = cloudinary.uploader.upload(request.files['foto'], folder='siqueirao/site')
+            foto_url = up.get('secure_url', foto_url)
+        with _db() as (conn, cur):
+            cur.execute('''
+                UPDATE veiculos_site SET marca=%s, modelo=%s, versao=%s, ano=%s, km=%s,
+                combustivel=%s, transmissao=%s, cor=%s, preco=%s, foto=%s, destaque=%s,
+                ativo=%s, observacoes=%s WHERE id=%s
+            ''', (
+                request.form.get('marca','').strip(),
+                request.form.get('modelo','').strip(),
+                request.form.get('versao','').strip(),
+                request.form.get('ano','').strip(),
+                int(request.form.get('km',0) or 0),
+                request.form.get('combustivel','').strip(),
+                request.form.get('transmissao','').strip(),
+                request.form.get('cor','').strip(),
+                float(request.form.get('preco',0) or 0),
+                foto_url,
+                request.form.get('destaque') == 'on',
+                request.form.get('ativo') == 'on',
+                request.form.get('observacoes','').strip(),
+                vid,
+            ))
+        return redirect(url_for('website'))
+    return render_template('website_veiculo_form.html', v=v, titulo='Editar Veículo')
+
+
+@app.route('/website/veiculo/<int:vid>/excluir', methods=['POST'])
+@login_required
+def website_veiculo_excluir(vid):
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM veiculos_site WHERE id=%s', (vid,))
+    return redirect(url_for('website'))
 
 
 @app.route('/estoque')
 def estoque():
-    return render_template('estoque.html')
+    veiculos = _get_veiculos_site()
+    return render_template('estoque.html', veiculos=veiculos)
 
 
 @app.route('/financiamento')
@@ -697,9 +794,14 @@ def contato():
 
 @app.route('/veiculo/<int:vid>')
 def veiculo_detalhe(vid):
-    if vid < 0 or vid >= len(VEICULOS_SITE):
+    try:
+        with _db() as (conn, cur):
+            cur.execute('SELECT * FROM veiculos_site WHERE id=%s AND ativo=TRUE', (vid,))
+            v = row_to_dict(cur)
+    except Exception:
+        v = None
+    if not v:
         return redirect(url_for('estoque'))
-    v = VEICULOS_SITE[vid]
     return render_template('veiculo.html', v=v)
 
 
