@@ -344,11 +344,15 @@
     }
 
     function abrirModalLocacao(locacao = null) {
+      try {
         const isEdit = locacao !== null;
         fotosFilesParaUpload = [];
 
+        const _veiculos = Array.isArray(veiculos) ? veiculos : [];
+        const _clientes = Array.isArray(clientes) ? clientes : [];
+
         let optVeic = '<option value="">Selecione o veículo</option>';
-        veiculos.forEach(v => {
+        _veiculos.forEach(v => {
             const sel = isEdit && locacao.veiculo_id === v.id ? 'selected' : '';
             optVeic += '<option value="' + v.id + '"'
                 + ' data-diaria="' + (v.diaria||0) + '"'
@@ -360,7 +364,7 @@
         });
 
         let optCli = '<option value="">Selecione o cliente</option>';
-        clientes.filter(c => c.status === 'ativo').forEach(c => {
+        _clientes.filter(c => c.status === 'ativo').forEach(c => {
             const sel = isEdit && locacao.cliente_id === c.id ? 'selected' : '';
             optCli += '<option value="' + c.id + '" ' + sel + '>' + c.nome + '</option>';
         });
@@ -546,6 +550,10 @@
                 document.getElementById('wrapDescPromessa').style.display = this.checked ? 'block' : 'none';
             });
         }, 100);
+      } catch(err) {
+        console.error('Erro ao abrir modal de locação:', err);
+        showToast('Erro ao abrir formulário: ' + (err.message || err), 'error');
+      }
     }
 
     function atualizarDiaria() {
