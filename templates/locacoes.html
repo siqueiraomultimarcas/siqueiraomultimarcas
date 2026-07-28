@@ -326,6 +326,22 @@
     }
 
     // ====== MODAL NOVA/EDITAR LOCAÇÃO ======
+    const _COMBUSTIVEIS = ['Reserva','1/4','Meio','3/4','Cheio'];
+
+    function _selComb(nome, val) {
+        return '<select class="form-control" name="' + nome + '" id="' + nome + '">' +
+            '<option value="">Selecione</option>' +
+            _COMBUSTIVEIS.map(c => '<option value="' + c + '"' + (val === c ? ' selected' : '') + '>' + c + '</option>').join('') +
+            '</select>';
+    }
+
+    function _toggle(nome, label, desc, val) {
+        return '<label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;">' +
+            '<input type="checkbox" name="' + nome + '" id="' + nome + '" style="width:18px;height:18px;accent-color:#2563eb;" ' + (val ? 'checked' : '') + '>' +
+            '<div><div style="font-size:.82rem;font-weight:600;color:#0f172a;">' + label + '</div>' +
+            '<div style="font-size:.72rem;color:#64748b;">' + desc + '</div></div></label>';
+    }
+
     function abrirModalLocacao(locacao = null) {
         const isEdit = locacao !== null;
         fotosFilesParaUpload = [];
@@ -333,7 +349,13 @@
         let optVeic = '<option value="">Selecione o veículo</option>';
         veiculos.forEach(v => {
             const sel = isEdit && locacao.veiculo_id === v.id ? 'selected' : '';
-            optVeic += '<option value="' + v.id + '" data-diaria="' + v.diaria + '" data-km="' + v.km_atual + '" ' + sel + '>' + v.placa + ' - ' + v.marca + ' ' + v.modelo + '</option>';
+            optVeic += '<option value="' + v.id + '"'
+                + ' data-diaria="' + (v.diaria||0) + '"'
+                + ' data-km="' + (v.km_atual||0) + '"'
+                + ' data-caucao="' + (v.caucao_padrao||0) + '"'
+                + ' data-freq="' + (v.frequencia_padrao||'avulso') + '"'
+                + ' data-tempo="' + (v.tempo_minimo_padrao||30) + '"'
+                + ' ' + sel + '>' + v.placa + ' - ' + v.marca + ' ' + v.modelo + '</option>';
         });
 
         let optCli = '<option value="">Selecione o cliente</option>';
@@ -343,23 +365,17 @@
         });
 
         const checklistItens = [
-            { id: 'combustivel', label: 'Combustível' }, { id: 'freios', label: 'Freios' },
-            { id: 'luzes', label: 'Luzes' }, { id: 'pneus', label: 'Pneus' },
-            { id: 'parabrisas', label: 'Parabrisas' }, { id: 'retrovisores', label: 'Retrovisores' },
-            { id: 'limpeza', label: 'Limpeza' }, { id: 'documentos', label: 'Documentos' }
+            {id:'combustivel',label:'Combustível'},{id:'freios',label:'Freios'},
+            {id:'luzes',label:'Luzes'},{id:'pneus',label:'Pneus'},
+            {id:'parabrisas',label:'Parabrisas'},{id:'retrovisores',label:'Retrovisores'},
+            {id:'limpeza',label:'Limpeza'},{id:'documentos',label:'Documentos'}
         ];
-
         let savedChecklist = [];
-        try {
-            if (isEdit && locacao.checklist) {
-                savedChecklist = typeof locacao.checklist === 'string' ? JSON.parse(locacao.checklist) : locacao.checklist;
-            }
-        } catch {}
-
+        try { if (isEdit && locacao.checklist) savedChecklist = typeof locacao.checklist === 'string' ? JSON.parse(locacao.checklist) : locacao.checklist; } catch {}
         let checklistHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">';
         checklistItens.forEach(item => {
-            const checked = savedChecklist.find(c => c.id === item.id && c.checked) ? 'checked' : '';
-            checklistHtml += '<div class="checklist-item"><input type="checkbox" id="check_' + item.id + '" value="' + item.id + '" ' + checked + '><label for="check_' + item.id + '">' + item.label + '</label></div>';
+            const chk = savedChecklist.find(c => c.id === item.id && c.checked) ? 'checked' : '';
+            checklistHtml += '<div class="checklist-item"><input type="checkbox" id="check_' + item.id + '" value="' + item.id + '" ' + chk + '><label for="check_' + item.id + '">' + item.label + '</label></div>';
         });
         checklistHtml += '</div>';
 
@@ -377,55 +393,136 @@
 
         const _freq = isEdit ? (locacao.frequencia_cobranca || 'avulso') : 'avulso';
         const _freqOpts = [
-            {v:'avulso',   l:'Avulso (manual)'},
-            {v:'semanal',  l:'Semanal (7 dias)'},
-            {v:'quinzenal',l:'Quinzenal (14 dias)'},
-            {v:'mensal',   l:'Mensal (28 dias)'}
+            {v:'avulso',l:'Avulso'},{v:'semanal',l:'Semanal (7d)'},
+            {v:'quinzenal',l:'Quinzenal (14d)'},{v:'mensal',l:'Mensal (28d)'}
         ];
-        const freqBtnsHtml = _freqOpts.map(function(o) {
+        const freqBtnsHtml = _freqOpts.map(o => {
             const a = _freq === o.v;
-            const border = a ? '#2563eb' : '#e2e8f0';
-            const bg     = a ? '#eff6ff' : '#f8fafc';
-            const color  = a ? '#1d4ed8' : '#64748b';
             return '<button type="button" data-freq="' + o.v + '" onclick="setFreqLoc(\'' + o.v + '\')" '
-                 + 'style="padding:6px 14px;border-radius:8px;border:2px solid ' + border
-                 + ';background:' + bg + ';color:' + color
-                 + ';font-size:.78rem;font-weight:600;cursor:pointer;">'
-                 + o.l + '</button>';
+                + 'style="padding:6px 12px;border-radius:8px;border:2px solid ' + (a?'#2563eb':'#e2e8f0')
+                + ';background:' + (a?'#eff6ff':'#f8fafc') + ';color:' + (a?'#1d4ed8':'#64748b')
+                + ';font-size:.76rem;font-weight:600;cursor:pointer;">' + o.l + '</button>';
         }).join('');
 
+        const _v = (k, def='') => isEdit ? (locacao[k] ?? def) : def;
+        const _sec = (title, icon) =>
+            '<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#64748b;'
+            + 'margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;">'
+            + '<i class="fas fa-' + icon + '" style="margin-right:6px;color:#2563eb;"></i>' + title + '</div>';
+
         const content = '<form id="formLocacao">' +
+
+            // ─── Veículo / Cliente ─────────────────────────────────────────────
             '<div class="grid-2">' +
-                '<div class="form-group"><label>Veículo *</label><select class="form-control" name="veiculo_id" id="selectVeiculo" required onchange="atualizarDiaria()">' + optVeic + '</select></div>' +
-                '<div class="form-group"><label>Cliente *</label><select class="form-control" name="cliente_id" required>' + optCli + '</select></div>' +
+                '<div class="form-group"><label>Veículo *</label>' +
+                '<select class="form-control" name="veiculo_id" id="selectVeiculo" required onchange="atualizarDiaria()">' + optVeic + '</select></div>' +
+                '<div class="form-group"><label>Cliente *</label>' +
+                '<select class="form-control" name="cliente_id" required>' + optCli + '</select></div>' +
             '</div>' +
+
+            // ─── Datas ────────────────────────────────────────────────────────
             '<div class="grid-2">' +
-                '<div class="form-group"><label>Data Início *</label><input type="date" class="form-control" name="data_inicio" id="dataInicio" value="' + (isEdit ? locacao.data_inicio : new Date().toISOString().slice(0,10)) + '" required onchange="calcularTotal()"></div>' +
-                '<div class="form-group"><label>Data Fim <span style="font-size:0.7rem;color:#94a3b8;font-weight:400">(opcional)</span></label><input type="date" class="form-control" name="data_fim" id="dataFim" value="' + (isEdit ? (locacao.data_fim || '') : '') + '" onchange="calcularTotal()"></div>' +
+                '<div class="form-group"><label>Data Início *</label>' +
+                '<input type="date" class="form-control" name="data_inicio" id="dataInicio" value="' + (isEdit ? _v('data_inicio') : new Date().toISOString().slice(0,10)) + '" required onchange="calcularTotal();calcularProxPagamento()"></div>' +
+                '<div class="form-group"><label>Data Fim <small style="color:#94a3b8">(opcional)</small></label>' +
+                '<input type="date" class="form-control" name="data_fim" id="dataFim" value="' + _v('data_fim') + '" onchange="calcularTotal()"></div>' +
             '</div>' +
+
+            // ─── Frequência e valores ─────────────────────────────────────────
+            _sec('Frequência e Valores do Aluguel','money-bill-wave') +
             '<div class="form-group">' +
-                '<label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Frequência de Cobrança</label>' +
-                '<input type="hidden" name="frequencia_cobranca" id="freqCobranca" value="' + (isEdit ? (locacao.frequencia_cobranca || 'avulso') : 'avulso') + '">' +
+                '<input type="hidden" name="frequencia_cobranca" id="freqCobranca" value="' + _freq + '">' +
                 '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="freqBtns">' + freqBtnsHtml + '</div>' +
             '</div>' +
             '<div class="grid-3">' +
-                '<div class="form-group"><label>Valor Semanal (R$) <span style="font-size:0.7rem;color:#64748b;font-weight:400">÷7 = diária</span></label><input type="number" class="form-control" name="valor_semanal" id="semanalLoc" value="' + (isEdit ? (locacao.valor_semanal || (locacao.diaria ? Math.round(locacao.diaria * 7 * 100) / 100 : '')) : '') + '" step="0.01" min="0" oninput="sincSemanal()" placeholder="Ex: 450,03"></div>' +
-                '<div class="form-group"><label>Valor Diária (R$) <span style="font-size:0.7rem;color:#94a3b8;font-weight:400">calculado automaticamente</span></label><input type="number" class="form-control" name="diaria" id="diariaLoc" value="' + (isEdit ? locacao.diaria : '') + '" step="0.01" min="0" readonly style="background:#f8fafc;color:#64748b;cursor:not-allowed;"></div>' +
-                '<div class="form-group"><label>Km Saída</label><input type="number" class="form-control" name="km_saida" id="kmSaida" value="' + (isEdit ? (locacao.km_saida || '') : '') + '" min="0"></div>' +
+                '<div class="form-group"><label>Valor Semanal (R$) <small style="color:#64748b">÷7=diária</small></label>' +
+                '<input type="number" class="form-control" name="valor_semanal" id="semanalLoc" value="' + _v('valor_semanal','') + '" step="0.01" min="0" oninput="sincSemanal()" placeholder="Ex: 450"></div>' +
+                '<div class="form-group"><label>Valor Diária (R$) <small style="color:#94a3b8">auto</small></label>' +
+                '<input type="number" class="form-control" name="diaria" id="diariaLoc" value="' + _v('diaria','') + '" step="0.01" min="0" readonly style="background:#f8fafc;color:#64748b;"></div>' +
+                '<div class="form-group"><label>Km Saída</label>' +
+                '<input type="number" class="form-control" name="km_saida" id="kmSaida" value="' + _v('km_saida','') + '" min="0"></div>' +
             '</div>' +
-            '<div class="form-group"><label>Total Calculado</label><div id="totalCalculado" style="font-size:1.5rem;font-weight:bold;color:#2563eb;">' + (isEdit ? formatCurrency(locacao.total) : 'R$ 0,00') + '</div></div>' +
-            '<div class="form-group"><label>Checklist de Entrega</label>' + checklistHtml + '</div>' +
+
+            // ─── Caução e Financeiro ──────────────────────────────────────────
+            _sec('Caução e Valores Financeiros','shield-halved') +
+            '<div class="grid-3" style="margin-bottom:10px;">' +
+                '<div class="form-group"><label>Caução (R$)</label>' +
+                '<input type="number" class="form-control" name="caucao" id="caucaoLoc" value="' + _v('caucao',0) + '" step="0.01" min="0" placeholder="0,00"></div>' +
+                '<div class="form-group"><label>Multa por Atraso (R$)</label>' +
+                '<input type="number" class="form-control" name="multa_atraso" value="' + _v('multa_atraso',0) + '" step="0.01" min="0" placeholder="0,00"></div>' +
+                '<div class="form-group"><label>Juros ao Mês (%)</label>' +
+                '<input type="number" class="form-control" name="juros_mes" value="' + _v('juros_mes',0) + '" step="0.01" min="0" placeholder="0,00"></div>' +
+            '</div>' +
+            '<div class="grid-3" style="margin-bottom:10px;">' +
+                '<div class="form-group"><label>Tempo Mínimo (dias)</label>' +
+                '<input type="number" class="form-control" name="tempo_minimo_dias" id="tempoMinimoLoc" value="' + _v('tempo_minimo_dias',30) + '" min="1" placeholder="30"></div>' +
+                '<div class="form-group"><label>Próximo Pagamento</label>' +
+                '<input type="date" class="form-control" name="proximo_pagamento" id="proxPagamento" value="' + _v('proximo_pagamento','') + '"></div>' +
+                '<div class="form-group"><label>Multa Saída Antecipada (R$)</label>' +
+                '<input type="number" class="form-control" name="multa_saida_antecipada" value="' + _v('multa_saida_antecipada',0) + '" step="0.01" min="0" placeholder="0,00"></div>' +
+            '</div>' +
+            '<div style="margin-bottom:12px;">' + _toggle('caucao_pendente','Caução Pendente','Caução ainda não foi paga na entrada',_v('caucao_pendente',false)) + '</div>' +
+
+            // ─── Entrega do Veículo ──────────────────────────────────────────
+            _sec('Entrega do Veículo','car') +
+            '<div class="grid-2" style="margin-bottom:10px;">' +
+                '<div class="form-group"><label>Local de Retirada</label>' +
+                '<input type="text" class="form-control" name="local_retirada" value="' + _v('local_retirada','') + '" placeholder="Ex: Curitiba"></div>' +
+                '<div class="form-group"><label>Local de Devolução</label>' +
+                '<input type="text" class="form-control" name="local_devolucao" value="' + _v('local_devolucao','') + '" placeholder="Ex: Curitiba"></div>' +
+            '</div>' +
+            '<div class="grid-3" style="margin-bottom:10px;">' +
+                '<div class="form-group"><label>Nível Combustível Saída</label>' + _selComb('nivel_combustivel_saida',_v('nivel_combustivel_saida','')) + '</div>' +
+                '<div class="form-group"><label>Franquia KM/dia</label>' +
+                '<input type="number" class="form-control" name="franquia_km_diaria" id="franquiaLoc" value="' + _v('franquia_km_diaria','') + '" min="0" placeholder="Ex: 100" oninput="mostrarExemploKm()"></div>' +
+                '<div class="form-group"><label>Valor por KM Excedente (R$)</label>' +
+                '<input type="number" class="form-control" name="km_excedente_valor" id="kmExcVal" value="' + _v('km_excedente_valor',0) + '" step="0.01" min="0" placeholder="Ex: 0.80" oninput="mostrarExemploKm()"></div>' +
+            '</div>' +
+            '<div id="exemploKm" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;font-size:.78rem;color:#92400e;margin-bottom:10px;"></div>' +
             '<div class="form-group">' +
-                '<label>Fotos do Estado do Veículo</label>' +
+                '<label>Raio de Circulação Permitido</label>' +
+                '<input type="text" class="form-control" name="raio_circulacao" value="' + _v('raio_circulacao','') + '" placeholder="Ex: Região Metropolitana de Curitiba"></div>' +
+
+            // ─── Opções do Contrato ─────────────────────────────────────────
+            _sec('Opções do Contrato','sliders') +
+            '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">' +
+                _toggle('seguro_terceiros','Seguro para Terceiros Incluso','Seguro básico já incluso no valor do aluguel',_v('seguro_terceiros',false)) +
+                _toggle('promessa_compra','Locação com Promessa de Compra','Plano fidelidade — valores pagos abatidos no preço final',_v('promessa_compra',false)) +
+            '</div>' +
+            '<div id="wrapDescPromessa" style="display:' + (_v('promessa_compra',false) ? 'block' : 'none') + ';margin-bottom:10px;">' +
+                '<div class="form-group"><label>Desconto / Abatimento na Promessa de Compra (R$)</label>' +
+                '<input type="number" class="form-control" name="desconto_promessa_compra" value="' + _v('desconto_promessa_compra',0) + '" step="0.01" min="0" placeholder="Ex: 5000,00"></div>' +
+            '</div>' +
+            '<div class="form-group"><label>Atendente</label>' +
+            '<input type="text" class="form-control" name="atendente" value="' + _v('atendente','') + '" placeholder="Nome do atendente"></div>' +
+
+            // ─── Total Calculado ────────────────────────────────────────────
+            '<div class="form-group" style="margin-top:8px;">' +
+                '<label>Total Calculado</label>' +
+                '<div id="totalCalculado" style="font-size:1.5rem;font-weight:bold;color:#2563eb;">' + (isEdit ? formatCurrency(locacao.total) : '—') + '</div>' +
+            '</div>' +
+
+            // ─── Checklist ──────────────────────────────────────────────────
+            _sec('Checklist de Entrega','list-check') +
+            checklistHtml +
+
+            // ─── Fotos ──────────────────────────────────────────────────────
+            _sec('Fotos do Veículo','camera') +
+            '<div class="form-group">' +
                 fotosExistentes +
                 '<div class="foto-upload-area" onclick="document.getElementById(\'inputFotosLocacao\').click()">' +
                     '<i class="fas fa-camera" style="font-size:2rem;color:#9ca3af;"></i><br><span style="color:#6b7280;">Clique para selecionar fotos</span>' +
                 '</div>' +
-                '<input type="file" id="inputFotosLocacao" accept="image/*" multiple style="display:none;" onchange="previewFotos(this, \'previewFotosLocacao\')">' +
+                '<input type="file" id="inputFotosLocacao" accept="image/*" multiple style="display:none;" onchange="previewFotos(this,\'previewFotosLocacao\')">' +
                 '<div id="previewFotosLocacao" class="preview-fotos"></div>' +
-                '<div id="progressUpload" class="upload-progress"><i class="fas fa-spinner fa-spin"></i> Enviando fotos para a nuvem... aguarde.</div>' +
+                '<div id="progressUpload" class="upload-progress"><i class="fas fa-spinner fa-spin"></i> Enviando fotos... aguarde.</div>' +
             '</div>' +
-            '<div class="form-group"><label>Observações</label><textarea class="form-control" name="observacoes" rows="2">' + (isEdit ? (locacao.observacoes || '') : '') + '</textarea></div>' +
+
+            // ─── Observações ────────────────────────────────────────────────
+            '<div class="form-group"><label>Observações</label>' +
+            '<textarea class="form-control" name="observacoes" rows="2">' + _v('observacoes','') + '</textarea></div>' +
+
+            // ─── Botões ──────────────────────────────────────────────────────
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;gap:8px;">' +
                 '<div>' +
                     (isEdit && locacao.frequencia_cobranca && locacao.frequencia_cobranca !== 'avulso' && !locacao.data_fim
@@ -440,17 +537,59 @@
         '</form>';
 
         abrirModal(isEdit ? 'Editar Locação' : 'Nova Locação', content);
+
+        // Listener para mostrar/ocultar campo de desconto promessa de compra
+        setTimeout(() => {
+            const chkPC = document.getElementById('promessa_compra');
+            if (chkPC) chkPC.addEventListener('change', function() {
+                document.getElementById('wrapDescPromessa').style.display = this.checked ? 'block' : 'none';
+            });
+        }, 100);
     }
 
     function atualizarDiaria() {
         const select = document.getElementById('selectVeiculo');
         const option = select.options[select.selectedIndex];
-        const d = parseFloat(option.dataset.diaria) || 0;
+        const d   = parseFloat(option.dataset.diaria) || 0;
+        const cau = parseFloat(option.dataset.caucao) || 0;
+        const frq = option.dataset.freq || 'avulso';
+        const tmp = parseInt(option.dataset.tempo) || 30;
+
         document.getElementById('kmSaida').value = option.dataset.km || 0;
-        // Define semanal = diária × 7, e deriva a diária a partir disso
+        if (cau > 0) document.getElementById('caucaoLoc').value = cau;
+        if (tmp > 0) document.getElementById('tempoMinimoLoc').value = tmp;
+        setFreqLoc(frq);
+
         const sem = document.getElementById('semanalLoc');
         if (sem) sem.value = d > 0 ? Math.round(d * 7 * 100) / 100 : '';
         sincSemanal();
+        calcularProxPagamento();
+    }
+
+    function calcularProxPagamento() {
+        const inicio = document.getElementById('dataInicio')?.value;
+        const freq   = document.getElementById('freqCobranca')?.value || 'avulso';
+        const dias   = {semanal:7, quinzenal:14, mensal:28}[freq];
+        if (!inicio || !dias) return;
+        const d = new Date(inicio + 'T00:00:00');
+        d.setDate(d.getDate() + dias);
+        const pp = document.getElementById('proxPagamento');
+        if (pp && !pp.value) pp.value = d.toISOString().slice(0,10);
+    }
+
+    function mostrarExemploKm() {
+        const franq = parseInt(document.getElementById('franquiaLoc')?.value) || 0;
+        const val   = parseFloat(document.getElementById('kmExcVal')?.value) || 0;
+        const div   = document.getElementById('exemploKm');
+        if (!div) return;
+        if (franq > 0 && val > 0) {
+            div.style.display = 'block';
+            div.innerHTML = '<i class="fas fa-info-circle"></i> Franquia: <strong>' + franq + ' km/dia</strong> grátis. '
+                + 'Excedente cobrado a <strong>R$ ' + val.toFixed(2).replace('.',',') + '/km</strong>. '
+                + 'Ex: 10 km extras = <strong>R$ ' + (10*val).toFixed(2).replace('.',',') + '</strong>.';
+        } else {
+            div.style.display = 'none';
+        }
     }
 
     function sincSemanal() {
@@ -511,20 +650,32 @@
         const formData = new FormData(form);
         const data = Object.fromEntries(formData);
 
-        if (data.veiculo_id) data.veiculo_id = parseInt(data.veiculo_id);
-        if (data.cliente_id) data.cliente_id = parseInt(data.cliente_id);
-        if (data.diaria) data.diaria = parseFloat(data.diaria);
-        if (data.km_saida) data.km_saida = parseInt(data.km_saida);
-        data.valor_semanal = parseFloat(document.getElementById('semanalLoc')?.value) || null;
-
         if (!data.veiculo_id || !data.cliente_id || !data.data_inicio) {
             showToast('Preencha veículo, cliente e data de início', 'warning');
             return;
         }
 
-        // data_fim é opcional — envia null se vazio
+        // Tipos
+        data.veiculo_id  = parseInt(data.veiculo_id);
+        data.cliente_id  = parseInt(data.cliente_id);
+        data.diaria      = parseFloat(data.diaria) || null;
+        data.km_saida    = parseInt(data.km_saida) || null;
+        data.valor_semanal = parseFloat(document.getElementById('semanalLoc')?.value) || null;
         if (!data.data_fim) data.data_fim = null;
+        if (!data.proximo_pagamento) data.proximo_pagamento = null;
 
+        // Checkboxes (FormData só inclui quando marcado)
+        data.caucao_pendente   = form.querySelector('[name=caucao_pendente]')?.checked   || false;
+        data.seguro_terceiros  = form.querySelector('[name=seguro_terceiros]')?.checked   || false;
+        data.promessa_compra   = form.querySelector('[name=promessa_compra]')?.checked    || false;
+
+        // Numéricos extras
+        ['caucao','multa_atraso','juros_mes','tempo_minimo_dias','franquia_km_diaria',
+         'km_excedente_valor','desconto_promessa_compra','multa_saida_antecipada'].forEach(k => {
+            data[k] = parseFloat(data[k]) || null;
+        });
+
+        // Checklist
         const checklist = [];
         document.querySelectorAll('.checklist-item input[type="checkbox"]').forEach(cb => {
             const lbl = cb.nextElementSibling;
@@ -532,14 +683,15 @@
         });
         data.checklist = JSON.stringify(checklist);
 
-        const diaria = parseFloat(data.diaria) || 0;
-        if (data.data_fim) {
+        // Total (apenas com data_fim)
+        if (data.data_fim && data.diaria) {
             const dias = Math.ceil((new Date(data.data_fim) - new Date(data.data_inicio)) / 86400000) + 1;
-            data.total = dias > 0 ? dias * diaria : 0;
+            data.total = dias > 0 ? dias * data.diaria : null;
         } else {
             data.total = null;
         }
 
+        // Fotos
         let fotosUrls = [];
         if (fotosFilesParaUpload.length > 0) {
             document.getElementById('progressUpload').style.display = 'block';
@@ -552,14 +704,13 @@
             }
             document.getElementById('progressUpload').style.display = 'none';
         }
-
         if (id) {
             const loc = locacoes.find(l => l.id === id);
             let existentes = [];
             try {
-                if (loc && loc.fotos_saida) {
-                    const parsed = typeof loc.fotos_saida === 'string' ? JSON.parse(loc.fotos_saida) : loc.fotos_saida;
-                    if (Array.isArray(parsed)) existentes = parsed;
+                if (loc?.fotos_saida) {
+                    const p = typeof loc.fotos_saida === 'string' ? JSON.parse(loc.fotos_saida) : loc.fotos_saida;
+                    if (Array.isArray(p)) existentes = p;
                 }
             } catch {}
             data.fotos_saida = [...existentes, ...fotosUrls];
@@ -567,22 +718,16 @@
             data.fotos_saida = fotosUrls;
         }
 
-        try {
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? '/api/locacoes/' + id : '/api/locacoes';
-            const resp = await fetch(url, {
-                method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
-            });
-            if (resp.ok) {
-                fecharModal();
-                showToast(id ? 'Locação atualizada!' : 'Locação cadastrada!', 'success');
-                await carregarDados();
-            } else {
-                const err = await resp.json();
-                showToast('Erro: ' + (err.error || 'Falha ao salvar'), 'error');
-            }
-        } catch (error) {
-            showToast('Erro ao salvar: ' + (error.message || error), 'error');
+        const method = id ? 'PUT' : 'POST';
+        const url    = id ? '/api/locacoes/' + id : '/api/locacoes';
+        const resp   = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+        if (resp.ok) {
+            fecharModal();
+            showToast(id ? 'Locação atualizada!' : 'Locação cadastrada!', 'success');
+            await carregarDados();
+        } else {
+            const err = await resp.json();
+            showToast('Erro: ' + (err.error || 'Falha ao salvar'), 'error');
         }
       } catch (outer) {
           showToast('Erro inesperado: ' + (outer.message || outer), 'error');
@@ -601,58 +746,112 @@
         const loc = locacoes.find(l => l.id === id);
         if (!loc) return;
         fotosFilesParaUpload = [];
-
         const hoje = new Date().toISOString().split('T')[0];
+        const kmSaida = loc.km_saida || 0;
+        const temFranquia = loc.franquia_km_diaria > 0 && loc.km_excedente_valor > 0;
+        const combSaida = loc.nivel_combustivel_saida || '—';
+
+        const selCombRet = '<select class="form-control" id="nivelCombRetorno">' +
+            '<option value="">Selecione</option>' +
+            ['Reserva','1/4','Meio','3/4','Cheio'].map(c => '<option value="' + c + '">' + c + '</option>').join('') +
+            '</select>';
+
         const content = '<form id="formDevolucao">' +
             '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:16px;">' +
-                '<p style="margin:0;font-size:0.9rem;"><strong>Veículo:</strong> ' + (loc.placa || '-') + ' — ' + (loc.marca || '') + ' ' + (loc.modelo || '') + '</p>' +
-                '<p style="margin:4px 0 0;font-size:0.9rem;"><strong>Cliente:</strong> ' + (loc.nome_cliente || '-') + '</p>' +
-                '<p style="margin:4px 0 0;font-size:0.9rem;"><strong>Km na Saída:</strong> ' + (loc.km_saida ? loc.km_saida.toLocaleString() + ' km' : '-') + '</p>' +
+                '<p style="margin:0;font-size:.9rem;"><strong>Veículo:</strong> ' + (loc.placa||'-') + ' — ' + (loc.marca||'') + ' ' + (loc.modelo||'') + '</p>' +
+                '<p style="margin:4px 0 0;font-size:.9rem;"><strong>Cliente:</strong> ' + (loc.nome_cliente||'-') + '</p>' +
+                '<p style="margin:4px 0 0;font-size:.9rem;"><strong>Km na Saída:</strong> ' + (kmSaida ? kmSaida.toLocaleString()+'km' : '-') +
+                (temFranquia ? ' · <strong>Franquia:</strong> ' + loc.franquia_km_diaria + ' km/dia · <strong>Excedente:</strong> R$' + parseFloat(loc.km_excedente_valor).toFixed(2).replace('.',',') + '/km' : '') + '</p>' +
+                (loc.caucao > 0 ? '<p style="margin:4px 0 0;font-size:.9rem;"><strong>Caução:</strong> ' + formatCurrency(loc.caucao) + (loc.caucao_pendente ? ' <span style="color:#ef4444">(pendente)</span>' : ' <span style="color:#16a34a">(pago)</span>') + '</p>' : '') +
             '</div>' +
             '<div class="grid-2">' +
-                '<div class="form-group"><label>Data de Devolução *</label><input type="date" class="form-control" id="dataDevolucao" value="' + hoje + '" required></div>' +
-                '<div class="form-group"><label>Km de Retorno *</label><input type="number" class="form-control" id="kmRetorno" min="' + (loc.km_saida || 0) + '" required placeholder="Quilometragem atual" oninput="calcularKmRodado(' + (loc.km_saida || 0) + ')"></div>' +
+                '<div class="form-group"><label>Data de Devolução *</label>' +
+                '<input type="date" class="form-control" id="dataDevolucao" value="' + hoje + '" required onchange="calcularKmRodado(' + kmSaida + ',' + (loc.franquia_km_diaria||0) + ',' + (loc.km_excedente_valor||0) + ')"></div>' +
+                '<div class="form-group"><label>Km de Retorno *</label>' +
+                '<input type="number" class="form-control" id="kmRetorno" min="' + kmSaida + '" required placeholder="Quilometragem atual" oninput="calcularKmRodado(' + kmSaida + ',' + (loc.franquia_km_diaria||0) + ',' + (loc.km_excedente_valor||0) + ')"></div>' +
             '</div>' +
-            '<div id="kmRodadoInfo" style="background:#dbeafe;border-radius:8px;padding:8px 12px;font-size:0.85rem;color:#1e40af;margin-bottom:16px;display:none;">' +
+            '<div class="grid-2">' +
+                '<div class="form-group"><label>Nível Combustível Saída</label>' +
+                '<input class="form-control" value="' + combSaida + '" readonly style="background:#f8fafc;color:#64748b;"></div>' +
+                '<div class="form-group"><label>Nível Combustível Retorno</label>' + selCombRet + '</div>' +
+            '</div>' +
+            '<div id="kmRodadoInfo" style="background:#dbeafe;border-radius:8px;padding:10px 14px;font-size:.85rem;color:#1e40af;margin-bottom:12px;display:none;">' +
                 '<i class="fas fa-road"></i> <span id="kmRodadoText"></span>' +
             '</div>' +
+            '<div id="kmExcedenteInfo" style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:.85rem;color:#92400e;margin-bottom:12px;display:none;">' +
+                '<i class="fas fa-exclamation-triangle"></i> <span id="kmExcedenteText"></span>' +
+            '</div>' +
             '<div class="form-group">' +
-                '<label>Fotos de Retorno (condição do veículo)</label>' +
+                '<label>Fotos de Retorno <small style="color:#94a3b8">(opcional)</small></label>' +
                 '<div class="foto-upload-area" onclick="document.getElementById(\'inputFotosRetorno\').click()">' +
-                    '<i class="fas fa-camera" style="font-size:2rem;color:#9ca3af;"></i><br><span style="color:#6b7280;">Selecionar fotos do retorno (opcional)</span>' +
+                    '<i class="fas fa-camera" style="font-size:2rem;color:#9ca3af;"></i><br><span style="color:#6b7280;">Selecionar fotos do retorno</span>' +
                 '</div>' +
-                '<input type="file" id="inputFotosRetorno" accept="image/*" multiple style="display:none;" onchange="previewFotos(this, \'previewFotosRetorno\')">' +
+                '<input type="file" id="inputFotosRetorno" accept="image/*" multiple style="display:none;" onchange="previewFotos(this,\'previewFotosRetorno\')">' +
                 '<div id="previewFotosRetorno" class="preview-fotos"></div>' +
                 '<div id="progressDev" class="upload-progress"><i class="fas fa-spinner fa-spin"></i> Enviando fotos...</div>' +
             '</div>' +
             '<div style="text-align:right;margin-top:20px;">' +
                 '<button type="button" class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;margin-right:10px;">Cancelar</button>' +
-                '<button type="button" class="btn btn-success" onclick="confirmarDevolucao(' + id + ', ' + (loc.km_saida || 0) + ')"><i class="fas fa-undo"></i> Confirmar Devolução</button>' +
+                '<button type="button" class="btn btn-success" onclick="confirmarDevolucao(' + id + ',' + kmSaida + ',' + (loc.franquia_km_diaria||0) + ',' + (loc.km_excedente_valor||0) + ')"><i class="fas fa-undo"></i> Confirmar Devolução</button>' +
             '</div>' +
         '</form>';
 
         abrirModal('Registrar Devolução', content);
     }
 
-    function calcularKmRodado(kmSaida) {
-        const kmRet = parseInt(document.getElementById('kmRetorno').value) || 0;
+    function calcularKmRodado(kmSaida, franquiaDia, excVal) {
+        const kmRet  = parseInt(document.getElementById('kmRetorno')?.value) || 0;
+        const datDev = document.getElementById('dataDevolucao')?.value;
         const rodado = kmRet - kmSaida;
         const infoDiv = document.getElementById('kmRodadoInfo');
+        const excDiv  = document.getElementById('kmExcedenteInfo');
         if (kmRet > 0 && rodado >= 0) {
-            document.getElementById('kmRodadoText').textContent = rodado.toLocaleString() + ' km rodados nesta locação';
+            document.getElementById('kmRodadoText').textContent = rodado.toLocaleString('pt-BR') + ' km rodados nesta locação';
             infoDiv.style.display = 'block';
         } else {
             infoDiv.style.display = 'none';
         }
+        if (excDiv && franquiaDia > 0 && excVal > 0 && rodado >= 0 && datDev) {
+            // Busca data_inicio da locação ativa
+            const loc = locacoes.find(l => l.status === 'ativa' && l.km_saida == kmSaida);
+            const dataInicio = loc?.data_inicio;
+            let dias = 1;
+            if (dataInicio) {
+                const di = new Date(dataInicio + 'T00:00:00');
+                const dd = new Date(datDev + 'T00:00:00');
+                dias = Math.max(1, Math.ceil((dd - di) / 86400000) + 1);
+            }
+            const franquia = franquiaDia * dias;
+            const excKm = Math.max(0, rodado - franquia);
+            if (excKm > 0) {
+                const cobra = excKm * excVal;
+                document.getElementById('kmExcedenteText').innerHTML =
+                    dias + ' dias × ' + franquiaDia + ' km/dia = <strong>' + franquia.toLocaleString('pt-BR') + ' km</strong> de franquia · ' +
+                    '<strong>' + excKm.toLocaleString('pt-BR') + ' km excedentes</strong> × R$ '
+                    + parseFloat(excVal).toFixed(2).replace('.',',') + ' = <strong>' + formatCurrency(cobra) + '</strong>';
+                excDiv.style.display = 'block';
+            } else {
+                document.getElementById('kmExcedenteText').textContent = dias + ' dias × ' + franquiaDia + ' km/dia = ' + franquia.toLocaleString('pt-BR') + ' km de franquia · sem excedente.';
+                excDiv.style.background = '#f0fdf4';
+                excDiv.style.borderColor = '#bbf7d0';
+                excDiv.style.color = '#15803d';
+                excDiv.style.display = 'block';
+            }
+        } else if (excDiv) {
+            excDiv.style.display = 'none';
+        }
     }
 
-    async function confirmarDevolucao(id, kmSaida) {
-        const dataDev = document.getElementById('dataDevolucao').value;
+    async function confirmarDevolucao(id, kmSaida, franquiaDia, excVal) {
+        const dataDev   = document.getElementById('dataDevolucao').value;
         const kmRetorno = parseInt(document.getElementById('kmRetorno').value) || 0;
+        const nivelComb = document.getElementById('nivelCombRetorno')?.value || '';
 
-        if (!dataDev) { showToast('Informe a data de devolução', 'warning'); return; }
-        if (!kmRetorno) { showToast('Informe a quilometragem de retorno', 'warning'); return; }
-        if (kmRetorno < kmSaida) { showToast('Km de retorno não pode ser menor que o km de saída (' + kmSaida.toLocaleString() + ' km)', 'warning'); return; }
+        if (!dataDev)    { showToast('Informe a data de devolução', 'warning'); return; }
+        if (!kmRetorno)  { showToast('Informe a quilometragem de retorno', 'warning'); return; }
+        if (kmRetorno < kmSaida) { showToast('Km de retorno não pode ser menor que o km de saída (' + kmSaida.toLocaleString('pt-BR') + ' km)', 'warning'); return; }
+
+        const loc = locacoes.find(l => l.id === id);
 
         let fotosRetornoUrls = [];
         if (fotosFilesParaUpload.length > 0) {
@@ -667,25 +866,24 @@
             document.getElementById('progressDev').style.display = 'none';
         }
 
-        try {
-            const resp = await fetch('/api/locacoes/' + id + '/devolver', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    data_fim: dataDev,
-                    data_devolucao_real: dataDev,
-                    km_retorno: kmRetorno,
-                    fotos_retorno: fotosRetornoUrls
-                })
-            });
-            if (resp.ok) {
-                fecharModal();
-                showToast('Veículo devolvido com sucesso! Status atualizado para disponível.', 'success');
-                await carregarDados();
-            } else {
-                showToast('Erro ao registrar devolução', 'error');
-            }
-        } catch (error) {
+        const resp = await fetch('/api/locacoes/' + id + '/devolver', {
+            method: 'PUT',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+                data_fim: dataDev, data_devolucao_real: dataDev,
+                km_retorno: kmRetorno, fotos_retorno: fotosRetornoUrls,
+                nivel_combustivel_retorno: nivelComb
+            })
+        });
+        if (resp.ok) {
+            const r = await resp.json();
+            fecharModal();
+            const msgExc = r.total_km_excedente > 0
+                ? ' · KM excedente: ' + formatCurrency(r.total_km_excedente)
+                : '';
+            showToast('Veículo devolvido com sucesso!' + msgExc, 'success', 6000);
+            await carregarDados();
+        } else {
             showToast('Erro ao registrar devolução', 'error');
         }
     }
@@ -701,75 +899,104 @@
             try { checklist = loc.checklist ? (typeof loc.checklist === 'string' ? JSON.parse(loc.checklist) : loc.checklist) : []; } catch {}
 
             const dias = loc.data_inicio && loc.data_fim
-                ? Math.ceil((new Date(loc.data_fim) - new Date(loc.data_inicio)) / 86400000) + 1
+                ? Math.ceil((new Date(loc.data_fim + 'T00:00:00') - new Date(loc.data_inicio + 'T00:00:00')) / 86400000) + 1
                 : 0;
 
-            const win = window.open('', '_blank', 'width=820,height=950');
-            win.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Contrato #' + id + '</title>' +
+            function fld(label, val) {
+                return '<div class="field"><label>' + label + '</label><span>' + (val != null && val !== '' ? val : '&nbsp;') + '</span></div>';
+            }
+            function row() { return '<div class="row">' + Array.from(arguments).join('') + '</div>'; }
+            function sec(title, content) { return '<div class="section"><h2>' + title + '</h2>' + content + '</div>'; }
+            function yn(v) { return v ? 'Sim' : 'Não'; }
+
+            const win = window.open('', '_blank', 'width=840,height=1000');
+            win.document.write(
+            '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Contrato #' + id + '</title>' +
             '<style>' +
-            'body{font-family:Arial,sans-serif;font-size:13px;padding:30px;color:#111;}' +
-            'h1{font-size:20px;text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:5px;}' +
-            '.sub{text-align:center;color:#555;font-size:12px;margin-bottom:20px;}' +
-            '.section{margin-bottom:18px;}' +
-            '.section h2{font-size:13px;background:#f0f0f0;padding:5px 10px;margin-bottom:10px;border-left:4px solid #2563eb;text-transform:uppercase;letter-spacing:0.5px;}' +
-            '.row{display:flex;gap:20px;margin-bottom:6px;}' +
+            'body{font-family:Arial,sans-serif;font-size:12.5px;padding:28px;color:#111;}' +
+            'h1{font-size:18px;text-align:center;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:4px;}' +
+            '.sub{text-align:center;color:#555;font-size:11px;margin-bottom:18px;}' +
+            '.section{margin-bottom:16px;}' +
+            '.section h2{font-size:11.5px;background:#f0f0f0;padding:4px 10px;margin:0 0 8px;border-left:4px solid #2563eb;text-transform:uppercase;letter-spacing:.5px;}' +
+            '.row{display:flex;gap:16px;margin-bottom:5px;}' +
             '.field{flex:1;}' +
-            '.field label{display:block;font-size:11px;color:#555;margin-bottom:2px;}' +
-            '.field span{display:block;font-weight:bold;border-bottom:1px solid #ccc;padding-bottom:2px;min-height:18px;}' +
-            '.checklist-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}' +
-            '.total-box{background:#f0f7ff;border:2px solid #2563eb;border-radius:8px;padding:14px 20px;text-align:center;margin-top:10px;}' +
-            '.total-box .valor{font-size:28px;font-weight:bold;color:#2563eb;}' +
-            '.assinaturas{display:flex;gap:60px;margin-top:50px;}' +
+            '.field label{display:block;font-size:10px;color:#666;margin-bottom:1px;}' +
+            '.field span{display:block;font-weight:600;border-bottom:1px solid #ccc;padding-bottom:2px;min-height:17px;font-size:12px;}' +
+            '.checklist-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;}' +
+            '.total-box{background:#f0f7ff;border:2px solid #2563eb;border-radius:6px;padding:12px 18px;text-align:center;margin-top:8px;}' +
+            '.total-box .valor{font-size:26px;font-weight:bold;color:#2563eb;}' +
+            '.badge{display:inline-block;padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700;}' +
+            '.badge-ok{background:#dcfce7;color:#15803d;}' +
+            '.badge-pend{background:#fee2e2;color:#c41230;}' +
+            '.assinaturas{display:flex;gap:60px;margin-top:48px;}' +
             '.assinatura{flex:1;text-align:center;}' +
-            '.assinatura .linha{border-top:1px solid #333;margin-top:50px;padding-top:5px;font-size:12px;}' +
-            '.termos{font-size:10px;color:#555;margin-top:24px;border-top:1px dashed #ccc;padding-top:10px;line-height:1.5;}' +
+            '.assinatura .linha{border-top:1px solid #333;margin-top:50px;padding-top:4px;font-size:11px;}' +
+            '.termos{font-size:9.5px;color:#555;margin-top:20px;border-top:1px dashed #ccc;padding-top:8px;line-height:1.5;}' +
             '@media print{body{padding:10px;}}' +
             '</style></head><body>' +
             '<h1>CONTRATO DE LOCAÇÃO DE VEÍCULO</h1>' +
-            '<p class="sub">Siqueirão Multimarcas &nbsp;|&nbsp; Contrato #' + id + ' &nbsp;|&nbsp; Emitido em ' + new Date().toLocaleDateString('pt-BR') + '</p>' +
+            '<p class="sub">Siqueirão Multimarcas &nbsp;|&nbsp; Contrato #' + id + ' &nbsp;|&nbsp; Emitido em ' + new Date().toLocaleDateString('pt-BR') +
+                (loc.atendente ? ' &nbsp;|&nbsp; Atendente: <strong>' + loc.atendente + '</strong>' : '') + '</p>' +
 
-            '<div class="section"><h2>Dados do Locatário</h2>' +
-            '<div class="row">' +
-                '<div class="field"><label>Nome Completo</label><span>' + (loc.nome_cliente || '&nbsp;') + '</span></div>' +
-                '<div class="field"><label>CPF</label><span>' + (loc.cpf || '&nbsp;') + '</span></div>' +
-            '</div><div class="row">' +
-                '<div class="field"><label>CNH</label><span>' + (loc.cnh || '&nbsp;') + '</span></div>' +
-                '<div class="field"><label>Telefone</label><span>' + (loc.telefone || '&nbsp;') + '</span></div>' +
-            '</div><div class="row">' +
-                '<div class="field"><label>Endereço</label><span>' + [(loc.endereco || ''), (loc.cidade || ''), (loc.estado || '')].filter(Boolean).join(' — ') + '</span></div>' +
-            '</div></div>' +
+            sec('Dados do Locatário',
+                row(fld('Nome Completo', loc.nome_cliente), fld('CPF', loc.cpf)) +
+                row(fld('CNH', loc.cnh), fld('Telefone', loc.telefone), fld('E-mail', loc.email)) +
+                row(fld('Endereço', [loc.endereco, loc.cidade, loc.estado].filter(Boolean).join(' — ')))
+            ) +
 
-            '<div class="section"><h2>Dados do Veículo</h2>' +
-            '<div class="row">' +
-                '<div class="field"><label>Placa</label><span>' + (loc.placa || '&nbsp;') + '</span></div>' +
-                '<div class="field"><label>Marca / Modelo</label><span>' + (loc.marca || '') + ' ' + (loc.modelo || '') + '</span></div>' +
-                '<div class="field"><label>Ano</label><span>' + (loc.ano || '&nbsp;') + '</span></div>' +
-            '</div><div class="row">' +
-                '<div class="field"><label>Cor</label><span>' + (loc.cor || '&nbsp;') + '</span></div>' +
-                '<div class="field"><label>Combustível</label><span>' + (loc.combustivel || '&nbsp;') + '</span></div>' +
-                '<div class="field"><label>Km na Saída</label><span>' + (loc.km_saida ? loc.km_saida.toLocaleString() + ' km' : '&nbsp;') + '</span></div>' +
-            '</div></div>' +
+            sec('Dados do Veículo',
+                row(fld('Placa', loc.placa), fld('Marca / Modelo', (loc.marca||'') + ' ' + (loc.modelo||'')), fld('Ano', loc.ano)) +
+                row(fld('Cor', loc.cor), fld('Combustível (tipo)', loc.combustivel), fld('Km na Saída', loc.km_saida ? loc.km_saida.toLocaleString('pt-BR') + ' km' : null)) +
+                row(fld('Nível de Combustível na Saída', loc.nivel_combustivel_saida),
+                    fld('Local de Retirada', loc.local_retirada),
+                    fld('Local de Devolução', loc.local_devolucao))
+            ) +
 
-            '<div class="section"><h2>Período e Valores</h2>' +
-            '<div class="row">' +
-                '<div class="field"><label>Data de Saída</label><span>' + formatDate(loc.data_inicio) + '</span></div>' +
-                '<div class="field"><label>Data de Retorno Prevista</label><span>' + formatDate(loc.data_fim) + '</span></div>' +
-                '<div class="field"><label>Nº de Diárias</label><span>' + dias + ' dia(s)</span></div>' +
-            '</div>' +
-            '<div class="total-box">' +
-                '<div style="font-size:13px;margin-bottom:4px;">Valor por Diária: ' + formatCurrency(loc.diaria) + ' × ' + dias + ' dias</div>' +
-                '<div class="valor">' + formatCurrency(loc.total) + '</div>' +
-                '<div style="font-size:12px;color:#555;margin-top:4px;">Valor Total da Locação</div>' +
-            '</div></div>' +
+            sec('Período e Condições Financeiras',
+                row(fld('Data de Saída', formatDate(loc.data_inicio)),
+                    fld('Data Prevista Retorno', formatDate(loc.data_fim)),
+                    fld('Nº de Diárias', dias + ' dia(s)')) +
+                row(fld('Diária', formatCurrency(loc.diaria)),
+                    fld('Tempo Mínimo', loc.tempo_minimo_dias ? loc.tempo_minimo_dias + ' dias' : null),
+                    fld('Próximo Pagamento', formatDate(loc.proximo_pagamento))) +
+                row(fld('Caução',
+                        loc.caucao > 0
+                            ? formatCurrency(loc.caucao) + ' &nbsp;<span class="badge ' + (loc.caucao_pendente ? 'badge-pend">pendente' : 'badge-ok">pago') + '</span>'
+                            : 'Não aplicável'),
+                    fld('Multa de Atraso (por dia)', loc.multa_atraso > 0 ? formatCurrency(loc.multa_atraso) : 'Não aplicável'),
+                    fld('Juros ao Mês', loc.juros_mes > 0 ? loc.juros_mes + '%' : 'Não aplicável')) +
+                row(fld('Multa Saída Antecipada', loc.multa_saida_antecipada > 0 ? formatCurrency(loc.multa_saida_antecipada) : 'Não aplicável'),
+                    fld('Seguro Terceiros', yn(loc.seguro_terceiros)),
+                    fld('Promessa de Compra', yn(loc.promessa_compra) + (loc.promessa_compra && loc.desconto_promessa_compra > 0 ? ' (desc. ' + formatCurrency(loc.desconto_promessa_compra) + ')' : ''))) +
+                '<div class="total-box">' +
+                    '<div style="font-size:12px;margin-bottom:4px;">' + formatCurrency(loc.diaria) + ' × ' + dias + ' dia(s)</div>' +
+                    '<div class="valor">' + formatCurrency(loc.total) + '</div>' +
+                    '<div style="font-size:11px;color:#555;margin-top:3px;">Valor Total da Locação</div>' +
+                '</div>'
+            ) +
+
+            sec('Franquia de KM e Circulação',
+                row(fld('Franquia KM/dia', loc.franquia_km_diaria ? loc.franquia_km_diaria + ' km/dia' : 'Ilimitado'),
+                    fld('Valor KM Excedente', loc.km_excedente_valor > 0 ? formatCurrency(loc.km_excedente_valor) + '/km' : 'Não aplicável'),
+                    fld('Raio de Circulação', loc.raio_circulacao || 'Sem restrição'))
+            ) +
 
             (checklist.length > 0 ?
-            '<div class="section"><h2>Checklist de Entrega</h2><div class="checklist-grid">' +
-            checklist.map(item => '<div style="font-size:12px;padding:3px 0;">' + (item.checked ? '&#10003;' : '&#9744;') + ' ' + item.label + '</div>').join('') +
-            '</div></div>' : '') +
+            sec('Checklist de Entrega do Veículo',
+                '<div class="checklist-grid">' +
+                checklist.map(function(i){ return '<div style="font-size:11px;padding:2px 0;">' + (i.checked ? '&#10003;' : '&#9744;') + ' ' + i.label + '</div>'; }).join('') +
+                '</div>') : '') +
 
-            '<div class="section"><h2>Observações</h2><p style="min-height:30px;border-bottom:1px solid #ccc;padding-bottom:4px;">' + (loc.observacoes || '&nbsp;') + '</p></div>' +
+            sec('Observações',
+                '<p style="min-height:28px;border-bottom:1px solid #ccc;padding-bottom:3px;">' + (loc.observacoes || '&nbsp;') + '</p>') +
 
-            '<div class="termos">TERMOS E CONDIÇÕES: O locatário declara ter recebido o veículo nas condições descritas no checklist acima e se responsabiliza por devolvê-lo no mesmo estado, assumindo os custos de eventuais avarias, multas de trânsito e outras penalidades geradas durante o período de locação. O combustível deverá ser devolvido no mesmo nível registrado na saída. Em caso de sinistro ou acidente, o locatário deverá comunicar a locadora imediatamente. O não cumprimento dos prazos acarretará cobrança de diárias adicionais.</div>' +
+            '<div class="termos"><strong>TERMOS E CONDIÇÕES:</strong> ' +
+                'O locatário declara ter recebido o veículo em perfeitas condições e compromete-se a devolvê-lo nas mesmas condições. ' +
+                'Danos, multas de trânsito e infrações ocorridas durante o período de locação são de inteira responsabilidade do locatário. ' +
+                (loc.caucao > 0 ? 'A caução de ' + formatCurrency(loc.caucao) + ' será devolvida após conferência do veículo na devolução. ' : '') +
+                (loc.franquia_km_diaria ? 'Franquia: ' + loc.franquia_km_diaria + ' km/dia; km excedente cobrado a ' + formatCurrency(loc.km_excedente_valor) + '/km. ' : '') +
+                'O locatário não poderá sublocar ou emprestar o veículo a terceiros. O combustível deve ser devolvido no mesmo nível registrado na saída.' +
+            '</div>' +
 
             '<div class="assinaturas">' +
                 '<div class="assinatura"><div class="linha">Siqueirão Multimarcas — Locador</div></div>' +

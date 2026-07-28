@@ -370,6 +370,32 @@ def init_db():
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS observacao TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS pdf_url TEXT")
 
+    # ── Novos campos de locação (v2 — formulário completo) ───────────────────
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS caucao NUMERIC(10,2) DEFAULT 0")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS caucao_pendente BOOLEAN DEFAULT FALSE")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS multa_atraso NUMERIC(10,2) DEFAULT 0")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS juros_mes NUMERIC(5,2) DEFAULT 0")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS proximo_pagamento DATE")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS tempo_minimo_dias INTEGER DEFAULT 30")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS local_retirada TEXT")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS local_devolucao TEXT")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS nivel_combustivel_saida TEXT")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS nivel_combustivel_retorno TEXT")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS franquia_km_diaria INTEGER")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS km_excedente_valor NUMERIC(10,2) DEFAULT 0")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS total_km_excedente NUMERIC(10,2) DEFAULT 0")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS raio_circulacao TEXT")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS seguro_terceiros BOOLEAN DEFAULT FALSE")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS promessa_compra BOOLEAN DEFAULT FALSE")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS desconto_promessa_compra NUMERIC(10,2) DEFAULT 0")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS atendente TEXT")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS multa_saida_antecipada NUMERIC(10,2) DEFAULT 0")
+    cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS total_final NUMERIC(10,2)")
+    # Campos padrão por veículo (pré-preenchidos na criação da locação)
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS caucao_padrao NUMERIC(10,2)")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS frequencia_padrao TEXT")
+    cur.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS tempo_minimo_padrao INTEGER")
+
     cur.execute('''
         CREATE TABLE IF NOT EXISTS os_baixas (
             id              SERIAL PRIMARY KEY,
@@ -2585,6 +2611,42 @@ def _gerar_periodos_futuros(cur, locacao_id, data_inicio, freq, diaria, valor_se
     return criados
 
 
+def _locacao_extra_fields(data):
+    """Extrai e tipifica os campos extras do payload de locação."""
+    def _f(k, default=None):
+        v = data.get(k)
+        return default if (v is None or v == '') else v
+    def _num(k, default=0):
+        try: return float(_f(k, default) or default)
+        except: return default
+    def _int(k, default=None):
+        try: v = _f(k); return int(v) if v not in (None, '') else default
+        except: return default
+    def _bool(k):
+        v = data.get(k)
+        if isinstance(v, bool): return v
+        return str(v).lower() in ('true', '1', 'on', 'yes')
+    return {
+        'caucao':                   _num('caucao') or None,
+        'caucao_pendente':          _bool('caucao_pendente'),
+        'multa_atraso':             _num('multa_atraso') or None,
+        'juros_mes':                _num('juros_mes') or None,
+        'proximo_pagamento':        _f('proximo_pagamento'),
+        'tempo_minimo_dias':        _int('tempo_minimo_dias', 30),
+        'local_retirada':           _f('local_retirada'),
+        'local_devolucao':          _f('local_devolucao'),
+        'nivel_combustivel_saida':  _f('nivel_combustivel_saida'),
+        'franquia_km_diaria':       _int('franquia_km_diaria'),
+        'km_excedente_valor':       _num('km_excedente_valor') or None,
+        'raio_circulacao':          _f('raio_circulacao'),
+        'seguro_terceiros':         _bool('seguro_terceiros'),
+        'promessa_compra':          _bool('promessa_compra'),
+        'desconto_promessa_compra': _num('desconto_promessa_compra') or None,
+        'atendente':                _f('atendente'),
+        'multa_saida_antecipada':   _num('multa_saida_antecipada') or None,
+    }
+
+
 @app.route('/api/locacoes', methods=['POST'])
 @login_required
 def add_locacao():
@@ -2604,13 +2666,33 @@ def add_locacao():
 
         freq = data.get('frequencia_cobranca') or 'avulso'
         valor_semanal = float(data.get('valor_semanal') or 0) or None
+        ex = _locacao_extra_fields(data)
+
         with _db() as (conn, cur):
             cur.execute('''
-                INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida, status, checklist, fotos_saida, observacoes, frequencia_cobranca, valor_semanal)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-            ''', (data['veiculo_id'], data['cliente_id'], data['data_inicio'], data_fim,
-                  diaria or None, total, data.get('km_saida') or None, data.get('status', 'ativa'),
-                  data.get('checklist'), fotos_saida, data.get('observacoes'), freq, valor_semanal))
+                INSERT INTO locacoes (
+                    veiculo_id, cliente_id, data_inicio, data_fim, diaria, total, km_saida,
+                    status, checklist, fotos_saida, observacoes, frequencia_cobranca, valor_semanal,
+                    caucao, caucao_pendente, multa_atraso, juros_mes, proximo_pagamento,
+                    tempo_minimo_dias, local_retirada, local_devolucao, nivel_combustivel_saida,
+                    franquia_km_diaria, km_excedente_valor, raio_circulacao, seguro_terceiros,
+                    promessa_compra, desconto_promessa_compra, atendente, multa_saida_antecipada
+                ) VALUES (
+                    %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                    %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
+                ) RETURNING id
+            ''', (
+                data['veiculo_id'], data['cliente_id'], data['data_inicio'], data_fim,
+                diaria or None, total, data.get('km_saida') or None,
+                data.get('status', 'ativa'), data.get('checklist'), fotos_saida,
+                data.get('observacoes'), freq, valor_semanal,
+                ex['caucao'], ex['caucao_pendente'], ex['multa_atraso'], ex['juros_mes'],
+                ex['proximo_pagamento'], ex['tempo_minimo_dias'], ex['local_retirada'],
+                ex['local_devolucao'], ex['nivel_combustivel_saida'], ex['franquia_km_diaria'],
+                ex['km_excedente_valor'], ex['raio_circulacao'], ex['seguro_terceiros'],
+                ex['promessa_compra'], ex['desconto_promessa_compra'], ex['atendente'],
+                ex['multa_saida_antecipada']
+            ))
             new_id = cur.fetchone()[0]
             cur.execute("UPDATE veiculos SET status = 'locado' WHERE id = %s", (data['veiculo_id'],))
             if freq in ('semanal', 'quinzenal', 'mensal') and not data_fim:
@@ -2638,23 +2720,36 @@ def update_locacao(id):
             if fotos_saida and isinstance(fotos_saida, list):
                 fotos_saida = json.dumps(fotos_saida)
 
-            # data_fim é opcional — converte string vazia para None
             data_fim = data.get('data_fim') or None
-            total    = data.get('total')
-            if total == '' or total is None:
-                total = None
-
+            total    = data.get('total') or None
             valor_semanal_upd = float(data.get('valor_semanal') or 0) or None
+            ex = _locacao_extra_fields(data)
+
             cur.execute('''
-                UPDATE locacoes SET veiculo_id=%s, cliente_id=%s, data_inicio=%s, data_fim=%s,
-                diaria=%s, total=%s, km_saida=%s, checklist=%s, fotos_saida=%s, observacoes=%s,
-                frequencia_cobranca=%s, valor_semanal=%s
+                UPDATE locacoes SET
+                    veiculo_id=%s, cliente_id=%s, data_inicio=%s, data_fim=%s,
+                    diaria=%s, total=%s, km_saida=%s, checklist=%s, fotos_saida=%s,
+                    observacoes=%s, frequencia_cobranca=%s, valor_semanal=%s,
+                    caucao=%s, caucao_pendente=%s, multa_atraso=%s, juros_mes=%s,
+                    proximo_pagamento=%s, tempo_minimo_dias=%s, local_retirada=%s,
+                    local_devolucao=%s, nivel_combustivel_saida=%s, franquia_km_diaria=%s,
+                    km_excedente_valor=%s, raio_circulacao=%s, seguro_terceiros=%s,
+                    promessa_compra=%s, desconto_promessa_compra=%s, atendente=%s,
+                    multa_saida_antecipada=%s
                 WHERE id=%s
-            ''', (data.get('veiculo_id'), data.get('cliente_id'), data.get('data_inicio'),
-                  data_fim, data.get('diaria'), total,
-                  data.get('km_saida') or None, data.get('checklist'),
-                  fotos_saida, data.get('observacoes'),
-                  data.get('frequencia_cobranca') or 'avulso', valor_semanal_upd, id))
+            ''', (
+                data.get('veiculo_id'), data.get('cliente_id'), data.get('data_inicio'),
+                data_fim, data.get('diaria'), total,
+                data.get('km_saida') or None, data.get('checklist'),
+                fotos_saida, data.get('observacoes'),
+                data.get('frequencia_cobranca') or 'avulso', valor_semanal_upd,
+                ex['caucao'], ex['caucao_pendente'], ex['multa_atraso'], ex['juros_mes'],
+                ex['proximo_pagamento'], ex['tempo_minimo_dias'], ex['local_retirada'],
+                ex['local_devolucao'], ex['nivel_combustivel_saida'], ex['franquia_km_diaria'],
+                ex['km_excedente_valor'], ex['raio_circulacao'], ex['seguro_terceiros'],
+                ex['promessa_compra'], ex['desconto_promessa_compra'], ex['atendente'],
+                ex['multa_saida_antecipada'], id
+            ))
 
             veiculo_novo = data.get('veiculo_id')
             if veiculo_antigo != veiculo_novo and status_antigo == 'ativa':
@@ -2669,7 +2764,6 @@ def update_locacao(id):
         app.logger.error('Erro em update_locacao: %s', e)
         return jsonify({'error': 'Erro ao atualizar locação. Tente novamente.'}), 500
 
-    # Regenera períodos passados que possam ter sido excluídos
     freq_edit = data.get('frequencia_cobranca') or 'avulso'
     if freq_edit in ('semanal', 'quinzenal', 'mensal'):
         gerar_periodos_pendentes(force=True)
@@ -2728,25 +2822,55 @@ def gerar_cobrancas_locacao(id):
 @login_required
 def devolver_locacao(id):
     data = request.json
+    total_km_excedente = 0.0
     with _db() as (conn, cur):
-        cur.execute('SELECT veiculo_id FROM locacoes WHERE id = %s', (id,))
+        cur.execute(
+            '''SELECT veiculo_id, km_saida, franquia_km_diaria, km_excedente_valor,
+                      data_inicio, caucao, promessa_compra, desconto_promessa_compra
+               FROM locacoes WHERE id = %s''', (id,)
+        )
         locacao = cur.fetchone()
+        if not locacao:
+            return jsonify({'error': 'Locação não encontrada'}), 404
 
-        if locacao:
-            fotos_retorno = data.get('fotos_retorno')
-            if fotos_retorno and isinstance(fotos_retorno, list):
-                fotos_retorno = json.dumps(fotos_retorno)
+        (veiculo_id, km_saida, franquia_km_diaria,
+         km_excedente_valor, data_inicio, caucao,
+         promessa_compra, desconto_promessa_compra) = locacao
+
+        fotos_retorno = data.get('fotos_retorno')
+        if fotos_retorno and isinstance(fotos_retorno, list):
+            fotos_retorno = json.dumps(fotos_retorno)
+
+        km_retorno = data.get('km_retorno')
+        data_dev   = data.get('data_fim') or data.get('data_devolucao_real')
+
+        # Calcula km excedente
+        if km_retorno and km_saida and franquia_km_diaria and km_excedente_valor:
+            km_rodado = int(km_retorno) - int(km_saida)
+            if data_dev and data_inicio:
+                di = data_inicio if not isinstance(data_inicio, str) else _date.fromisoformat(data_inicio)
+                dd = _date.fromisoformat(data_dev) if isinstance(data_dev, str) else data_dev
+                dias = (dd - di).days + 1
+                franquia_total = int(franquia_km_diaria) * dias
+                km_exc = max(0, km_rodado - franquia_total)
+                total_km_excedente = round(km_exc * float(km_excedente_valor), 2)
+
+        cur.execute(
+            '''UPDATE locacoes SET
+               data_fim=%s, data_devolucao_real=%s, km_retorno=%s, fotos_retorno=%s,
+               status='concluida', nivel_combustivel_retorno=%s, total_km_excedente=%s
+               WHERE id=%s''',
+            (data_dev, data.get('data_devolucao_real') or data_dev,
+             km_retorno, fotos_retorno,
+             data.get('nivel_combustivel_retorno'), total_km_excedente, id)
+        )
+        if km_retorno:
             cur.execute(
-                "UPDATE locacoes SET data_fim=%s, data_devolucao_real=%s, km_retorno=%s, fotos_retorno=%s, status='concluida' WHERE id=%s",
-                (data.get('data_fim'), data.get('data_devolucao_real'), data.get('km_retorno'), fotos_retorno, id)
+                "UPDATE veiculos SET km_atual=%s, status='disponivel' WHERE id=%s",
+                (km_retorno, veiculo_id)
             )
-            if data.get('km_retorno'):
-                cur.execute(
-                    "UPDATE veiculos SET km_atual=%s, status='disponivel' WHERE id=%s",
-                    (data['km_retorno'], locacao[0])
-                )
 
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'total_km_excedente': total_km_excedente})
 
 # ==================== API ABASTECIMENTOS ====================
 
