@@ -3,185 +3,160 @@
 
 {% block extra_css %}
 <style>
-    /* ── Welcome banner compacto ─────────────────────────── */
-    .welcome-banner {
-        background: linear-gradient(120deg, #0f172a 0%, #1e3a5f 70%, #1d4ed8 100%);
-        border-radius: 14px;
-        padding: 20px 28px;
-        margin-bottom: 24px;
+    /* ── Header do dashboard ─────────────────────────────── */
+    .dash-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        overflow: hidden;
-        position: relative;
+        margin-bottom: 22px;
     }
-    .welcome-banner::after {
-        content: '';
-        position: absolute;
-        right: -30px; top: -40px;
-        width: 180px; height: 180px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.03);
-        pointer-events: none;
-    }
-    .welcome-text h2 {
-        font-size: 1.05rem;
-        font-weight: 600;
-        color: #f1f5f9;
+    .dash-greeting h2 {
+        font-size: 1.18rem;
+        font-weight: 700;
+        color: #0f172a;
         margin-bottom: 2px;
     }
-    .welcome-text p {
-        font-size: 0.78rem;
-        color: #64748b;
-    }
+    .dash-greeting p { font-size: .78rem; color: #94a3b8; }
+    .dash-header-right { display: flex; align-items: center; gap: 8px; }
     .online-pill {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: rgba(255,255,255,0.07);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
         border-radius: 20px;
-        padding: 6px 14px;
-        font-size: 0.75rem;
-        color: #94a3b8;
-        white-space: nowrap;
-        position: relative;
-        z-index: 1;
+        padding: 5px 12px;
+        font-size: .72rem;
+        color: #16a34a;
+        font-weight: 600;
     }
     .online-dot {
         width: 6px; height: 6px;
         border-radius: 50%;
-        background: #4ade80;
-        box-shadow: 0 0 6px #4ade80;
+        background: #22c55e;
+        box-shadow: 0 0 5px #22c55e;
+        animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+        0%,100% { opacity: 1; } 50% { opacity: .5; }
     }
 
-    /* ── KPI cards limpos ────────────────────────────────── */
+    /* ── KPI grid (5 colunas no desktop) ─────────────────── */
     .kpi-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
-        margin-bottom: 20px;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin-bottom: 18px;
     }
     .kpi-card {
         background: white;
         border-radius: 12px;
-        padding: 18px 20px;
+        padding: 16px 18px;
         box-shadow: var(--card-shadow);
         border: 1px solid rgba(0,0,0,0.04);
-        position: relative;
-        overflow: hidden;
-        transition: box-shadow 0.2s, transform 0.2s;
+        position: relative; overflow: hidden;
+        transition: box-shadow .2s, transform .2s;
+        border-top: 3px solid transparent;
     }
     .kpi-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); }
-    .kpi-label {
-        font-size: 0.68rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #94a3b8;
-        margin-bottom: 8px;
-    }
-    .kpi-value {
-        font-size: 1.7rem;
-        font-weight: 700;
-        color: #0f172a;
-        line-height: 1;
-        margin-bottom: 4px;
-    }
-    .kpi-sub {
-        font-size: 0.72rem;
-        color: #94a3b8;
-        font-weight: 400;
-    }
-    .kpi-icon-bg {
-        position: absolute;
-        right: 16px;
-        bottom: 12px;
-        font-size: 2.6rem;
-        opacity: 0.18;
-    }
-    /* accent line topo do card */
-    .kpi-card.blue   { border-top: 3px solid #2563eb; }
-    .kpi-card.green  { border-top: 3px solid #10b981; }
-    .kpi-card.orange { border-top: 3px solid #f59e0b; }
-    .kpi-card.purple { border-top: 3px solid #8b5cf6; }
-    .kpi-card.red    { border-top: 3px solid #ef4444; }
-
-    .kpi-card.blue   .kpi-icon-bg { color: #2563eb; }
-    .kpi-card.green  .kpi-icon-bg { color: #10b981; }
-    .kpi-card.orange .kpi-icon-bg { color: #f59e0b; }
-    .kpi-card.purple .kpi-icon-bg { color: #8b5cf6; }
-    .kpi-card.red    .kpi-icon-bg { color: #ef4444; }
-
-    /* ── Quick actions + ops row ─────────────────────────── */
-    .ops-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
-        margin-bottom: 20px;
-    }
-    .qa-card {
-        background: white;
-        border-radius: 12px;
-        padding: 14px 18px;
-        box-shadow: var(--card-shadow);
-        border: 1px solid rgba(0,0,0,0.04);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        cursor: pointer;
-        text-decoration: none;
-        color: inherit;
-        transition: box-shadow 0.2s, transform 0.2s;
-    }
-    .qa-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); text-decoration: none; }
-    .qa-icon {
-        width: 38px; height: 38px;
-        border-radius: 10px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 0.95rem;
-        flex-shrink: 0;
-    }
-    .qa-icon.blue   { background: #eff6ff; color: #2563eb; }
-    .qa-icon.green  { background: #f0fdf4; color: #059669; }
-    .qa-icon.amber  { background: #fffbeb; color: #d97706; }
-    .qa-icon.red    { background: #fff1f2; color: #dc2626; }
-    .qa-label { font-size: 0.68rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-    .qa-value { font-size: 1rem; font-weight: 700; color: #1e293b; margin-top: 1px; }
-    .qa-arrow { margin-left: auto; color: #cbd5e1; font-size: 0.7rem; flex-shrink: 0; }
-
-    /* ── Trend badge on KPI ──────────────────────────────── */
+    .kpi-label { font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: #94a3b8; margin-bottom: 8px; }
+    .kpi-value { font-size: 1.55rem; font-weight: 700; color: #0f172a; line-height: 1; margin-bottom: 4px; }
+    .kpi-sub { font-size: .7rem; color: #94a3b8; }
+    .kpi-icon-bg { position: absolute; right: 14px; bottom: 10px; font-size: 2.4rem; opacity: .14; pointer-events: none; }
     .kpi-trend {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        font-size: 0.68rem;
-        font-weight: 600;
-        padding: 2px 7px;
-        border-radius: 20px;
-        margin-top: 4px;
+        display: inline-flex; align-items: center; gap: 3px;
+        font-size: .65rem; font-weight: 600; padding: 1px 7px;
+        border-radius: 20px; margin-top: 5px;
     }
     .kpi-trend.up   { background: #f0fdf4; color: #16a34a; }
     .kpi-trend.down { background: #fff1f2; color: #dc2626; }
     .kpi-trend.flat { background: #f8fafc; color: #64748b; }
+    .kpi-card.blue   { border-top-color: #2563eb; } .kpi-card.blue   .kpi-icon-bg { color: #2563eb; }
+    .kpi-card.green  { border-top-color: #10b981; } .kpi-card.green  .kpi-icon-bg { color: #10b981; }
+    .kpi-card.orange { border-top-color: #f59e0b; } .kpi-card.orange .kpi-icon-bg { color: #f59e0b; }
+    .kpi-card.purple { border-top-color: #8b5cf6; } .kpi-card.purple .kpi-icon-bg { color: #8b5cf6; }
+    .kpi-card.red    { border-top-color: #ef4444; } .kpi-card.red    .kpi-icon-bg { color: #ef4444; }
+    .kpi-card.teal   { border-top-color: #14b8a6; } .kpi-card.teal   .kpi-icon-bg { color: #14b8a6; }
+
+    /* ── Ações rápidas ───────────────────────────────────── */
+    .qa-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+    .qa-card {
+        background: white;
+        border-radius: 10px;
+        padding: 12px 14px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid rgba(0,0,0,0.04);
+        display: flex; align-items: center; gap: 10px;
+        text-decoration: none; color: inherit;
+        transition: box-shadow .2s, transform .2s;
+    }
+    .qa-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); }
+    .qa-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+    .qa-icon.blue   { background: #eff6ff; color: #2563eb; }
+    .qa-icon.green  { background: #f0fdf4; color: #059669; }
+    .qa-icon.amber  { background: #fffbeb; color: #d97706; }
+    .qa-icon.red    { background: #fff1f2; color: #dc2626; }
+    .qa-icon.purple { background: #f5f3ff; color: #7c3aed; }
+    .qa-label { font-size: .63rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .qa-value { font-size: .92rem; font-weight: 700; color: #1e293b; margin-top: 1px; white-space: nowrap; }
+    .qa-arrow { margin-left: auto; color: #cbd5e1; font-size: .68rem; flex-shrink: 0; }
+
+    /* ── Locações ativas (lista rápida) ──────────────────── */
+    .loc-row {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .loc-row:last-child { border-bottom: none; }
+    .loc-placa {
+        font-family: monospace; font-size: .78rem; font-weight: 700;
+        background: #1e293b; color: #f8fafc;
+        padding: 3px 8px; border-radius: 5px; flex-shrink: 0;
+    }
+    .loc-info { flex: 1; min-width: 0; }
+    .loc-info strong { font-size: .82rem; color: #0f172a; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .loc-info small { font-size: .7rem; color: #94a3b8; }
+    .loc-valor { font-size: .8rem; font-weight: 600; color: #16a34a; flex-shrink: 0; }
+
+    @media (max-width: 1024px) {
+        .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+        .qa-grid  { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+        .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        .qa-grid  { grid-template-columns: repeat(2, 1fr) !important; }
+        .dash-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Banner de boas-vindas -->
-<div class="welcome-banner">
-    <div class="welcome-text">
+<!-- Header do Dashboard -->
+<div class="dash-header">
+    <div class="dash-greeting">
         <h2 id="saudacao">Bem-vindo!</h2>
         <p id="dataAtual"></p>
     </div>
-    <div class="online-pill">
-        <span class="online-dot"></span>
-        Sistema Online
+    <div class="dash-header-right">
+        <div class="online-pill">
+            <span class="online-dot"></span>
+            Online
+        </div>
+        <a href="/locacoes" class="btn btn-primary btn-sm" style="height:32px;">
+            <i class="fas fa-plus"></i> Nova Locação
+        </a>
+        <a href="/reservas" class="btn btn-secondary btn-sm" style="height:32px;">
+            <i class="fas fa-calendar-plus"></i> Reserva
+        </a>
     </div>
 </div>
 
-<!-- KPIs principais -->
+<!-- KPIs (5 cards) -->
 <div class="kpi-grid">
     <div class="kpi-card blue">
         <div class="kpi-label">Frota Total</div>
@@ -191,7 +166,7 @@
     </div>
     <div class="kpi-card green">
         <div class="kpi-label">Faturamento do Mês</div>
-        <div class="kpi-value" id="faturamentoMes" style="font-size:1.25rem;">—</div>
+        <div class="kpi-value" id="faturamentoMes" style="font-size:1.2rem;">—</div>
         <div class="kpi-sub"><span id="locacoesAtivas">—</span> locações ativas</div>
         <div id="faturamentoTrend"></div>
         <i class="fas fa-dollar-sign kpi-icon-bg"></i>
@@ -203,23 +178,21 @@
         <i class="fas fa-percentage kpi-icon-bg"></i>
     </div>
     <div class="kpi-card purple">
-        <div class="kpi-label">Clientes Ativos</div>
+        <div class="kpi-label">Clientes Cadastrados</div>
         <div class="kpi-value" id="totalClientes">—</div>
-        <div class="kpi-sub">cadastrados</div>
+        <div class="kpi-sub">no sistema</div>
         <i class="fas fa-users kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card teal">
+        <div class="kpi-label">Reservas Ativas</div>
+        <div class="kpi-value" id="totalReservas">—</div>
+        <div class="kpi-sub">agendamentos</div>
+        <i class="fas fa-calendar-plus kpi-icon-bg"></i>
     </div>
 </div>
 
-<!-- Ações rápidas + ops -->
-<div class="ops-grid">
-    <a class="qa-card" href="/locacoes">
-        <div class="qa-icon blue"><i class="fas fa-plus"></i></div>
-        <div>
-            <div class="qa-label">Ação Rápida</div>
-            <div class="qa-value">Nova Locação</div>
-        </div>
-        <i class="fas fa-chevron-right qa-arrow"></i>
-    </a>
+<!-- Ações rápidas (4 atalhos) -->
+<div class="qa-grid">
     <a class="qa-card" href="/operacional">
         <div class="qa-icon amber"><i class="fas fa-clipboard-list"></i></div>
         <div>
@@ -244,10 +217,18 @@
         </div>
         <i class="fas fa-chevron-right qa-arrow"></i>
     </a>
+    <a class="qa-card" href="/despesas">
+        <div class="qa-icon purple"><i class="fas fa-receipt"></i></div>
+        <div>
+            <div class="qa-label">Despesas do Mês</div>
+            <div class="qa-value" id="despesasMes">—</div>
+        </div>
+        <i class="fas fa-chevron-right qa-arrow"></i>
+    </a>
 </div>
 
-<!-- Gráficos -->
-<div class="charts-grid">
+<!-- Gráficos + Locações ativas -->
+<div class="charts-grid" style="grid-template-columns: 1.5fr 1fr;">
     <div class="card">
         <div class="card-header">
             <span class="card-title"><i class="fas fa-chart-bar"></i> Faturamento Mensal</span>
@@ -256,23 +237,24 @@
     </div>
     <div class="card">
         <div class="card-header">
-            <span class="card-title"><i class="fas fa-car"></i> Status da Frota</span>
+            <span class="card-title"><i class="fas fa-key"></i> Locações Ativas</span>
+            <a href="/locacoes" style="font-size:.72rem;color:#2563eb;text-decoration:none;font-weight:600;">Ver todas →</a>
         </div>
-        <div class="chart-box"><canvas id="chartFrota"></canvas></div>
+        <div id="locacoesAtivasList">
+            <div class="empty-state"><i class="fas fa-key"></i><p>Nenhuma locação ativa</p></div>
+        </div>
     </div>
 </div>
 
 <!-- Tabela + Alertas -->
-<div class="charts-grid" style="margin-top:20px;">
+<div class="charts-grid" style="margin-top:16px;">
     <div class="card">
         <div class="card-header">
-            <span class="card-title"><i class="fas fa-trophy"></i> Veículos Mais Locados</span>
+            <span class="card-title"><i class="fas fa-car"></i> Status da Frota</span>
         </div>
-        <div class="table-container">
-            <table id="tabelaVeiculosLocados">
-                <thead><tr><th style="width:32px;">#</th><th>Veículo</th><th style="text-align:center;">Locações</th></tr></thead>
-                <tbody><tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px;">Carregando...</td></tr></tbody>
-            </table>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center;">
+            <div class="chart-box" style="height:200px;"><canvas id="chartFrota"></canvas></div>
+            <div id="frotaLegenda" style="font-size:.8rem;"></div>
         </div>
     </div>
     <div class="card">
@@ -285,6 +267,19 @@
                 <p>Nenhuma pendência</p>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Mais locados -->
+<div style="margin-top:16px;" class="card">
+    <div class="card-header">
+        <span class="card-title"><i class="fas fa-trophy"></i> Veículos Mais Locados</span>
+    </div>
+    <div class="table-container">
+        <table id="tabelaVeiculosLocados">
+            <thead><tr><th style="width:32px;">#</th><th>Veículo</th><th style="text-align:center;">Locações</th></tr></thead>
+            <tbody><tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px;">Carregando...</td></tr></tbody>
+        </table>
     </div>
 </div>
 
@@ -313,6 +308,8 @@
             document.getElementById('totalClientes').textContent        = data.total_clientes;
             document.getElementById('locacoesAtivas').textContent       = data.locacoes_ativas;
             document.getElementById('manutencoesPendentes').textContent = data.manutencoes_pendentes;
+            document.getElementById('totalReservas').textContent        = data.total_reservas ?? '—';
+            document.getElementById('despesasMes').textContent          = data.despesas_mes ? formatCurrency(data.despesas_mes) : '—';
             window.multasPendentes = data.multas_pendentes;
 
             // Trend: mês atual vs mês anterior
@@ -366,20 +363,51 @@
 
         const ctxFr = document.getElementById('chartFrota').getContext('2d');
         if (chartFrota) chartFrota.destroy();
+        const frotaData = [data.veiculos_disponiveis, data.veiculos_locados, data.veiculos_manutencao];
+        const frotaColors = ['#10b981','#2563eb','#f59e0b'];
+        const frotaLabels = ['Disponível','Locado','Manutenção'];
         chartFrota = new Chart(ctxFr, {
             type: 'doughnut',
             data: {
-                labels: ['Disponível', 'Locado', 'Manutenção'],
-                datasets: [{ data: [data.veiculos_disponiveis, data.veiculos_locados, data.veiculos_manutencao],
-                    backgroundColor: ['#10b981','#f59e0b','#ef4444'],
-                    borderWidth: 0, hoverOffset: 4 }]
+                labels: frotaLabels,
+                datasets: [{ data: frotaData, backgroundColor: frotaColors, borderWidth: 0, hoverOffset: 4 }]
             },
             options: {
-                responsive: true, maintainAspectRatio: false,
-                cutout: '68%',
-                plugins: { legend: { position: 'bottom', labels: { font: { family: 'Poppins', size: 11 }, boxWidth: 10, padding: 16 } } }
+                responsive: true, maintainAspectRatio: false, cutout: '72%',
+                plugins: { legend: { display: false } }
             }
         });
+        // Legenda lateral personalizada
+        const leg = document.getElementById('frotaLegenda');
+        if (leg) {
+            const total = frotaData.reduce((a,b) => a+b, 0) || 1;
+            leg.innerHTML = frotaLabels.map((l,i) => `
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <div style="width:10px;height:10px;border-radius:3px;background:${frotaColors[i]};flex-shrink:0;"></div>
+                    <div>
+                        <div style="font-weight:700;color:#0f172a;">${frotaData[i]}</div>
+                        <div style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">${l} · ${Math.round(frotaData[i]/total*100)}%</div>
+                    </div>
+                </div>`).join('');
+        }
+    }
+
+    async function carregarLocacoesAtivas() {
+        try {
+            const locs = await fetch('/api/locacoes?status=ativa').then(r => r.json());
+            const el = document.getElementById('locacoesAtivasList');
+            if (!locs.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-key"></i><p>Nenhuma locação ativa</p></div>'; return; }
+            el.innerHTML = locs.slice(0, 7).map(l => `
+                <div class="loc-row">
+                    <span class="loc-placa">${l.placa || '—'}</span>
+                    <div class="loc-info">
+                        <strong>${l.nome_cliente || '—'}</strong>
+                        <small>${l.marca || ''} ${l.modelo || ''} · Desde ${formatDate(l.data_inicio)}</small>
+                    </div>
+                    <span class="loc-valor">${l.diaria ? formatCurrency(l.diaria) + '/d' : '—'}</span>
+                </div>`).join('') +
+                (locs.length > 7 ? `<div style="text-align:center;padding:10px;font-size:.74rem;color:#94a3b8;">+${locs.length - 7} locações</div>` : '');
+        } catch(e) {}
     }
 
     function atualizarTabelaVeiculos(veiculos) {
@@ -485,6 +513,7 @@
         carregarAlertasRevisao();
         carregarAlertasCobranca();
         carregarOpsSnippet();
+        carregarLocacoesAtivas();
     });
 </script>
 {% endblock %}

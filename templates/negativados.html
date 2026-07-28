@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}Negativados — Siqueirão{% endblock %}
+
+{% block extra_css %}
+<style>
+.neg-card {
+    background: white; border: 1px solid #fee2e2; border-left: 4px solid #ef4444;
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 14px;
+    transition: box-shadow .15s;
+}
+.neg-card:hover { box-shadow: var(--card-shadow-hover); }
+.neg-avatar {
+    width: 42px; height: 42px; border-radius: 10px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 700; color: white; flex-shrink: 0;
+}
+.neg-info { flex: 1; min-width: 0; }
+.neg-info strong { font-size: .9rem; color: #0f172a; }
+.neg-info .neg-sub { font-size: .74rem; color: #64748b; margin-top: 2px; }
+.neg-motivo { font-size: .76rem; background: #fff1f2; color: #dc2626; padding: 4px 10px; border-radius: 6px; border: 1px solid #fee2e2; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+.neg-data { font-size: .72rem; color: #94a3b8; flex-shrink: 0; white-space: nowrap; }
+
+/* Busca de cliente para negativar */
+.cliente-suggestion {
+    padding: 10px 14px; border-bottom: 1px solid #f1f5f9;
+    cursor: pointer; font-size: .85rem;
+    display: flex; align-items: center; gap: 10px;
+    transition: background .1s;
+}
+.cliente-suggestion:hover { background: #f8fafc; }
+.cliente-suggestion:last-child { border-bottom: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-user-slash"></i> Negativados</h1>
+    <button class="btn btn-danger" onclick="abrirModalNegativar()">
+        <i class="fas fa-user-slash"></i> Negativar Cliente
+    </button>
+</div>
+
+<!-- Info card -->
+<div style="background:#fff1f2;border:1px solid #fecaca;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+    <i class="fas fa-exclamation-triangle" style="color:#ef4444;font-size:1.1rem;flex-shrink:0;"></i>
+    <div style="font-size:.82rem;color:#7f1d1d;">
+        Clientes negativados recebem um <strong>alerta automático</strong> ao tentar criar uma nova locação. Remova a negativação apenas após a regularização da pendência.
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-user-slash"></i></div>
+        <div class="stat-info"><h3 id="totalNeg">—</h3><p>Total Negativados</p></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-key"></i></div>
+        <div class="stat-info"><h3 id="negComLocacao">—</h3><p>Com Locação Ativa</p></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-user-check"></i></div>
+        <div class="stat-info"><h3 id="negSemLocacao">—</h3><p>Sem Locação Ativa</p></div>
+    </div>
+</div>
+
+<!-- Busca -->
+<div class="card" style="margin-bottom:14px;">
+    <div style="display:flex;gap:10px;align-items:center;">
+        <input type="text" class="form-control" id="busca" placeholder="Buscar por nome..." oninput="filtrar()" style="max-width:300px;font-size:.85rem;">
+        <span style="font-size:.8rem;color:#94a3b8;" id="countLabel"></span>
+    </div>
+</div>
+
+<!-- Lista -->
+<div id="listaNegativados">
+    <div class="empty-state"><i class="fas fa-user-slash"></i><p>Carregando...</p></div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let negativados = [], todosClientes = [];
+
+async function carregarDados() {
+    [negativados, todosClientes] = await Promise.all([
+        fetch('/api/negativados').then(r=>r.json()),
+        fetch('/api/clientes').then(r=>r.json()),
+    ]);
+    renderizar(negativados);
+    atualizarKPIs();
+}
+
+function atualizarKPIs() {
+    document.getElementById('totalNeg').textContent      = negativados.length;
+    document.getElementById('negComLocacao').textContent = negativados.filter(n=>n.locacoes_ativas>0).length;
+    document.getElementById('negSemLocacao').textContent = negativados.filter(n=>n.locacoes_ativas==0).length;
+}
+
+function renderizar(lista) {
+    const el = document.getElementById('listaNegativados');
+    document.getElementById('countLabel').textContent = lista.length + ' cliente(s)';
+    if (!lista.length) {
+        el.innerHTML = `<div class="empty-state">
+            <i class="fas fa-check-circle" style="color:#10b981;font-size:2.5rem;display:block;margin-bottom:12px;"></i>
+            <p style="font-size:.9rem;font-weight:500;">Nenhum cliente negativado</p>
+            <p style="font-size:.8rem;color:#94a3b8;margin-top:4px;">A lista está limpa.</p>
+        </div>`;
+        return;
+    }
+    el.innerHTML = lista.map(n => `
+        <div class="neg-card">
+            <div class="neg-avatar">${(n.nome||'?')[0].toUpperCase()}</div>
+            <div class="neg-info">
+                <strong>${n.nome}</strong>
+                <div class="neg-sub">
+                    ${n.cpf ? `<span style="font-family:monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:.72rem;">${n.cpf}</span>` : ''}
+                    ${n.telefone ? `· ${n.telefone}` : ''}
+                    ${n.total_locacoes > 0 ? `· <strong style="color:#0f172a;">${n.total_locacoes}</strong> locação(ões)` : ''}
+                    ${n.locacoes_ativas > 0 ? `<span style="background:#fef3c7;color:#92400e;padding:1px 8px;border-radius:10px;font-size:.68rem;font-weight:700;margin-left:6px;">${n.locacoes_ativas} ativa</span>` : ''}
+                </div>
+            </div>
+            ${n.motivo_negativacao ? `<div class="neg-motivo" title="${n.motivo_negativacao}">
+                <i class="fas fa-comment-alt" style="margin-right:4px;"></i>${n.motivo_negativacao}
+            </div>` : ''}
+            <div class="neg-data">${n.data_negativacao ? formatDate(n.data_negativacao) : '—'}</div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+                <a href="/clientes" class="btn btn-sm btn-secondary" title="Ver cliente"><i class="fas fa-user"></i></a>
+                <button class="btn btn-sm btn-success" onclick="removerNegativacao(${n.id}, '${(n.nome||'').replace("'","'")}')" title="Remover negativação">
+                    <i class="fas fa-user-check"></i> Regularizar
+                </button>
+            </div>
+        </div>`).join('');
+}
+
+function filtrar() {
+    const b = document.getElementById('busca').value.toLowerCase();
+    renderizar(negativados.filter(n => !b || (n.nome||'').toLowerCase().includes(b) || (n.cpf||'').includes(b)));
+}
+
+function abrirModalNegativar() {
+    abrirModal('Negativar Cliente', `
+        <div class="form-group">
+            <label>Buscar Cliente</label>
+            <input type="text" class="form-control" id="buscaCliente" placeholder="Digite o nome ou CPF..." oninput="filtrarClientes()" autofocus>
+        </div>
+        <div id="listaSugestoes" style="max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:14px;display:none;"></div>
+        <div id="clienteSelecionado" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+            <div style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;font-weight:700;letter-spacing:.06em;margin-bottom:4px;">Cliente selecionado</div>
+            <div id="nomeClienteSel" style="font-weight:600;color:#0f172a;"></div>
+        </div>
+        <div class="form-group" id="motivoGroup" style="display:none;">
+            <label>Motivo da Negativação *</label>
+            <textarea class="form-control" id="motivoNeg" rows="3" placeholder="Descreva o motivo: inadimplência, dano ao veículo, etc."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+            <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+            <button class="btn btn-danger" id="btnNegativar" style="display:none;" onclick="confirmarNegativacao()">
+                <i class="fas fa-user-slash"></i> Confirmar Negativação
+            </button>
+        </div>`);
+}
+
+let clienteParaNegativar = null;
+
+function filtrarClientes() {
+    const b = document.getElementById('buscaCliente').value.toLowerCase();
+    if (!b || b.length < 2) { document.getElementById('listaSugestoes').style.display='none'; return; }
+    const negativadosIds = new Set(negativados.map(n=>n.id));
+    const filtrados = todosClientes.filter(c =>
+        !negativadosIds.has(c.id) &&
+        ((c.nome||'').toLowerCase().includes(b) || (c.cpf||'').includes(b))
+    ).slice(0,8);
+    const el = document.getElementById('listaSugestoes');
+    if (!filtrados.length) { el.innerHTML = '<div style="padding:12px;text-align:center;color:#94a3b8;font-size:.82rem;">Nenhum cliente encontrado</div>'; el.style.display='block'; return; }
+    el.innerHTML = filtrados.map(c => `
+        <div class="cliente-suggestion" onclick="selecionarCliente(${c.id}, '${(c.nome||'').replace("'","'")}', '${c.cpf||''}')">
+            <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#2563eb,#60a5fa);display:flex;align-items:center;justify-content:center;color:white;font-size:.8rem;font-weight:700;flex-shrink:0;">${(c.nome||'?')[0]}</div>
+            <div>
+                <div style="font-weight:600;color:#0f172a;">${c.nome}</div>
+                <div style="font-size:.72rem;color:#94a3b8;">${c.cpf||'Sem CPF'} ${c.telefone?'· '+c.telefone:''}</div>
+            </div>
+        </div>`).join('');
+    el.style.display='block';
+}
+
+function selecionarCliente(id, nome, cpf) {
+    clienteParaNegativar = id;
+    document.getElementById('listaSugestoes').style.display='none';
+    document.getElementById('buscaCliente').value = nome + (cpf ? ' — ' + cpf : '');
+    document.getElementById('clienteSelecionado').style.display='block';
+    document.getElementById('nomeClienteSel').textContent = nome + (cpf ? ' · ' + cpf : '');
+    document.getElementById('motivoGroup').style.display='block';
+    document.getElementById('btnNegativar').style.display='inline-flex';
+}
+
+async function confirmarNegativacao() {
+    if (!clienteParaNegativar) { showToast('Selecione um cliente', 'error'); return; }
+    const motivo = document.getElementById('motivoNeg').value.trim();
+    if (!motivo) { showToast('Informe o motivo da negativação', 'error'); return; }
+    try {
+        const resp = await fetch(`/api/clientes/${clienteParaNegativar}/negativar`, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ motivo })
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Erro');
+        showToast(data.message, 'success');
+        fecharModal();
+        carregarDados();
+    } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function removerNegativacao(id, nome) {
+    confirmarAcao('Remover Negativação',
+        `Confirma a regularização de <strong>${nome}</strong>? Isso remove o alerta ao criar locações.`,
+        async () => {
+            try {
+                const resp = await fetch(`/api/clientes/${id}/remover-negativacao`, { method: 'POST' });
+                const data = await resp.json();
+                showToast(data.message, 'success');
+                carregarDados();
+            } catch { showToast('Erro ao remover negativação', 'error'); }
+        }
+    );
+}
+
+window.addEventListener('load', carregarDados);
+</script>
+{% endblock %}

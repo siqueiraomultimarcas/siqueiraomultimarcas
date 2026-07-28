@@ -146,8 +146,105 @@
         }
         .sidebar-logout:hover { background: #fee2e2; color: #dc2626; }
 
+        /* ── Main Wrapper + Top Bar ──────────────────────────── */
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-left: 240px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .top-bar {
+            height: 54px;
+            background: #fff;
+            border-bottom: 1px solid #eaecf0;
+            display: flex;
+            align-items: center;
+            padding: 0 26px;
+            position: sticky;
+            top: 0;
+            z-index: 95;
+            flex-shrink: 0;
+            gap: 8px;
+        }
+        .top-bar-left {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .top-bar-brand {
+            font-size: .88rem;
+            font-weight: 700;
+            color: #1e293b;
+            display: none;
+        }
+        .top-bar-sep {
+            width: 1px; height: 18px;
+            background: #e8ecf0;
+        }
+        .top-bar-subtitle {
+            font-size: .72rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .top-icon-btn {
+            width: 36px; height: 36px;
+            border-radius: 8px; border: none;
+            background: none; color: #64748b;
+            font-size: .88rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
+            transition: background .12s, color .12s;
+            text-decoration: none;
+        }
+        .top-icon-btn:hover { background: #f1f5f9; color: #1e293b; }
+        .notif-badge {
+            position: absolute;
+            top: 6px; right: 6px;
+            width: 7px; height: 7px;
+            background: #ef4444;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            display: none;
+        }
+        .notif-badge.show { display: block; }
+        .top-user-chip {
+            display: flex; align-items: center; gap: 8px;
+            padding: 4px 10px 4px 4px;
+            border-radius: 8px;
+            border: 1px solid #e8ecf0;
+            background: #f8fafc;
+            margin-left: 4px;
+        }
+        .top-avatar {
+            width: 28px; height: 28px; border-radius: 6px;
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            display: flex; align-items: center; justify-content: center;
+            font-size: .7rem; font-weight: 700; color: white; flex-shrink: 0;
+        }
+        .top-user-info { line-height: 1.2; }
+        .top-user-name { font-size: .76rem; font-weight: 600; color: #1e293b; white-space: nowrap; }
+        .top-user-role-sm { font-size: .62rem; color: #94a3b8; }
+        .hamburger-btn {
+            display: none;
+            width: 36px; height: 36px;
+            border-radius: 8px; border: none;
+            background: none; color: #64748b; font-size: 1rem;
+            cursor: pointer; align-items: center; justify-content: center;
+            transition: background .12s;
+            flex-shrink: 0;
+        }
+        .hamburger-btn:hover { background: #f1f5f9; }
+
         /* ── Main Content ─────────────────────────────────────── */
-        .main-content { flex: 1; margin-left: 240px; padding: 26px 30px; }
+        .main-content { flex: 1; padding: 26px 30px; }
 
         .page-header {
             display: flex;
@@ -340,8 +437,9 @@
 
         /* ── Print ────────────────────────────────────────────── */
         @media print {
-            .sidebar, .bottom-nav, .page-header .btn, .toolbar, .modal, #toast-container, nav { display: none !important; }
-            .main-content { margin-left: 0 !important; padding: 0 !important; }
+            .sidebar, .top-bar, .bottom-nav, .page-header .btn, .toolbar, .modal, #toast-container, nav { display: none !important; }
+            .main-wrapper { margin-left: 0 !important; }
+            .main-content { padding: 0 !important; }
             .card { box-shadow: none !important; border: 1px solid #ddd !important; }
         }
 
@@ -424,13 +522,23 @@
         ════════════════════════════════════════════════════════ */
         @media (max-width: 768px) {
 
-            /* Sidebar: esconde completamente no mobile */
+            /* Sidebar: esconde no mobile */
             .sidebar { display: none; }
 
-            /* Conteúdo: ocupa tela inteira, respira acima e abaixo do bottom nav */
+            /* Main wrapper: sem margem da sidebar */
+            .main-wrapper { margin-left: 0 !important; }
+
+            /* Top bar mobile */
+            .top-bar { padding: 0 14px; }
+            .hamburger-btn { display: flex !important; }
+            .top-bar-brand { display: block !important; }
+            .top-bar-sep, .top-bar-subtitle { display: none; }
+            .top-user-name, .top-user-role-sm { display: none; }
+            .top-user-chip { padding: 4px; border-color: transparent; background: none; }
+
+            /* Conteúdo: padding top reduzido pois top-bar já é sticky */
             .main-content {
-                margin-left: 0 !important;
-                padding: 20px 14px calc(70px + env(safe-area-inset-bottom)) !important;
+                padding: 16px 14px calc(70px + env(safe-area-inset-bottom)) !important;
             }
 
             /* Bottom nav aparece */
@@ -553,6 +661,16 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="/reservas" class="nav-link {% if request.path == '/reservas' %}active{% endif %}">
+                    <i class="fas fa-calendar-plus"></i> <span>Reservas</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/negativados" class="nav-link {% if request.path == '/negativados' %}active{% endif %}">
+                    <i class="fas fa-user-slash"></i> <span>Negativados</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="/checklist" class="nav-link {% if request.path == '/checklist' %}active{% endif %}">
                     <i class="fas fa-calendar-check"></i> <span>Checklist de Aluguéis</span>
                 </a>
@@ -572,6 +690,11 @@
             <li class="nav-item">
                 <a href="/contas-receber" class="nav-link {% if request.path == '/contas-receber' %}active{% endif %}">
                     <i class="fas fa-money-bill-wave"></i> <span>Contas a Receber</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/despesas" class="nav-link {% if request.path == '/despesas' %}active{% endif %}">
+                    <i class="fas fa-receipt"></i> <span>Despesas</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -631,11 +754,45 @@
         </div>
     </nav>
 
-    <!-- ── CONTENT ─────────────────────────────────────────── -->
-    <main class="main-content">
-        {% block content %}{% endblock %}
-    </main>
-</div>
+    <!-- ── MAIN WRAPPER (top-bar + conteúdo) ────────────────── -->
+    <div class="main-wrapper">
+
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button class="hamburger-btn" onclick="abrirMais()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="top-bar-brand">Siqueirão</span>
+                <div class="top-bar-sep"></div>
+                <span class="top-bar-subtitle">Sistema de Gestão</span>
+            </div>
+            <div class="top-bar-right">
+                <a href="/operacional" class="top-icon-btn" title="Operacional / Hoje">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span class="notif-badge" id="topNotifBadge"></span>
+                </a>
+                <a href="/financas" class="top-icon-btn" title="Finanças">
+                    <i class="fas fa-chart-pie"></i>
+                </a>
+                <div style="width:1px;height:20px;background:#e8ecf0;margin:0 4px;"></div>
+                <div class="top-user-chip">
+                    <div class="top-avatar">{{ current_user.nome[0].upper() }}</div>
+                    <div class="top-user-info">
+                        <div class="top-user-name">{{ current_user.nome.split()[0] }}</div>
+                        <div class="top-user-role-sm">{{ current_user.nivel | capitalize }}</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Conteúdo da página -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
+    </div><!-- /main-wrapper -->
+</div><!-- /app-container -->
 
 <!-- ── BOTTOM NAV (mobile) ──────────────────────────────── -->
 <nav class="bottom-nav">
@@ -673,14 +830,17 @@
             <a href="/veiculos"       class="mais-item {% if request.path == '/veiculos' %}active{% endif %}" onclick="fecharMais()">
                 <i class="fas fa-car"></i>Veículos
             </a>
-            <a href="/contas-pagar"   class="mais-item {% if request.path == '/contas-pagar' %}active{% endif %}" onclick="fecharMais()">
-                <i class="fas fa-file-invoice-dollar"></i>Contas Pagar
+            <a href="/reservas"       class="mais-item {% if request.path == '/reservas' %}active{% endif %}" onclick="fecharMais()">
+                <i class="fas fa-calendar-plus"></i>Reservas
+            </a>
+            <a href="/despesas"       class="mais-item {% if request.path == '/despesas' %}active{% endif %}" onclick="fecharMais()">
+                <i class="fas fa-receipt"></i>Despesas
+            </a>
+            <a href="/negativados"    class="mais-item {% if request.path == '/negativados' %}active{% endif %}" onclick="fecharMais()">
+                <i class="fas fa-user-slash"></i>Negativados
             </a>
             <a href="/manutencoes"    class="mais-item {% if request.path == '/manutencoes' %}active{% endif %}" onclick="fecharMais()">
                 <i class="fas fa-tools"></i>Manutenções
-            </a>
-            <a href="/os-lserp"       class="mais-item {% if request.path == '/os-lserp' %}active{% endif %}" onclick="fecharMais()">
-                <i class="fas fa-wrench"></i>OS/Oficina
             </a>
             <a href="/abastecimentos" class="mais-item {% if request.path == '/abastecimentos' %}active{% endif %}" onclick="fecharMais()">
                 <i class="fas fa-gas-pump"></i>Abastec.
@@ -911,6 +1071,8 @@
         if (d.total > 0) {
             const b = document.getElementById('badge-hoje');
             if (b) { b.textContent = d.total; b.style.display = 'inline'; }
+            const nb = document.getElementById('topNotifBadge');
+            if (nb) nb.classList.add('show');
         }
     } catch(e) {}
 })();

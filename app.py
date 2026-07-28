@@ -419,6 +419,53 @@ def init_db():
     """)
     cur.execute("ALTER TABLE os_lserp_meta ADD COLUMN IF NOT EXISTS oculto BOOLEAN DEFAULT FALSE")
 
+    # ── Reservas / Agendamentos ──────────────────────────────────────────────
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS reservas (
+            id SERIAL PRIMARY KEY,
+            veiculo_id INTEGER REFERENCES veiculos(id),
+            cliente_id INTEGER REFERENCES clientes(id),
+            data_inicio DATE NOT NULL,
+            data_fim DATE,
+            valor_previsto NUMERIC(10,2),
+            observacoes TEXT,
+            status TEXT DEFAULT 'pendente',
+            usuario_id INTEGER REFERENCES usuarios(id),
+            data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cur.execute("ALTER TABLE reservas ADD COLUMN IF NOT EXISTS origem TEXT DEFAULT 'manual'")
+
+    # ── Despesas ─────────────────────────────────────────────────────────────
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS despesas (
+            id SERIAL PRIMARY KEY,
+            veiculo_id INTEGER REFERENCES veiculos(id),
+            categoria TEXT NOT NULL DEFAULT 'outros',
+            descricao TEXT NOT NULL,
+            valor NUMERIC(10,2) NOT NULL,
+            data_despesa DATE NOT NULL,
+            recorrente BOOLEAN DEFAULT FALSE,
+            frequencia TEXT,
+            fornecedor TEXT,
+            status TEXT DEFAULT 'pago',
+            comprovante TEXT,
+            observacoes TEXT,
+            data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # ── Negativados: flags na tabela clientes ────────────────────────────────
+    cur.execute("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS negativado BOOLEAN DEFAULT FALSE")
+    cur.execute("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS motivo_negativacao TEXT")
+    cur.execute("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS data_negativacao DATE")
+
+    # ── Índices novos módulos ────────────────────────────────────────────────
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_reservas_veiculo ON reservas(veiculo_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_reservas_status  ON reservas(status)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_despesas_data    ON despesas(data_despesa)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_despesas_veiculo ON despesas(veiculo_id)")
+
     # Backfill custo de manutenções que têm itens_json mas custo NULL
     cur.execute("""
         UPDATE manutencoes
@@ -3479,6 +3526,21 @@ def get_dashboard():
         cur.execute("SELECT COUNT(*) FROM multas WHERE status = 'pendente'")
         multas_pendentes = cur.fetchone()[0]
 
+        try:
+            cur.execute("SELECT COUNT(*) FROM reservas WHERE status IN ('pendente','confirmada')")
+            total_reservas = cur.fetchone()[0]
+        except Exception:
+            total_reservas = 0
+
+        try:
+            cur.execute(
+                "SELECT COALESCE(SUM(valor),0) FROM despesas WHERE TO_CHAR(data_despesa,'YYYY-MM') = %s",
+                (mes_atual,)
+            )
+            despesas_mes = float(cur.fetchone()[0])
+        except Exception:
+            despesas_mes = 0.0
+
     return jsonify({
         'total_veiculos': total_veiculos,
         'veiculos_disponiveis': disponiveis,
@@ -3494,6 +3556,8 @@ def get_dashboard():
         'locacoes_mes': locacoes_mes,
         'manutencoes_pendentes': manutencoes_pendentes,
         'multas_pendentes': multas_pendentes,
+        'total_reservas': total_reservas,
+        'despesas_mes': round(despesas_mes, 2),
     })
 
 # ==================== API CUSTOS POR VEÍCULO ====================
@@ -5223,6 +5287,275 @@ def get_financas():
             'contratos': per_contratos,
         }
     })
+
+
+# ==================== RESERVAS ====================
+
+@app.route('/reservas')
+@login_required
+def reservas_page():
+    return render_template('reservas.html')
+
+
+@app.route('/api/reservas', methods=['GET'])
+@login_required
+def get_reservas():
+    status = request.args.get('status', '')
+    with _db() as (conn, cur):
+        q = '''
+            SELECT r.id, r.veiculo_id, r.cliente_id, r.data_inicio, r.data_fim,
+                   r.valor_previsto, r.observacoes, r.status, r.data_cadastro,
+                   v.placa, v.marca, v.modelo, v.cor,
+                   c.nome as nome_cliente, c.telefone
+            FROM reservas r
+            LEFT JOIN veiculos v ON r.veiculo_id = v.id
+            LEFT JOIN clientes c ON r.cliente_id = c.id
+        '''
+        params = []
+        if status:
+            q += ' WHERE r.status = %s'
+            params.append(status)
+        q += ' ORDER BY r.data_inicio DESC'
+        cur.execute(q, params)
+        return jsonify(rows_to_dict(cur))
+
+
+@app.route('/api/reservas', methods=['POST'])
+@login_required
+def add_reserva():
+    data = request.get_json()
+    with _db() as (conn, cur):
+        cur.execute('''
+            INSERT INTO reservas (veiculo_id, cliente_id, data_inicio, data_fim,
+                                  valor_previsto, observacoes, status, usuario_id)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
+        ''', (
+            data.get('veiculo_id'), data.get('cliente_id'),
+            data.get('data_inicio'), data.get('data_fim') or None,
+            data.get('valor_previsto') or None, data.get('observacoes'),
+            data.get('status', 'pendente'), current_user.id
+        ))
+        new_id = cur.fetchone()[0]
+        conn.commit()
+    return jsonify({'id': new_id, 'message': 'Reserva criada com sucesso!'})
+
+
+@app.route('/api/reservas/<int:rid>', methods=['PUT'])
+@login_required
+def update_reserva(rid):
+    data = request.get_json()
+    with _db() as (conn, cur):
+        cur.execute('''
+            UPDATE reservas SET veiculo_id=%s, cliente_id=%s, data_inicio=%s, data_fim=%s,
+                valor_previsto=%s, observacoes=%s, status=%s
+            WHERE id=%s
+        ''', (
+            data.get('veiculo_id'), data.get('cliente_id'),
+            data.get('data_inicio'), data.get('data_fim') or None,
+            data.get('valor_previsto') or None, data.get('observacoes'),
+            data.get('status', 'pendente'), rid
+        ))
+        conn.commit()
+    return jsonify({'message': 'Reserva atualizada!'})
+
+
+@app.route('/api/reservas/<int:rid>', methods=['DELETE'])
+@login_required
+def delete_reserva(rid):
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM reservas WHERE id=%s', (rid,))
+        conn.commit()
+    return jsonify({'message': 'Reserva excluída!'})
+
+
+@app.route('/api/reservas/<int:rid>/confirmar', methods=['POST'])
+@login_required
+def confirmar_reserva(rid):
+    with _db() as (conn, cur):
+        cur.execute("UPDATE reservas SET status='confirmada' WHERE id=%s", (rid,))
+        conn.commit()
+    return jsonify({'message': 'Reserva confirmada!'})
+
+
+@app.route('/api/reservas/<int:rid>/converter', methods=['POST'])
+@login_required
+def converter_reserva(rid):
+    with _db() as (conn, cur):
+        cur.execute('SELECT * FROM reservas WHERE id=%s', (rid,))
+        res = row_to_dict(cur)
+        if not res:
+            return jsonify({'error': 'Reserva não encontrada'}), 404
+        cur.execute('''
+            INSERT INTO locacoes (veiculo_id, cliente_id, data_inicio, data_fim, diaria, status)
+            VALUES (%s,%s,%s,%s,%s,'ativa') RETURNING id
+        ''', (res['veiculo_id'], res['cliente_id'], res['data_inicio'],
+              res['data_fim'], res['valor_previsto']))
+        loc_id = cur.fetchone()[0]
+        cur.execute("UPDATE veiculos SET status='locado' WHERE id=%s", (res['veiculo_id'],))
+        cur.execute("UPDATE reservas SET status='convertida' WHERE id=%s", (rid,))
+        conn.commit()
+    return jsonify({'message': 'Reserva convertida em locação!', 'locacao_id': loc_id})
+
+
+# ==================== DESPESAS ====================
+
+@app.route('/despesas')
+@login_required
+def despesas_page():
+    return render_template('despesas.html')
+
+
+@app.route('/api/despesas', methods=['GET'])
+@login_required
+def get_despesas():
+    mes = request.args.get('mes', '')
+    ano = request.args.get('ano', '')
+    veiculo_id = request.args.get('veiculo_id', '')
+    with _db() as (conn, cur):
+        q = '''
+            SELECT d.id, d.veiculo_id, d.categoria, d.descricao, d.valor,
+                   d.data_despesa, d.recorrente, d.frequencia, d.fornecedor,
+                   d.status, d.comprovante, d.observacoes, d.data_cadastro,
+                   v.placa, v.marca, v.modelo
+            FROM despesas d
+            LEFT JOIN veiculos v ON d.veiculo_id = v.id
+        '''
+        conds, params = [], []
+        if mes and ano:
+            conds.append("TO_CHAR(d.data_despesa,'MM') = %s AND TO_CHAR(d.data_despesa,'YYYY') = %s")
+            params += [mes.zfill(2), ano]
+        elif ano:
+            conds.append("TO_CHAR(d.data_despesa,'YYYY') = %s")
+            params.append(ano)
+        if veiculo_id:
+            conds.append('d.veiculo_id = %s')
+            params.append(veiculo_id)
+        if conds:
+            q += ' WHERE ' + ' AND '.join(conds)
+        q += ' ORDER BY d.data_despesa DESC'
+        cur.execute(q, params)
+        rows = rows_to_dict(cur)
+
+        # Totais por categoria
+        cur.execute('''
+            SELECT categoria, COALESCE(SUM(valor),0)
+            FROM despesas
+            ''' + ('WHERE TO_CHAR(data_despesa,\'YYYY-MM\') = %s' if mes and ano else '') + '''
+            GROUP BY categoria
+        ''', ([f"{ano}-{mes.zfill(2)}"] if mes and ano else []))
+        por_categoria = {r[0]: float(r[1]) for r in cur.fetchall()}
+
+    return jsonify({'despesas': rows, 'por_categoria': por_categoria})
+
+
+@app.route('/api/despesas', methods=['POST'])
+@login_required
+def add_despesa():
+    data = request.get_json()
+    with _db() as (conn, cur):
+        cur.execute('''
+            INSERT INTO despesas (veiculo_id, categoria, descricao, valor, data_despesa,
+                                  recorrente, frequencia, fornecedor, status, observacoes)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
+        ''', (
+            data.get('veiculo_id') or None,
+            data.get('categoria', 'outros'),
+            data.get('descricao'), data.get('valor'),
+            data.get('data_despesa'),
+            data.get('recorrente', False),
+            data.get('frequencia') or None,
+            data.get('fornecedor') or None,
+            data.get('status', 'pago'),
+            data.get('observacoes')
+        ))
+        new_id = cur.fetchone()[0]
+        conn.commit()
+    return jsonify({'id': new_id, 'message': 'Despesa registrada com sucesso!'})
+
+
+@app.route('/api/despesas/<int:did>', methods=['PUT'])
+@login_required
+def update_despesa(did):
+    data = request.get_json()
+    with _db() as (conn, cur):
+        cur.execute('''
+            UPDATE despesas SET veiculo_id=%s, categoria=%s, descricao=%s, valor=%s,
+                data_despesa=%s, recorrente=%s, frequencia=%s, fornecedor=%s,
+                status=%s, observacoes=%s
+            WHERE id=%s
+        ''', (
+            data.get('veiculo_id') or None,
+            data.get('categoria', 'outros'),
+            data.get('descricao'), data.get('valor'),
+            data.get('data_despesa'),
+            data.get('recorrente', False),
+            data.get('frequencia') or None,
+            data.get('fornecedor') or None,
+            data.get('status', 'pago'),
+            data.get('observacoes'), did
+        ))
+        conn.commit()
+    return jsonify({'message': 'Despesa atualizada!'})
+
+
+@app.route('/api/despesas/<int:did>', methods=['DELETE'])
+@login_required
+def delete_despesa(did):
+    with _db() as (conn, cur):
+        cur.execute('DELETE FROM despesas WHERE id=%s', (did,))
+        conn.commit()
+    return jsonify({'message': 'Despesa excluída!'})
+
+
+# ==================== NEGATIVADOS ====================
+
+@app.route('/negativados')
+@login_required
+def negativados_page():
+    return render_template('negativados.html')
+
+
+@app.route('/api/negativados', methods=['GET'])
+@login_required
+def get_negativados():
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT c.id, c.nome, c.cpf, c.telefone, c.email,
+                   c.motivo_negativacao, c.data_negativacao,
+                   COUNT(l.id) as total_locacoes,
+                   COALESCE(SUM(CASE WHEN l.status='ativa' THEN 1 ELSE 0 END),0) as locacoes_ativas
+            FROM clientes c
+            LEFT JOIN locacoes l ON c.id = l.cliente_id
+            WHERE c.negativado = TRUE
+            GROUP BY c.id, c.nome, c.cpf, c.telefone, c.email, c.motivo_negativacao, c.data_negativacao
+            ORDER BY c.data_negativacao DESC NULLS LAST
+        ''')
+        return jsonify(rows_to_dict(cur))
+
+
+@app.route('/api/clientes/<int:cid>/negativar', methods=['POST'])
+@login_required
+def negativar_cliente(cid):
+    data = request.get_json()
+    with _db() as (conn, cur):
+        cur.execute('''
+            UPDATE clientes SET negativado=TRUE, motivo_negativacao=%s, data_negativacao=CURRENT_DATE
+            WHERE id=%s
+        ''', (data.get('motivo', ''), cid))
+        conn.commit()
+    return jsonify({'message': 'Cliente negativado!'})
+
+
+@app.route('/api/clientes/<int:cid>/remover-negativacao', methods=['POST'])
+@login_required
+def remover_negativacao(cid):
+    with _db() as (conn, cur):
+        cur.execute('''
+            UPDATE clientes SET negativado=FALSE, motivo_negativacao=NULL, data_negativacao=NULL
+            WHERE id=%s
+        ''', (cid,))
+        conn.commit()
+    return jsonify({'message': 'Negativação removida!'})
 
 
 # Roda migrations no cold start do Vercel (e também localmente via __main__)

@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% block title %}Reservas — Siqueirão{% endblock %}
+
+{% block extra_css %}
+<style>
+.status-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: .7rem; font-weight: 700; letter-spacing: .03em;
+}
+.chip-pendente   { background: #fef3c7; color: #92400e; }
+.chip-confirmada { background: #dbeafe; color: #1e40af; }
+.chip-cancelada  { background: #f1f5f9; color: #475569; }
+.chip-convertida { background: #d1fae5; color: #065f46; }
+.timeline-bar {
+    background: white; border: 1px solid #e2e8f0;
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 16px;
+    transition: box-shadow .15s;
+}
+.timeline-bar:hover { box-shadow: var(--card-shadow-hover); }
+.tl-veiculo { font-family: monospace; font-size: .78rem; font-weight: 700; background: #1e293b; color: #f8fafc; padding: 3px 8px; border-radius: 5px; flex-shrink: 0; }
+.tl-body { flex: 1; min-width: 0; }
+.tl-body strong { display: block; font-size: .85rem; color: #0f172a; }
+.tl-body small { font-size: .72rem; color: #94a3b8; }
+.tl-datas { font-size: .76rem; color: #475569; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+.tl-valor { font-size: .82rem; font-weight: 700; color: #2563eb; flex-shrink: 0; }
+.tl-acoes { display: flex; gap: 4px; flex-shrink: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-calendar-plus"></i> Reservas</h1>
+    <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="abrirModalReserva()">
+            <i class="fas fa-plus"></i> Nova Reserva
+        </button>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-calendar-alt"></i></div>
+        <div class="stat-info"><h3 id="totalReservas">—</h3><p>Total</p></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-clock"></i></div>
+        <div class="stat-info"><h3 id="totalPendentes">—</h3><p>Pendentes</p></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info"><h3 id="totalConfirmadas">—</h3><p>Confirmadas</p></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-key"></i></div>
+        <div class="stat-info"><h3 id="totalConvertidas">—</h3><p>Convertidas</p></div>
+    </div>
+</div>
+
+<!-- Filtros + lista -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title"><i class="fas fa-list"></i> Lista de Reservas</span>
+        <div style="display:flex;gap:8px;">
+            <select class="form-control" id="filtroStatus" onchange="aplicarFiltro()" style="width:140px;font-size:.83rem;">
+                <option value="">Todos status</option>
+                <option value="pendente">Pendente</option>
+                <option value="confirmada">Confirmada</option>
+                <option value="convertida">Convertida</option>
+                <option value="cancelada">Cancelada</option>
+            </select>
+            <input type="text" class="form-control" id="busca" placeholder="Buscar cliente ou veículo..." oninput="aplicarFiltro()" style="width:230px;font-size:.83rem;">
+        </div>
+    </div>
+    <div id="listaReservas">
+        <div class="empty-state"><i class="fas fa-calendar-plus"></i><p>Carregando...</p></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let reservas = [], veiculos = [], clientes = [];
+
+async function carregarDados() {
+    [reservas, veiculos, clientes] = await Promise.all([
+        fetch('/api/reservas').then(r=>r.json()),
+        fetch('/api/veiculos').then(r=>r.json()),
+        fetch('/api/clientes').then(r=>r.json()),
+    ]);
+    renderizar(reservas);
+    atualizarKPIs();
+}
+
+function atualizarKPIs() {
+    document.getElementById('totalReservas').textContent    = reservas.length;
+    document.getElementById('totalPendentes').textContent   = reservas.filter(r=>r.status==='pendente').length;
+    document.getElementById('totalConfirmadas').textContent = reservas.filter(r=>r.status==='confirmada').length;
+    document.getElementById('totalConvertidas').textContent = reservas.filter(r=>r.status==='convertida').length;
+}
+
+function chipStatus(s) {
+    const map = { pendente:'chip-pendente', confirmada:'chip-confirmada', cancelada:'chip-cancelada', convertida:'chip-convertida' };
+    const labels = { pendente:'Pendente', confirmada:'Confirmada', cancelada:'Cancelada', convertida:'Convertida' };
+    return `<span class="status-chip ${map[s]||'chip-pendente'}">${labels[s]||s}</span>`;
+}
+
+function renderizar(lista) {
+    const el = document.getElementById('listaReservas');
+    if (!lista.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-plus"></i><p>Nenhuma reserva encontrada</p></div>'; return; }
+    el.innerHTML = lista.map(r => `
+        <div class="timeline-bar">
+            <span class="tl-veiculo">${r.placa || '—'}</span>
+            <div class="tl-body">
+                <strong>${r.nome_cliente || '—'}</strong>
+                <small>${r.marca||''} ${r.modelo||''} ${r.telefone ? '· '+r.telefone : ''}</small>
+            </div>
+            <div class="tl-datas">
+                <i class="fas fa-calendar" style="color:#94a3b8;margin-right:4px;"></i>
+                ${formatDate(r.data_inicio)} ${r.data_fim ? '→ '+formatDate(r.data_fim) : ''}
+            </div>
+            ${r.valor_previsto ? `<div class="tl-valor">${formatCurrency(r.valor_previsto)}</div>` : ''}
+            ${chipStatus(r.status)}
+            <div class="tl-acoes">
+                ${r.status==='pendente' ? `<button class="btn btn-sm btn-info" onclick="confirmarReserva(${r.id})" title="Confirmar"><i class="fas fa-check"></i></button>` : ''}
+                ${['pendente','confirmada'].includes(r.status) ? `<button class="btn btn-sm btn-success" onclick="converterReserva(${r.id})" title="Converter em Locação"><i class="fas fa-key"></i></button>` : ''}
+                <button class="btn btn-sm btn-secondary" onclick="editarReserva(${r.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="excluirReserva(${r.id})" title="Excluir"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`).join('');
+}
+
+function aplicarFiltro() {
+    const s = document.getElementById('filtroStatus').value;
+    const b = document.getElementById('busca').value.toLowerCase();
+    const filtrado = reservas.filter(r =>
+        (!s || r.status === s) &&
+        (!b || (r.nome_cliente||'').toLowerCase().includes(b) || (r.placa||'').toLowerCase().includes(b))
+    );
+    renderizar(filtrado);
+}
+
+function abrirModalReserva(id) {
+    const r = id ? reservas.find(x=>x.id===id) : {};
+    const optsV = veiculos.map(v=>`<option value="${v.id}" ${r.veiculo_id==v.id?'selected':''}>${v.placa} — ${v.marca} ${v.modelo}</option>`).join('');
+    const optsC = clientes.map(c=>`<option value="${c.id}" ${r.cliente_id==c.id?'selected':''}>${c.nome} ${c.cpf?'('+c.cpf+')':''}</option>`).join('');
+    abrirModal(id ? 'Editar Reserva' : 'Nova Reserva', `
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Veículo *</label>
+                <select class="form-control" id="rVeiculo" required><option value="">Selecione…</option>${optsV}</select>
+            </div>
+            <div class="form-group">
+                <label>Cliente *</label>
+                <select class="form-control" id="rCliente" required><option value="">Selecione…</option>${optsC}</select>
+            </div>
+            <div class="form-group">
+                <label>Data de Início *</label>
+                <input type="date" class="form-control" id="rDataInicio" value="${r.data_inicio||''}">
+            </div>
+            <div class="form-group">
+                <label>Data de Fim</label>
+                <input type="date" class="form-control" id="rDataFim" value="${r.data_fim||''}">
+            </div>
+            <div class="form-group">
+                <label>Valor Previsto (R$)</label>
+                <input type="number" class="form-control" id="rValor" step="0.01" value="${r.valor_previsto||''}">
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select class="form-control" id="rStatus">
+                    ${['pendente','confirmada','cancelada'].map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Observações</label>
+            <textarea class="form-control" id="rObs" rows="2">${r.observacoes||''}</textarea>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+            <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="salvarReserva(${id||0})">
+                <i class="fas fa-save"></i> ${id ? 'Salvar' : 'Criar Reserva'}
+            </button>
+        </div>`);
+}
+
+function editarReserva(id) { abrirModalReserva(id); }
+
+async function salvarReserva(id) {
+    const payload = {
+        veiculo_id: document.getElementById('rVeiculo').value || null,
+        cliente_id: document.getElementById('rCliente').value || null,
+        data_inicio: document.getElementById('rDataInicio').value,
+        data_fim: document.getElementById('rDataFim').value || null,
+        valor_previsto: document.getElementById('rValor').value || null,
+        status: document.getElementById('rStatus').value,
+        observacoes: document.getElementById('rObs').value,
+    };
+    if (!payload.data_inicio) { showToast('Data de início é obrigatória', 'error'); return; }
+    try {
+        const url = id ? `/api/reservas/${id}` : '/api/reservas';
+        const method = id ? 'PUT' : 'POST';
+        const resp = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Erro');
+        showToast(data.message, 'success');
+        fecharModal();
+        carregarDados();
+    } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function confirmarReserva(id) {
+    try {
+        const resp = await fetch(`/api/reservas/${id}/confirmar`, { method: 'POST' });
+        const data = await resp.json();
+        showToast(data.message, 'success');
+        carregarDados();
+    } catch { showToast('Erro ao confirmar', 'error'); }
+}
+
+async function converterReserva(id) {
+    confirmarAcao('Converter em Locação',
+        'Esta reserva será convertida em uma locação ativa. Deseja continuar?',
+        async () => {
+            try {
+                const resp = await fetch(`/api/reservas/${id}/converter`, { method: 'POST' });
+                const data = await resp.json();
+                showToast(data.message, 'success');
+                carregarDados();
+            } catch { showToast('Erro ao converter', 'error'); }
+        }
+    );
+}
+
+async function excluirReserva(id) {
+    confirmarAcao('Excluir Reserva', 'Confirmar exclusão da reserva?', async () => {
+        try {
+            await fetch(`/api/reservas/${id}`, { method: 'DELETE' });
+            showToast('Reserva excluída!', 'success');
+            carregarDados();
+        } catch { showToast('Erro ao excluir', 'error'); }
+    });
+}
+
+window.addEventListener('load', carregarDados);
+</script>
+{% endblock %}
