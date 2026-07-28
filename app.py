@@ -2556,7 +2556,8 @@ def get_locacao(id):
     with _db() as (conn, cur):
         cur.execute('''
             SELECT l.*, v.placa, v.marca, v.modelo, v.cor, v.ano, v.combustivel,
-                   c.nome as nome_cliente, c.cpf, c.cnh, c.telefone, c.endereco, c.cidade, c.estado
+                   c.nome as nome_cliente, c.cpf, c.cnh, c.telefone, c.email,
+                   c.endereco, c.cidade, c.estado
             FROM locacoes l
             LEFT JOIN veiculos v ON l.veiculo_id = v.id
             LEFT JOIN clientes c ON l.cliente_id = c.id
@@ -2661,8 +2662,8 @@ def add_locacao():
             total = dias * diaria
 
         fotos_saida = data.get('fotos_saida')
-        if fotos_saida and isinstance(fotos_saida, list):
-            fotos_saida = json.dumps(fotos_saida)
+        if isinstance(fotos_saida, list):
+            fotos_saida = json.dumps(fotos_saida) if fotos_saida else None
 
         freq = data.get('frequencia_cobranca') or 'avulso'
         valor_semanal = float(data.get('valor_semanal') or 0) or None
@@ -2717,8 +2718,8 @@ def update_locacao(id):
             veiculo_antigo, status_antigo = locacao
 
             fotos_saida = data.get('fotos_saida')
-            if fotos_saida and isinstance(fotos_saida, list):
-                fotos_saida = json.dumps(fotos_saida)
+            if isinstance(fotos_saida, list):
+                fotos_saida = json.dumps(fotos_saida) if fotos_saida else None
 
             data_fim = data.get('data_fim') or None
             total    = data.get('total') or None
