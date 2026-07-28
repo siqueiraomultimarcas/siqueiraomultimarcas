@@ -4977,6 +4977,253 @@ def patch_veiculo_status(id):
     return jsonify({'success': True})
 
 
+@app.route('/checklist')
+@login_required
+def checklist_page():
+    return render_template('checklist.html')
+
+
+@app.route('/api/checklist-diario')
+@login_required
+def get_checklist_diario():
+    from datetime import date as _d2, timedelta
+    hoje = _d2.today()
+    de  = request.args.get('de',  (hoje - timedelta(days=2)).isoformat())
+    ate = request.args.get('ate', (hoje + timedelta(days=4)).isoformat())
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT pl.id, pl.locacao_id, pl.data_inicio, pl.data_fim,
+                   pl.valor_previsto, COALESCE(pl.desconto,0) AS desconto,
+                   pl.valor_pago, pl.status, pl.data_pagamento,
+                   pl.semana_numero, pl.parcela_num, pl.total_parcelas,
+                   v.placa, v.marca, v.modelo,
+                   c.nome AS cliente,
+                   l.atendente, l.frequencia_cobranca
+            FROM pagamentos_locacao pl
+            JOIN locacoes l ON l.id = pl.locacao_id
+            JOIN veiculos v ON v.id = l.veiculo_id
+            JOIN clientes c ON c.id = l.cliente_id
+            WHERE pl.status != 'cancelado'
+              AND pl.data_fim >= %s
+              AND pl.data_fim <= %s
+            ORDER BY pl.data_fim, v.placa
+        ''', (de, ate))
+        rows = rows_to_dict(cur)
+    # Agrupar por data_fim
+    from collections import defaultdict
+    grupos = defaultdict(list)
+    for r in rows:
+        grupos[str(r['data_fim'])].append(r)
+    return jsonify({'grupos': dict(grupos), 'de': de, 'ate': ate})
+
+
+@app.route('/api/checklist/<int:pagamento_id>/toggle', methods=['PUT'])
+@login_required
+def toggle_checklist(pagamento_id):
+    data = request.json or {}
+    pago = data.get('pago', False)
+    from datetime import date as _d2
+    if pago:
+        cur_status = 'pago'
+        data_pag   = data.get('data_pagamento') or _d2.today().isoformat()
+        valor_pago = data.get('valor_pago')
+    else:
+        cur_status = 'pendente'
+        data_pag   = None
+        valor_pago = None
+    with _db() as (conn, cur):
+        if pago:
+            cur.execute('''
+                UPDATE pagamentos_locacao
+                   SET status=%s, data_pagamento=%s, valor_pago=COALESCE(%s, valor_previsto)
+                 WHERE id=%s
+            ''', (cur_status, data_pag, valor_pago, pagamento_id))
+        else:
+            cur.execute('''
+                UPDATE pagamentos_locacao
+                   SET status=%s, data_pagamento=NULL, valor_pago=NULL
+                 WHERE id=%s
+            ''', (cur_status, pagamento_id))
+    return jsonify({'success': True, 'status': cur_status})
+
+
+@app.route('/api/veiculos/<int:id>/defaults', methods=['PUT'])
+@login_required
+def update_veiculo_defaults(id):
+    data = request.json or {}
+    def _num(k):
+        try: v = data.get(k); return float(v) if v not in (None, '') else None
+        except: return None
+    def _int(k):
+        try: v = data.get(k); return int(v) if v not in (None, '') else None
+        except: return None
+    caucao_padrao      = _num('caucao_padrao')
+    frequencia_padrao  = (data.get('frequencia_padrao') or '').strip() or None
+    tempo_minimo_padrao = _int('tempo_minimo_padrao')
+    with _db() as (conn, cur):
+        cur.execute(
+            'UPDATE veiculos SET caucao_padrao=%s, frequencia_padrao=%s, tempo_minimo_padrao=%s WHERE id=%s',
+            (caucao_padrao, frequencia_padrao, tempo_minimo_padrao, id)
+        )
+    return jsonify({'success': True})
+
+
+# ==================== FINANÇAS ====================
+
+@app.route('/financas')
+@login_required
+def financas_page():
+    return render_template('financas.html')
+
+
+@app.route('/api/financas')
+@login_required
+def get_financas():
+    from datetime import date as _date2
+    hoje = _date2.today()
+    mes  = int(request.args.get('mes',  hoje.month))
+    ano  = int(request.args.get('ano',  hoje.year))
+    de   = request.args.get('de',  '')
+    ate  = request.args.get('ate', '')
+
+    # Período do mês
+    from calendar import monthrange
+    ini_mes = f'{ano}-{mes:02d}-01'
+    fim_mes = f'{ano}-{mes:02d}-{monthrange(ano, mes)[1]:02d}'
+
+    # Período customizado (para o bloco "por período")
+    ini_per = de  if de  else ini_mes
+    fim_per = ate if ate else fim_mes
+
+    with _db() as (conn, cur):
+        # ── KPIs do mês ──────────────────────────────────────────────
+        cur.execute('''
+            SELECT
+                COALESCE(SUM(pl.valor_previsto - COALESCE(pl.desconto,0)), 0),
+                COALESCE(SUM(CASE WHEN pl.status='pago'
+                    THEN pl.valor_pago ELSE 0 END), 0),
+                COUNT(*) FILTER (WHERE pl.status='pendente'),
+                COUNT(*) FILTER (WHERE pl.status='pago'),
+                COUNT(*) FILTER (WHERE pl.status='pendente' AND pl.data_fim < CURRENT_DATE)
+            FROM pagamentos_locacao pl
+            WHERE pl.data_fim >= %s AND pl.data_inicio <= %s
+              AND pl.status != 'cancelado'
+        ''', (ini_mes, fim_mes))
+        r = cur.fetchone()
+        receita_prevista = float(r[0] or 0)
+        receita_recebida = float(r[1] or 0)
+        qtd_pendente     = int(r[2] or 0)
+        qtd_pago         = int(r[3] or 0)
+        qtd_vencido      = int(r[4] or 0)
+
+        # ── Caução pendente (acumulado geral) ─────────────────────────
+        cur.execute('''
+            SELECT COALESCE(SUM(caucao), 0), COUNT(*)
+            FROM locacoes
+            WHERE caucao_pendente = TRUE AND status = 'ativa' AND caucao > 0
+        ''')
+        r2 = cur.fetchone()
+        caucao_pendente_total = float(r2[0] or 0)
+        qtd_caucao_pendente   = int(r2[1] or 0)
+
+        # ── KM excedente acumulado (locações concluídas no período) ──
+        cur.execute('''
+            SELECT COALESCE(SUM(total_km_excedente), 0), COUNT(*)
+            FROM locacoes
+            WHERE total_km_excedente > 0
+              AND (data_devolucao_real >= %s OR data_fim >= %s)
+              AND (data_devolucao_real <= %s OR data_fim <= %s)
+        ''', (ini_per, ini_per, fim_per, fim_per))
+        r3 = cur.fetchone()
+        km_exc_total = float(r3[0] or 0)
+        qtd_km_exc   = int(r3[1] or 0)
+
+        # ── Locações ativas ──────────────────────────────────────────
+        cur.execute("SELECT COUNT(*) FROM locacoes WHERE status='ativa'")
+        loc_ativas = int(cur.fetchone()[0] or 0)
+
+        cur.execute("SELECT COUNT(*) FROM locacoes WHERE status='ativa' AND data_fim < CURRENT_DATE")
+        loc_vencidas = int(cur.fetchone()[0] or 0)
+
+        # ── Receita por veículo (top 10) ──────────────────────────────
+        cur.execute('''
+            SELECT v.placa, v.marca || ' ' || v.modelo AS veiculo,
+                   COALESCE(SUM(pl.valor_previsto - COALESCE(pl.desconto,0)), 0) AS receita
+            FROM pagamentos_locacao pl
+            JOIN locacoes l ON l.id = pl.locacao_id
+            JOIN veiculos v ON v.id = l.veiculo_id
+            WHERE pl.data_fim >= %s AND pl.data_inicio <= %s
+              AND pl.status != 'cancelado'
+            GROUP BY v.id, v.placa, v.marca, v.modelo
+            ORDER BY receita DESC
+            LIMIT 10
+        ''', (ini_mes, fim_mes))
+        receita_por_veiculo = [
+            {'placa': r[0], 'veiculo': r[1], 'receita': float(r[2])}
+            for r in cur.fetchall()
+        ]
+
+        # ── Evolução mensal (últimos 6 meses) ─────────────────────────
+        cur.execute('''
+            SELECT TO_CHAR(pl.data_fim, 'YYYY-MM') AS mes_ano,
+                   COALESCE(SUM(pl.valor_previsto - COALESCE(pl.desconto,0)), 0) AS previsto,
+                   COALESCE(SUM(CASE WHEN pl.status='pago' THEN pl.valor_pago ELSE 0 END), 0) AS recebido
+            FROM pagamentos_locacao pl
+            WHERE pl.data_fim >= (CURRENT_DATE - INTERVAL '5 months')
+              AND pl.status != 'cancelado'
+            GROUP BY TO_CHAR(pl.data_fim, 'YYYY-MM')
+            ORDER BY mes_ano
+        ''')
+        evolucao = [
+            {'mes': r[0], 'previsto': float(r[1]), 'recebido': float(r[2])}
+            for r in cur.fetchall()
+        ]
+
+        # ── Período customizado (separado para o bloco "Por período") ─
+        cur.execute('''
+            SELECT
+                COALESCE(SUM(pl.valor_previsto - COALESCE(pl.desconto,0)), 0),
+                COALESCE(SUM(CASE WHEN pl.status='pago' THEN pl.valor_pago ELSE 0 END), 0),
+                COUNT(*) FILTER (WHERE pl.status='pago'),
+                COUNT(DISTINCT pl.locacao_id)
+            FROM pagamentos_locacao pl
+            WHERE pl.data_fim >= %s AND pl.data_inicio <= %s
+              AND pl.status != 'cancelado'
+        ''', (ini_per, fim_per))
+        rp = cur.fetchone()
+        per_previsto  = float(rp[0] or 0)
+        per_recebido  = float(rp[1] or 0)
+        per_qtd_pago  = int(rp[2] or 0)
+        per_contratos = int(rp[3] or 0)
+
+    taxa = round(receita_recebida / receita_prevista * 100, 1) if receita_prevista > 0 else 0
+
+    return jsonify({
+        'mes': mes, 'ano': ano,
+        'receita_prevista': receita_prevista,
+        'receita_recebida': receita_recebida,
+        'taxa_recebimento': taxa,
+        'qtd_pendente': qtd_pendente,
+        'qtd_pago': qtd_pago,
+        'qtd_vencido': qtd_vencido,
+        'caucao_pendente_total': caucao_pendente_total,
+        'qtd_caucao_pendente': qtd_caucao_pendente,
+        'km_exc_total': km_exc_total,
+        'qtd_km_exc': qtd_km_exc,
+        'loc_ativas': loc_ativas,
+        'loc_vencidas': loc_vencidas,
+        'receita_por_veiculo': receita_por_veiculo,
+        'evolucao': evolucao,
+        'periodo': {
+            'ini': ini_per, 'fim': fim_per,
+            'previsto': per_previsto,
+            'recebido': per_recebido,
+            'qtd_pago': per_qtd_pago,
+            'contratos': per_contratos,
+        }
+    })
+
+
 # Roda migrations no cold start do Vercel (e também localmente via __main__)
 try:
     init_db()

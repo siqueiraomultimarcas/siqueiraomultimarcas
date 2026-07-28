@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+{% block title %}Finanças - Locadora{% endblock %}
+{% block content %}
+
+<style>
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+.kpi-card { position:relative; background:#fff; border-radius:12px; padding:18px 20px;
+            box-shadow:0 1px 4px rgba(0,0,0,.08); overflow:hidden; }
+.kpi-card .kpi-label   { font-size:.65rem; font-weight:700; text-transform:uppercase;
+                          letter-spacing:.07em; color:#64748b; margin-bottom:4px; }
+.kpi-card .kpi-value   { font-size:1.55rem; font-weight:700; color:#0f172a;
+                          font-variant-numeric:tabular-nums; }
+.kpi-card .kpi-sub     { font-size:.72rem; color:#94a3b8; margin-top:2px; }
+.kpi-card .kpi-icon-bg { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
+.kpi-card.blue  { border-left:3px solid #2563eb; }
+.kpi-card.green { border-left:3px solid #16a34a; }
+.kpi-card.amber { border-left:3px solid #d97706; }
+.kpi-card.red   { border-left:3px solid #dc2626; }
+.kpi-card.purple{ border-left:3px solid #7c3aed; }
+.kpi-card.blue   .kpi-value { color:#2563eb; } .kpi-card.blue   .kpi-icon-bg { color:#2563eb; }
+.kpi-card.green  .kpi-value { color:#16a34a; } .kpi-card.green  .kpi-icon-bg { color:#16a34a; }
+.kpi-card.amber  .kpi-value { color:#d97706; } .kpi-card.amber  .kpi-icon-bg { color:#d97706; }
+.kpi-card.red    .kpi-value { color:#dc2626; } .kpi-card.red    .kpi-icon-bg { color:#dc2626; }
+.kpi-card.purple .kpi-value { color:#7c3aed; } .kpi-card.purple .kpi-icon-bg { color:#7c3aed; }
+
+.taxa-bar-wrap { margin-top:8px; }
+.taxa-bar-bg   { background:#e2e8f0; border-radius:4px; height:6px; overflow:hidden; }
+.taxa-bar-fill { height:100%; border-radius:4px; background:#16a34a; transition:width .5s; }
+
+.evolucao-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-top:4px; }
+.ev-cell { background:#f8fafc; border-radius:8px; padding:10px 12px; text-align:center; }
+.ev-cell .ev-mes   { font-size:.62rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+.ev-cell .ev-val   { font-size:.95rem; font-weight:700; color:#0f172a; font-variant-numeric:tabular-nums; }
+.ev-cell .ev-rec   { font-size:.72rem; color:#16a34a; margin-top:2px; font-variant-numeric:tabular-nums; }
+.ev-cell.atual     { background:#eff6ff; border:1px solid #bfdbfe; }
+.ev-cell.atual .ev-mes { color:#2563eb; }
+
+.veiculo-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f1f5f9; }
+.veiculo-row:last-child { border-bottom:none; }
+.veiculo-placa { background:#1e293b; color:#fff; font-size:.72rem; font-weight:700; padding:3px 8px;
+                 border-radius:5px; letter-spacing:.05em; flex-shrink:0; }
+.veiculo-nome  { flex:1; font-size:.82rem; font-weight:500; color:#0f172a; }
+.veiculo-val   { font-size:.88rem; font-weight:700; color:#16a34a; font-variant-numeric:tabular-nums; flex-shrink:0; }
+.veiculo-bar   { height:4px; border-radius:2px; background:#16a34a; transition:width .4s; }
+
+.periodo-box   { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:18px 20px; }
+.periodo-box h3{ font-size:.78rem; font-weight:700; color:#15803d; text-transform:uppercase;
+                 letter-spacing:.07em; margin-bottom:14px; }
+.periodo-kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+.periodo-kpi { text-align:center; }
+.periodo-kpi .pk-val { font-size:1.3rem; font-weight:700; color:#15803d; font-variant-numeric:tabular-nums; }
+.periodo-kpi .pk-lbl { font-size:.62rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+
+.filter-row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+.filter-row label { font-size:.72rem; font-weight:600; color:#64748b; margin-bottom:3px; display:block; }
+.filter-row select,
+.filter-row input[type=date],
+.filter-row input[type=month] { border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px;
+                                  font-size:.82rem; font-family:'Poppins',sans-serif;
+                                  color:#0f172a; background:#fff; outline:none; }
+.filter-row select:focus,
+.filter-row input:focus { border-color:#2563eb; }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-chart-pie"></i> Finanças</h1>
+        <p style="font-size:.8rem;color:#94a3b8;margin-top:2px;">Resumo financeiro das locações</p>
+    </div>
+    <button class="btn btn-primary" onclick="exportarRelatorio()">
+        <i class="fas fa-download"></i> Exportar
+    </button>
+</div>
+
+<!-- Filtro de mês -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="filter-row">
+        <div>
+            <label>Mês de referência</label>
+            <input type="month" id="filtroMes" onchange="carregarFinancas()">
+        </div>
+        <div style="height:1px;width:24px;background:#e2e8f0;align-self:center;"></div>
+        <div>
+            <label>Período customizado — De</label>
+            <input type="date" id="periodoIni" onchange="carregarFinancas()">
+        </div>
+        <div>
+            <label>Até</label>
+            <input type="date" id="periodoFim" onchange="carregarFinancas()">
+        </div>
+        <button class="btn btn-primary" onclick="carregarFinancas()" style="height:38px;align-self:flex-end;">
+            <i class="fas fa-sync-alt"></i> Atualizar
+        </button>
+        <button class="btn" onclick="limparPeriodo()" style="height:38px;align-self:flex-end;background:#f1f5f9;color:#64748b;">
+            <i class="fas fa-times"></i> Limpar Período
+        </button>
+    </div>
+</div>
+
+<!-- KPIs do mês -->
+<div id="tituloMes" style="font-size:.78rem;font-weight:700;color:#94a3b8;text-transform:uppercase;
+     letter-spacing:.08em;margin-bottom:10px;">Carregando...</div>
+<div class="kpi-grid" style="margin-bottom:20px;">
+    <div class="kpi-card blue">
+        <div class="kpi-label">Receita Prevista</div>
+        <div class="kpi-value" id="kpiPrevisto">R$ 0</div>
+        <div class="kpi-sub" id="kpiPrevistoSub">—</div>
+        <i class="fas fa-file-invoice-dollar kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card green">
+        <div class="kpi-label">Receita Recebida</div>
+        <div class="kpi-value" id="kpiRecebido">R$ 0</div>
+        <div class="taxa-bar-wrap">
+            <div class="taxa-bar-bg"><div class="taxa-bar-fill" id="taxaBarFill" style="width:0%"></div></div>
+        </div>
+        <div class="kpi-sub" id="kpiTaxa">0% recebido</div>
+        <i class="fas fa-check-circle kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card amber">
+        <div class="kpi-label">A Receber</div>
+        <div class="kpi-value" id="kpiPendente">0</div>
+        <div class="kpi-sub" id="kpiPendenteSub">—</div>
+        <i class="fas fa-clock kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card red">
+        <div class="kpi-label">Vencidos sem Pagar</div>
+        <div class="kpi-value" id="kpiVencido">0</div>
+        <div class="kpi-sub" id="kpiVencidoSub">—</div>
+        <i class="fas fa-exclamation-triangle kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card purple">
+        <div class="kpi-label">Caução Pendente</div>
+        <div class="kpi-value" id="kpiCaucao">R$ 0</div>
+        <div class="kpi-sub" id="kpiCaucaoSub">—</div>
+        <i class="fas fa-shield-alt kpi-icon-bg"></i>
+    </div>
+    <div class="kpi-card" style="border-left:3px solid #0891b2;">
+        <div class="kpi-label" style="color:#0891b2;">KM Excedente</div>
+        <div class="kpi-value" id="kpiKmExc" style="color:#0891b2;">R$ 0</div>
+        <div class="kpi-sub" id="kpiKmExcSub">—</div>
+        <i class="fas fa-road kpi-icon-bg" style="color:#0891b2;"></i>
+    </div>
+    <div class="kpi-card" style="border-left:3px solid #0f172a;">
+        <div class="kpi-label">Locações Ativas</div>
+        <div class="kpi-value" id="kpiAtivas">0</div>
+        <div class="kpi-sub" id="kpiAtivasSub">—</div>
+        <i class="fas fa-key kpi-icon-bg"></i>
+    </div>
+</div>
+
+<!-- Layout 2 colunas -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+
+    <!-- Evolução mensal -->
+    <div class="card">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin:0;">
+                <i class="fas fa-chart-line" style="color:#2563eb;margin-right:6px;"></i>Evolução (6 meses)
+            </h3>
+        </div>
+        <div id="evolucaoGrid" class="evolucao-grid" style="padding:4px 0;">
+            <div style="color:#94a3b8;font-size:.8rem;grid-column:1/-1;padding:20px;text-align:center;">Carregando...</div>
+        </div>
+    </div>
+
+    <!-- Receita por veículo -->
+    <div class="card">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin:0;">
+                <i class="fas fa-car" style="color:#16a34a;margin-right:6px;"></i>Receita por Veículo
+            </h3>
+            <span id="veiculoMesTxt" style="font-size:.7rem;color:#94a3b8;"></span>
+        </div>
+        <div id="veiculoList" style="padding:4px 0;">
+            <div style="color:#94a3b8;font-size:.8rem;padding:20px;text-align:center;">Carregando...</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Bloco período customizado -->
+<div class="periodo-box" id="periodoBox" style="display:none;margin-bottom:20px;">
+    <h3><i class="fas fa-calendar-alt" style="margin-right:6px;"></i>Resultado do Período Selecionado</h3>
+    <div class="periodo-kpi-grid">
+        <div class="periodo-kpi">
+            <div class="pk-val" id="perPrevisto">—</div>
+            <div class="pk-lbl">Previsto</div>
+        </div>
+        <div class="periodo-kpi">
+            <div class="pk-val" id="perRecebido" style="color:#16a34a;">—</div>
+            <div class="pk-lbl">Recebido</div>
+        </div>
+        <div class="periodo-kpi">
+            <div class="pk-val" id="perContratos" style="color:#2563eb;">—</div>
+            <div class="pk-lbl">Contratos</div>
+        </div>
+        <div class="periodo-kpi">
+            <div class="pk-val" id="perQtdPago">—</div>
+            <div class="pk-lbl">Parcelas Pagas</div>
+        </div>
+    </div>
+    <p style="font-size:.72rem;color:#64748b;margin-top:12px;margin-bottom:0;" id="periodoTexto"></p>
+</div>
+
+<!-- Atalhos rápidos -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;">
+    <a href="/cobrancas" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,.1);display:flex;align-items:center;justify-content:center;color:#6366f1;flex-shrink:0;">
+            <i class="fas fa-calendar-check"></i>
+        </div>
+        <div>
+            <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Calendário de Locações</div>
+            <div style="font-size:.72rem;color:#94a3b8;">Checklist de pagamentos</div>
+        </div>
+    </a>
+    <a href="/contas-receber" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(22,163,74,.1);display:flex;align-items:center;justify-content:center;color:#16a34a;flex-shrink:0;">
+            <i class="fas fa-money-bill-wave"></i>
+        </div>
+        <div>
+            <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Contas a Receber</div>
+            <div style="font-size:.72rem;color:#94a3b8;">Pendentes e recebidos</div>
+        </div>
+    </a>
+    <a href="/locacoes" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(37,99,235,.1);display:flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0;">
+            <i class="fas fa-key"></i>
+        </div>
+        <div>
+            <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Locações</div>
+            <div style="font-size:.72rem;color:#94a3b8;">Gerenciar contratos</div>
+        </div>
+    </a>
+    <a href="/relatorios" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(217,119,6,.1);display:flex;align-items:center;justify-content:center;color:#d97706;flex-shrink:0;">
+            <i class="fas fa-chart-bar"></i>
+        </div>
+        <div>
+            <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Relatórios</div>
+            <div style="font-size:.72rem;color:#94a3b8;">Análises detalhadas</div>
+        </div>
+    </a>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const MESES_PT = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function fmtR(v) {
+    return 'R$ ' + (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtRk(v) {
+    if (v >= 1000) return 'R$ ' + (v/1000).toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}) + 'k';
+    return fmtR(v);
+}
+
+function el(id) { return document.getElementById(id); }
+
+async function carregarFinancas() {
+    const mesInput = el('filtroMes').value; // YYYY-MM
+    const de  = el('periodoIni').value;
+    const ate = el('periodoFim').value;
+
+    const [ano, mes] = mesInput ? mesInput.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth()+1];
+
+    let url = `/api/financas?mes=${mes}&ano=${ano}`;
+    if (de)  url += `&de=${de}`;
+    if (ate) url += `&ate=${ate}`;
+
+    const r = await fetch(url);
+    const d = await r.json();
+
+    // Título
+    el('tituloMes').textContent = MESES_PT[d.mes] + ' de ' + d.ano;
+
+    // KPIs
+    el('kpiPrevisto').textContent = fmtRk(d.receita_prevista);
+    el('kpiPrevistoSub').textContent = (d.qtd_pendente + d.qtd_pago) + ' período(s)';
+
+    el('kpiRecebido').textContent = fmtRk(d.receita_recebida);
+    el('taxaBarFill').style.width = Math.min(100, d.taxa_recebimento) + '%';
+    el('kpiTaxa').textContent = d.taxa_recebimento.toFixed(1) + '% recebido';
+
+    el('kpiPendente').textContent = fmtRk(d.receita_prevista - d.receita_recebida);
+    el('kpiPendenteSub').textContent = d.qtd_pendente + ' parcela(s)';
+
+    el('kpiVencido').textContent = d.qtd_vencido;
+    el('kpiVencidoSub').textContent = d.qtd_vencido > 0 ? 'períodos em atraso' : 'sem atrasos';
+
+    el('kpiCaucao').textContent = fmtRk(d.caucao_pendente_total);
+    el('kpiCaucaoSub').textContent = d.qtd_caucao_pendente + ' contrato(s) com caução pendente';
+
+    el('kpiKmExc').textContent = fmtRk(d.km_exc_total);
+    el('kpiKmExcSub').textContent = d.qtd_km_exc + ' devolução(ões) com excedente';
+
+    el('kpiAtivas').textContent = d.loc_ativas;
+    el('kpiAtivasSub').textContent = d.loc_vencidas > 0
+        ? d.loc_vencidas + ' com vencimento expirado'
+        : 'todas no prazo';
+
+    // Evolução mensal
+    const evolHtml = d.evolucao.length === 0
+        ? '<div style="color:#94a3b8;padding:20px;text-align:center;grid-column:1/-1;">Sem dados</div>'
+        : d.evolucao.map(e => {
+            const [eAno, eMes] = e.mes.split('-').map(Number);
+            const isAtual = (eAno === d.ano && eMes === d.mes);
+            return `<div class="ev-cell${isAtual ? ' atual' : ''}">
+                <div class="ev-mes">${MESES_PT[eMes].slice(0,3)} ${String(eAno).slice(2)}</div>
+                <div class="ev-val">${fmtRk(e.previsto)}</div>
+                <div class="ev-rec">${fmtRk(e.recebido)} rec.</div>
+            </div>`;
+        }).join('');
+    el('evolucaoGrid').innerHTML = evolHtml;
+
+    // Receita por veículo
+    el('veiculoMesTxt').textContent = MESES_PT[d.mes] + '/' + d.ano;
+    const maxRec = d.receita_por_veiculo.length > 0 ? d.receita_por_veiculo[0].receita : 1;
+    const veicHtml = d.receita_por_veiculo.length === 0
+        ? '<div style="color:#94a3b8;padding:20px;text-align:center;">Sem locações no período</div>'
+        : d.receita_por_veiculo.map(v => {
+            const pct = Math.round(v.receita / maxRec * 100);
+            return `<div class="veiculo-row">
+                <span class="veiculo-placa">${v.placa}</span>
+                <div style="flex:1;min-width:0;">
+                    <div class="veiculo-nome" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.veiculo}</div>
+                    <div class="veiculo-bar" style="width:${pct}%;margin-top:4px;"></div>
+                </div>
+                <span class="veiculo-val">${fmtRk(v.receita)}</span>
+            </div>`;
+        }).join('');
+    el('veiculoList').innerHTML = veicHtml;
+
+    // Período customizado
+    if (de || ate) {
+        const p = d.periodo;
+        el('perPrevisto').textContent  = fmtRk(p.previsto);
+        el('perRecebido').textContent  = fmtRk(p.recebido);
+        el('perContratos').textContent = p.contratos;
+        el('perQtdPago').textContent   = p.qtd_pago;
+        el('periodoTexto').textContent = 'Período: ' + (de || '—') + ' a ' + (ate || '—');
+        el('periodoBox').style.display = 'block';
+    } else {
+        el('periodoBox').style.display = 'none';
+    }
+}
+
+function limparPeriodo() {
+    el('periodoIni').value = '';
+    el('periodoFim').value = '';
+    carregarFinancas();
+}
+
+function exportarRelatorio() {
+    const mesInput = el('filtroMes').value;
+    const [ano, mes] = mesInput ? mesInput.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth()+1];
+    window.open(`/relatorios?mes=${mes}&ano=${ano}`, '_blank');
+}
+
+// Inicializa com mês atual
+const hoje = new Date();
+el('filtroMes').value = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
+carregarFinancas();
+</script>
+{% endblock %}

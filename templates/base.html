@@ -537,12 +537,22 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="/checklist" class="nav-link {% if request.path == '/checklist' %}active{% endif %}">
+                    <i class="fas fa-calendar-check"></i> <span>Checklist de Aluguéis</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="/cobrancas" class="nav-link {% if request.path == '/cobrancas' %}active{% endif %}">
-                    <i class="fas fa-calendar-check"></i> <span>Calendário de Locações</span>
+                    <i class="fas fa-clipboard-list"></i> <span>Calendário de Locações</span>
                 </a>
             </li>
 
             <li class="nav-section">Financeiro</li>
+            <li class="nav-item">
+                <a href="/financas" class="nav-link {% if request.path == '/financas' %}active{% endif %}">
+                    <i class="fas fa-chart-pie"></i> <span>Finanças</span>
+                </a>
+            </li>
             <li class="nav-item">
                 <a href="/contas-receber" class="nav-link {% if request.path == '/contas-receber' %}active{% endif %}">
                     <i class="fas fa-money-bill-wave"></i> <span>Contas a Receber</span>

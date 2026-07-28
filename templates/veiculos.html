@@ -631,6 +631,46 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
             </div>
         </div>
 
+        <!-- ── Defaults de Locação ── -->
+        <div style="border:1px solid #dbeafe;border-radius:8px;overflow:hidden;margin-bottom:14px;">
+            <div style="background:#eff6ff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;"
+                 onclick="toggleDefaultsSection()">
+                <span style="font-size:.82rem;font-weight:600;color:#1d4ed8;">
+                    <i class="fas fa-sliders-h" style="margin-right:6px;"></i>Padrões de Locação
+                    <span style="font-size:.7rem;color:#64748b;font-weight:400;margin-left:8px;">pré-preenchem o formulário de nova locação</span>
+                </span>
+                <i id="defaultsChevron" class="fas fa-chevron-down" style="color:#3b82f6;font-size:.8rem;"></i>
+            </div>
+            <div id="defaultsSection" style="display:none;padding:14px;border-top:1px solid #dbeafe;background:#fff;">
+                <div class="grid-3">
+                    <div class="form-group" style="margin-bottom:6px;">
+                        <label style="font-size:.72rem;color:#64748b;">Caução Padrão (R$)</label>
+                        <input type="number" class="form-control" name="caucao_padrao"
+                               value="${v ? (v.caucao_padrao||'') : ''}" step="0.01" min="0"
+                               placeholder="ex: 2000.00">
+                    </div>
+                    <div class="form-group" style="margin-bottom:6px;">
+                        <label style="font-size:.72rem;color:#64748b;">Frequência Padrão</label>
+                        <select class="form-control" name="frequencia_padrao">
+                            <option value="">Sem padrão</option>
+                            ${[['diario','Diário'],['semanal','Semanal (7d)'],['quinzenal','Quinzenal (15d)'],['mensal','Mensal (30d)'],['avulso','Avulso']].map(([val,lbl]) =>
+                                `<option value="${val}" ${_optSel(v ? v.frequencia_padrao : '', val)}>${lbl}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:6px;">
+                        <label style="font-size:.72rem;color:#64748b;">Tempo Mínimo Padrão (dias)</label>
+                        <input type="number" class="form-control" name="tempo_minimo_padrao"
+                               value="${v ? (v.tempo_minimo_padrao||'') : ''}" min="1"
+                               placeholder="ex: 30">
+                    </div>
+                </div>
+                ${v && (v.caucao_padrao || v.frequencia_padrao || v.tempo_minimo_padrao) ?
+                    '<button type="button" class="btn btn-primary btn-sm" onclick="salvarDefaults(' + v.id + ')" style="margin-top:4px;"><i class="fas fa-save"></i> Salvar apenas defaults</button>'
+                    : ''}
+            </div>
+        </div>
+
         <!-- ── Campos ocultos FIPE ── -->
         <input type="hidden" name="valor_fipe" value="${v ? (v.valor_fipe||'') : ''}">
         <input type="hidden" name="codigo_fipe" value="${v ? (v.codigo_fipe||'') : ''}">
@@ -983,6 +1023,34 @@ function _fipeDadosVeiculo() {
         ano:         g('ano'),           // ano modelo
         combustivel: g('combustivel'),
     };
+}
+
+function toggleDefaultsSection() {
+    const sec  = document.getElementById('defaultsSection');
+    const icon = document.getElementById('defaultsChevron');
+    const open = sec.style.display !== 'none';
+    sec.style.display = open ? 'none' : 'block';
+    icon.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+async function salvarDefaults(veiculoId) {
+    const form = document.getElementById('formVeiculo');
+    const fd   = new FormData(form);
+    const body = {
+        caucao_padrao:       fd.get('caucao_padrao')       || null,
+        frequencia_padrao:   fd.get('frequencia_padrao')   || null,
+        tempo_minimo_padrao: fd.get('tempo_minimo_padrao') || null,
+    };
+    const resp = await fetch(`/api/veiculos/${veiculoId}/defaults`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+    });
+    if (resp.ok) {
+        showToast('Padrões salvos!', 'success');
+    } else {
+        showToast('Erro ao salvar padrões', 'error');
+    }
 }
 
 function toggleFipeSection() {
