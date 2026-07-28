@@ -433,6 +433,23 @@ def init_db():
         )
     ''')
 
+    # ── Seed veículos do site se tabela vazia ────────────────────────────────
+    cur.execute('SELECT COUNT(*) FROM veiculos_site')
+    if cur.fetchone()[0] == 0:
+        seed = [
+            ('Volkswagen','Golf','1.4 TSI Highline','2022/2023',28500,'Flex','Automático','Prata',118900,'/static/img/car-1.jpg',True),
+            ('Honda','Civic','2.0 Touring CVT','2021/2022',42300,'Gasolina','Automático','Preto',139500,'/static/img/car-2.jpg',False),
+            ('Toyota','Corolla Cross','2.0 XRE','2023/2024',15800,'Flex','Automático','Branco',162900,'/static/img/car-3.jpg',False),
+            ('Chevrolet','S10','2.8 LTZ 4x4 Diesel','2022/2023',55200,'Diesel','Automático','Azul',218900,'/static/img/car-4.jpg',False),
+            ('Volkswagen','T-Cross','1.4 TSI Highline','2022/2022',38100,'Flex','Automático','Cinza',129900,'/static/img/car-5.jpg',False),
+            ('Hyundai','HB20','1.0 Comfort Plus','2021/2022',47600,'Flex','Manual','Vermelho',72900,'/static/img/car-6.jpg',False),
+        ]
+        for s in seed:
+            cur.execute('''
+                INSERT INTO veiculos_site (marca,modelo,versao,ano,km,combustivel,transmissao,cor,preco,foto,destaque)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ''', s)
+
     # ── Índices — evita Seq Scan em JOINs e filtros frequentes ──────────────
     cur.execute("CREATE INDEX IF NOT EXISTS idx_locacoes_veiculo   ON locacoes(veiculo_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_locacoes_cliente   ON locacoes(cliente_id)")
