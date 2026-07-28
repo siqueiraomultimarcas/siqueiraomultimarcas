@@ -35,105 +35,119 @@
             --white:          #ffffff;
             --gray:           #6b7280;
             --gray-light:     #e5e7eb;
-            --sidebar-bg:     #0f172a;
-            --card-shadow:    0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
-            --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.06);
+            --sidebar-bg:     #ffffff;
+            --card-shadow:    0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.03);
+            --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.10), 0 8px 24px rgba(0,0,0,0.05);
         }
 
-        body { font-family: 'Poppins', sans-serif; background: var(--light); color: var(--dark); }
+        body { font-family: 'Poppins', sans-serif; background: #f4f6f9; color: var(--dark); }
 
         /* ── Layout ───────────────────────────────────────────── */
         .app-container { display: flex; min-height: 100vh; }
 
         /* ── Sidebar (desktop) ────────────────────────────────── */
         .sidebar {
-            width: 260px;
-            background: var(--sidebar-bg);
-            color: white;
+            width: 240px;
+            background: #ffffff;
             position: fixed;
             height: 100vh;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            border-right: 1px solid rgba(255,255,255,0.06);
+            border-right: 1px solid #e8ecf0;
             z-index: 100;
+            scrollbar-width: thin;
+            scrollbar-color: #e2e8f0 transparent;
         }
+        .sidebar::-webkit-scrollbar { width: 3px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
         .logo-area {
-            padding: 22px 20px 18px;
-            border-bottom: 1px solid rgba(255,255,255,0.07);
+            padding: 20px 18px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            flex-shrink: 0;
         }
-        .logo-area img { width: 100%; max-width: 190px; height: auto; }
+        .logo-area img { width: 100%; max-width: 170px; height: auto; }
         .logo-area .system-label {
             display: block;
-            margin-top: 8px;
-            font-size: 0.68rem;
+            margin-top: 6px;
+            font-size: 0.62rem;
             font-weight: 600;
             letter-spacing: 0.12em;
             text-transform: uppercase;
-            color: #475569;
+            color: #94a3b8;
         }
 
-        .nav-menu { flex: 1; padding: 12px 10px; list-style: none; }
-        .nav-item { margin: 2px 0; }
+        .nav-menu { flex: 1; padding: 10px 10px; list-style: none; }
+        .nav-item { margin: 1px 0; }
 
         .nav-section {
-            padding: 14px 10px 4px;
-            font-size: 0.62rem;
+            padding: 16px 10px 4px;
+            font-size: 0.58rem;
             font-weight: 700;
             letter-spacing: 0.14em;
             text-transform: uppercase;
-            color: #334155;
+            color: #b0bac6;
         }
 
         .nav-link {
             display: flex;
             align-items: center;
-            gap: 11px;
-            padding: 10px 12px;
-            color: #94a3b8;
+            gap: 10px;
+            padding: 8px 10px;
+            color: #64748b;
             text-decoration: none;
-            transition: all 0.15s;
-            font-size: 0.86rem;
+            transition: background 0.12s, color 0.12s;
+            font-size: 0.83rem;
             font-weight: 500;
             border-radius: 8px;
-            border-left: 3px solid transparent;
+            border-left: 2px solid transparent;
         }
-        .nav-link:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
+        .nav-link:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
         .nav-link.active {
-            background: rgba(37,99,235,0.15);
-            color: #60a5fa;
+            background: #eff6ff;
+            color: #2563eb;
             border-left-color: #2563eb;
             font-weight: 600;
         }
-        .nav-link i { width: 18px; text-align: center; font-size: 0.88rem; }
+        .nav-link i {
+            width: 17px;
+            text-align: center;
+            font-size: 0.82rem;
+            opacity: 0.75;
+        }
+        .nav-link.active i { opacity: 1; }
 
         .sidebar-footer {
-            padding: 14px 16px;
-            border-top: 1px solid rgba(255,255,255,0.07);
+            padding: 12px 14px;
+            border-top: 1px solid #f1f5f9;
             flex-shrink: 0;
         }
-        .sidebar-user { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .sidebar-user { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
         .sidebar-avatar {
-            width: 34px; height: 34px;
-            border-radius: 50%;
+            width: 32px; height: 32px;
+            border-radius: 8px;
             background: linear-gradient(135deg, #2563eb, #3b82f6);
             display: flex; align-items: center; justify-content: center;
-            font-size: 0.85rem; font-weight: 700; color: white;
+            font-size: 0.8rem; font-weight: 700; color: white;
             flex-shrink: 0;
         }
         .sidebar-user-info { overflow: hidden; }
-        .sidebar-user-name { font-size: 0.83rem; color: #e2e8f0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .sidebar-user-role { font-size: 0.7rem; color: #475569; }
+        .sidebar-user-name { font-size: 0.8rem; color: #1e293b; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sidebar-user-role { font-size: 0.66rem; color: #94a3b8; }
         .sidebar-logout {
             display: flex; align-items: center; gap: 8px;
-            color: #475569; text-decoration: none;
-            font-size: 0.82rem; padding: 8px 10px;
+            color: #94a3b8; text-decoration: none;
+            font-size: 0.78rem; padding: 7px 10px;
             border-radius: 7px; transition: all 0.15s;
         }
-        .sidebar-logout:hover { background: rgba(255,255,255,0.07); color: #94a3b8; }
+        .sidebar-logout:hover { background: #fee2e2; color: #dc2626; }
 
         /* ── Main Content ─────────────────────────────────────── */
-        .main-content { flex: 1; margin-left: 260px; padding: 28px 32px; }
+        .main-content { flex: 1; margin-left: 240px; padding: 26px 30px; }
 
         .page-header {
             display: flex;
@@ -346,62 +360,64 @@
         }
         .mais-overlay.open { display: flex; }
         .mais-sheet {
-            background: #0f172a;
+            background: #ffffff;
             width: 100%;
             border-radius: 20px 20px 0 0;
             padding: 20px 16px;
             padding-bottom: max(20px, env(safe-area-inset-bottom));
             animation: slideUp 0.25s ease;
+            border-top: 1px solid #e8ecf0;
         }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .mais-handle { width: 36px; height: 4px; background: rgba(255,255,255,0.12); border-radius: 2px; margin: 0 auto 18px; }
+        .mais-handle { width: 36px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 0 auto 18px; }
         .mais-user {
             display: flex; align-items: center; gap: 10px;
-            padding: 12px 14px; background: rgba(255,255,255,0.05);
+            padding: 12px 14px; background: #f8fafc;
             border-radius: 12px; margin-bottom: 14px;
+            border: 1px solid #f1f5f9;
         }
         .mais-avatar {
-            width: 38px; height: 38px; border-radius: 50%;
+            width: 38px; height: 38px; border-radius: 8px;
             background: linear-gradient(135deg, #2563eb, #3b82f6);
             display: flex; align-items: center; justify-content: center;
             font-size: 0.9rem; font-weight: 700; color: white; flex-shrink: 0;
         }
-        .mais-user-name { font-size: 0.85rem; color: #e2e8f0; font-weight: 500; }
-        .mais-user-role { font-size: 0.7rem; color: #475569; }
+        .mais-user-name { font-size: 0.85rem; color: #1e293b; font-weight: 600; }
+        .mais-user-role { font-size: 0.7rem; color: #94a3b8; }
         .mais-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
         .mais-item {
             display: flex; flex-direction: column; align-items: center; gap: 6px;
             padding: 12px 6px; border-radius: 12px;
-            background: rgba(255,255,255,0.04);
-            text-decoration: none; color: #94a3b8;
+            background: #f8fafc;
+            text-decoration: none; color: #64748b;
             font-size: 0.68rem; font-weight: 500; text-align: center;
-            border: 1px solid rgba(255,255,255,0.06);
+            border: 1px solid #e8ecf0;
             transition: background 0.15s, color 0.15s;
         }
-        .mais-item:hover, .mais-item.active { background: rgba(37,99,235,0.15); color: #60a5fa; }
+        .mais-item:hover, .mais-item.active { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
         .mais-item i { font-size: 1.1rem; }
         .mais-logout {
             display: flex; align-items: center; justify-content: center; gap: 8px;
             width: 100%; padding: 13px;
-            background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.18);
-            border-radius: 10px; color: #fca5a5; font-size: 0.84rem; font-weight: 500;
+            background: #fff5f5; border: 1px solid #fecaca;
+            border-radius: 10px; color: #dc2626; font-size: 0.84rem; font-weight: 500;
             text-decoration: none; transition: background 0.15s;
         }
-        .mais-logout:hover { background: rgba(239,68,68,0.15); }
+        .mais-logout:hover { background: #fee2e2; }
 
         /* ── Banner PWA install ───────────────────────────────── */
         #pwa-install-banner {
             display: none; position: fixed; bottom: 0; left: 0; right: 0;
-            background: #1e293b; color: #e2e8f0;
+            background: #ffffff; color: #1e293b;
             padding: 14px 18px; padding-bottom: max(14px, env(safe-area-inset-bottom));
             align-items: center; gap: 12px; z-index: 9998;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.35);
-            border-top: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+            border-top: 1px solid #e8ecf0;
         }
         #pwa-install-banner img { width: 38px; height: 38px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
         #pwa-install-banner .pwa-info { flex: 1; min-width: 0; }
         #pwa-install-banner .pwa-info strong { display: block; font-weight: 600; font-size: .85rem; }
-        #pwa-install-banner .pwa-info small { font-size: .72rem; color: #64748b; }
+        #pwa-install-banner .pwa-info small { font-size: .72rem; color: #94a3b8; }
 
         /* ════════════════════════════════════════════════════════
            RESPONSIVE — MOBILE (≤ 768px)
@@ -424,23 +440,23 @@
                 bottom: 0; left: 0; right: 0;
                 height: calc(60px + env(safe-area-inset-bottom));
                 padding-bottom: env(safe-area-inset-bottom);
-                background: #0f172a;
-                border-top: 1px solid rgba(255,255,255,0.08);
+                background: #ffffff;
+                border-top: 1px solid #e8ecf0;
                 z-index: 300;
-                box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+                box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
             }
             .bn-item {
                 flex: 1;
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
                 gap: 3px; padding: 8px 4px;
-                color: #475569; text-decoration: none;
+                color: #94a3b8; text-decoration: none;
                 font-size: 0.58rem; font-weight: 600; letter-spacing: 0.03em;
                 background: none; border: none; cursor: pointer;
                 transition: color 0.15s;
                 -webkit-tap-highlight-color: transparent;
             }
             .bn-item i { font-size: 1.15rem; transition: color 0.15s; }
-            .bn-item.active { color: #60a5fa; }
+            .bn-item.active { color: #2563eb; }
             .bn-item.active i { color: #2563eb; }
             .bn-item:active { opacity: 0.7; }
 
