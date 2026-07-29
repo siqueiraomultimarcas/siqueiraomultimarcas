@@ -938,6 +938,19 @@
             function sec(title, content) { return '<div class="section"><h2>' + title + '</h2>' + content + '</div>'; }
             function yn(v) { return v ? 'Sim' : 'Não'; }
 
+            const freqLabel = {'semanal':'Semanal','quinzenal':'Quinzenal','mensal':'Mensal','avulso':'Avulso'}[loc.frequencia_cobranca] || loc.frequencia_cobranca || 'Avulso';
+            const totalBox = loc.data_fim && loc.total
+                ? '<div class="total-box">' +
+                    '<div style="font-size:12px;margin-bottom:4px;">' + formatCurrency(loc.diaria) + ' × ' + dias + ' dia(s)</div>' +
+                    '<div class="valor">' + formatCurrency(loc.total) + '</div>' +
+                    '<div style="font-size:11px;color:#555;margin-top:3px;">Valor Total da Locação</div>' +
+                  '</div>'
+                : '<div class="total-box" style="background:#fff7ed;border-color:#f97316;">' +
+                    '<div style="font-size:12px;margin-bottom:4px;">Cobrança ' + freqLabel + (loc.valor_semanal ? ' · ' + formatCurrency(loc.valor_semanal) + '/período' : '') + '</div>' +
+                    '<div class="valor" style="color:#ea580c;">' + formatCurrency(loc.diaria) + '<span style="font-size:14px;font-weight:500;">/dia</span></div>' +
+                    '<div style="font-size:11px;color:#555;margin-top:3px;">Locação em aberto — sem data fim definida</div>' +
+                  '</div>';
+
             const win = window.open('', '_blank', 'width=840,height=1000');
             win.document.write(
             '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Contrato #' + id + '</title>' +
@@ -980,19 +993,6 @@
                     fld('Local de Retirada', loc.local_retirada),
                     fld('Local de Devolução', loc.local_devolucao))
             ) +
-
-            const freqLabel = {'semanal':'Semanal','quinzenal':'Quinzenal','mensal':'Mensal','avulso':'Avulso'}[loc.frequencia_cobranca] || loc.frequencia_cobranca || 'Avulso';
-            const totalBox = loc.data_fim && loc.total
-                ? '<div class="total-box">' +
-                    '<div style="font-size:12px;margin-bottom:4px;">' + formatCurrency(loc.diaria) + ' × ' + dias + ' dia(s)</div>' +
-                    '<div class="valor">' + formatCurrency(loc.total) + '</div>' +
-                    '<div style="font-size:11px;color:#555;margin-top:3px;">Valor Total da Locação</div>' +
-                  '</div>'
-                : '<div class="total-box" style="background:#fff7ed;border-color:#f97316;">' +
-                    '<div style="font-size:12px;margin-bottom:4px;">Cobrança ' + freqLabel + (loc.valor_semanal ? ' · ' + formatCurrency(loc.valor_semanal) + '/período' : '') + '</div>' +
-                    '<div class="valor" style="color:#ea580c;">' + formatCurrency(loc.diaria) + '<span style="font-size:14px;font-weight:500;">/dia</span></div>' +
-                    '<div style="font-size:11px;color:#555;margin-top:3px;">Locação em aberto — sem data fim definida</div>' +
-                  '</div>';
 
             sec('Período e Condições Financeiras',
                 row(fld('Data de Saída', formatDate(loc.data_inicio)),
