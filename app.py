@@ -76,7 +76,7 @@ def get_conn():
     url = os.environ.get('DATABASE_URL')
     if not url:
         raise RuntimeError('DATABASE_URL não configurada. Crie um arquivo .env com a connection string do Neon.')
-    return psycopg2.connect(url)
+    return psycopg2.connect(url, connect_timeout=15, options="-c statement_timeout=30000")
 
 
 @contextmanager

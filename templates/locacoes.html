@@ -94,14 +94,30 @@
     let clientes = [];
     let fotosFilesParaUpload = [];
 
+    function _fetchTimeout(url, ms = 20000) {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), ms);
+        return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(tid));
+    }
+
     async function carregarDados() {
         try {
+            document.getElementById('tabelaLocacoes').innerHTML =
+                '<tr><td colspan="10" style="text-align:center;padding:32px;color:#94a3b8;"><i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Carregando...</td></tr>';
+
             const [respLoc, respVeic, respCli] = await Promise.all([
-                fetch('/api/locacoes'), fetch('/api/veiculos'), fetch('/api/clientes')
+                _fetchTimeout('/api/locacoes'),
+                _fetchTimeout('/api/veiculos'),
+                _fetchTimeout('/api/clientes')
             ]);
-            locacoes = await respLoc.json();
-            veiculos = await respVeic.json();
-            clientes = await respCli.json();
+
+            const _loc = await respLoc.json();
+            const _veic = await respVeic.json();
+            const _cli  = await respCli.json();
+
+            locacoes = Array.isArray(_loc)  ? _loc  : [];
+            veiculos = Array.isArray(_veic) ? _veic : [];
+            clientes = Array.isArray(_cli)  ? _cli  : [];
 
             const selectVeic = document.getElementById('filtroVeiculoLoc');
             veiculos.forEach(v => {
@@ -116,8 +132,13 @@
             renderizarLocacoes(locacoes);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
-            showToast('Erro ao carregar dados', 'error');
-            document.getElementById('tabelaLocacoes').innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#94a3b8;">Erro ao carregar. Tente recarregar a página.</td></tr>';
+            const msg = error.name === 'AbortError'
+                ? 'Tempo limite excedido. Verifique a conexão com o servidor.'
+                : 'Erro ao carregar dados. Tente recarregar a página.';
+            showToast(msg, 'error');
+            document.getElementById('tabelaLocacoes').innerHTML =
+                '<tr><td colspan="10" style="text-align:center;padding:32px;color:#ef473a;">' +
+                '<i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>' + msg + '</td></tr>';
         }
     }
 
