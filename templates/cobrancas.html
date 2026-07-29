@@ -3,18 +3,6 @@
 {% block content %}
 
 <style>
-/* ── KPI ──────────────────────────────────────────────────────────── */
-.kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:14px; }
-.kpi-card { position:relative; background:#fff; border-radius:12px; padding:18px 20px;
-            box-shadow:0 1px 4px rgba(0,0,0,.08); overflow:hidden; }
-.kpi-card .kpi-label { font-size:.65rem; font-weight:700; text-transform:uppercase;
-                        letter-spacing:.07em; color:#64748b; margin-bottom:4px; }
-.kpi-card .kpi-value { font-size:1.6rem; font-weight:700; color:#0f172a; }
-.kpi-card .kpi-icon-bg { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
-.kpi-card.blue  .kpi-value { color:#008cdd; } .kpi-card.blue  .kpi-icon-bg { color:#008cdd; }
-.kpi-card.green .kpi-value { color:#16a34a; } .kpi-card.green .kpi-icon-bg { color:#16a34a; }
-.kpi-card.amber .kpi-value { color:#d4a800; } .kpi-card.amber .kpi-icon-bg { color:#d4a800; }
-
 /* ── Accordion cards ─────────────────────────────────────────────── */
 .contrato-card { background:#fff; border-radius:12px; margin-bottom:12px;
                  box-shadow:0 1px 4px rgba(0,0,0,.07); overflow:hidden; }
@@ -117,19 +105,25 @@
 <!-- KPIs -->
 <div class="kpi-grid" style="margin-bottom:20px;">
     <div class="kpi-card blue">
-        <div class="kpi-label">Locações Ativas</div>
-        <div class="kpi-value" id="kpiLocacoes">0</div>
-        <i class="fas fa-key kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-key"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiLocacoes">0</div>
+            <div class="kpi-label">Locações Ativas</div>
+        </div>
     </div>
     <div class="kpi-card green">
-        <div class="kpi-label">Total Recebido</div>
-        <div class="kpi-value" id="kpiRecebido" style="font-size:1.1rem">R$ 0,00</div>
-        <i class="fas fa-check-circle kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiRecebido">R$ 0,00</div>
+            <div class="kpi-label">Total Recebido</div>
+        </div>
     </div>
     <div class="kpi-card amber">
-        <div class="kpi-label">Pagamentos Registrados</div>
-        <div class="kpi-value" id="kpiPagamentos">0</div>
-        <i class="fas fa-receipt kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-receipt"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiPagamentos">0</div>
+            <div class="kpi-label">Pagamentos Registrados</div>
+        </div>
     </div>
 </div>
 

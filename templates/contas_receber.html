@@ -3,21 +3,6 @@
 {% block content %}
 
 <style>
-.kpi-grid  { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
-.kpi-card  { position:relative; background:#fff; border-radius:12px; padding:18px 20px;
-             box-shadow:0 1px 4px rgba(0,0,0,.08); overflow:hidden; }
-.kpi-card .kpi-label    { font-size:.65rem; font-weight:700; text-transform:uppercase;
-                          letter-spacing:.07em; color:#64748b; margin-bottom:4px; }
-.kpi-card .kpi-value    { font-size:1.5rem; font-weight:700; color:#0f172a; }
-.kpi-card .kpi-icon-bg  { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
-.kpi-card.blue  .kpi-value { color:#008cdd; } .kpi-card.blue  .kpi-icon-bg { color:#008cdd; }
-.kpi-card.green .kpi-value { color:#16a34a; } .kpi-card.green .kpi-icon-bg { color:#16a34a; }
-.kpi-card.amber .kpi-value { color:#d4a800; } .kpi-card.amber .kpi-icon-bg { color:#d4a800; }
-.kpi-card.red   .kpi-value { color:#c73a2e; } .kpi-card.red   .kpi-icon-bg { color:#c73a2e; }
-.kpi-card.blue  { border-left:3px solid #008cdd; }
-.kpi-card.green { border-left:3px solid #16a34a; }
-.kpi-card.amber { border-left:3px solid #d4a800; }
-.kpi-card.red   { border-left:3px solid #c73a2e; }
 .tabs { display:flex; gap:6px; flex-wrap:wrap; }
 .tab-btn { padding:6px 16px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
            font-size:.78rem; font-weight:600; cursor:pointer; color:#64748b; transition:all .15s; }
@@ -46,46 +31,62 @@
 </div>
 
 <!-- KPIs -->
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:20px;">
+<div class="kpi-grid" style="margin-bottom:20px;">
     <div class="kpi-card blue">
-        <div class="kpi-label">Total Pendente</div>
-        <div class="kpi-value" id="kpiPendente" style="font-size:1.1rem">R$ 0,00</div>
-        <i class="fas fa-clock kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiPendente">R$ 0,00</div>
+            <div class="kpi-label">Total Pendente</div>
+        </div>
     </div>
     <div class="kpi-card green">
-        <div class="kpi-label">Recebido Este Mês</div>
-        <div class="kpi-value" id="kpiRecebidoMes" style="font-size:1.1rem">R$ 0,00</div>
-        <i class="fas fa-check-circle kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiRecebidoMes">R$ 0,00</div>
+            <div class="kpi-label">Recebido Este Mês</div>
+        </div>
     </div>
-    <div class="kpi-card amber">
-        <div class="kpi-label">Qtd Pendente</div>
-        <div class="kpi-value" id="kpiQtdPendente">0</div>
-        <i class="fas fa-list kpi-icon-bg"></i>
+    <div class="kpi-card orange">
+        <div class="kpi-icon"><i class="fas fa-list"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiQtdPendente">0</div>
+            <div class="kpi-label">Qtd Pendente</div>
+        </div>
     </div>
     <div class="kpi-card red">
-        <div class="kpi-label">Vencidos</div>
-        <div class="kpi-value" id="kpiVencidos">0</div>
-        <i class="fas fa-exclamation-triangle kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiVencidos">0</div>
+            <div class="kpi-label">Vencidos</div>
+        </div>
     </div>
-    <div class="kpi-card" style="border-left:4px solid #7c3aed;">
-        <div class="kpi-label" style="color:#7c3aed;">Descontos no Mês</div>
-        <div class="kpi-value" id="kpiDescontos" style="color:#7c3aed;font-size:1.1rem;">R$ 0,00</div>
-        <i class="fas fa-tag kpi-icon-bg" style="color:#7c3aed;"></i>
+    <div class="kpi-card purple">
+        <div class="kpi-icon"><i class="fas fa-tag"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiDescontos">R$ 0,00</div>
+            <div class="kpi-label">Descontos no Mês</div>
+        </div>
     </div>
-    <div class="kpi-card" style="border-left:4px solid #c73a2e;">
-        <div class="kpi-label" style="color:#c73a2e;">Vence Hoje</div>
-        <div class="kpi-value" id="kpiVenceHoje" style="color:#c73a2e;font-size:1.1rem;">R$ 0,00</div>
-        <i class="fas fa-calendar-day kpi-icon-bg" style="color:#c73a2e;"></i>
+    <div class="kpi-card amber">
+        <div class="kpi-icon"><i class="fas fa-calendar-day"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiVenceHoje">R$ 0,00</div>
+            <div class="kpi-label">Vence Hoje</div>
+        </div>
     </div>
-    <div class="kpi-card" style="border-left:4px solid #ffc900;">
-        <div class="kpi-label" style="color:#d4a800;">Vence esta Semana</div>
-        <div class="kpi-value" id="kpiVenceSemana" style="color:#d4a800;font-size:1.1rem;">R$ 0,00</div>
-        <i class="fas fa-calendar-week kpi-icon-bg" style="color:#d4a800;"></i>
+    <div class="kpi-card teal">
+        <div class="kpi-icon"><i class="fas fa-calendar-week"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiVenceSemana">R$ 0,00</div>
+            <div class="kpi-label">Vence esta Semana</div>
+        </div>
     </div>
-    <div class="kpi-card" style="border-left:4px solid #0891b2;">
-        <div class="kpi-label" style="color:#0891b2;">Próximos 30 Dias</div>
-        <div class="kpi-value" id="kpiProjecaoMes" style="color:#0891b2;font-size:1.1rem;">R$ 0,00</div>
-        <i class="fas fa-chart-line kpi-icon-bg" style="color:#0891b2;"></i>
+    <div class="kpi-card blue">
+        <div class="kpi-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiProjecaoMes">R$ 0,00</div>
+            <div class="kpi-label">Próximos 30 Dias</div>
+        </div>
     </div>
 </div>
 
