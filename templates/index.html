@@ -41,42 +41,16 @@
         0%,100% { opacity: 1; } 50% { opacity: .5; }
     }
 
-    /* ── KPI grid (5 colunas no desktop) ─────────────────── */
-    .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 12px;
-        margin-bottom: 18px;
-    }
-    .kpi-card {
-        background: white;
-        border-radius: 12px;
-        padding: 16px 18px;
-        box-shadow: var(--card-shadow);
-        border: 1px solid rgba(0,0,0,0.04);
-        position: relative; overflow: hidden;
-        transition: box-shadow .2s, transform .2s;
-        border-top: 3px solid transparent;
-    }
-    .kpi-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); }
-    .kpi-label { font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: #94a3b8; margin-bottom: 8px; }
-    .kpi-value { font-size: 1.55rem; font-weight: 700; color: #0f172a; line-height: 1; margin-bottom: 4px; }
-    .kpi-sub { font-size: .7rem; color: #94a3b8; }
-    .kpi-icon-bg { position: absolute; right: 14px; bottom: 10px; font-size: 2.4rem; opacity: .14; pointer-events: none; }
+    /* ── KPI grid (5 colunas no desktop, herda Velo de base.html) */
+    .kpi-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; }
     .kpi-trend {
         display: inline-flex; align-items: center; gap: 3px;
         font-size: .65rem; font-weight: 600; padding: 1px 7px;
-        border-radius: 20px; margin-top: 5px;
+        border-radius: 20px; margin-top: 4px;
     }
     .kpi-trend.up   { background: #f0fdf4; color: #16a34a; }
     .kpi-trend.down { background: #fff1f2; color: #c73a2e; }
     .kpi-trend.flat { background: #f8fafc; color: #64748b; }
-    .kpi-card.blue   { border-top-color: #008cdd; } .kpi-card.blue   .kpi-icon-bg { color: #008cdd; }
-    .kpi-card.green  { border-top-color: #33cd5f; } .kpi-card.green  .kpi-icon-bg { color: #33cd5f; }
-    .kpi-card.orange { border-top-color: #ffc900; } .kpi-card.orange .kpi-icon-bg { color: #ffc900; }
-    .kpi-card.purple { border-top-color: #8b5cf6; } .kpi-card.purple .kpi-icon-bg { color: #8b5cf6; }
-    .kpi-card.red    { border-top-color: #ef473a; } .kpi-card.red    .kpi-icon-bg { color: #ef473a; }
-    .kpi-card.teal   { border-top-color: #14b8a6; } .kpi-card.teal   .kpi-icon-bg { color: #14b8a6; }
 
     /* ── Ações rápidas ───────────────────────────────────── */
     .qa-grid {
@@ -159,35 +133,44 @@
 <!-- KPIs (5 cards) -->
 <div class="kpi-grid">
     <div class="kpi-card blue">
-        <div class="kpi-label">Frota Total</div>
-        <div class="kpi-value" id="totalVeiculos">—</div>
-        <div class="kpi-sub"><span id="veiculosDisponiveis">—</span> disponíveis</div>
-        <i class="fas fa-car kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-car"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="totalVeiculos">—</div>
+            <div class="kpi-label">Frota Total</div>
+            <div class="kpi-sub"><span id="veiculosDisponiveis">—</span> disponíveis</div>
+        </div>
     </div>
     <div class="kpi-card green">
-        <div class="kpi-label">Faturamento do Mês</div>
-        <div class="kpi-value" id="faturamentoMes" style="font-size:1.2rem;">—</div>
-        <div class="kpi-sub"><span id="locacoesAtivas">—</span> locações ativas</div>
-        <div id="faturamentoTrend"></div>
-        <i class="fas fa-dollar-sign kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="faturamentoMes">—</div>
+            <div class="kpi-label">Faturamento do Mês</div>
+            <div class="kpi-sub"><span id="locacoesAtivas">—</span> locações ativas &nbsp;<span id="faturamentoTrend"></span></div>
+        </div>
     </div>
     <div class="kpi-card orange">
-        <div class="kpi-label">Taxa de Ocupação</div>
-        <div class="kpi-value" id="taxaOcupacao">—</div>
-        <div class="kpi-sub">da frota locada</div>
-        <i class="fas fa-percentage kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-percentage"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="taxaOcupacao">—</div>
+            <div class="kpi-label">Taxa de Ocupação</div>
+            <div class="kpi-sub">da frota locada</div>
+        </div>
     </div>
     <div class="kpi-card purple">
-        <div class="kpi-label">Clientes Cadastrados</div>
-        <div class="kpi-value" id="totalClientes">—</div>
-        <div class="kpi-sub">no sistema</div>
-        <i class="fas fa-users kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-users"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="totalClientes">—</div>
+            <div class="kpi-label">Clientes Cadastrados</div>
+            <div class="kpi-sub">no sistema</div>
+        </div>
     </div>
     <div class="kpi-card teal">
-        <div class="kpi-label">Reservas Ativas</div>
-        <div class="kpi-value" id="totalReservas">—</div>
-        <div class="kpi-sub">agendamentos</div>
-        <i class="fas fa-calendar-plus kpi-icon-bg"></i>
+        <div class="kpi-icon"><i class="fas fa-calendar-plus"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="totalReservas">—</div>
+            <div class="kpi-label">Reservas Ativas</div>
+            <div class="kpi-sub">agendamentos</div>
+        </div>
     </div>
 </div>
 

@@ -4,33 +4,33 @@
 <h1 style="font-size:1.4rem;font-weight:700;color:#0f172a;margin:0 0 16px;">Carros</h1>
 
 <!-- KPI Financeiros -->
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
-    <div class="vl-kpi-card" style="background:#f0fdf4;border:1px solid #bbf7d0;">
-        <div class="vl-kpi-icon" style="background:#16a34a;"><i class="fas fa-dollar-sign"></i></div>
-        <div>
-            <div class="vl-kpi-val" id="kpiValorCompra">—</div>
-            <div class="vl-kpi-label">Valor de Compra da Frota</div>
+<div class="kpi-grid" style="margin-bottom:16px;">
+    <div class="kpi-card green">
+        <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiValorCompra">—</div>
+            <div class="kpi-label">Valor de Compra da Frota</div>
         </div>
     </div>
-    <div class="vl-kpi-card" style="background:#f5f3ff;border:1px solid #ddd6fe;">
-        <div class="vl-kpi-icon" style="background:#7c3aed;"><i class="fas fa-tag"></i></div>
-        <div>
-            <div class="vl-kpi-val" id="kpiFipe">—</div>
-            <div class="vl-kpi-label">Valor total FIPE da Frota</div>
+    <div class="kpi-card purple">
+        <div class="kpi-icon"><i class="fas fa-tag"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiFipe">—</div>
+            <div class="kpi-label">Valor total FIPE da Frota</div>
         </div>
     </div>
-    <div class="vl-kpi-card" style="background:#fff1f2;border:1px solid #fecaca;">
-        <div class="vl-kpi-icon" style="background:#ef4444;"><i class="fas fa-wrench"></i></div>
-        <div>
-            <div class="vl-kpi-val" id="kpiCustoMes">—</div>
-            <div class="vl-kpi-label">Custo total com a frota no mês</div>
+    <div class="kpi-card red">
+        <div class="kpi-icon"><i class="fas fa-wrench"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiCustoMes">—</div>
+            <div class="kpi-label">Custo total com a frota no mês</div>
         </div>
     </div>
-    <div class="vl-kpi-card" style="background:#fefce8;border:1px solid #fde68a;">
-        <div class="vl-kpi-icon" style="background:#d97706;"><i class="fas fa-calendar-alt"></i></div>
-        <div>
-            <div class="vl-kpi-val" id="kpiAnoMedio">—</div>
-            <div class="vl-kpi-label">Ano médio da frota</div>
+    <div class="kpi-card amber">
+        <div class="kpi-icon"><i class="fas fa-calendar-alt"></i></div>
+        <div class="kpi-text">
+            <div class="kpi-value" id="kpiAnoMedio">—</div>
+            <div class="kpi-label">Ano médio da frota</div>
         </div>
     </div>
 </div>
@@ -319,11 +319,7 @@
 /* form grid 3 colunas */
 .grid-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px; }
 
-/* ----- Velo card rows ----- */
-.vl-kpi-card { border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px; }
-.vl-kpi-icon { width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1.05rem;flex-shrink:0; }
-.vl-kpi-val  { font-size:1.1rem;font-weight:700;color:#0f172a; }
-.vl-kpi-label{ font-size:.7rem;color:#64748b;margin-top:2px; }
+/* ----- list rows ----- */
 .vl-row { border-bottom:1px solid #f1f5f9; }
 .vl-row:last-child { border-bottom:none; }
 .vl-row-header { display:grid;grid-template-columns:56px 180px 1fr 120px 110px;align-items:center;gap:0;padding:13px 20px;cursor:pointer;transition:background .1s; }

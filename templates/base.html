@@ -395,21 +395,61 @@
         .toast.warning { background: linear-gradient(135deg, #d4a800, #ffc900); color: #252525; }
         .toast.info    { background: linear-gradient(135deg, #015e94, #008cdd); }
 
-        /* ── KPI Cards ────────────────────────────────────────── */
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
-        .kpi-card { background: white; border-radius: 12px; padding: 18px 20px; box-shadow: var(--card-shadow); border: 1px solid rgba(0,0,0,0.04); border-top: 3px solid transparent; position: relative; overflow: hidden; transition: box-shadow 0.2s, transform 0.2s; }
-        .kpi-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); }
-        .kpi-label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; }
-        .kpi-value { font-size: 1.65rem; font-weight: 700; color: #0f172a; line-height: 1; margin-bottom: 4px; }
-        .kpi-sub { font-size: 0.72rem; color: #94a3b8; }
-        .kpi-icon-bg { position: absolute; right: 16px; bottom: 12px; font-size: 2.6rem; opacity: 0.18; pointer-events: none; }
-        .kpi-card.blue   { border-top-color: #008cdd; } .kpi-card.blue   .kpi-icon-bg { color: #008cdd; }
-        .kpi-card.green  { border-top-color: #33cd5f; } .kpi-card.green  .kpi-icon-bg { color: #33cd5f; }
-        .kpi-card.orange { border-top-color: #ffc900; } .kpi-card.orange .kpi-icon-bg { color: #ffc900; }
-        .kpi-card.purple { border-top-color: #8b5cf6; } .kpi-card.purple .kpi-icon-bg { color: #8b5cf6; }
-        .kpi-card.red    { border-top-color: #ef473a; } .kpi-card.red    .kpi-icon-bg { color: #ef473a; }
-        .kpi-card.teal   { border-top-color: #14b8a6; } .kpi-card.teal   .kpi-icon-bg { color: #14b8a6; }
-        .kpi-card.amber  { border-top-color: #ffc900; } .kpi-card.amber  .kpi-icon-bg { color: #ffc900; }
+        /* ── KPI Cards — Velo style ───────────────────────────── */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .kpi-card { border-radius: 16px; padding: 20px 20px; display: flex; align-items: center; gap: 16px; transition: box-shadow 0.2s, transform 0.15s; cursor: default; }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+        .kpi-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.15rem; flex-shrink: 0; }
+        .kpi-text { flex: 1; min-width: 0; }
+        .kpi-value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; margin-bottom: 5px; }
+        .kpi-label { font-size: 0.72rem; color: #64748b; line-height: 1.35; }
+        .kpi-sub   { font-size: 0.72rem; color: #94a3b8; margin-top: 2px; }
+        .kpi-icon-bg { display: none; }
+        /* Paleta de cores */
+        .kpi-card.blue   { background: linear-gradient(135deg,rgba(0,140,221,.13),rgba(0,140,221,.04)); }
+        .kpi-card.green  { background: linear-gradient(135deg,rgba(22,163,74,.13),rgba(22,163,74,.04)); }
+        .kpi-card.orange { background: linear-gradient(135deg,rgba(217,119,6,.13),rgba(217,119,6,.04)); }
+        .kpi-card.purple { background: linear-gradient(135deg,rgba(124,58,237,.13),rgba(124,58,237,.04)); }
+        .kpi-card.red    { background: linear-gradient(135deg,rgba(239,68,68,.13),rgba(239,68,68,.04)); }
+        .kpi-card.teal   { background: linear-gradient(135deg,rgba(13,148,136,.13),rgba(13,148,136,.04)); }
+        .kpi-card.amber  { background: linear-gradient(135deg,rgba(217,119,6,.13),rgba(217,119,6,.04)); }
+        /* Ícone circular */
+        .kpi-card.blue   .kpi-icon { background: #008cdd; }
+        .kpi-card.green  .kpi-icon { background: #16a34a; }
+        .kpi-card.orange .kpi-icon { background: #d97706; }
+        .kpi-card.purple .kpi-icon { background: #7c3aed; }
+        .kpi-card.red    .kpi-icon { background: #ef4444; }
+        .kpi-card.teal   .kpi-icon { background: #0d9488; }
+        .kpi-card.amber  .kpi-icon { background: #d97706; }
+        /* Valor colorido */
+        .kpi-card.blue   .kpi-value { color: #008cdd; }
+        .kpi-card.green  .kpi-value { color: #16a34a; }
+        .kpi-card.orange .kpi-value { color: #d97706; }
+        .kpi-card.purple .kpi-value { color: #7c3aed; }
+        .kpi-card.red    .kpi-value { color: #ef4444; }
+        .kpi-card.teal   .kpi-value { color: #0d9488; }
+        .kpi-card.amber  .kpi-value { color: #d97706; }
+        /* Velo-specific aliases (financas.html) */
+        .vl-kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:16px; }
+        @media(max-width:960px) { .vl-kpi-grid { grid-template-columns:repeat(2,1fr); } }
+        @media(max-width:520px) { .vl-kpi-grid { grid-template-columns:1fr; } }
+        .vl-kpi { border-radius:16px; padding:20px; display:flex; align-items:center; gap:16px; }
+        .vl-kpi.purple { background:linear-gradient(135deg,rgba(124,58,237,.13),rgba(124,58,237,.04)); }
+        .vl-kpi.red    { background:linear-gradient(135deg,rgba(239,68,68,.13),rgba(239,68,68,.04)); }
+        .vl-kpi.green  { background:linear-gradient(135deg,rgba(22,163,74,.13),rgba(22,163,74,.04)); }
+        .vl-kpi.amber  { background:linear-gradient(135deg,rgba(217,119,6,.13),rgba(217,119,6,.04)); }
+        .vl-kpi-icon { width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.15rem;flex-shrink:0; }
+        .vl-kpi.purple .vl-kpi-icon { background:#7c3aed; }
+        .vl-kpi.red    .vl-kpi-icon { background:#ef4444; }
+        .vl-kpi.green  .vl-kpi-icon { background:#16a34a; }
+        .vl-kpi.amber  .vl-kpi-icon { background:#d97706; }
+        .vl-kpi-text { flex:1;min-width:0; }
+        .vl-kpi-val  { font-size:1.35rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2; }
+        .vl-kpi.purple .vl-kpi-val { color:#7c3aed; }
+        .vl-kpi.red    .vl-kpi-val { color:#ef4444; }
+        .vl-kpi.green  .vl-kpi-val { color:#16a34a; }
+        .vl-kpi.amber  .vl-kpi-val { color:#d97706; }
+        .vl-kpi-lbl { font-size:.73rem;color:#64748b;margin-top:5px;line-height:1.35; }
 
         /* ── Grid layouts ─────────────────────────────────────── */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
