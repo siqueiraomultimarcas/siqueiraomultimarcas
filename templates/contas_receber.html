@@ -3,21 +3,144 @@
 {% block content %}
 
 <style>
+/* ── Tabs / filtros ─────────────────────────────────────────────── */
 .tabs { display:flex; gap:6px; flex-wrap:wrap; }
-.tab-btn { padding:6px 16px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
-           font-size:.78rem; font-weight:600; cursor:pointer; color:#64748b; transition:all .15s; }
+.tab-btn { padding:6px 14px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
+           font-size:.76rem; font-weight:600; cursor:pointer; color:#64748b; transition:all .15s; }
 .tab-btn:hover  { border-color:#008cdd; color:#008cdd; }
 .tab-btn.active { background:#008cdd; border-color:#008cdd; color:#fff; }
-.badge-status { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 9px;
-                border-radius:4px; border:1px solid transparent; }
+.cr-filter-label { font-size:.67rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.cr-filter-sep   { width:1px; height:28px; background:#e2e8f0; flex-shrink:0; }
+
+/* ── Status badges ──────────────────────────────────────────────── */
+.badge-status { display:inline-flex; align-items:center; gap:4px; font-size:.68rem; font-weight:600;
+                padding:3px 9px; border-radius:8px; border:1px solid transparent; cursor:pointer; white-space:nowrap; }
 .badge-status.pendente { background:#fffbeb; color:#7a6000; border-color:#fde68a; }
+.badge-status.pendente:hover { background:#fef3c7; }
 .badge-status.vencido  { background:#fef2f2; color:#c73a2e; border-color:#fecaca; font-weight:700; }
-.badge-status.pago,
-.badge-status.recebido { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
-.grupo-row-card td { transition: background .12s; }
-.grupo-row-card:hover td { background:#f1f5f9; }
-.cr-filter-label { font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
-.cr-filter-sep { width:1px; height:28px; background:#e2e8f0; flex-shrink:0; }
+.badge-status.vencido:hover  { background:#fee2e2; }
+.badge-status.pago, .badge-status.recebido { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; cursor:default; }
+
+/* ── Seção (Contratos / Multas / Avulsas) ───────────────────────── */
+.cr-sect-bar {
+    display:flex; align-items:center; gap:12px; padding:14px 18px;
+    background:#fff; border-radius:16px 16px 0 0;
+    border-bottom:1px solid #f1f5f9;
+}
+.cr-sect-icon {
+    width:40px; height:40px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1rem; flex-shrink:0; color:#fff;
+}
+.cr-sect-icon.blue   { background:linear-gradient(135deg,#008cdd,#30a2e4); }
+.cr-sect-icon.red    { background:linear-gradient(135deg,#ef4444,#c73a2e); }
+.cr-sect-icon.green  { background:linear-gradient(135deg,#16a34a,#22c55e); }
+.cr-sect-title { font-weight:700; font-size:.92rem; color:#0f172a; }
+.cr-sect-sub   { display:flex; gap:12px; margin-top:2px; flex-wrap:wrap; }
+.cr-sect-badge { margin-left:auto; background:#f1f5f9; color:#475569; font-size:.72rem;
+                 font-weight:700; padding:3px 10px; border-radius:20px; }
+
+/* ── Grupo (linha de placa / cliente) ───────────────────────────── */
+.cr-grupo { background:#fff; border-bottom:1px solid #f1f5f9; }
+.cr-grupo:last-child { border-bottom:none; border-radius:0 0 16px 16px; }
+.cr-grupo-header {
+    display:flex; align-items:center; gap:12px; padding:13px 18px;
+    cursor:pointer; user-select:none; transition:background .12s;
+}
+.cr-grupo-header:hover { background:#f8fafc; }
+.cr-grupo-avatar {
+    width:40px; height:40px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.85rem; font-weight:800; font-family:monospace;
+    letter-spacing:.05em;
+}
+.cr-grupo-avatar.blue  { background:rgba(0,140,221,.12); color:#008cdd; }
+.cr-grupo-avatar.red   { background:rgba(239,68,68,.12);  color:#c73a2e; }
+.cr-grupo-avatar.green { background:rgba(22,163,74,.12);  color:#16a34a; }
+.cr-grupo-info  { flex:1; min-width:0; }
+.cr-grupo-nome  { font-weight:700; font-size:.9rem; color:#0f172a; }
+.cr-grupo-sub   { font-size:.72rem; color:#64748b; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cr-grupo-right { display:flex; align-items:center; gap:14px; flex-shrink:0; }
+.cr-grupo-right .cr-g-tot { text-align:right; }
+.cr-grupo-right .cr-g-tot-val  { font-weight:800; font-size:1rem; font-variant-numeric:tabular-nums; }
+.cr-grupo-right .cr-g-tot-lbl  { font-size:.62rem; color:#94a3b8; text-transform:uppercase; font-weight:600; letter-spacing:.04em; }
+.cr-grupo-chevron { color:#94a3b8; font-size:.75rem; transition:transform .2s; }
+
+/* ── Cabeçalho de mês (só contratos) ────────────────────────────── */
+.cr-mes-header {
+    display:flex; align-items:center; gap:8px; padding:8px 18px 8px 36px;
+    cursor:pointer; background:#fafafa; border-top:1px solid #f1f5f9;
+    transition:background .12s; user-select:none;
+}
+.cr-mes-header:hover { background:#f1f5f9; }
+.cr-mes-header.venc  { background:#fff7f7; border-left:3px solid #fca5a5; padding-left:33px; }
+.cr-mes-chevron { font-size:.65rem; color:#94a3b8; transition:transform .2s; }
+.cr-mes-label   { font-weight:700; font-size:.82rem; color:#1e293b; }
+.cr-mes-count   { font-size:.72rem; color:#94a3b8; }
+.cr-mes-totals  { margin-left:auto; display:flex; gap:12px; align-items:center; }
+
+/* ── Cabeçalho de coluna ────────────────────────────────────────── */
+.cr-col-header {
+    display:grid; gap:6px; align-items:center;
+    padding:6px 18px; background:#f8fafc; border-top:1px solid #f1f5f9;
+}
+.cr-col-header span {
+    font-size:.62rem; font-weight:700; color:#94a3b8; text-transform:uppercase;
+    letter-spacing:.06em; cursor:pointer; display:flex; align-items:center; gap:3px;
+}
+.cr-col-header span:hover { color:#008cdd; }
+.cr-col-header span.ativo { color:#008cdd; }
+
+/* ── Item row ───────────────────────────────────────────────────── */
+.cr-item {
+    display:grid; gap:6px; align-items:center;
+    padding:10px 18px; border-top:1px solid #f9fafb; transition:background .1s;
+}
+.cr-item:hover { background:#f8fafc; }
+.cr-item.cr-pago { opacity:.55; }
+
+/* Grid columns: contratos (7 cols) */
+.cr-item-c, .cr-col-c { grid-template-columns:30px 94px 1fr 115px 95px 125px 32px; }
+/* Grid columns: multas (6 cols) */
+.cr-item-m, .cr-col-m { grid-template-columns:94px 1fr 115px 95px 125px 32px; }
+/* Grid columns: avulsas (5 cols) */
+.cr-item-a, .cr-col-a { grid-template-columns:1fr 115px 95px 125px 32px; }
+
+/* Placa chip */
+.cr-placa { display:inline-flex; align-items:center; background:#1e293b; color:#fff;
+            font-size:.7rem; font-weight:700; letter-spacing:.05em; padding:2px 8px;
+            border-radius:5px; font-family:monospace; }
+/* Data chip */
+.cr-date { display:inline-flex; align-items:center; gap:4px; font-size:.72rem;
+           font-weight:600; padding:2px 8px; border-radius:7px; white-space:nowrap; }
+.cr-date.ok   { background:#f0fdf4; color:#16a34a; }
+.cr-date.venc { background:#fef2f2; color:#c73a2e; }
+.cr-date.pend { background:#f1f5f9; color:#475569; }
+/* Valor */
+.cr-val { font-size:.88rem; font-weight:700; font-variant-numeric:tabular-nums; text-align:right; }
+.cr-val.ok   { color:#16a34a; }
+.cr-val.venc { color:#ef4444; }
+.cr-val.pend { color:#0f172a; }
+/* Descrição */
+.cr-desc { font-size:.82rem; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cr-desc-sub { font-size:.7rem; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+
+/* ── Menu ⋯ ─────────────────────────────────────────────────────── */
+.cr-act-wrap { position:relative; }
+.cr-act-btn  { background:none; border:none; width:26px; height:26px; border-radius:7px; cursor:pointer;
+               color:#94a3b8; font-size:.95rem; display:flex; align-items:center; justify-content:center; }
+.cr-act-btn:hover { background:#f1f5f9; color:#475569; }
+.cr-act-menu { position:fixed; background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+               box-shadow:0 8px 24px rgba(0,0,0,.12); z-index:400; min-width:160px; overflow:hidden; display:none; }
+.cr-act-menu.open { display:block; }
+.cr-act-menu button { display:flex; align-items:center; gap:8px; width:100%; padding:9px 13px;
+                      border:none; background:transparent; cursor:pointer; font-size:.81rem; color:#374151; }
+.cr-act-menu button:hover { background:#f8fafc; }
+.cr-act-menu button.danger { color:#c73a2e; }
+.cr-act-menu .cr-dd-sep { height:1px; background:#f1f5f9; margin:2px 0; }
+
+/* ── Seção card wrapper ─────────────────────────────────────────── */
+.cr-sect-wrap { background:#fff; border-radius:16px; box-shadow:0 1px 4px rgba(0,0,0,.07); margin-bottom:14px; overflow:hidden; }
 </style>
 
 <div class="page-header">
@@ -136,84 +259,63 @@
     </div>
 </div>
 
-<!-- ── Card Contratos ── -->
-<div class="card" id="card-contratos" style="margin-bottom:16px;">
-    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <h3 class="card-title" style="margin:0;">
-            <i class="fas fa-file-contract"></i> Contratos
-            <span id="badge-contratos" class="badge badge-info" style="font-size:.7rem;margin-left:6px;">0</span>
-        </h3>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <span id="sum-contratos-pend"></span>
-            <span id="sum-contratos-rec"></span>
+<!-- ── Contratos ── -->
+<div class="cr-sect-wrap" id="card-contratos" style="margin-bottom:14px;">
+    <div class="cr-sect-bar">
+        <div class="cr-sect-icon blue"><i class="fas fa-file-contract"></i></div>
+        <div>
+            <div class="cr-sect-title">Contratos</div>
+            <div class="cr-sect-sub">
+                <span id="sum-contratos-pend"></span>
+                <span id="sum-contratos-rec"></span>
+            </div>
         </div>
+        <span id="badge-contratos" class="cr-sect-badge">0</span>
     </div>
-    <div>
-        <table style="width:100%;border-collapse:collapse;">
-            <thead style="display:none;">
-                <tr>
-                    <th></th><th>Cliente</th><th>Placa</th><th>Descrição</th><th>Valor</th>
-                    <th>Vencimento</th><th>Status</th><th>Recebido em</th><th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="tabela-contratos">
-                <tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</td></tr>
-            </tbody>
-        </table>
+    <div id="lista-contratos">
+        <div style="text-align:center;padding:40px;color:#94a3b8;">
+            <i class="fas fa-spinner fa-spin" style="font-size:1.4rem;display:block;margin-bottom:10px;"></i>Carregando...
+        </div>
     </div>
 </div>
 
-<!-- ── Card Multas ── -->
-<div class="card" id="card-multas" style="margin-bottom:16px;">
-    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <h3 class="card-title" style="margin:0;">
-            <i class="fas fa-exclamation-triangle" style="color:#c73a2e;"></i> Multas
-            <span id="badge-multas" class="badge badge-info" style="font-size:.7rem;margin-left:6px;">0</span>
-        </h3>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <span id="sum-multas-pend"></span>
-            <span id="sum-multas-rec"></span>
+<!-- ── Multas ── -->
+<div class="cr-sect-wrap" id="card-multas" style="margin-bottom:14px;">
+    <div class="cr-sect-bar">
+        <div class="cr-sect-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+        <div>
+            <div class="cr-sect-title">Multas</div>
+            <div class="cr-sect-sub">
+                <span id="sum-multas-pend"></span>
+                <span id="sum-multas-rec"></span>
+            </div>
         </div>
+        <span id="badge-multas" class="cr-sect-badge">0</span>
     </div>
-    <div>
-        <table style="width:100%;border-collapse:collapse;">
-            <thead style="display:none;">
-                <tr>
-                    <th>Cliente</th><th>Placa</th><th>Descrição</th><th>Valor</th>
-                    <th>Vencimento</th><th>Status</th><th>Recebido em</th><th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="tabela-multas">
-                <tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</td></tr>
-            </tbody>
-        </table>
+    <div id="lista-multas">
+        <div style="text-align:center;padding:40px;color:#94a3b8;">
+            <i class="fas fa-spinner fa-spin" style="font-size:1.4rem;display:block;margin-bottom:10px;"></i>Carregando...
+        </div>
     </div>
 </div>
 
-<!-- ── Card Avulsas ── -->
-<div class="card" id="card-avulsas">
-    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <h3 class="card-title" style="margin:0;">
-            <i class="fas fa-bolt" style="color:#16a34a;"></i> Avulsas
-            <span id="badge-avulsas" class="badge badge-info" style="font-size:.7rem;margin-left:6px;">0</span>
-        </h3>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <span id="sum-avulsas-pend"></span>
-            <span id="sum-avulsas-rec"></span>
+<!-- ── Avulsas ── -->
+<div class="cr-sect-wrap" id="card-avulsas">
+    <div class="cr-sect-bar">
+        <div class="cr-sect-icon green"><i class="fas fa-bolt"></i></div>
+        <div>
+            <div class="cr-sect-title">Avulsas</div>
+            <div class="cr-sect-sub">
+                <span id="sum-avulsas-pend"></span>
+                <span id="sum-avulsas-rec"></span>
+            </div>
         </div>
+        <span id="badge-avulsas" class="cr-sect-badge">0</span>
     </div>
-    <div>
-        <table style="width:100%;border-collapse:collapse;">
-            <thead style="display:none;">
-                <tr>
-                    <th>Cliente</th><th>Descrição</th><th>Valor</th>
-                    <th>Vencimento</th><th>Status</th><th>Recebido em</th><th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="tabela-avulsas">
-                <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</td></tr>
-            </tbody>
-        </table>
+    <div id="lista-avulsas">
+        <div style="text-align:center;padding:40px;color:#94a3b8;">
+            <i class="fas fa-spinner fa-spin" style="font-size:1.4rem;display:block;margin-bottom:10px;"></i>Carregando...
+        </div>
     </div>
 </div>
 
@@ -596,333 +698,291 @@ function _badgesGrupo(s) {
          + (s.pagas.length>0?`<span style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;">${s.pagas.length} paga${s.pagas.length>1?'s':''}</span>`:'');
 }
 
-const _thS = s=>`<th style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:#64748b;background:#f8fafc;font-weight:700;white-space:nowrap;">${s}</th>`;
-function _thC(col,label){const a=_subSortCol===col;return`<th onclick="event.stopPropagation();_subSort('${col}')" style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:${a?'#008cdd':'#64748b'};background:#f8fafc;font-weight:700;white-space:nowrap;cursor:pointer;user-select:none;">${label}${a?(_subSortAsc?' ↑':' ↓'):''}</th>`;}
-function _subSort(col){if(_subSortCol===col)_subSortAsc=!_subSortAsc;else{_subSortCol=col;_subSortAsc=true;}const was=new Set(_expandedGroups);renderizar();was.forEach(gId=>{const det=document.getElementById('det_'+gId);const chev=document.getElementById('chev_'+gId);if(det)det.style.display='table-row';if(chev)chev.style.transform='rotate(90deg)';});}
+function _sortArrow(col){const a=_subSortCol===col;if(!a)return'<i class="fas fa-sort" style="color:#cbd5e1;font-size:.55rem;"></i>';return _subSortAsc?'<i class="fas fa-sort-up" style="color:#008cdd;font-size:.55rem;"></i>':'<i class="fas fa-sort-down" style="color:#008cdd;font-size:.55rem;"></i>';}
+function _subSort(col){if(_subSortCol===col)_subSortAsc=!_subSortAsc;else{_subSortCol=col;_subSortAsc=true;}const was=new Set(_expandedGroups);renderizar();was.forEach(gId=>{const body=document.getElementById('body_'+gId);const chev=document.getElementById('chev_'+gId);if(body)body.style.display='block';if(chev)chev.style.transform='rotate(90deg)';});}
 function _sortSubItems(items){if(!_subSortCol)return items;return[...items].sort((a,b)=>{let va=a[_subSortCol],vb=b[_subSortCol];if(_subSortCol==='valor'){return _subSortAsc?(parseFloat(va)||0)-(parseFloat(vb)||0):(parseFloat(vb)||0)-(parseFloat(va)||0);}va=String(va||'').toLowerCase();vb=String(vb||'').toLowerCase();return _subSortAsc?va.localeCompare(vb,'pt-BR'):vb.localeCompare(va,'pt-BR');});}
 
 function renderTableContratos(lista, busca) {
     document.getElementById('badge-contratos').textContent = lista.length;
     _setSumRow(lista, 'sum-contratos-pend', 'sum-contratos-rec');
-    const tbody = document.getElementById('tabela-contratos');
+    const wrap = document.getElementById('lista-contratos');
     if (!lista.length) {
-        tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:36px;color:#94a3b8;">
-            <i class="fas fa-file-contract" style="font-size:2rem;margin-bottom:10px;display:block;color:#cbd5e1;"></i>
-            Nenhum contrato encontrado
-            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#008cdd;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
-        </td></tr>`;
+        wrap.innerHTML=`<div style="text-align:center;padding:48px;color:#94a3b8;">
+            <i class="fas fa-file-contract" style="font-size:2.5rem;display:block;margin-bottom:14px;color:#cbd5e1;"></i>
+            <p style="font-weight:600;color:#374151;">Nenhum contrato encontrado</p>
+            <button onclick="limparFiltros()" style="margin-top:14px;padding:7px 16px;background:#008cdd;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
+        </div>`;
         return;
     }
     let grupos = _agrupar(lista, d=>d.placa||'—', d=>d.placa||'—');
-    // vencidos primeiro, depois por pendente decrescente
     grupos.sort((a,b)=>{
         const sa=_grupoSummary(a), sb=_grupoSummary(b);
         if (sa.hasVenc!==sb.hasVenc) return sa.hasVenc?-1:1;
         return sb.totalPend-sa.totalPend;
     });
-    tbody.innerHTML = grupos.map((g,idx)=>{
+    const colH = `<div class="cr-col-header cr-col-c">
+        <span></span>
+        <span onclick="event.stopPropagation();_subSort('placa')" class="${_subSortCol==='placa'?'ativo':''}">Placa ${_sortArrow('placa')}</span>
+        <span onclick="event.stopPropagation();_subSort('descricao')" class="${_subSortCol==='descricao'?'ativo':''}">Descrição ${_sortArrow('descricao')}</span>
+        <span onclick="event.stopPropagation();_subSort('data_vencimento')" class="${_subSortCol==='data_vencimento'?'ativo':''}">Vencimento ${_sortArrow('data_vencimento')}</span>
+        <span onclick="event.stopPropagation();_subSort('valor')" class="${_subSortCol==='valor'?'ativo':''}" style="justify-content:flex-end;">Valor ${_sortArrow('valor')}</span>
+        <span>Situação</span><span></span></div>`;
+
+    wrap.innerHTML = grupos.map((g,idx)=>{
         const gId='cg_'+idx; const s=_grupoSummary(g);
         const autoExpand = !!(busca && busca.length>0);
         const primeiro = g.itens[0] || {};
         const placa = primeiro.placa || '—';
         const descParts = (primeiro.descricao||'').split(/\s*[—\-]\s*/);
-        const veiculoDesc = descParts.length > 1 ? descParts.slice(1).join(' ') : '';
+        const veiculoDesc = descParts.length>1 ? descParts.slice(1).join(' ') : '';
         const clienteNome = primeiro.cliente || '—';
-        const tel=(primeiro.cliente_telefone||'').replace(/\D/g,'');
-        const waMsg=encodeURIComponent(`Olá ${clienteNome}, você possui ${fmtCurrency(s.totalPend)} pendente com o Siqueirão Multimarcas.`);
-        const hasObsGrupo=g.itens.some(d=>_obsCache[`contrato_${d.id}`]);
-        // ── Agrupar itens por mês (baseado em data_vencimento) ──
+        const hasObsGrupo = g.itens.some(d=>_obsCache[`contrato_${d.id}`]);
         const _porMes = {};
-        g.itens.forEach(d => {
-            const mk = (d.data_vencimento||'9999-99').slice(0,7);
-            if (!_porMes[mk]) _porMes[mk] = [];
+        g.itens.forEach(d=>{
+            const mk=(d.data_vencimento||'9999-99').slice(0,7);
+            if(!_porMes[mk])_porMes[mk]=[];
             _porMes[mk].push(d);
         });
-        const _meses = Object.keys(_porMes).sort().reverse();
-
-        const mesRows = _meses.map((mk, mi) => {
-            const mesId = `${gId}_m${mi}`;
-            const itensM = _sortSubItems(_porMes[mk]);
-            const [ano, mes] = mk.split('-');
-            const mesLbl = isNaN(parseInt(mes)) ? 'Sem data' :
-                new Date(parseInt(ano), parseInt(mes)-1, 1)
-                    .toLocaleDateString('pt-BR', {month:'long', year:'numeric'})
-                    .replace(/^\w/, c=>c.toUpperCase());
-            const pendM  = itensM.filter(d=>d.status!=='pago'&&d.status!=='recebido');
-            const pagosM = itensM.filter(d=>d.status==='pago'||d.status==='recebido');
-            const vencM  = pendM.filter(d=>d.data_vencimento&&d.data_vencimento<hoje);
-            const tpM    = pendM.reduce((s,d)=>s+parseFloat(d.valor||0),0);
-            const trM    = pagosM.reduce((s,d)=>s+parseFloat(d.valor||0),0);
-            const hasVencM = vencM.length > 0;
-            const locacaoIdMes = (itensM.find(d=>d.locacao_id)||{}).locacao_id || null;
-
-            const periodoRows = itensM.map(d=>{
+        const mesRows = Object.keys(_porMes).sort().reverse().map((mk,mi)=>{
+            const mesId=`${gId}_m${mi}`;
+            const itensM=_sortSubItems(_porMes[mk]);
+            const [ano,mes]=mk.split('-');
+            const mesLbl=isNaN(parseInt(mes))?'Sem data':new Date(parseInt(ano),parseInt(mes)-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
+            const pendM=itensM.filter(d=>d.status!=='pago'&&d.status!=='recebido');
+            const pagosM=itensM.filter(d=>d.status==='pago'||d.status==='recebido');
+            const vencM=pendM.filter(d=>d.data_vencimento&&d.data_vencimento<hoje);
+            const tpM=pendM.reduce((s,d)=>s+parseFloat(d.valor||0),0);
+            const trM=pagosM.reduce((s,d)=>s+parseFloat(d.valor||0),0);
+            const hvm=vencM.length>0;
+            const periodoRows=itensM.map(d=>{
                 const isPago=d.status==='pago'||d.status==='recebido';
                 const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
                 const desc=(d.descricao||'').replace(/'/g,"\\'");
                 const cliEsc=(d.cliente||'').replace(/'/g,"\\'");
                 const hasObs=!!_obsCache[`contrato_${d.id}`];
-                return `<tr style="background:#fafbfc;">
-                    <td style="padding:7px 10px;width:32px;text-align:center;"><input type="checkbox" class="chk-contrato" data-id="${d.id}" data-valor="${parseFloat(d.valor||0)}" onchange="atualizarBtnCardContratos()" style="cursor:pointer;width:14px;height:14px;accent-color:#008cdd;"></td>
-                    <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
-                    <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
-                    <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                    <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#c73a2e;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
-                    <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
-                    <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['contrato_'+d.id])}" style="color:#ffc900;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
-                    <td style="padding:7px 10px;text-align:center;">
-                        <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
-                            <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_contrato_${d.id}')" title="Ações">⋯</button>
-                            <div id="locmenu_cr_contrato_${d.id}" class="loc-menu" style="display:none;">
-                                ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('contrato',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
-                                ${!isPago?`<button onclick="closeLocMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>`:''}
-                                <button onclick="closeLocMenus();abrirObservacao('contrato',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
-                                <button class="danger" onclick="closeLocMenus();excluirPeriodo(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
-                            </div>
-                        </div>
-                    </td>
-                </tr>`;
-            }).join('');
-
-            return `
-            <tr onclick="toggleMesGrupo('${mesId}')" style="cursor:pointer;background:${hasVencM?'#fff7f7':'#f8fafc'};border-bottom:1px solid #e2e8f0;${hasVencM?'border-left:3px solid #fca5a5;':'border-left:3px solid transparent;'}">
-                <td style="padding:8px 8px 8px 16px;width:32px;text-align:center;" onclick="event.stopPropagation()">
-                    <input type="checkbox" id="chkMes_${mesId}" onchange="selecionarMes('${mesId}',this)" style="cursor:pointer;width:15px;height:15px;accent-color:#008cdd;">
-                </td>
-                <td colspan="8" style="padding:8px 16px 8px 8px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <i class="fas fa-chevron-right" id="chev_${mesId}" style="transition:transform .2s;color:#94a3b8;font-size:.7rem;width:10px;"></i>
-                            <span style="font-weight:700;font-size:.84rem;color:#1e293b;">${mesLbl}</span>
-                            <span style="font-size:.72rem;color:#94a3b8;">${itensM.length} período${itensM.length>1?'s':''}</span>
-                            ${vencM.length>0?`<span style="background:#fef2f2;color:#c73a2e;border:1px solid #fecaca;border-radius:4px;padding:1px 6px;font-size:.65rem;font-weight:600;">${vencM.length} vencido${vencM.length>1?'s':''}</span>`:''}
-                        </div>
-                        <div style="display:flex;gap:10px;align-items:center;">
-                            ${tpM>0?`<span style="font-size:.78rem;font-weight:700;color:#d4a800;">${fmtCurrency(tpM)} pendente</span>`:''}
-                            ${trM>0?`<span style="font-size:.78rem;font-weight:700;color:#16a34a;">${fmtCurrency(trM)} recebido</span>`:''}
-                        </div>
+                const dc=isPago?'ok':vencido?'venc':'pend';
+                const dateTxt=isPago?`<i class="fas fa-check"></i> ${fmtDate(d.data_recebimento)}`
+                              :vencido?`<i class="fas fa-exclamation-circle"></i> ${fmtDate(d.data_vencimento)}`
+                              :`<i class="fas fa-calendar"></i> ${fmtDate(d.data_vencimento)||'—'}`;
+                const shortDesc=(d.descricao||'—').split(' · ')[0];
+                const subDesc=(d.descricao||'').includes(' · ')?(d.descricao||'').split(' · ').slice(1).join(' · ').substring(0,60):'';
+                let statusHtml;
+                if(isPago) statusHtml=`<span class="badge-status pago"><i class="fas fa-check-circle"></i> Pago${hasObs?` 💬`:''}</span>`;
+                else if(vencido) statusHtml=`<span class="badge-status vencido" onclick="abrirBaixa('contrato',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-exclamation-circle"></i> Vencido</span>`;
+                else statusHtml=`<span class="badge-status pendente" onclick="abrirBaixa('contrato',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-clock"></i> Pendente</span>`;
+                const menuItems=`${!isPago?`<button onclick="closeCRMenus();abrirBaixa('contrato',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
+                    ${!isPago?`<button onclick="closeCRMenus();abrirAsaasContrato(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>`:''}
+                    <button onclick="closeCRMenus();abrirObservacao('contrato',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
+                    <div class="cr-dd-sep"></div>
+                    <button class="danger" onclick="closeCRMenus();excluirPeriodo(${d.id})"><i class="fas fa-trash"></i> Excluir</button>`;
+                return `<div class="cr-item cr-item-c ${isPago?'cr-pago':''}">
+                    <div style="display:flex;justify-content:center;align-items:center;">
+                        ${!isPago?`<input type="checkbox" class="chk-contrato" data-id="${d.id}" data-valor="${parseFloat(d.valor||0)}" onchange="atualizarBtnCardContratos()" style="width:14px;height:14px;cursor:pointer;accent-color:#008cdd;">`:''}
                     </div>
-                </td>
-            </tr>
-            <tr id="det_${mesId}" style="display:none;">
-                <td colspan="9" style="padding:0;">
-                    <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
-                        <thead><tr style="border-bottom:1px solid #e2e8f0;">
-                            <th style="padding:5px 10px;background:#f1f5f9;width:32px;"></th>
-                            ${_thC('placa','Placa')}${_thC('descricao','Descrição')}${_thC('valor','Valor')}${_thC('data_vencimento','Vencimento')}${_thC('status','Status')}${_thC('data_recebimento','Recebido em')}${_thS('Ações')}
-                        </tr></thead>
-                        <tbody>${periodoRows}</tbody>
-                    </table>
-                </td>
-            </tr>`;
+                    <div><span class="cr-placa">${_esc(d.placa||'—')}</span></div>
+                    <div style="min-width:0;">
+                        <div class="cr-desc" title="${_esc(d.descricao||'')}">${_esc(shortDesc)}</div>
+                        ${subDesc?`<div class="cr-desc-sub">${_esc(subDesc)}</div>`:''}
+                    </div>
+                    <div><span class="cr-date ${dc}">${dateTxt}</span></div>
+                    <div class="cr-val ${dc}">${fmtCurrency(d.valor)}</div>
+                    <div>${statusHtml}</div>
+                    <div class="cr-act-wrap">
+                        <button class="cr-act-btn" onclick="toggleCRMenu(event,'c${d.id}')">⋯</button>
+                        <div id="crmenu_c${d.id}" class="cr-act-menu">${menuItems}</div>
+                    </div>
+                </div>`;
+            }).join('');
+            return `<div class="cr-mes-header${hvm?' venc':''}" onclick="toggleMesGrupo('${mesId}')">
+                <div onclick="event.stopPropagation()" style="display:flex;align-items:center;">
+                    <input type="checkbox" id="chkMes_${mesId}" onchange="selecionarMes('${mesId}',this)" style="width:14px;height:14px;cursor:pointer;accent-color:#008cdd;">
+                </div>
+                <i class="fas fa-chevron-right cr-mes-chevron" id="chev_${mesId}"></i>
+                <span class="cr-mes-label">${mesLbl}</span>
+                <span class="cr-mes-count">${itensM.length} período${itensM.length>1?'s':''}</span>
+                ${hvm?`<span style="background:#fef2f2;color:#c73a2e;border:1px solid #fecaca;border-radius:4px;padding:1px 7px;font-size:.64rem;font-weight:600;">${vencM.length} vencido${vencM.length>1?'s':''}</span>`:''}
+                <div class="cr-mes-totals">
+                    ${tpM>0?`<span style="font-size:.77rem;font-weight:700;color:#d4a800;">${fmtCurrency(tpM)}</span>`:''}
+                    ${trM>0?`<span style="font-size:.77rem;font-weight:700;color:#16a34a;">${fmtCurrency(trM)}</span>`:''}
+                </div>
+            </div>
+            <div class="cr-mes-body" id="body_${mesId}" style="display:none;">
+                ${colH}${periodoRows}
+            </div>`;
         }).join('');
 
-        return `
-        <tr class="grupo-row-card" onclick="toggleGrupoCard('${gId}')" style="cursor:pointer;border-bottom:1px solid #e2e8f0;${s.hasVenc?'border-left:3px solid #fca5a5;':''}">
-            <td colspan="9" style="padding:12px 16px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                        <div onclick="event.stopPropagation()">
-                            <input type="checkbox" id="chkG_${gId}" onchange="selecionarGrupo('${gId}',this)" style="cursor:pointer;width:15px;height:15px;accent-color:#008cdd;">
-                        </div>
-                        <div>
-                            <span style="background:#1e3a5f;color:#7dc5ee;font-size:.82rem;font-weight:800;padding:3px 10px;border-radius:6px;font-family:monospace;letter-spacing:.04em;">${_esc(placa)}</span>
-                        </div>
-                        <div>
-                            <div style="font-weight:600;font-size:.88rem;color:#0f172a;">${_esc(veiculoDesc)}${hasObsGrupo?' <span title="Grupo tem observações" style="font-size:.85rem;">💬</span>':''}</div>
-                            <div style="font-size:.72rem;color:#64748b;margin-top:2px;">${_esc(clienteNome)} · ${g.itens.length} período${g.itens.length>1?'s':''}</div>
-                        </div>
-                        <div>${_badgesGrupo(s)}</div>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-                        ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#c73a2e;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
-                        ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d4a800;">${fmtCurrency(s.totalPend)}</div></div>`:''}
-                        ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
-                        <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
-                    </div>
+        return `<div class="cr-grupo">
+            <div class="cr-grupo-header" onclick="toggleGrupoCard('${gId}')">
+                <div onclick="event.stopPropagation()" style="display:flex;align-items:center;">
+                    <input type="checkbox" id="chkG_${gId}" onchange="selecionarGrupo('${gId}',this)" style="width:14px;height:14px;cursor:pointer;accent-color:#008cdd;">
                 </div>
-            </td>
-        </tr>
-        <tr id="det_${gId}" style="display:${autoExpand?'table-row':'none'};">
-            <td colspan="9" style="padding:0;border-bottom:2px solid #e2e8f0;">
-                <table style="width:100%;border-collapse:collapse;">
-                    <tbody>${mesRows}</tbody>
-                </table>
-            </td>
-        </tr>`;
+                <div class="cr-grupo-avatar blue">${_esc(placa.replace(/[^A-Z0-9]/gi,'').slice(0,3).toUpperCase()||'—')}</div>
+                <div class="cr-grupo-info">
+                    <div class="cr-grupo-nome">${_esc(placa)}${hasObsGrupo?' 💬':''}</div>
+                    <div class="cr-grupo-sub">${_esc(veiculoDesc||clienteNome)} · ${g.itens.length} período${g.itens.length>1?'s':''}</div>
+                </div>
+                <div class="cr-grupo-right">
+                    ${_badgesGrupo(s)}
+                    ${s.proxVenc?`<div class="cr-g-tot"><div class="cr-g-tot-lbl">Próx. Venc.</div><div class="cr-g-tot-val" style="${s.hasVenc?'color:#c73a2e;':'color:#374151;'}font-size:.82rem;">${fmtDate(s.proxVenc)}</div></div>`:''}
+                    ${s.totalPend>0?`<div class="cr-g-tot"><div class="cr-g-tot-lbl">Pendente</div><div class="cr-g-tot-val" style="color:#d4a800;">${fmtCurrency(s.totalPend)}</div></div>`:''}
+                    ${s.totalRec>0?`<div class="cr-g-tot"><div class="cr-g-tot-lbl">Recebido</div><div class="cr-g-tot-val" style="color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
+                    <i class="fas fa-chevron-right cr-grupo-chevron" id="chev_${gId}" ${autoExpand?'style="transform:rotate(90deg)"':''}></i>
+                </div>
+            </div>
+            <div class="cr-grupo-body" id="body_${gId}" style="${autoExpand?'':'display:none'}">
+                ${mesRows}
+            </div>
+        </div>`;
     }).join('');
-    // atualizar chevrons para grupos auto-expandidos
-    if (busca) grupos.forEach((_,idx)=>{ const c=document.getElementById('chev_cg_'+idx); if(c) c.style.transform='rotate(90deg)'; });
 }
 
 function renderTableMultas(lista, busca) {
     document.getElementById('badge-multas').textContent = lista.length;
     _setSumRow(lista, 'sum-multas-pend', 'sum-multas-rec');
-    const tbody = document.getElementById('tabela-multas');
+    const wrap = document.getElementById('lista-multas');
     if (!lista.length) {
-        tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:36px;color:#94a3b8;">
-            <i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:10px;display:block;color:#cbd5e1;"></i>
-            Nenhuma multa encontrada
-            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#008cdd;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
-        </td></tr>`;
+        wrap.innerHTML=`<div style="text-align:center;padding:48px;color:#94a3b8;">
+            <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;display:block;margin-bottom:14px;color:#cbd5e1;"></i>
+            <p style="font-weight:600;color:#374151;">Nenhuma multa encontrada</p>
+            <button onclick="limparFiltros()" style="margin-top:14px;padding:7px 16px;background:#008cdd;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
+        </div>`;
         return;
     }
     let grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||'sem'), d=>d.cliente||'Sem motorista');
-    grupos.sort((a,b)=>{
-        const sa=_grupoSummary(a), sb=_grupoSummary(b);
-        if (sa.hasVenc!==sb.hasVenc) return sa.hasVenc?-1:1;
-        return sb.totalPend-sa.totalPend;
-    });
-    tbody.innerHTML = grupos.map((g,idx)=>{
+    grupos.sort((a,b)=>{ const sa=_grupoSummary(a),sb=_grupoSummary(b); if(sa.hasVenc!==sb.hasVenc)return sa.hasVenc?-1:1; return sb.totalPend-sa.totalPend; });
+    const colH=`<div class="cr-col-header cr-col-m">
+        <span onclick="event.stopPropagation();_subSort('placa')" class="${_subSortCol==='placa'?'ativo':''}">Placa ${_sortArrow('placa')}</span>
+        <span onclick="event.stopPropagation();_subSort('descricao')" class="${_subSortCol==='descricao'?'ativo':''}">Descrição ${_sortArrow('descricao')}</span>
+        <span onclick="event.stopPropagation();_subSort('data_vencimento')" class="${_subSortCol==='data_vencimento'?'ativo':''}">Vencimento ${_sortArrow('data_vencimento')}</span>
+        <span onclick="event.stopPropagation();_subSort('valor')" class="${_subSortCol==='valor'?'ativo':''}" style="justify-content:flex-end;">Valor ${_sortArrow('valor')}</span>
+        <span>Situação</span><span></span></div>`;
+    wrap.innerHTML = grupos.map((g,idx)=>{
         const gId='mg_'+idx; const s=_grupoSummary(g);
-        const autoExpand = !!(busca && busca.length>0);
-        const tel=(g.itens[0]?.cliente_telefone||'').replace(/\D/g,'');
-        const waMsg=encodeURIComponent(`Olá ${g.cliente}, você possui ${fmtCurrency(s.totalPend)} em multas pendentes com o Siqueirão Multimarcas.`);
+        const autoExpand=!!(busca&&busca.length>0);
         const hasObsGrupo=g.itens.some(d=>_obsCache[`multa_${d.id}`]);
-        const subRows = _sortSubItems(g.itens).map(d=>{
+        const initials=_esc((g.cliente||'?')[0].toUpperCase());
+        const subRows=_sortSubItems(g.itens).map(d=>{
             const isPago=d.status==='pago'||d.status==='recebido';
             const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
             const desc=(d.descricao||'').replace(/'/g,"\\'");
             const cliEsc=(d.cliente||'').replace(/'/g,"\\'");
-            const hasObs=!!_obsCache[`multa_${d.id}`];
-            return `<tr style="background:#fafbfc;">
-                <td style="padding:7px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;">${d.placa||'—'}</td>
-                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
-                <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#c73a2e;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
-                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'pago':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['multa_'+d.id])}" style="color:#ffc900;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
-                <td style="padding:7px 10px;text-align:center;">
-                    <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
-                        <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_multa_${d.id}')" title="Ações">⋯</button>
-                        <div id="locmenu_cr_multa_${d.id}" class="loc-menu" style="display:none;">
-                            ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('multa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
-                            ${!isPago?`<button onclick="closeLocMenus();abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>`:''}
-                            <button onclick="closeLocMenus();abrirObservacao('multa',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
-                            <button class="danger" onclick="closeLocMenus();excluirMultaCR(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
-                        </div>
-                    </div>
-                </td>
-            </tr>`;
+            const dc=isPago?'ok':vencido?'venc':'pend';
+            const dateTxt=isPago?`<i class="fas fa-check"></i> ${fmtDate(d.data_recebimento)}`
+                          :vencido?`<i class="fas fa-exclamation-circle"></i> ${fmtDate(d.data_vencimento)}`
+                          :`<i class="fas fa-calendar"></i> ${fmtDate(d.data_vencimento)||'—'}`;
+            let statusHtml;
+            if(isPago) statusHtml=`<span class="badge-status pago"><i class="fas fa-check-circle"></i> Pago</span>`;
+            else if(vencido) statusHtml=`<span class="badge-status vencido" onclick="abrirBaixa('multa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-exclamation-circle"></i> Vencido</span>`;
+            else statusHtml=`<span class="badge-status pendente" onclick="abrirBaixa('multa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-clock"></i> Pendente</span>`;
+            const menuItems=`${!isPago?`<button onclick="closeCRMenus();abrirBaixa('multa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
+                ${!isPago?`<button onclick="closeCRMenus();abrirAsaasMulta(${d.id},${parseFloat(d.valor||0)},'${desc}','${cliEsc}')"><i class="fas fa-bolt"></i> Asaas</button>`:''}
+                <button onclick="closeCRMenus();abrirObservacao('multa',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
+                <div class="cr-dd-sep"></div>
+                <button class="danger" onclick="closeCRMenus();excluirMultaCR(${d.id})"><i class="fas fa-trash"></i> Excluir</button>`;
+            return `<div class="cr-item cr-item-m ${isPago?'cr-pago':''}">
+                <div><span class="cr-placa">${_esc(d.placa||'—')}</span></div>
+                <div class="cr-desc" title="${_esc(d.descricao||'')}">${_esc((d.descricao||'—').substring(0,60))}</div>
+                <div><span class="cr-date ${dc}">${dateTxt}</span></div>
+                <div class="cr-val ${dc}">${fmtCurrency(d.valor)}</div>
+                <div>${statusHtml}</div>
+                <div class="cr-act-wrap">
+                    <button class="cr-act-btn" onclick="toggleCRMenu(event,'m${d.id}')">⋯</button>
+                    <div id="crmenu_m${d.id}" class="cr-act-menu">${menuItems}</div>
+                </div>
+            </div>`;
         }).join('');
-        return `
-        <tr class="grupo-row-card" onclick="toggleGrupoCard('${gId}')" style="cursor:pointer;border-bottom:1px solid #e2e8f0;${s.hasVenc?'border-left:3px solid #fca5a5;':''}">
-            <td colspan="8" style="padding:12px 16px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                        <div>
-                            <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${_esc(g.cliente)}${hasObsGrupo?' <span title="Grupo tem observações" style="font-size:.85rem;">💬</span>':''}</div>
-                            <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} multa${g.itens.length>1?'s':''}</div>
-                        </div>
-                        <div>${_badgesGrupo(s)}</div>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-                        ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#c73a2e;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
-                        ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d4a800;">${fmtCurrency(s.totalPend)}</div></div>`:''}
-                        ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
-                        <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
-                    </div>
+        return `<div class="cr-grupo">
+            <div class="cr-grupo-header" onclick="toggleGrupoCard('${gId}')">
+                <div class="cr-grupo-avatar red">${initials}</div>
+                <div class="cr-grupo-info">
+                    <div class="cr-grupo-nome">${_esc(g.cliente)}${hasObsGrupo?' 💬':''}</div>
+                    <div class="cr-grupo-sub">${g.itens.length} multa${g.itens.length>1?'s':''}</div>
                 </div>
-            </td>
-        </tr>
-        <tr id="det_${gId}" style="display:${autoExpand?'table-row':'none'};">
-            <td colspan="8" style="padding:0;">
-                <div style="border-top:1px solid #e2e8f0;">
-                    <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
-                        <thead><tr style="border-bottom:1px solid #e2e8f0;">
-                            ${_thC('placa','Placa')}${_thC('descricao','Descrição')}${_thC('valor','Valor')}${_thC('data_vencimento','Vencimento')}${_thC('status','Status')}${_thC('data_recebimento','Recebido em')}${_thS('Ações')}
-                        </tr></thead>
-                        <tbody>${subRows}</tbody>
-                    </table>
+                <div class="cr-grupo-right">
+                    ${_badgesGrupo(s)}
+                    ${s.totalPend>0?`<div class="cr-g-tot"><div class="cr-g-tot-lbl">Pendente</div><div class="cr-g-tot-val" style="color:#d4a800;">${fmtCurrency(s.totalPend)}</div></div>`:''}
+                    ${s.totalRec>0?`<div class="cr-g-tot"><div class="cr-g-tot-lbl">Recebido</div><div class="cr-g-tot-val" style="color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
+                    <i class="fas fa-chevron-right cr-grupo-chevron" id="chev_${gId}" ${autoExpand?'style="transform:rotate(90deg)"':''}></i>
                 </div>
-            </td>
-        </tr>`;
+            </div>
+            <div class="cr-grupo-body" id="body_${gId}" style="${autoExpand?'':'display:none'}">
+                ${colH}${subRows}
+            </div>
+        </div>`;
     }).join('');
-    if (busca) grupos.forEach((_,idx)=>{ const c=document.getElementById('chev_mg_'+idx); if(c) c.style.transform='rotate(90deg)'; });
 }
 
 function renderTableAvulsas(lista, busca) {
     document.getElementById('badge-avulsas').textContent = lista.length;
     _setSumRow(lista, 'sum-avulsas-pend', 'sum-avulsas-rec');
-    const tbody = document.getElementById('tabela-avulsas');
+    const wrap = document.getElementById('lista-avulsas');
     if (!lista.length) {
-        tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:36px;color:#94a3b8;">
-            <i class="fas fa-receipt" style="font-size:2rem;margin-bottom:10px;display:block;color:#cbd5e1;"></i>
-            Nenhuma cobrança avulsa encontrada
-            <br><button onclick="limparFiltros()" style="margin-top:12px;padding:6px 14px;background:#008cdd;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;">Limpar filtros</button>
-        </td></tr>`;
+        wrap.innerHTML=`<div style="text-align:center;padding:48px;color:#94a3b8;">
+            <i class="fas fa-receipt" style="font-size:2.5rem;display:block;margin-bottom:14px;color:#cbd5e1;"></i>
+            <p style="font-weight:600;color:#374151;">Nenhuma cobrança avulsa</p>
+            <button onclick="abrirModalAvulsa()" style="margin-top:14px;padding:7px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.8rem;"><i class="fas fa-plus"></i> Nova Cobrança</button>
+        </div>`;
         return;
     }
     let grupos = _agrupar(lista, d=>d.cliente_id!=null?'id_'+d.cliente_id:'n_'+(d.cliente||'sem'), d=>d.cliente||'—');
-    grupos.sort((a,b)=>{
-        const sa=_grupoSummary(a), sb=_grupoSummary(b);
-        if (sa.hasVenc!==sb.hasVenc) return sa.hasVenc?-1:1;
-        return sb.totalPend-sa.totalPend;
-    });
-    tbody.innerHTML = grupos.map((g,idx)=>{
+    grupos.sort((a,b)=>{ const sa=_grupoSummary(a),sb=_grupoSummary(b); if(sa.hasVenc!==sb.hasVenc)return sa.hasVenc?-1:1; return sb.totalPend-sa.totalPend; });
+    const colH=`<div class="cr-col-header cr-col-a">
+        <span onclick="event.stopPropagation();_subSort('descricao')" class="${_subSortCol==='descricao'?'ativo':''}">Descrição ${_sortArrow('descricao')}</span>
+        <span onclick="event.stopPropagation();_subSort('data_vencimento')" class="${_subSortCol==='data_vencimento'?'ativo':''}">Vencimento ${_sortArrow('data_vencimento')}</span>
+        <span onclick="event.stopPropagation();_subSort('valor')" class="${_subSortCol==='valor'?'ativo':''}" style="justify-content:flex-end;">Valor ${_sortArrow('valor')}</span>
+        <span>Situação</span><span></span></div>`;
+    wrap.innerHTML = grupos.map((g,idx)=>{
         const gId='ag_'+idx; const s=_grupoSummary(g);
-        const autoExpand = !!(busca && busca.length>0);
-        const tel=(g.itens[0]?.cliente_telefone||'').replace(/\D/g,'');
-        const waMsg=encodeURIComponent(`Olá ${g.cliente}, você possui ${fmtCurrency(s.totalPend)} em cobranças pendentes com o Siqueirão Multimarcas.`);
+        const autoExpand=!!(busca&&busca.length>0);
         const hasObsGrupo=g.itens.some(d=>_obsCache[`avulsa_${d.id}`]);
-        const subRows = _sortSubItems(g.itens).map(d=>{
+        const initials=_esc((g.cliente||'?')[0].toUpperCase());
+        const subRows=_sortSubItems(g.itens).map(d=>{
             const isPago=d.status==='pago'||d.status==='recebido';
             const vencido=!isPago&&d.data_vencimento&&d.data_vencimento<hoje;
             const desc=(d.descricao||'').replace(/'/g,"\\'");
-            const hasObs=!!_obsCache[`avulsa_${d.id}`];
-            return `<tr style="background:#fafbfc;">
-                <td style="padding:7px 10px;font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${_esc(d.descricao||'')}">${d.descricao||'—'}</td>
-                <td style="padding:7px 10px;font-weight:700;">${fmtCurrency(d.valor)}</td>
-                <td style="padding:7px 10px;font-size:.8rem;${vencido?'color:#c73a2e;font-weight:600;':''}">${fmtDate(d.data_vencimento)||'—'}</td>
-                <td style="padding:7px 10px;"><span class="badge-status ${isPago?'recebido':vencido?'vencido':'pendente'}">${isPago?'Pago':vencido?'Vencido':'Pendente'}</span></td>
-                <td style="padding:7px 10px;font-size:.8rem;color:#64748b;">${fmtDate(d.data_recebimento)||'—'}${hasObs?` <span title="${_esc(_obsCache['avulsa_'+d.id])}" style="color:#ffc900;cursor:help;"><i class="fas fa-comment-alt"></i></span>`:''}</td>
-                <td style="padding:7px 10px;text-align:center;">
-                    <div class="loc-menu-wrap" style="position:relative;display:inline-block;">
-                        <button class="loc-menu-btn" onclick="toggleLocMenu(event,'cr_avulsa_${d.id}')" title="Ações">⋯</button>
-                        <div id="locmenu_cr_avulsa_${d.id}" class="loc-menu" style="display:none;">
-                            ${!isPago?`<button onclick="closeLocMenus();abrirBaixa('avulsa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
-                            <button onclick="closeLocMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button>
-                            <button onclick="closeLocMenus();abrirObservacao('avulsa',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
-                            <button class="danger" onclick="closeLocMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>
-                        </div>
-                    </div>
-                </td>
-            </tr>`;
+            const dc=isPago?'ok':vencido?'venc':'pend';
+            const dateTxt=isPago?`<i class="fas fa-check"></i> ${fmtDate(d.data_recebimento)}`
+                          :vencido?`<i class="fas fa-exclamation-circle"></i> ${fmtDate(d.data_vencimento)}`
+                          :`<i class="fas fa-calendar"></i> ${fmtDate(d.data_vencimento)||'—'}`;
+            let statusHtml;
+            if(isPago) statusHtml=`<span class="badge-status pago"><i class="fas fa-check-circle"></i> Pago</span>`;
+            else if(vencido) statusHtml=`<span class="badge-status vencido" onclick="abrirBaixa('avulsa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-exclamation-circle"></i> Vencido</span>`;
+            else statusHtml=`<span class="badge-status pendente" onclick="abrirBaixa('avulsa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-clock"></i> Pendente</span>`;
+            const menuItems=`${!isPago?`<button onclick="closeCRMenus();abrirBaixa('avulsa',${d.id},'${desc}',${parseFloat(d.valor||0)})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
+                <button onclick="closeCRMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button>
+                <button onclick="closeCRMenus();abrirObservacao('avulsa',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
+                <div class="cr-dd-sep"></div>
+                <button class="danger" onclick="closeCRMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>`;
+            return `<div class="cr-item cr-item-a ${isPago?'cr-pago':''}">
+                <div class="cr-desc" title="${_esc(d.descricao||'')}">${_esc((d.descricao||'—').substring(0,60))}</div>
+                <div><span class="cr-date ${dc}">${dateTxt}</span></div>
+                <div class="cr-val ${dc}">${fmtCurrency(d.valor)}</div>
+                <div>${statusHtml}</div>
+                <div class="cr-act-wrap">
+                    <button class="cr-act-btn" onclick="toggleCRMenu(event,'a${d.id}')">⋯</button>
+                    <div id="crmenu_a${d.id}" class="cr-act-menu">${menuItems}</div>
+                </div>
+            </div>`;
         }).join('');
-        return `
-        <tr class="grupo-row-card" onclick="toggleGrupoCard('${gId}')" style="cursor:pointer;border-bottom:1px solid #e2e8f0;${s.hasVenc?'border-left:3px solid #fca5a5;':''}">
-            <td colspan="7" style="padding:12px 16px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                        <div>
-                            <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${_esc(g.cliente)}${hasObsGrupo?' <span title="Grupo tem observações" style="font-size:.85rem;">💬</span>':''}</div>
-                            <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} cobrança${g.itens.length>1?'s':''}</div>
-                        </div>
-                        <div>${_badgesGrupo(s)}</div>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-                        ${s.proxVenc?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Próx. Venc.</div><div style="font-size:.82rem;${s.hasVenc?'color:#c73a2e;font-weight:700;':'color:#374151;'}">${fmtDate(s.proxVenc)}${s.hasVenc?' ⚠':''}</div></div>`:''}
-                        ${s.totalPend>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pendente</div><div style="font-weight:700;color:#d4a800;">${fmtCurrency(s.totalPend)}</div></div>`:''}
-                        ${s.totalRec>0?`<div style="text-align:right;"><div style="font-size:.62rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Recebido</div><div style="font-weight:700;color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
-                        <i class="fas fa-chevron-right" id="chev_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
-                    </div>
+        return `<div class="cr-grupo">
+            <div class="cr-grupo-header" onclick="toggleGrupoCard('${gId}')">
+                <div class="cr-grupo-avatar green">${initials}</div>
+                <div class="cr-grupo-info">
+                    <div class="cr-grupo-nome">${_esc(g.cliente)}${hasObsGrupo?' 💬':''}</div>
+                    <div class="cr-grupo-sub">${g.itens.length} cobrança${g.itens.length>1?'s':''}</div>
                 </div>
-            </td>
-        </tr>
-        <tr id="det_${gId}" style="display:${autoExpand?'table-row':'none'};">
-            <td colspan="7" style="padding:0;">
-                <div style="border-top:1px solid #e2e8f0;">
-                    <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
-                        <thead><tr style="border-bottom:1px solid #e2e8f0;">
-                            ${_thC('descricao','Descrição')}${_thC('valor','Valor')}${_thC('data_vencimento','Vencimento')}${_thC('status','Status')}${_thC('data_recebimento','Recebido em')}${_thS('Ações')}
-                        </tr></thead>
-                        <tbody>${subRows}</tbody>
-                    </table>
+                <div class="cr-grupo-right">
+                    ${_badgesGrupo(s)}
+                    ${s.totalPend>0?`<div class="cr-g-tot"><div class="cr-g-tot-lbl">Pendente</div><div class="cr-g-tot-val" style="color:#d4a800;">${fmtCurrency(s.totalPend)}</div></div>`:''}
+                    ${s.totalRec>0?`<div class="cr-g-tot"><div class="cr-g-tot-lbl">Recebido</div><div class="cr-g-tot-val" style="color:#16a34a;">${fmtCurrency(s.totalRec)}</div></div>`:''}
+                    <i class="fas fa-chevron-right cr-grupo-chevron" id="chev_${gId}" ${autoExpand?'style="transform:rotate(90deg)"':''}></i>
                 </div>
-            </td>
-        </tr>`;
+            </div>
+            <div class="cr-grupo-body" id="body_${gId}" style="${autoExpand?'':'display:none'}">
+                ${colH}${subRows}
+            </div>
+        </div>`;
     }).join('');
-    if (busca) grupos.forEach((_,idx)=>{ const c=document.getElementById('chev_ag_'+idx); if(c) c.style.transform='rotate(90deg)'; });
 }
 
 // ── Seleção em massa — Contratos ──────────────────────────────────────────────
@@ -932,44 +992,43 @@ function selecionarTodosCard(el) {
 }
 
 function toggleGrupoCard(gId) {
-    const det  = document.getElementById('det_' + gId);
+    const body = document.getElementById('body_' + gId);
     const chev = document.getElementById('chev_' + gId);
-    if (!det) return;
-    const isOpen = det.style.display !== 'none';
-    det.style.display = isOpen ? 'none' : 'table-row';
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
     if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
     if (isOpen) _expandedGroups.delete(gId); else _expandedGroups.add(gId);
 }
 function toggleMesGrupo(mesId) {
-    const det  = document.getElementById('det_' + mesId);
+    const body = document.getElementById('body_' + mesId);
     const chev = document.getElementById('chev_' + mesId);
-    if (!det) return;
-    const isOpen = det.style.display !== 'none';
-    det.style.display = isOpen ? 'none' : 'table-row';
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
     if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
 }
 function selecionarGrupo(gId, el) {
-    const det  = document.getElementById('det_' + gId);
+    const body = document.getElementById('body_' + gId);
     const chev = document.getElementById('chev_' + gId);
-    if (!det) return;
-    if (el.checked && det.style.display === 'none') {
-        det.style.display = 'table-row';
+    if (!body) return;
+    if (el.checked && body.style.display === 'none') {
+        body.style.display = 'block';
         if (chev) chev.style.transform = 'rotate(90deg)';
     }
-    det.querySelectorAll('.chk-contrato').forEach(c => c.checked = el.checked);
+    body.querySelectorAll('.chk-contrato').forEach(c => c.checked = el.checked);
     atualizarBtnCardContratos();
 }
 
 function selecionarMes(mesId, el) {
-    const det  = document.getElementById('det_' + mesId);
+    const body = document.getElementById('body_' + mesId);
     const chev = document.getElementById('chev_' + mesId);
-    if (!det) return;
-    // Expande o mês ao marcar
-    if (el.checked && det.style.display === 'none') {
-        det.style.display = 'table-row';
+    if (!body) return;
+    if (el.checked && body.style.display === 'none') {
+        body.style.display = 'block';
         if (chev) chev.style.transform = 'rotate(90deg)';
     }
-    det.querySelectorAll('.chk-contrato').forEach(c => c.checked = el.checked);
+    body.querySelectorAll('.chk-contrato').forEach(c => c.checked = el.checked);
     atualizarBtnCardContratos();
 }
 
@@ -1525,22 +1584,20 @@ async function confirmarAsaasMulta() {
 }
 
 // ── Menus de ação ─────────────────────────────────────────────────────────────
-function toggleLocMenu(e, id) {
+function toggleCRMenu(e, id) {
     e.stopPropagation();
-    const menu=document.getElementById('locmenu_'+id);
-    const isOpen=menu&&menu.style.display!=='none';
-    closeLocMenus();
-    if(menu&&!isOpen){
+    const menu=document.getElementById('crmenu_'+id);
+    const wasOpen=menu&&menu.classList.contains('open');
+    closeCRMenus();
+    if(menu&&!wasOpen){
         const rect=e.currentTarget.getBoundingClientRect();
-        menu.style.position='fixed';
         menu.style.top=(rect.bottom+4)+'px';
-        menu.style.left='auto';
         menu.style.right=(window.innerWidth-rect.right)+'px';
-        menu.style.display='block';
+        menu.classList.add('open');
     }
 }
-function closeLocMenus(){document.querySelectorAll('.loc-menu').forEach(m=>m.style.display='none');}
-document.addEventListener('click',closeLocMenus);
+function closeCRMenus(){document.querySelectorAll('.cr-act-menu.open').forEach(m=>m.classList.remove('open'));}
+document.addEventListener('click',closeCRMenus);
 
 window.addEventListener('load', async () => { await carregarDados(); filtrarVigente(); });
 
@@ -1553,16 +1610,6 @@ carregarDados = async function(...args) {
 };
 </script>
 
-<style>
-.loc-menu-btn { background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:3px 9px;font-size:.95rem;cursor:pointer;color:#475569;letter-spacing:2px;line-height:1; }
-.loc-menu-btn:hover { background:#e2e8f0; }
-.loc-menu { position:absolute;right:0;top:calc(100% + 4px);z-index:200;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.10);min-width:150px;overflow:hidden; }
-.loc-menu button { display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;text-align:left;padding:9px 14px;font-size:.83rem;cursor:pointer;color:#374151; }
-.loc-menu button:hover { background:#f8fafc; }
-.loc-menu button.danger { color:#c73a2e; }
-.loc-menu button.danger:hover { background:#fef2f2; }
-.loc-menu button i { width:14px;text-align:center; }
-</style>
 
 <!-- Barra flutuante de seleção -->
 <div id="barraSelCR" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
