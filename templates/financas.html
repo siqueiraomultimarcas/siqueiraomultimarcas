@@ -664,51 +664,90 @@ function _avatarBg(nome) {
     return cores[i];
 }
 
+function _grupoStatus(parcelas) {
+    if (parcelas.some(p=>p.vencido))   return 'vencido';
+    if (parcelas.some(p=>p.status==='pendente')) return 'pendente';
+    return 'pago';
+}
+
+function toggleGrupo(locId) {
+    const sub = el('grp_'+locId);
+    const arr = el('grpArrow_'+locId);
+    if (!sub) return;
+    const open = sub.style.display !== 'none';
+    sub.style.display = open ? 'none' : 'block';
+    if (arr) arr.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
+}
+
 function renderEntradas(lista) {
     const el_le = el('listaEntradas');
     if(!lista.length) {
         el_le.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-size:.85rem;">Nenhum lançamento encontrado</div>';
         return;
     }
-    el_le.innerHTML = lista.slice(0,50).map(c=>{
-        const ini = fmtDate(c.data_inicio_period);
-        const fim = fmtDate(c.data_fim_period);
-        const per = ini!=='—'&&fim!=='—' ? `${ini} – ${fim}` : (c.data_vencimento?'Venc. '+fmtDate(c.data_vencimento):'—');
-        const bg  = _avatarBg(c.cliente);
-        const ini_l = (c.cliente||'?')[0].toUpperCase();
 
-        let badge = '';
-        if(c.status==='pago') {
-            badge = `<span class="bdg-pago">Pago</span>`;
-        } else if(c.vencido) {
-            badge = `<span class="bdg-venc" onclick="abrirModalPagamento(${c.id})" title="Confirmar pagamento">Vencido</span>`;
-        } else {
-            badge = `<span class="bdg-pend" onclick="abrirModalPagamento(${c.id})" title="Confirmar pagamento">Pendente</span>`;
-        }
+    // Agrupar por locacao_id
+    const grupos = {};
+    lista.forEach(c => {
+        const key = c.locacao_id || ('avulso_'+c.id);
+        if (!grupos[key]) grupos[key] = { locacao_id: c.locacao_id, cliente: c.cliente, placa: c.placa, descricao: c.descricao, parcelas: [] };
+        grupos[key].parcelas.push(c);
+    });
 
-        return `<div class="ent-row">
-            <div class="ent-avatar" style="background:${bg};">${ini_l}</div>
-            <div class="ent-info">
-                <div class="ent-nome">${c.cliente||'—'}</div>
-                <div class="ent-sub">${c.descricao||c.placa||'—'} &nbsp;·&nbsp; ${per}</div>
-            </div>
-            <div class="ent-val">${fmtR(c.valor)}</div>
-            ${badge}
-            <div class="ent-menu-wrap">
-                <div class="ent-menu-btn" onclick="toggleMenuEnt(${c.id},event)">⋯</div>
-                <div class="ent-dropdown" id="entDD_${c.id}">
-                    <div class="ent-dd-item" onclick="abrirMaisInfo(${c.id})">
-                        <i class="fas fa-info-circle"></i> Mais informações
-                    </div>
-                    <div class="ent-dd-item" onclick="gerarLinkPagamento(${c.id})">
-                        <i class="fas fa-link"></i> Gerar link de pagamento
-                    </div>
-                    ${c.status!=='pago'?`<hr class="ent-dd-sep">
-                    <div class="ent-dd-item" onclick="abrirModalPagamento(${c.id})">
-                        <i class="fas fa-check-circle"></i> Confirmar pagamento
-                    </div>`:'' }
+    el_le.innerHTML = Object.values(grupos).map(g => {
+        const bg    = _avatarBg(g.cliente);
+        const letra = (g.cliente||'?')[0].toUpperCase();
+        const total = g.parcelas.reduce((s,p)=>s+parseFloat(p.valor||0),0);
+        const qtd   = g.parcelas.length;
+        const st    = _grupoStatus(g.parcelas);
+        const locId = g.locacao_id || ('av'+g.parcelas[0].id);
+
+        let badgeGrp = '';
+        const qtdVenc = g.parcelas.filter(p=>p.vencido).length;
+        const qtdPend = g.parcelas.filter(p=>p.status==='pendente'&&!p.vencido).length;
+        if (st==='vencido') badgeGrp = `<span class="bdg-venc">${qtdVenc} vencida${qtdVenc>1?'s':''}</span>`;
+        else if (st==='pendente') badgeGrp = `<span class="bdg-pend">${qtdPend} pendente${qtdPend>1?'s':''}</span>`;
+        else badgeGrp = `<span class="bdg-pago">Pago</span>`;
+
+        // Parcelas internas
+        const subRows = g.parcelas.map(c => {
+            const ini = fmtDate(c.data_inicio_period);
+            const fim = fmtDate(c.data_fim_period);
+            const per = ini!=='—'&&fim!=='—' ? `${ini} – ${fim}` : (c.data_vencimento?'Venc. '+fmtDate(c.data_vencimento):'—');
+            let badge = '';
+            if(c.status==='pago') badge = `<span class="bdg-pago">Pago</span>`;
+            else if(c.vencido)   badge = `<span class="bdg-venc" onclick="abrirModalPagamento(${c.id})" style="cursor:pointer;">Vencido</span>`;
+            else                  badge = `<span class="bdg-pend" onclick="abrirModalPagamento(${c.id})" style="cursor:pointer;">Pendente</span>`;
+            return `<div class="ent-row" style="padding-left:52px;background:#fafafa;border-left:3px solid #e2e8f0;">
+                <div class="ent-info" style="flex:1;">
+                    <div class="ent-sub" style="font-size:.8rem;color:#475569;">${per}</div>
                 </div>
+                <div class="ent-val" style="font-size:.88rem;">${fmtR(c.valor)}</div>
+                ${badge}
+                <div class="ent-menu-wrap">
+                    <div class="ent-menu-btn" onclick="toggleMenuEnt(${c.id},event)">⋯</div>
+                    <div class="ent-dropdown" id="entDD_${c.id}">
+                        <div class="ent-dd-item" onclick="abrirMaisInfo(${c.id})"><i class="fas fa-info-circle"></i> Mais informações</div>
+                        <div class="ent-dd-item" onclick="gerarLinkPagamento(${c.id})"><i class="fas fa-link"></i> Gerar link de pagamento</div>
+                        ${c.status!=='pago'?`<hr class="ent-dd-sep"><div class="ent-dd-item" onclick="abrirModalPagamento(${c.id})"><i class="fas fa-check-circle"></i> Confirmar pagamento</div>`:'' }
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        return `<div>
+            <div class="ent-row" onclick="toggleGrupo('${locId}')" style="cursor:pointer;user-select:none;">
+                <i id="grpArrow_${locId}" class="fas fa-chevron-right" style="font-size:.65rem;color:#94a3b8;margin-right:4px;transition:transform .2s;flex-shrink:0;"></i>
+                <div class="ent-avatar" style="background:${bg};">${letra}</div>
+                <div class="ent-info">
+                    <div class="ent-nome">${g.cliente||'—'}</div>
+                    <div class="ent-sub">${g.placa||'—'} &nbsp;·&nbsp; ${qtd} parcela${qtd>1?'s':''}</div>
+                </div>
+                <div class="ent-val">${fmtR(total)}</div>
+                ${badgeGrp}
+                <div style="width:32px;"></div>
             </div>
+            <div id="grp_${locId}" style="display:none;">${subRows}</div>
         </div>`;
     }).join('');
 }
