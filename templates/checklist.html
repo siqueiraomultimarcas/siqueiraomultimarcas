@@ -208,7 +208,7 @@
 </div>
 
 {% endblock %}
-{% block scripts %}
+{% block extra_js %}
 <script>
 const DIAS_PT   = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const MESES_PT  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -377,4 +377,4 @@ function irParaHoje() {
 carregarChecklist();
 setInterval(carregarChecklist, 120000);
 </script>
-{% endblock %}
+{% endblock extra_js %}
