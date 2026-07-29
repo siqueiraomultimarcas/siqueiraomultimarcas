@@ -1,104 +1,119 @@
 ﻿{% extends "base.html" %}
 {% block title %}Veículos — Siqueirão Multimarcas{% endblock %}
 {% block content %}
+<h1 style="font-size:1.4rem;font-weight:700;color:#0f172a;margin:0 0 16px;">Carros</h1>
 
-<!-- ================================================
-     CABEÇALHO DA PÁGINA
-================================================= -->
-<div class="page-header">
-    <div>
-        <h1><i class="fas fa-car"></i> Frota de Veículos</h1>
-        <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Gestão e controle da frota de veículos</p>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;">
-        <button class="btn btn-crlv" onclick="abrirModalCRLV()">
-            <i class="fas fa-file-import"></i> Importar CRLV
-        </button>
-        <button class="btn btn-primary" onclick="abrirModalVeiculo()">
-            <i class="fas fa-plus"></i> Novo Veículo
-        </button>
-    </div>
-</div>
-
-<!-- ================================================
-     CONTADORES DE STATUS
-================================================= -->
-<div class="kpi-grid" style="margin-bottom:20px;">
-    <div class="kpi-card green">
-        <div class="kpi-label">Disponíveis</div>
-        <div class="kpi-value" id="countDisponivel">0</div>
-        <i class="fas fa-check-circle kpi-icon-bg"></i>
-    </div>
-    <div class="kpi-card orange">
-        <div class="kpi-label">Locados</div>
-        <div class="kpi-value" id="countLocado">0</div>
-        <i class="fas fa-key kpi-icon-bg"></i>
-    </div>
-    <div class="kpi-card red">
-        <div class="kpi-label">Em Manutenção</div>
-        <div class="kpi-value" id="countManutencao">0</div>
-        <i class="fas fa-tools kpi-icon-bg"></i>
-    </div>
-    <div class="kpi-card purple">
-        <div class="kpi-label">Indisponíveis</div>
-        <div class="kpi-value" id="countIndisponivel">0</div>
-        <i class="fas fa-ban kpi-icon-bg"></i>
-    </div>
-</div>
-
-
-<!-- ================================================
-     TABELA DE VEÍCULOS (com filtros no card-header)
-================================================= -->
-<div class="card">
-    <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-car"></i> Frota <span id="countFrotaBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
-        <div style="display:flex;gap:8px;align-items:center;">
-            <input type="text" class="form-control search" id="buscaVeiculo"
-                   placeholder="Buscar por placa, marca, modelo ou RENAVAM..." onkeyup="filtrarVeiculos()">
-            <select class="form-control" id="filtroStatus" onchange="filtrarVeiculos()" style="width:160px;">
-                <option value="todos">Todos Status</option>
-                <option value="disponivel">Disponível</option>
-                <option value="locado">Locado</option>
-                <option value="manutencao">Manutenção</option>
-                <option value="indisponivel">Indisponível</option>
-            </select>
-            <select class="form-control" id="filtroCategoria" onchange="filtrarVeiculos()" style="width:170px;">
-                <option value="todos">Todas Categorias</option>
-                <option value="Econômico">Econômico</option>
-                <option value="Intermediário">Intermediário</option>
-                <option value="Executivo">Executivo</option>
-                <option value="Utilitário">Utilitário</option>
-                <option value="SUV">SUV</option>
-            </select>
+<!-- KPI Financeiros -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+    <div class="vl-kpi-card" style="background:#f0fdf4;border:1px solid #bbf7d0;">
+        <div class="vl-kpi-icon" style="background:#16a34a;"><i class="fas fa-dollar-sign"></i></div>
+        <div>
+            <div class="vl-kpi-val" id="kpiValorCompra">—</div>
+            <div class="vl-kpi-label">Valor de Compra da Frota</div>
         </div>
     </div>
-    <div class="table-container" id="veiculosTableContainer">
-        <table>
-            <thead>
-                <tr>
-                    <th>Foto</th>
-                    <th onclick="sortBy('placa')" style="cursor:pointer;user-select:none;">Placa <span id="sort_placa"></span></th>
-                    <th onclick="sortBy('marca')" style="cursor:pointer;user-select:none;">Marca / Modelo <span id="sort_marca"></span></th>
-                    <th onclick="sortBy('ano')" style="cursor:pointer;user-select:none;">Ano <span id="sort_ano"></span></th>
-                    <th onclick="sortBy('cor')" style="cursor:pointer;user-select:none;">Cor <span id="sort_cor"></span></th>
-                    <th onclick="sortBy('combustivel')" style="cursor:pointer;user-select:none;">Combustível <span id="sort_combustivel"></span></th>
-                    <th onclick="sortBy('categoria')" style="cursor:pointer;user-select:none;">Categoria <span id="sort_categoria"></span></th>
-                    <th onclick="sortBy('diaria')" style="cursor:pointer;user-select:none;">Diária <span id="sort_diaria"></span></th>
-                    <th>Compra</th>
-                    <th>FIPE / Variação</th>
-                    <th>Km</th>
-                    <th>Status</th>
-                    <th style="text-align:center;">CRLV</th>
-                    <th style="text-align:center;">Ações</th>
-                </tr>
-            </thead>
-            <tbody id="tabelaVeiculos">
-                <tr><td colspan="13" style="text-align:center">Carregando...</td></tr>
-            </tbody>
-        </table>
+    <div class="vl-kpi-card" style="background:#f5f3ff;border:1px solid #ddd6fe;">
+        <div class="vl-kpi-icon" style="background:#7c3aed;"><i class="fas fa-tag"></i></div>
+        <div>
+            <div class="vl-kpi-val" id="kpiFipe">—</div>
+            <div class="vl-kpi-label">Valor total FIPE da Frota</div>
+        </div>
     </div>
-    <div id="paginacaoVeiculos" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);"></div>
+    <div class="vl-kpi-card" style="background:#fff1f2;border:1px solid #fecaca;">
+        <div class="vl-kpi-icon" style="background:#ef4444;"><i class="fas fa-wrench"></i></div>
+        <div>
+            <div class="vl-kpi-val" id="kpiCustoMes">—</div>
+            <div class="vl-kpi-label">Custo total com a frota no mês</div>
+        </div>
+    </div>
+    <div class="vl-kpi-card" style="background:#fefce8;border:1px solid #fde68a;">
+        <div class="vl-kpi-icon" style="background:#d97706;"><i class="fas fa-calendar-alt"></i></div>
+        <div>
+            <div class="vl-kpi-val" id="kpiAnoMedio">—</div>
+            <div class="vl-kpi-label">Ano médio da frota</div>
+        </div>
+    </div>
+</div>
+
+<!-- Cadastrar carro -->
+<div class="card" style="margin-bottom:16px;">
+    <div style="padding:16px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="font-size:.9rem;font-weight:700;color:#0f172a;">Cadastrar carro</div>
+        <div style="display:flex;gap:0;align-items:center;flex:1;max-width:420px;">
+            <span style="background:#f8fafc;border:1px solid #e2e8f0;border-right:none;border-radius:8px 0 0 8px;padding:9px 12px;color:#f59e0b;">
+                <i class="fas fa-hand-point-right"></i>
+            </span>
+            <input type="text" id="inputCadastroCarro" class="form-control"
+                   placeholder="Digite a Placa do carro"
+                   style="border-radius:0;border-left:none;border-right:none;font-size:.85rem;"
+                   oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+            <button onclick="abrirCadastroComPlaca()"
+                    style="background:#4f46e5;border:1px solid #4f46e5;border-left:none;border-radius:0 8px 8px 0;padding:9px 18px;color:white;cursor:pointer;font-size:.88rem;font-weight:600;white-space:nowrap;">
+                Cadastrar
+            </button>
+        </div>
+        <button class="btn-crlv" onclick="abrirModalCRLV()" style="margin-left:auto;">
+            <i class="fas fa-file-import"></i> Importar CRLV
+        </button>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card" style="margin-bottom:16px;">
+    <div style="padding:14px 20px 16px;">
+        <div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Filtros</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
+            <div>
+                <label style="font-size:.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">Modelo</label>
+                <select class="form-control" id="filtroModelo" onchange="filtrarVeiculos()" style="font-size:.84rem;">
+                    <option value="">Selecione</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">Marca</label>
+                <select class="form-control" id="filtroMarca" onchange="filtrarVeiculos()" style="font-size:.84rem;">
+                    <option value="">Selecione</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">Carro / Placa</label>
+                <input type="text" class="form-control" id="buscaVeiculo" placeholder="Buscar placa..."
+                       oninput="filtrarVeiculos()" style="font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">Status</label>
+                <select class="form-control" id="filtroStatus" onchange="filtrarVeiculos()" style="font-size:.84rem;">
+                    <option value="">Selecione</option>
+                    <option value="disponivel">Disponível</option>
+                    <option value="locado">Locado</option>
+                    <option value="manutencao">Manutenção</option>
+                    <option value="indisponivel">Indisponível</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Meus Carros -->
+<div class="card">
+    <div style="padding:14px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9;">
+        <div>
+            <div style="font-size:1rem;font-weight:700;color:#0f172a;">Meus Carros</div>
+            <div style="font-size:.76rem;color:#64748b;margin-top:2px;" id="countCarros">0 Carros</div>
+        </div>
+        <button onclick="exportarCarros()" class="btn" style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;font-size:.8rem;padding:6px 14px;">
+            <i class="fas fa-download"></i> Exportar
+        </button>
+    </div>
+    <div style="display:grid;grid-template-columns:56px 180px 1fr 120px 90px;gap:0;padding:8px 20px;background:#f8fafc;border-bottom:1px solid #f1f5f9;">
+        <div></div>
+        <div style="font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Placa</div>
+        <div style="font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Modelo</div>
+        <div style="font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Status</div>
+        <div></div>
+    </div>
+    <div id="listaCarros"><div style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</div></div>
+    <div id="paginacaoVeiculos" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;border-top:1px solid #f1f5f9;"></div>
 </div>
 
 <!-- ================================================
@@ -304,6 +319,23 @@
 /* form grid 3 colunas */
 .grid-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px; }
 
+/* ----- Velo card rows ----- */
+.vl-kpi-card { border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px; }
+.vl-kpi-icon { width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1.05rem;flex-shrink:0; }
+.vl-kpi-val  { font-size:1.1rem;font-weight:700;color:#0f172a; }
+.vl-kpi-label{ font-size:.7rem;color:#64748b;margin-top:2px; }
+.vl-row { border-bottom:1px solid #f1f5f9; }
+.vl-row:last-child { border-bottom:none; }
+.vl-row-header { display:grid;grid-template-columns:56px 180px 1fr 120px 90px;align-items:center;gap:0;padding:13px 20px;cursor:pointer;transition:background .1s; }
+.vl-row-header:hover { background:#f8fafc; }
+.vl-act-btn { border:none;background:#f1f5f9;color:#475569;border-radius:8px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:background .1s; }
+.vl-act-btn:hover { background:#e2e8f0; }
+.vl-expand { background:#fafbfc;border-top:1px solid #f1f5f9; }
+/* ----- tabs no modal de detalhes ----- */
+.vl-tab { border:none;background:none;padding:8px 16px;font-size:.82rem;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s; }
+.vl-tab.active,.vl-tab:hover { color:#4f46e5;border-bottom-color:#4f46e5; }
+.vl-tab-pane { min-height:80px; }
+
 </style>
 
 <!-- ================================================
@@ -353,12 +385,26 @@ async function carregarVeiculos() {
 }
 
 function atualizarContadores() {
-    const c = { disponivel:0, locado:0, manutencao:0, indisponivel:0 };
-    veiculos.forEach(v => { if (c[v.status] !== undefined) c[v.status]++; });
-    document.getElementById('countDisponivel').textContent  = c.disponivel;
-    document.getElementById('countLocado').textContent      = c.locado;
-    document.getElementById('countManutencao').textContent  = c.manutencao;
-    document.getElementById('countIndisponivel').textContent= c.indisponivel;
+    const totalCompra = veiculos.reduce((s,v) => s + (parseFloat(v.valor_compra)||0), 0);
+    const totalFipe   = veiculos.reduce((s,v) => s + (parseFloat(v.valor_fipe)||0), 0);
+    const anos = veiculos.filter(v => v.ano).map(v => parseInt(v.ano));
+    const anoMedio = anos.length ? Math.round(anos.reduce((s,a)=>s+a,0)/anos.length) : null;
+
+    document.getElementById('kpiValorCompra').textContent = totalCompra ? formatCurrency(totalCompra) : '—';
+    document.getElementById('kpiFipe').textContent        = totalFipe   ? formatCurrency(totalFipe)   : '—';
+    document.getElementById('kpiAnoMedio').textContent    = anoMedio || '—';
+
+    // Popula dropdowns de filtro (só na primeira carga)
+    const selMod = document.getElementById('filtroModelo');
+    const selMar = document.getElementById('filtroMarca');
+    if (selMod && selMod.options.length <= 1) {
+        [...new Set(veiculos.map(v=>v.modelo).filter(Boolean))].sort()
+            .forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; selMod.appendChild(o); });
+    }
+    if (selMar && selMar.options.length <= 1) {
+        [...new Set(veiculos.map(v=>v.marca).filter(Boolean))].sort()
+            .forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; selMar.appendChild(o); });
+    }
 }
 
 
@@ -375,17 +421,15 @@ function renderizarVeiculos(lista) {
 }
 
 function _renderPageV() {
-    document.getElementById('countFrotaBadge').textContent = _filtradosV.length;
-    const tbody = document.getElementById('tabelaVeiculos');
-    const pag   = document.getElementById('paginacaoVeiculos');
+    const container = document.getElementById('listaCarros');
+    const pag       = document.getElementById('paginacaoVeiculos');
+    const countEl   = document.getElementById('countCarros');
+
+    if (countEl) countEl.textContent = _filtradosV.length + (_filtradosV.length === 1 ? ' Carro' : ' Carros');
 
     if (!_filtradosV.length) {
-        tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:48px 20px;">
-    <i class="fas fa-car" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
-    <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhum veículo encontrado</div>
-    <div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou cadastre um novo veículo</div>
-</td></tr>`;
-        pag.innerHTML = '';
+        container.innerHTML = '<div style="text-align:center;padding:48px 20px;color:#94a3b8;"><i class="fas fa-car" style="font-size:2rem;display:block;margin-bottom:10px;"></i>Nenhum veículo encontrado</div>';
+        if (pag) pag.innerHTML = '';
         return;
     }
 
@@ -394,84 +438,79 @@ function _renderPageV() {
     const inicio = (_pagV - 1) * _POR_PAG_V;
     const lista  = _filtradosV.slice(inicio, inicio + _POR_PAG_V);
 
-    tbody.innerHTML = lista.map(v => {
-        const foto = v.foto
-            ? `<img src="${v.foto}" class="foto-thumbnail" alt="${v.placa}">`
-            : `<div class="foto-placeholder"><i class="fas fa-car"></i></div>`;
-        return `<tr>
-            <td>${foto}</td>
-            <td><strong>${v.placa.toUpperCase()}</strong></td>
-            <td>${v.marca} ${v.modelo}</td>
-            <td>${v.ano || '-'}</td>
-            <td>${v.cor || '-'}</td>
-            <td>${v.combustivel || '-'}</td>
-            <td>${v.categoria || '-'}</td>
-            <td>${formatCurrency(v.diaria)}</td>
-            <td>${v.valor_compra ? `<span style="font-weight:600;font-size:0.82rem;color:#0f172a;">${formatCurrency(v.valor_compra)}</span>` : '<span style="color:#cbd5e1;font-size:0.78rem;">—</span>'}</td>
-            <td>${(() => {
-                if (!v.valor_fipe) return '<span style="color:#cbd5e1;font-size:0.78rem;">—</span>';
-                let html = `<span style="font-weight:700;font-size:0.82rem;color:#0f172a;">${formatCurrency(v.valor_fipe)}</span>`;
-                if (v.referencia_fipe) html += `<br><span style="font-size:0.65rem;color:#94a3b8;">${v.referencia_fipe}</span>`;
-                if (v.valor_compra && v.valor_compra > 0) {
-                    const pct = ((v.valor_fipe - v.valor_compra) / v.valor_compra) * 100;
-                    const positivo = pct >= 0;
-                    const cor = positivo ? '#15803d' : '#c73a2e';
-                    const bg  = positivo ? '#f0fdf4' : '#fef2f2';
-                    const seta = positivo ? '▲' : '▼';
-                    html += `<br><span style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:4px;font-size:0.68rem;font-weight:700;background:${bg};color:${cor};">${seta} ${Math.abs(pct).toFixed(1)}%</span>`;
-                }
-                return html;
-            })()}</td>
-            <td>${(v.km_atual || 0).toLocaleString()} km</td>
-            <td>${getStatusBadge(v.status)}</td>
-            <td style="text-align:center;">
-                ${v.crlv_url
-                    ? `<button class="btn btn-sm" style="background:#16a34a;color:#fff;gap:5px;"
-                            onclick="abrirCRLV(${v.id}, '${v.crlv_url}')" title="Visualizar CRLV">
-                            <i class="fas fa-file-alt"></i> <span style="font-size:0.72rem;">Ver</span>
-                       </button>`
-                    : `<button class="btn btn-sm" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;gap:5px;"
-                            onclick="abrirCRLV(${v.id}, '')" title="Enviar CRLV">
-                            <i class="fas fa-upload"></i> <span style="font-size:0.72rem;">Enviar</span>
-                       </button>`
-                }
-            </td>
-            <td style="text-align:center;">
-                <div class="act-wrap">
-                    <button class="act-btn" onclick="toggleActMenu(event,${v.id})" title="Ações">⋯</button>
-                    <div id="actmenu_${v.id}" class="act-menu">
-                        <button onclick="toggleActMenu(event,-1);editarVeiculo(${v.id})"><i class="fas fa-edit"></i> Editar</button>
-                        <button class="danger" onclick="toggleActMenu(event,-1);confirmarExcluir(${v.id}, '${v.placa}')"><i class="fas fa-trash"></i> Excluir</button>
-                    </div>
+    const stMap = {
+        disponivel:  { label:'Disponível',  color:'#16a34a', bg:'#f0fdf4' },
+        locado:      { label:'Locado',       color:'#2563eb', bg:'#eff6ff' },
+        manutencao:  { label:'Manutenção',   color:'#dc2626', bg:'#fef2f2' },
+        indisponivel:{ label:'Indisponível', color:'#6b7280', bg:'#f9fafb' }
+    };
+
+    container.innerHTML = lista.map(v => {
+        const st = stMap[v.status] || { label: v.status || '—', color:'#6b7280', bg:'#f9fafb' };
+        const carIcon = v.foto
+            ? `<img src="${v.foto}" style="width:36px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;">`
+            : `<div style="width:36px;height:36px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-car" style="color:#3b82f6;"></i></div>`;
+        return `<div class="vl-row" id="vlrow_${v.id}">
+            <div class="vl-row-header" onclick="toggleExpandCarro(${v.id})">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-chevron-down" id="vlchev_${v.id}" style="font-size:.6rem;color:#cbd5e1;transition:transform .2s;"></i>
+                    ${carIcon}
                 </div>
-            </td>
-        </tr>`;
+                <div>
+                    <div style="font-weight:700;color:#0f172a;font-size:.88rem;">${v.placa.toUpperCase()}</div>
+                    <div style="font-size:.74rem;color:#94a3b8;">${(v.km_atual||0).toLocaleString('pt-BR')} KM</div>
+                </div>
+                <div>
+                    <div style="font-size:.84rem;color:#0f172a;">${v.marca} ${v.modelo}</div>
+                    <div style="font-size:.74rem;color:#94a3b8;">${v.ano||''}${v.combustivel?' · '+v.combustivel:''}</div>
+                </div>
+                <div>
+                    <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:600;background:${st.bg};color:${st.color};">${st.label}</span>
+                </div>
+                <div style="display:flex;gap:5px;align-items:center;justify-content:flex-end;">
+                    <button onclick="event.stopPropagation();editarVeiculo(${v.id})" class="vl-act-btn" title="Editar"><i class="fas fa-pen"></i></button>
+                    <button onclick="event.stopPropagation();abrirDetalhesVeiculo(${v.id})" class="vl-act-btn" title="Informações"><i class="fas fa-info-circle" style="color:#3b82f6;"></i></button>
+                </div>
+            </div>
+            <div id="vlexp_${v.id}" class="vl-expand" style="display:none;">
+                <div style="padding:10px 20px 10px 76px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                    <div style="font-size:.78rem;color:#64748b;">Valor de compra: <strong style="color:#0f172a;">${v.valor_compra ? formatCurrency(v.valor_compra) : '—'}</strong></div>
+                    <div style="font-size:.78rem;color:#64748b;">Valor FIPE: <strong style="color:#7c3aed;">${v.valor_fipe ? formatCurrency(v.valor_fipe) : '—'}</strong></div>
+                    <div style="font-size:.78rem;color:#64748b;">Diária: <strong style="color:#0f172a;">${formatCurrency(v.diaria)}</strong></div>
+                    ${v.crlv_url
+                        ? `<button class="btn btn-sm" style="background:#16a34a;color:#fff;font-size:.74rem;padding:4px 12px;" onclick="event.stopPropagation();abrirCRLV(${v.id},'${v.crlv_url}')"><i class="fas fa-file-alt"></i> CRLV</button>`
+                        : `<button class="btn btn-sm" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;font-size:.74rem;padding:4px 12px;" onclick="event.stopPropagation();abrirCRLV(${v.id},'')"><i class="fas fa-upload"></i> Enviar CRLV</button>`
+                    }
+                    <button class="btn btn-sm" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;font-size:.74rem;padding:4px 12px;" onclick="event.stopPropagation();atualizarFipeVeiculo(${v.id})"><i class="fas fa-sync-alt"></i> Atualizar valor FIPE</button>
+                    <button class="btn btn-sm btn-danger" style="font-size:.74rem;padding:4px 12px;margin-left:auto;" onclick="event.stopPropagation();confirmarExcluir(${v.id},'${v.placa}')"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        </div>`;
     }).join('');
 
+    if (!pag) return;
     if (totalPags <= 1) { pag.innerHTML = ''; return; }
-    const btnStyle = (ativo) => `style="border:1px solid rgba(255,255,255,.15);background:${ativo ? '#008cdd' : 'rgba(255,255,255,.05)'};color:${ativo ? '#fff' : '#94a3b8'};border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;"`;
-    let html = `<span style="font-size:.75rem;color:#64748b;">${inicio+1}–${Math.min(inicio+_POR_PAG_V, _filtradosV.length)} de ${_filtradosV.length}</span>`;
-    html += `<button ${btnStyle(false)} onclick="_irPagV(${_pagV-1})" ${_pagV===1?'disabled':''}>‹</button>`;
-    for (let p = Math.max(1,_pagV-2); p <= Math.min(totalPags,_pagV+2); p++) {
-        html += `<button ${btnStyle(p===_pagV)} onclick="_irPagV(${p})">${p}</button>`;
-    }
-    html += `<button ${btnStyle(false)} onclick="_irPagV(${_pagV+1})" ${_pagV===totalPags?'disabled':''}>›</button>`;
-    pag.innerHTML = html;
+    const btnS = (a) => `style="border:1px solid #e2e8f0;background:${a?'#4f46e5':'#f8fafc'};color:${a?'#fff':'#475569'};border-radius:6px;padding:4px 10px;font-size:.74rem;cursor:pointer;"`;
+    let h = `<span style="font-size:.74rem;color:#64748b;">${inicio+1}–${Math.min(inicio+_POR_PAG_V,_filtradosV.length)} de ${_filtradosV.length}</span>`;
+    h += `<button ${btnS(false)} onclick="_irPagV(${_pagV-1})" ${_pagV===1?'disabled':''}>‹</button>`;
+    for (let p=Math.max(1,_pagV-2);p<=Math.min(totalPags,_pagV+2);p++)
+        h += `<button ${btnS(p===_pagV)} onclick="_irPagV(${p})">${p}</button>`;
+    h += `<button ${btnS(false)} onclick="_irPagV(${_pagV+1})" ${_pagV===totalPags?'disabled':''}>›</button>`;
+    pag.innerHTML = h;
 }
 
 function _irPagV(p) { _pagV = p; _renderPageV(); }
 
 function filtrarVeiculos() {
-    const busca    = document.getElementById('buscaVeiculo').value.toLowerCase();
-    const status   = document.getElementById('filtroStatus').value;
-    const categoria= document.getElementById('filtroCategoria').value;
+    const busca  = ((document.getElementById('buscaVeiculo')  || {value:''}).value || '').toLowerCase();
+    const status = (document.getElementById('filtroStatus')   || {value:''}).value || '';
+    const modelo = (document.getElementById('filtroModelo')   || {value:''}).value || '';
+    const marca  = (document.getElementById('filtroMarca')    || {value:''}).value || '';
     const filtrados = veiculos.filter(v =>
-        (v.placa.toLowerCase().includes(busca) ||
-         v.marca.toLowerCase().includes(busca) ||
-         v.modelo.toLowerCase().includes(busca) ||
-         (v.renavam || '').includes(busca)) &&
-        (status === 'todos'    || v.status === status) &&
-        (categoria === 'todos' || v.categoria === categoria)
+        (!busca  || v.placa.toLowerCase().includes(busca) || (v.modelo||'').toLowerCase().includes(busca)) &&
+        (!status || v.status === status) &&
+        (!modelo || v.modelo === modelo) &&
+        (!marca  || v.marca  === marca)
     );
     renderizarVeiculos(_sortLista(filtrados));
 }
@@ -994,6 +1033,121 @@ async function _enviarCRLV(id) {
     } catch(e) {
         showToast('Erro ao enviar: ' + e.message, 'error');
     }
+}
+
+/* ---------- NOVOS: expandir / detalhes / exportar ---------- */
+function toggleExpandCarro(id) {
+    const exp  = document.getElementById('vlexp_' + id);
+    const chev = document.getElementById('vlchev_' + id);
+    if (!exp) return;
+    const open = exp.style.display !== 'none';
+    exp.style.display = open ? 'none' : 'block';
+    if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function abrirCadastroComPlaca() {
+    const placa = ((document.getElementById('inputCadastroCarro') || {value:''}).value || '').trim();
+    abrirModalVeiculo(null, placa ? { placa } : null);
+}
+
+function exportarCarros() {
+    const linhas = [['Placa','Marca','Modelo','Ano','Cor','Combustível','Diária','Valor Compra','Valor FIPE','KM Atual','Status']];
+    veiculos.forEach(v => linhas.push([
+        v.placa, v.marca, v.modelo, v.ano||'', v.cor||'', v.combustivel||'',
+        v.diaria||0, v.valor_compra||0, v.valor_fipe||0, v.km_atual||0, v.status||''
+    ]));
+    const csv = linhas.map(l => l.map(c => '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+    a.download = 'frota_siqueirao.csv';
+    a.click();
+}
+
+function atualizarFipeVeiculo(id) {
+    showToast('Consulta FIPE: use o campo no formulário de edição do veículo', 'info');
+}
+
+async function abrirDetalhesVeiculo(id) {
+    const v = veiculos.find(x => x.id === id);
+    if (!v) return;
+
+    const content = `
+    <div style="border-bottom:1px solid #f1f5f9;padding-bottom:10px;margin-bottom:14px;display:flex;gap:0;">
+        ${['Informações','Locações','Manutenções'].map((tab,i) =>
+            `<button class="vl-tab${i===0?' active':''}" id="vtab_${i}" onclick="switchTabVeiculo(${i})">${tab}</button>`
+        ).join('')}
+    </div>
+    <div id="vtabPane0" class="vl-tab-pane">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:.84rem;">
+            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Marca</div><div style="font-weight:600;color:#4f46e5;">${v.marca||'—'}</div></div>
+            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Ano</div><div style="font-weight:600;">${v.ano||'—'}</div></div>
+            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Modelo</div><div style="font-weight:600;">${v.modelo||'—'}</div></div>
+            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">KM Atual</div><div style="font-weight:600;color:#4f46e5;">${(v.km_atual||0).toLocaleString('pt-BR')}</div></div>
+            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Chassi</div><div style="font-weight:600;font-family:monospace;font-size:.8rem;">${v.chassi||'—'}</div></div>
+            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Renavam</div><div style="font-weight:600;">${v.renavam||'—'}</div></div>
+            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Nº Motor</div><div style="font-weight:600;font-family:monospace;font-size:.8rem;">${v.numero_motor||'—'}</div></div>
+            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Cor</div><div style="font-weight:600;">${(v.cor||'—').toUpperCase()}</div></div>
+            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Combustível</div><div style="font-weight:600;">${v.combustivel||'—'}</div></div>
+            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Status</div><div>${getStatusBadge(v.status)}</div></div>
+        </div>
+    </div>
+    <div id="vtabPane1" class="vl-tab-pane" style="display:none;">
+        <div id="vDetLocacoes" style="text-align:center;padding:20px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+    </div>
+    <div id="vtabPane2" class="vl-tab-pane" style="display:none;">
+        <div id="vDetManutencoes" style="text-align:center;padding:20px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+    </div>
+    <div style="text-align:right;margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9;">
+        <button class="btn" style="background:#f1f5f9;color:#475569;" onclick="fecharModal()">Fechar</button>
+        <button class="btn btn-primary" style="margin-left:8px;" onclick="fecharModal();editarVeiculo(${v.id})"><i class="fas fa-pen"></i> Editar</button>
+    </div>`;
+
+    abrirModal('Detalhes do carro: ' + v.placa.toUpperCase(), content);
+
+    fetch('/api/locacoes').then(r=>r.json()).then(locs => {
+        const el = document.getElementById('vDetLocacoes');
+        if (!el) return;
+        const minha = Array.isArray(locs) ? locs.filter(l=>l.veiculo_id===v.id) : [];
+        if (!minha.length) { el.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;">Nenhuma locação registrada</div>'; return; }
+        el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;font-size:.81rem;border-collapse:collapse;"><thead><tr style="background:#f8fafc;">' +
+            '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Cliente</th>' +
+            '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Início</th>' +
+            '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Fim</th>' +
+            '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Status</th>' +
+            '</tr></thead><tbody>' +
+            minha.map(l=>'<tr><td style="padding:6px 10px;">'+(l.nome_cliente||'—')+'</td>' +
+                '<td style="padding:6px 10px;">'+(l.data_inicio||'—')+'</td>' +
+                '<td style="padding:6px 10px;">'+(l.data_fim||'—')+'</td>' +
+                '<td style="padding:6px 10px;">'+getStatusBadge(l.status)+'</td></tr>').join('') +
+            '</tbody></table></div>';
+    }).catch(()=>{});
+
+    fetch('/api/manutencoes').then(r=>r.json()).then(mans => {
+        const el = document.getElementById('vDetManutencoes');
+        if (!el) return;
+        const minha = Array.isArray(mans) ? mans.filter(m=>m.veiculo_id===v.id) : [];
+        if (!minha.length) { el.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;">Nenhuma manutenção registrada</div>'; return; }
+        el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;font-size:.81rem;border-collapse:collapse;"><thead><tr style="background:#f8fafc;">' +
+            '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Tipo</th>' +
+            '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Data</th>' +
+            '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Custo</th>' +
+            '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Status</th>' +
+            '</tr></thead><tbody>' +
+            minha.map(m=>'<tr><td style="padding:6px 10px;">'+(m.tipo||'—')+'</td>' +
+                '<td style="padding:6px 10px;">'+(m.data_manutencao||'—')+'</td>' +
+                '<td style="padding:6px 10px;">'+formatCurrency(m.custo)+'</td>' +
+                '<td style="padding:6px 10px;">'+(m.status||'—')+'</td></tr>').join('') +
+            '</tbody></table></div>';
+    }).catch(()=>{});
+}
+
+function switchTabVeiculo(n) {
+    [0,1,2].forEach(i => {
+        const pane = document.getElementById('vtabPane'+i);
+        const btn  = document.getElementById('vtab_'+i);
+        if (pane) pane.style.display = i===n ? 'block' : 'none';
+        if (btn)  btn.classList.toggle('active', i===n);
+    });
 }
 
 /* ---------- INICIALIZAR ---------- */
