@@ -2840,6 +2840,35 @@ def delete_locacao(id):
         return jsonify({'error': 'Erro interno. Tente novamente.'}), 500
 
 
+@app.route('/api/locacoes/<int:id>/pagamentos', methods=['GET'])
+@login_required
+def get_pagamentos_locacao(id):
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT id, semana_numero, data_inicio, data_fim,
+                   valor_previsto, valor_pago, desconto, status,
+                   data_pagamento, categoria, observacao
+            FROM pagamentos_locacao
+            WHERE locacao_id = %s
+            ORDER BY data_inicio DESC
+        ''', (id,))
+        pagamentos = rows_to_dict(cur)
+        # Calcula totais
+        total_recebido = sum(float(p.get('valor_pago') or 0) for p in pagamentos if p.get('status') == 'pago')
+        total_atraso   = sum(float(p.get('valor_previsto') or 0) - float(p.get('desconto') or 0)
+                             for p in pagamentos
+                             if p.get('status') == 'pendente' and p.get('data_fim') and
+                             str(p.get('data_fim')) < str(_date.today()))
+        total_geral    = sum(float(p.get('valor_previsto') or 0) - float(p.get('desconto') or 0)
+                             for p in pagamentos)
+    return jsonify({
+        'pagamentos': pagamentos,
+        'total_recebido': total_recebido,
+        'total_atraso': total_atraso,
+        'total_geral': total_geral,
+    })
+
+
 @app.route('/api/locacoes/<int:id>/gerar-cobrancas', methods=['POST'])
 @login_required
 def gerar_cobrancas_locacao(id):
