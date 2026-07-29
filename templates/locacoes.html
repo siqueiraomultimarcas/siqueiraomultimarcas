@@ -3,77 +3,103 @@
 {% block title %}Locações - Siqueirão{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1><i class="fas fa-key"></i> Controle de Locações</h1>
-        <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Controle de locações ativas e histórico</p>
-    </div>
-    <button class="btn btn-primary" onclick="abrirModalLocacao()">
-        <i class="fas fa-plus"></i> Nova Locação
-    </button>
-</div>
 
-<!-- Stats -->
-<div class="kpi-grid" style="margin-bottom: 20px;">
-    <div class="kpi-card orange">
-        <div class="kpi-label">Locações Ativas</div>
-        <div class="kpi-value" id="countAtivas">0</div>
-        <i class="fas fa-clock kpi-icon-bg"></i>
-    </div>
-    <div class="kpi-card green">
-        <div class="kpi-label">Finalizadas</div>
-        <div class="kpi-value" id="countFinalizadas">0</div>
-        <i class="fas fa-check-circle kpi-icon-bg"></i>
-    </div>
-    <div class="kpi-card blue">
-        <div class="kpi-label">Faturamento Total</div>
-        <div class="kpi-value" id="faturamentoTotal">R$ 0,00</div>
-        <i class="fas fa-dollar-sign kpi-icon-bg"></i>
-    </div>
-</div>
+<!-- ROW 1: Criar Nova Locação + Agendamentos -->
+<div style="display:grid;grid-template-columns:1fr 1.5fr;gap:16px;margin-bottom:16px;">
 
-<!-- Tabela de Locações (com filtros no card-header) -->
-<div class="card">
-    <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-key"></i> Locações <span id="countLocBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <select class="form-control" id="filtroVeiculoLoc" onchange="filtrarLocacoes()" style="width: 200px;">
-                <option value="todos">Todos os Veículos</option>
-            </select>
-            <select class="form-control" id="filtroClienteLoc" onchange="filtrarLocacoes()" style="width: 200px;">
-                <option value="todos">Todos os Clientes</option>
-            </select>
-            <select class="form-control" id="filtroStatusLoc" onchange="filtrarLocacoes()" style="width: 150px;">
-                <option value="todos">Todos Status</option>
-                <option value="ativa">Ativa</option>
-                <option value="concluida">Finalizada</option>
-            </select>
+    <!-- Painel Esquerdo: Criar Nova Locação -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Criar Nova Locação</h3>
+            <span title="Crie locações com veículos já cadastrados no sistema" style="color:#94a3b8;cursor:help;font-size:1rem;"><i class="fas fa-info-circle"></i></span>
+        </div>
+        <div style="padding:16px 18px 20px;">
+            <div onclick="abrirModalLocacao()"
+                 class="loc-nova-card"
+                 style="cursor:pointer;border:2px dashed #008cdd;border-radius:12px;padding:18px 16px;display:flex;align-items:center;gap:14px;transition:background .15s;"
+                 onmouseenter="this.style.background='#f0f9ff'" onmouseleave="this.style.background=''">
+                <div style="width:38px;height:38px;min-width:38px;background:#008cdd;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-plus" style="color:white;font-size:1.05rem;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;color:#0f172a;font-size:.9rem;">Cadastrar nova locação</div>
+                    <div style="font-size:.77rem;color:#64748b;margin-top:3px;line-height:1.4;">Clique aqui para criar uma locação com veículo previamente cadastrado.</div>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="table-container" style="max-height:60vh;overflow-y:auto;">
-        <table data-sortable>
-            <thead>
-                <tr>
-                    <th>Data Início</th>
-                    <th>Data Fim</th>
-                    <th>Veículo</th>
-                    <th>Cliente</th>
-                    <th>Valor/Período</th>
-                    <th>Total</th>
-                    <th>Checklist</th>
-                    <th>Fotos</th>
-                    <th>Status</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="tabelaLocacoes">
-                <tr><td colspan="10" style="text-align:center">Carregando...</td></tr>
-            </tbody>
-        </table>
+
+    <!-- Painel Direito: Agendamentos de Locações -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Agendamentos de Locações</h3>
+            <a href="/reservas" class="btn btn-primary" style="font-size:.8rem;padding:6px 14px;">
+                <i class="fas fa-plus"></i> Novo agendamento
+            </a>
+        </div>
+        <div id="agendamentosContainer" style="padding:28px 20px;text-align:center;">
+            <i class="fas fa-box-open" style="font-size:2.8rem;color:#cbd5e1;display:block;margin-bottom:14px;"></i>
+            <div style="font-weight:600;color:#475569;font-size:.9rem;margin-bottom:4px;">Nenhum resultado encontrado!</div>
+            <div style="font-size:.77rem;color:#94a3b8;line-height:1.5;max-width:320px;margin:0 auto;">Oops! Nenhum agendamento de locação encontrado, seus agendamentos de retirada ativos ficarão aqui.</div>
+        </div>
     </div>
+</div>
+
+<!-- ROW 2: Filtros -->
+<div class="card" style="margin-bottom:16px;">
+    <div style="padding:16px 20px 18px;">
+        <div style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px;">Filtros</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:14px;align-items:start;">
+            <div>
+                <label style="font-size:.73rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Veículo</label>
+                <input type="text" class="form-control" id="filtroPlacaLoc" placeholder="Placa" oninput="filtrarLocacoes()" style="font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.73rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Locatário</label>
+                <input type="text" class="form-control" id="filtroNomeLoc" placeholder="Nome do locatário" oninput="filtrarLocacoes()" style="font-size:.84rem;">
+            </div>
+            <div>
+                <label style="font-size:.73rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Tempo mínimo de contrato</label>
+                <select class="form-control" id="filtroTempoMinLoc" onchange="filtrarLocacoes()" style="font-size:.84rem;">
+                    <option value="">Selecione</option>
+                    <option value="semanal">Semanal</option>
+                    <option value="quinzenal">Quinzenal</option>
+                    <option value="mensal">Mensal</option>
+                    <option value="avulso">Avulso</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:.73rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Valor do Aluguel</label>
+                <div style="font-size:.7rem;color:#94a3b8;margin-bottom:6px;">de <strong style="color:#64748b;">R$0</strong> até <strong style="color:#64748b;" id="rangeAluguelMax">R$0</strong></div>
+                <input type="range" id="rangeAluguel" min="0" max="10000" value="10000" oninput="filtrarLocacoes()" style="width:100%;accent-color:#008cdd;height:4px;">
+            </div>
+            <div>
+                <label style="font-size:.73rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Valor do Caução</label>
+                <div style="font-size:.7rem;color:#94a3b8;margin-bottom:6px;">de <strong style="color:#64748b;">R$0</strong> até <strong style="color:#64748b;" id="rangeCaucaoMax">R$0</strong></div>
+                <input type="range" id="rangeCaucao" min="0" max="10000" value="10000" oninput="filtrarLocacoes()" style="width:100%;accent-color:#008cdd;height:4px;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROW 3: Locações ativas -->
+<div class="card">
+    <div style="padding:16px 20px 14px;display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid #f1f5f9;">
+        <div>
+            <div style="font-size:1rem;font-weight:700;color:#0f172a;">Locações ativas</div>
+            <div style="font-size:.78rem;color:#64748b;margin-top:3px;" id="countLocLabel">
+                <i class="fas fa-spinner fa-spin" style="font-size:.7rem;margin-right:4px;"></i> Carregando...
+            </div>
+        </div>
+        <a href="/clientes" style="font-size:.8rem;color:#008cdd;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:6px;">
+            Validade - CNH dos condutores <i class="fas fa-arrow-right" style="font-size:.7rem;"></i>
+        </a>
+    </div>
+    <div id="listaLocacoes"></div>
 </div>
 
 <style>
+    /* ── Estilos de upload / modal ── */
     .checklist-item { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
     .checklist-item input[type="checkbox"] { width: 18px; height: 18px; }
     .checklist-item label { cursor: pointer; margin: 0; }
@@ -86,6 +112,54 @@
     .preview-foto img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
     .preview-foto .remove-btn { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; border: none; line-height: 20px; text-align: center; }
     .upload-progress { background: #ddf0fb; border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; color: #015e94; display: none; margin-top: 8px; }
+    /* ── Rows de locação (estilo Velo) ── */
+    .loc-row { border-bottom: 1px solid #f1f5f9; }
+    .loc-row:last-child { border-bottom: none; }
+    .loc-row-header {
+        display: flex; align-items: center; gap: 14px;
+        padding: 14px 20px; cursor: pointer;
+        transition: background .1s;
+    }
+    .loc-row-header:hover { background: #f8fafc; }
+    .loc-chevron {
+        color: #94a3b8; font-size: .75rem; flex-shrink: 0;
+        transition: transform .2s; width: 14px;
+    }
+    .loc-chevron.open { transform: rotate(90deg); }
+    .loc-car-icon {
+        width: 40px; height: 40px; min-width: 40px; border-radius: 10px;
+        background: #e0f2fe; display: flex; align-items: center; justify-content: center;
+    }
+    .loc-car-icon.concluida { background: #f0fdf4; }
+    .loc-car-icon i { color: #008cdd; font-size: 1rem; }
+    .loc-car-icon.concluida i { color: #22c55e; }
+    .loc-info { flex: 1; min-width: 0; }
+    .loc-num { font-weight: 700; color: #0f172a; font-size: .88rem; }
+    .loc-placa { font-size: .82rem; color: #008cdd; font-weight: 700; }
+    .loc-recibo { background: none; border: none; padding: 0; color: #64748b; font-size: .72rem; cursor: pointer; text-decoration: underline; }
+    .loc-recibo:hover { color: #008cdd; }
+    .loc-cliente { font-size: .8rem; color: #64748b; margin-top: 1px; }
+    .loc-valores { min-width: 180px; flex-shrink: 0; }
+    .loc-val-label { font-size: .72rem; color: #94a3b8; }
+    .loc-val-num { font-size: .82rem; font-weight: 600; color: #0f172a; }
+    .loc-inicio { min-width: 130px; flex-shrink: 0; }
+    .loc-inicio-label { font-size: .72rem; color: #94a3b8; font-weight: 600; }
+    .loc-inicio-val { font-size: .82rem; color: #0f172a; margin-top: 2px; }
+    .loc-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .loc-action-btn {
+        background: none; border: none; cursor: pointer;
+        width: 30px; height: 30px; border-radius: 7px;
+        display: flex; align-items: center; justify-content: center;
+        color: #64748b; font-size: .9rem; transition: background .1s, color .1s;
+    }
+    .loc-action-btn:hover { background: #f1f5f9; color: #008cdd; }
+    .loc-action-btn.danger:hover { background: #fff1f2; color: #ef473a; }
+    .loc-expand { background: #f8fafc; border-top: 1px solid #f1f5f9; padding: 16px 20px 16px 88px; }
+    .loc-expand-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+    .loc-expand-field label { font-size: .68rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 2px; }
+    .loc-expand-field span { font-size: .82rem; font-weight: 600; color: #0f172a; }
+    .loc-fotos-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .loc-fotos-row img { width: 52px; height: 40px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #e2e8f0; }
 </style>
 
 <script>
@@ -119,15 +193,7 @@
             veiculos = Array.isArray(_veic) ? _veic : [];
             clientes = Array.isArray(_cli)  ? _cli  : [];
 
-            const selectVeic = document.getElementById('filtroVeiculoLoc');
-            veiculos.forEach(v => {
-                selectVeic.innerHTML += '<option value="' + v.id + '">' + v.placa + ' - ' + v.marca + ' ' + v.modelo + '</option>';
-            });
-            const selectCli = document.getElementById('filtroClienteLoc');
-            clientes.forEach(c => {
-                selectCli.innerHTML += '<option value="' + c.id + '">' + c.nome + '</option>';
-            });
-
+            configurarRangeSliders();
             atualizarEstatisticas();
             renderizarLocacoes(locacoes);
         } catch (error) {
@@ -144,11 +210,28 @@
 
     function atualizarEstatisticas() {
         const ativas = locacoes.filter(l => l.status === 'ativa').length;
-        const finalizadas = locacoes.filter(l => l.status === 'concluida').length;
-        const fatTotal = locacoes.reduce((sum, l) => sum + (parseFloat(l.total) || 0), 0);
-        document.getElementById('countAtivas').textContent = ativas;
-        document.getElementById('countFinalizadas').textContent = finalizadas;
-        document.getElementById('faturamentoTotal').textContent = formatCurrency(fatTotal);
+        const total  = locacoes.length;
+        const el = document.getElementById('countLocLabel');
+        if (el) el.textContent = total + (total === 1 ? ' Locação encontrada' : ' Locações encontradas');
+    }
+
+    function configurarRangeSliders() {
+        const maxAluguel = Math.ceil(Math.max(0, ...locacoes.map(l => parseFloat(l.valor_semanal || l.diaria) || 0)));
+        const maxCaucao  = Math.ceil(Math.max(0, ...locacoes.map(l => parseFloat(l.caucao) || 0)));
+        const rA = document.getElementById('rangeAluguel');
+        const rC = document.getElementById('rangeCaucao');
+        if (rA) { rA.max = maxAluguel || 10000; rA.value = rA.max; }
+        if (rC) { rC.max = maxCaucao  || 10000; rC.value = rC.max; }
+        atualizarLabelRange();
+    }
+
+    function atualizarLabelRange() {
+        const rA = document.getElementById('rangeAluguel');
+        const rC = document.getElementById('rangeCaucao');
+        const eA = document.getElementById('rangeAluguelMax');
+        const eC = document.getElementById('rangeCaucaoMax');
+        if (rA && eA) eA.textContent = formatCurrency(rA.value);
+        if (rC && eC) eC.textContent = formatCurrency(rC.value);
     }
 
     function getStatusBadge(status) {
@@ -229,41 +312,117 @@
 
     function verFoto(url) { abrirGaleria(url); }
 
+    function formatDateLong(str) {
+        if (!str) return '—';
+        const d = new Date(str + 'T12:00:00');
+        const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        return dias[d.getDay()] + ' ' + String(d.getDate()).padStart(2,'0') + ' ' + meses[d.getMonth()] + ', ' + d.getFullYear();
+    }
+
+    function toggleExpand(id) {
+        const exp = document.getElementById('loc_exp_' + id);
+        const chev = document.getElementById('loc_chev_' + id);
+        if (!exp) return;
+        const open = exp.style.display !== 'none';
+        exp.style.display = open ? 'none' : 'block';
+        if (chev) chev.classList.toggle('open', !open);
+    }
+
     function renderizarLocacoes(lista) {
-        document.getElementById('countLocBadge').textContent = lista.length;
-        const tbody = document.getElementById('tabelaLocacoes');
+        const el = document.getElementById('countLocLabel');
+        if (el) el.textContent = lista.length + (lista.length === 1 ? ' Locação encontrada' : ' Locações encontradas');
+
+        const container = document.getElementById('listaLocacoes');
         if (lista.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:48px 20px;">
-    <i class="fas fa-key" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
-    <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhuma locação encontrada</div>
-    <div style="font-size:0.8rem;color:#94a3b8;">Tente ajustar os filtros ou registre uma nova locação</div>
-</td></tr>`;
+            container.innerHTML =
+                '<div style="text-align:center;padding:48px 20px;">' +
+                '<i class="fas fa-key" style="font-size:2.2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>' +
+                '<div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhuma locação encontrada</div>' +
+                '<div style="font-size:.8rem;color:#94a3b8;">Tente ajustar os filtros ou registre uma nova locação.</div>' +
+                '</div>';
             return;
         }
-        tbody.innerHTML = lista.map(l => '<tr>' +
-            '<td>' + formatDate(l.data_inicio) + '</td>' +
-            '<td>' + formatDate(l.data_fim) + '</td>' +
-            '<td>' + (l.placa || '-') + ' ' + (l.marca || '') + ' ' + (l.modelo || '') + '</td>' +
-            '<td>' + (l.nome_cliente || '-') + '</td>' +
-            '<td>' + (l.valor_semanal ? formatCurrency(l.valor_semanal) + '<small style="color:#94a3b8;font-size:.7rem;">/sem</small>' : formatCurrency(l.diaria) + '<small style="color:#94a3b8;font-size:.7rem;">/dia</small>') + '</td>' +
-            '<td><strong>' + (l.total ? formatCurrency(l.total) : '<span style="color:#94a3b8;font-size:.8rem;">Em aberto</span>') + '</strong></td>' +
-            '<td>' + renderizarChecklist(l.checklist) + '</td>' +
-            '<td>' + renderizarFotos(l.fotos_saida) + '</td>' +
-            '<td>' + getStatusBadge(l.status) + '</td>' +
-            '<td style="text-align:center">' +
-                '<div class="loc-menu-wrap" style="position:relative;display:inline-block;">' +
-                    '<button class="loc-menu-btn" onclick="toggleLocMenu(event,' + l.id + ')" title="Ações">⋯</button>' +
-                    '<div id="locmenu_' + l.id + '" class="loc-menu" style="display:none;">' +
-                        '<button onclick="closeLocMenus();imprimirContrato(' + l.id + ')"><i class="fas fa-print"></i> Imprimir</button>' +
-                        (l.status === 'ativa' ?
-                            '<button onclick="closeLocMenus();editarLocacao(' + l.id + ')"><i class="fas fa-edit"></i> Editar</button>' +
-                            '<button onclick="closeLocMenus();abrirModalDevolucao(' + l.id + ')"><i class="fas fa-undo"></i> Devolver</button>'
-                        : '') +
-                        '<button class="danger" onclick="closeLocMenus();confirmarExcluirLocacao(' + l.id + ',\'' + (l.placa || '') + ' ' + (l.nome_cliente || '') + '\')"><i class="fas fa-trash"></i> Excluir</button>' +
+
+        container.innerHTML = lista.map(function(l) {
+            const isConcluida = l.status === 'concluida';
+            const numId = String(l.id).padStart(6, '0');
+            const veiculoLabel = [l.placa, l.marca, l.modelo].filter(Boolean).join(' ');
+            const valorAluguel = l.valor_semanal
+                ? formatCurrency(l.valor_semanal) + ' <span style="color:#94a3b8;font-size:.72rem;">(Semanal)</span>'
+                : formatCurrency(l.diaria) + ' <span style="color:#94a3b8;font-size:.72rem;">/dia</span>';
+            const valorCaucao = parseFloat(l.caucao) > 0
+                ? '<div class="loc-val-label" style="margin-top:3px;">Caução</div><div class="loc-val-num">' + formatCurrency(l.caucao) + '</div>'
+                : '';
+            const editBtn = '<button class="loc-action-btn" onclick="event.stopPropagation();editarLocacao(' + l.id + ')" title="Editar"><i class="fas fa-pen"></i></button>';
+            const delBtn  = '<button class="loc-action-btn danger" onclick="event.stopPropagation();confirmarExcluirLocacao(' + l.id + ',\'#' + numId + '\')" title="Excluir"><i class="fas fa-trash"></i></button>';
+            const devBtn  = l.status === 'ativa'
+                ? '<button class="loc-action-btn" onclick="event.stopPropagation();abrirModalDevolucao(' + l.id + ')" title="Registrar devolução" style="color:#008cdd;"><i class="fas fa-calendar-check"></i></button>'
+                : '';
+
+            // Detalhes do expand
+            const clItems = renderizarChecklist(l.checklist);
+            const fotosSaida = renderizarFotosExpand(l.fotos_saida);
+            const fotosRetorno = renderizarFotosExpand(l.fotos_retorno);
+
+            const expandBody =
+                '<div class="loc-expand-grid">' +
+                    '<div class="loc-expand-field"><label>KM Saída</label><span>' + (l.km_saida ? l.km_saida.toLocaleString('pt-BR') + ' km' : '—') + '</span></div>' +
+                    '<div class="loc-expand-field"><label>KM Retorno</label><span>' + (l.km_retorno ? l.km_retorno.toLocaleString('pt-BR') + ' km' : '—') + '</span></div>' +
+                    '<div class="loc-expand-field"><label>Data Devolução</label><span>' + formatDate(l.data_devolucao_real || l.data_fim) + '</span></div>' +
+                    '<div class="loc-expand-field"><label>Total</label><span>' + (l.total ? formatCurrency(l.total) : '<span style="color:#f59e0b;">Em aberto</span>') + '</span></div>' +
+                '</div>' +
+                '<div style="display:flex;gap:20px;flex-wrap:wrap;">' +
+                    '<div>' +
+                        '<div style="font-size:.68rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Checklist</div>' +
+                        '<div>' + clItems + '</div>' +
+                    '</div>' +
+                    (fotosSaida ? '<div><div style="font-size:.68rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Fotos Saída</div><div class="loc-fotos-row">' + fotosSaida + '</div></div>' : '') +
+                    (fotosRetorno ? '<div><div style="font-size:.68rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Fotos Retorno</div><div class="loc-fotos-row">' + fotosRetorno + '</div></div>' : '') +
+                '</div>' +
+                '<div style="display:flex;gap:8px;margin-top:14px;">' +
+                    '<button class="btn btn-secondary" style="font-size:.78rem;padding:5px 14px;" onclick="imprimirContrato(' + l.id + ')"><i class="fas fa-print"></i> Imprimir Contrato</button>' +
+                    (l.status === 'ativa' ? '<button class="btn btn-primary" style="font-size:.78rem;padding:5px 14px;" onclick="abrirModalDevolucao(' + l.id + ')"><i class="fas fa-undo"></i> Registrar Devolução</button>' : '') +
+                    '<button class="btn" style="font-size:.78rem;padding:5px 14px;background:#f1f5f9;color:#475569;" onclick="editarLocacao(' + l.id + ')"><i class="fas fa-pen"></i> Editar</button>' +
+                '</div>';
+
+            return '<div class="loc-row">' +
+                '<div class="loc-row-header" onclick="toggleExpand(' + l.id + ')">' +
+                    '<i class="fas fa-chevron-right loc-chevron" id="loc_chev_' + l.id + '"></i>' +
+                    '<div class="loc-car-icon' + (isConcluida ? ' concluida' : '') + '"><i class="fas fa-car"></i></div>' +
+                    '<div class="loc-info">' +
+                        '<div class="loc-num">#' + numId + '</div>' +
+                        '<div class="loc-placa">' + (l.placa || '—') + '</div>' +
+                        '<button class="loc-recibo" onclick="event.stopPropagation();imprimirContrato(' + l.id + ')">Gerar Recibo</button>' +
+                        '<div class="loc-cliente">' + (l.nome_cliente || '—') + '</div>' +
+                    '</div>' +
+                    '<div class="loc-valores">' +
+                        '<div class="loc-val-label">Aluguel</div>' +
+                        '<div class="loc-val-num">' + valorAluguel + '</div>' +
+                        valorCaucao +
+                    '</div>' +
+                    '<div class="loc-inicio">' +
+                        '<div class="loc-inicio-label">Início</div>' +
+                        '<div class="loc-inicio-val">' + formatDateLong(l.data_inicio) + '</div>' +
+                    '</div>' +
+                    '<div class="loc-actions">' +
+                        getStatusBadge(l.status) +
+                        editBtn + delBtn + devBtn +
                     '</div>' +
                 '</div>' +
-            '</td>' +
-        '</tr>').join('');
+                '<div id="loc_exp_' + l.id + '" class="loc-expand" style="display:none;">' + expandBody + '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function renderizarFotosExpand(fotos) {
+        if (!fotos) return '';
+        try {
+            const parsed = typeof fotos === 'string' ? JSON.parse(fotos) : fotos;
+            const lista = Array.isArray(parsed) ? parsed : [];
+            if (!lista.length) return '';
+            return lista.map(f => '<img src="' + thumbUrl(f) + '" onclick="abrirGaleria(' + lista.map(x=>"'"+x+"'").join(',') + ')" title="Ver foto">').join('');
+        } catch { return ''; }
     }
 
     function confirmarExcluirLocacao(id, descricao) {
@@ -298,13 +457,22 @@
     }
 
     function filtrarLocacoes() {
-        const veiculo = document.getElementById('filtroVeiculoLoc').value;
-        const cliente = document.getElementById('filtroClienteLoc').value;
-        const status = document.getElementById('filtroStatusLoc').value;
+        atualizarLabelRange();
+        const placa   = (document.getElementById('filtroPlacaLoc')   || {value:''}).value.toLowerCase();
+        const nome    = (document.getElementById('filtroNomeLoc')     || {value:''}).value.toLowerCase();
+        const tempo   = (document.getElementById('filtroTempoMinLoc') || {value:''}).value;
+        const maxAl   = parseFloat((document.getElementById('rangeAluguel') || {value:999999}).value) || 999999;
+        const maxCau  = parseFloat((document.getElementById('rangeCaucao')  || {value:999999}).value) || 999999;
+
         const filtradas = locacoes.filter(l => {
-            return (veiculo === 'todos' || l.veiculo_id == veiculo) &&
-                   (cliente === 'todos' || l.cliente_id == cliente) &&
-                   (status === 'todos' || l.status === status);
+            if (placa  && !(l.placa        || '').toLowerCase().includes(placa))  return false;
+            if (nome   && !(l.nome_cliente || '').toLowerCase().includes(nome))   return false;
+            if (tempo  && (l.frequencia_cobranca || 'avulso') !== tempo)          return false;
+            const valAluguel = parseFloat(l.valor_semanal || l.diaria) || 0;
+            const valCaucao  = parseFloat(l.caucao) || 0;
+            if (valAluguel > maxAl)  return false;
+            if (valCaucao  > maxCau) return false;
+            return true;
         });
         renderizarLocacoes(filtradas);
     }
@@ -1051,40 +1219,7 @@
 
     window.addEventListener('load', carregarDados);
 
-    function toggleLocMenu(e, id) {
-        e.stopPropagation();
-        const menu = document.getElementById('locmenu_' + id);
-        const isOpen = menu.style.display !== 'none';
-        closeLocMenus();
-        if (!isOpen) menu.style.display = 'block';
-    }
-    function closeLocMenus() {
-        document.querySelectorAll('.loc-menu').forEach(m => m.style.display = 'none');
-    }
-    document.addEventListener('click', closeLocMenus);
 </script>
-<style>
-.loc-menu-btn {
-    background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px;
-    padding: 4px 10px; font-size: 1rem; cursor: pointer; color: #475569;
-    letter-spacing: 2px; line-height: 1;
-}
-.loc-menu-btn:hover { background: #e2e8f0; }
-.loc-menu {
-    position: absolute; right: 0; top: calc(100% + 4px); z-index: 100;
-    background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,.10); min-width: 150px; overflow: hidden;
-}
-.loc-menu button {
-    display: flex; align-items: center; gap: 8px;
-    width: 100%; background: none; border: none; text-align: left;
-    padding: 9px 14px; font-size: .83rem; cursor: pointer; color: #374151;
-}
-.loc-menu button:hover { background: #f8fafc; }
-.loc-menu button.danger { color: #c73a2e; }
-.loc-menu button.danger:hover { background: #fef2f2; }
-.loc-menu button i { width: 14px; text-align: center; }
-</style>
 
 <!-- ── Lightbox Galeria de Fotos ────────────────────────────── -->
 <div id="lightbox" onclick="fecharGaleria()" style="
