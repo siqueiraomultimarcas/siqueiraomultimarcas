@@ -438,7 +438,7 @@
 </div>
 
 {% endblock %}
-{% block scripts %}
+{% block extra_js %}
 <script>
 const MESES_PT = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -475,12 +475,20 @@ async function carregarFinancas() {
     if(de)  url += `&de=${de}`;
     if(ate) url += `&ate=${ate}`;
 
-    const [r1, r2] = await Promise.all([
-        fetch(url),
-        fetch('/api/contas-receber')
-    ]);
-    const d = await r1.json();
-    const contasRaw = await r2.json();
+    let d, contasRaw;
+    try {
+        const [r1, r2] = await Promise.all([
+            fetch(url),
+            fetch('/api/contas-receber')
+        ]);
+        d = await r1.json();
+        contasRaw = await r2.json();
+    } catch(e) {
+        showToast('Erro ao carregar dados financeiros', 'error');
+        el('tituloMes').textContent = 'Erro ao carregar';
+        el('listaEntradas').innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;font-size:.85rem;">Falha ao carregar entradas</div>';
+        return;
+    }
 
     // ── KPIs ──────────────────────────────────────────────────
     el('tituloMes').textContent = MESES_PT[d.mes] + ' de ' + d.ano;
@@ -804,4 +812,4 @@ const hoje = new Date();
 el('filtroMes').value = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
 carregarFinancas();
 </script>
-{% endblock %}
+{% endblock extra_js %}
