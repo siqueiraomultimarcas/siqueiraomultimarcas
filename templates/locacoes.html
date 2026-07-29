@@ -175,10 +175,10 @@
     }
 
     async function carregarDados() {
-        try {
-            document.getElementById('tabelaLocacoes').innerHTML =
-                '<tr><td colspan="10" style="text-align:center;padding:32px;color:#94a3b8;"><i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Carregando...</td></tr>';
+        const lista = document.getElementById('listaLocacoes');
+        if (lista) lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;"><i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Carregando...</div>';
 
+        try {
             const [respLoc, respVeic, respCli] = await Promise.all([
                 _fetchTimeout('/api/locacoes'),
                 _fetchTimeout('/api/veiculos'),
@@ -202,9 +202,9 @@
                 ? 'Tempo limite excedido. Verifique a conexão com o servidor.'
                 : 'Erro ao carregar dados. Tente recarregar a página.';
             showToast(msg, 'error');
-            document.getElementById('tabelaLocacoes').innerHTML =
-                '<tr><td colspan="10" style="text-align:center;padding:32px;color:#ef473a;">' +
-                '<i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>' + msg + '</td></tr>';
+            if (lista) lista.innerHTML =
+                '<div style="text-align:center;padding:40px;color:#ef473a;">' +
+                '<i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>' + msg + '</div>';
         }
     }
 
