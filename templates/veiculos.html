@@ -105,7 +105,7 @@
             <i class="fas fa-download"></i> Exportar
         </button>
     </div>
-    <div style="display:grid;grid-template-columns:56px 180px 1fr 120px 90px;gap:0;padding:8px 20px;background:#f8fafc;border-bottom:1px solid #f1f5f9;">
+    <div style="display:grid;grid-template-columns:56px 180px 1fr 120px 110px;gap:0;padding:8px 20px;background:#f8fafc;border-bottom:1px solid #f1f5f9;">
         <div></div>
         <div style="font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Placa</div>
         <div style="font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Modelo</div>
@@ -326,7 +326,7 @@
 .vl-kpi-label{ font-size:.7rem;color:#64748b;margin-top:2px; }
 .vl-row { border-bottom:1px solid #f1f5f9; }
 .vl-row:last-child { border-bottom:none; }
-.vl-row-header { display:grid;grid-template-columns:56px 180px 1fr 120px 90px;align-items:center;gap:0;padding:13px 20px;cursor:pointer;transition:background .1s; }
+.vl-row-header { display:grid;grid-template-columns:56px 180px 1fr 120px 110px;align-items:center;gap:0;padding:13px 20px;cursor:pointer;transition:background .1s; }
 .vl-row-header:hover { background:#f8fafc; }
 .vl-act-btn { border:none;background:#f1f5f9;color:#475569;border-radius:8px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:background .1s; }
 .vl-act-btn:hover { background:#e2e8f0; }
@@ -467,8 +467,9 @@ function _renderPageV() {
                 <div>
                     <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:600;background:${st.bg};color:${st.color};">${st.label}</span>
                 </div>
-                <div style="display:flex;gap:5px;align-items:center;justify-content:flex-end;">
+                <div style="display:flex;gap:4px;align-items:center;justify-content:flex-end;">
                     <button onclick="event.stopPropagation();editarVeiculo(${v.id})" class="vl-act-btn" title="Editar"><i class="fas fa-pen"></i></button>
+                    <button onclick="event.stopPropagation();abrirCRLV(${v.id},'${v.crlv_url||''}')" class="vl-act-btn" title="${v.crlv_url?'Ver CRLV':'Enviar CRLV'}" style="${v.crlv_url?'color:#16a34a;background:#f0fdf4;':'color:#94a3b8;'}"><i class="fas fa-file-alt"></i></button>
                     <button onclick="event.stopPropagation();abrirDetalhesVeiculo(${v.id})" class="vl-act-btn" title="Informações"><i class="fas fa-info-circle" style="color:#3b82f6;"></i></button>
                 </div>
             </div>
@@ -1063,8 +1064,80 @@ function exportarCarros() {
     a.click();
 }
 
-function atualizarFipeVeiculo(id) {
-    showToast('Consulta FIPE: use o campo no formulário de edição do veículo', 'info');
+async function atualizarFipeVeiculo(id) {
+    const v = veiculos.find(x => x.id === id);
+    if (!v) return;
+    if (!v.marca || !v.modelo || !v.ano) {
+        showToast('Preencha marca, modelo e ano no cadastro do veículo antes de buscar a FIPE', 'warning');
+        return;
+    }
+
+    showToast('Buscando FIPE: ' + v.marca + ' ' + v.modelo + ' ' + v.ano + '…', 'info', 8000);
+
+    try {
+        // 1. Marcas
+        const marcas = await fetch('/api/fipe/marcas/carros').then(r => r.json());
+        const alvoM  = _fipeNorm(v.marca);
+        const marcaOpt = marcas.find(m => _fipeNorm(m.nome) === alvoM)
+                      || marcas.find(m => _fipeNorm(m.nome).startsWith(alvoM))
+                      || marcas.find(m => alvoM.startsWith(_fipeNorm(m.nome)));
+        if (!marcaOpt) {
+            showToast('Marca "' + v.marca + '" não encontrada na FIPE. Use Editar para buscar manualmente.', 'warning', 7000);
+            return;
+        }
+
+        // 2. Modelos
+        const modelos = await fetch('/api/fipe/modelos/' + marcaOpt.valor + '?tipo=carros').then(r => r.json());
+        const alvoMod = _fipeNorm(v.modelo);
+        const modeloOpt = modelos.find(m => _fipeNorm(m.modelo) === alvoMod)
+                       || modelos.find(m => _fipeNorm(m.modelo).startsWith(alvoMod))
+                       || modelos.find(m => alvoMod.split(' ').every(w => _fipeNorm(m.modelo).includes(w)));
+        if (!modeloOpt) {
+            showToast('Modelo "' + v.modelo + '" não encontrado na FIPE. Use Editar para buscar manualmente.', 'warning', 7000);
+            return;
+        }
+
+        // 3. Anos
+        const anos = await fetch('/api/fipe/anos/' + marcaOpt.valor + '/' + modeloOpt.valor + '?tipo=carros').then(r => r.json());
+        const anoAlvo  = String(v.ano).trim();
+        const combAlvo = _fipeNorm(v.combustivel || '');
+        const anoOpt = anos.find(a => a.nome.startsWith(anoAlvo) && combAlvo && _fipeNorm(a.nome).includes(combAlvo))
+                    || anos.find(a => a.nome.startsWith(anoAlvo));
+        if (!anoOpt) {
+            showToast('Ano ' + v.ano + ' não encontrado na FIPE para este modelo.', 'warning');
+            return;
+        }
+
+        // 4. Preço
+        const d = await fetch('/api/fipe/preco/' + marcaOpt.valor + '/' + modeloOpt.valor + '/' + anoOpt.valor + '?tipo=carros').then(r => r.json());
+        if (d.erro || !d.valor) throw new Error('Sem valor FIPE retornado');
+
+        const valorNum = parseFloat(d.valor.replace('R$','').trim().replace(/\./g,'').replace(',','.'));
+
+        // 5. Salvar no banco
+        const payload = Object.assign({}, v, {
+            valor_fipe:      valorNum,
+            codigo_fipe:     d.codigoFipe    || v.codigo_fipe    || '',
+            referencia_fipe: d.mesReferencia || v.referencia_fipe || '',
+        });
+        const resp = await fetch('/api/veiculos/' + id, {
+            method:  'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(payload),
+        });
+        if (!resp.ok) throw new Error('Erro ao salvar');
+
+        // 6. Atualizar array local e view
+        v.valor_fipe      = valorNum;
+        v.codigo_fipe     = d.codigoFipe    || '';
+        v.referencia_fipe = d.mesReferencia || '';
+        filtrarVeiculos();
+        atualizarContadores();
+
+        showToast('FIPE atualizada: ' + d.valor + (d.mesReferencia ? ' · ' + d.mesReferencia : ''), 'success', 6000);
+    } catch(e) {
+        showToast('Erro ao buscar FIPE: ' + e.message, 'error');
+    }
 }
 
 async function abrirDetalhesVeiculo(id) {
