@@ -107,10 +107,7 @@
 .ck-col.amanha .ck-col-head .dow  { color: #fff; }
 .ck-col.amanha .ck-col-head .date { color: rgba(255,255,255,.7); }
 
-/* Passado com pendente */
-.ck-col.atrasado .ck-col-head { background: #fff7f7; border-bottom-color: #fecaca; }
-.ck-col.atrasado .ck-col-head .dow  { color: #c73a2e; }
-.ck-col.atrasado .ck-col-head .date { color: #fca5a5; }
+/* Passado com pendente — destaque NO CARD, não na coluna */
 
 /* ── Corpo da coluna ────────────────────────────────────── */
 .ck-col-body {
@@ -155,13 +152,16 @@
 }
 .ck-card.pago .ck-placa { color: #9ca3af; }
 
-/* Linha 2: valor */
+/* Linha 2: valor (pendente = roxo, pago = cinza, atrasado = vermelho) */
 .ck-valor {
-    font-size: .8rem; font-weight: 700; color: #c73a2e;
+    font-size: .8rem; font-weight: 700; color: #4f46e5;
     font-variant-numeric: tabular-nums;
     padding-left: 21px;
 }
-.ck-card.pago .ck-valor { color: #9ca3af; }
+.ck-card.pago    .ck-valor    { color: #9ca3af; }
+.ck-card.atrasado             { background: #fff1f2; border-color: #fecaca; }
+.ck-card.atrasado .ck-placa   { color: #c73a2e; }
+.ck-card.atrasado .ck-valor   { color: #c73a2e; }
 
 /* Linha 3: cliente */
 .ck-cliente {
@@ -175,13 +175,16 @@
 .ck-empty { text-align: center; color: #d1d5db; font-size: .75rem; padding: 20px 0; }
 </style>
 
+<!-- Título -->
+<h1 style="font-size:1.4rem;font-weight:700;color:#0f172a;margin:0 0 16px;">Checklist de Aluguéis</h1>
+
 <!-- Instrução -->
 <div class="ck-info-box">
     <p class="title">Marque ou desmarque pagamentos de locações.</p>
     <p class="sub">
         Os valores serão atualizados automaticamente após a marcação da caixinha de seleção.<br>
-        Para ver pagamentos pendentes a mais de 7 dias, acesse:
-        <strong>Finanças › Contas a Receber</strong>
+        Para ver pagamentos pendentes a mais de 7 dias ou que não sejam do tipo "Aluguel", acesse:
+        <strong>Finanças &gt; Contas a Receber</strong>
     </p>
 </div>
 
@@ -195,7 +198,7 @@
     <button class="ck-nav-btn" onclick="moverSemana(7)" title="Próxima semana"><i class="fas fa-chevron-right"></i></button>
     <span class="ck-week-range" id="semanaLabel"></span>
 </div>
-<span class="ck-hint-link">*Clique no card para marcar como recebido.</span>
+<span class="ck-hint-link">*Clique no '☑' para marcar como recebido.</span>
 
 <!-- Grade de dias -->
 <div class="ck-scroll" style="margin-top:10px;">
@@ -266,11 +269,10 @@ function renderizar(de) {
         const pagamentos = _dados[diaStr] || [];
         const temPendente = pagamentos.some(p => p.status === 'pendente');
 
-        // classes da coluna
+        // classes da coluna (atrasado fica no card individual, não na coluna)
         let cls = 'ck-col';
-        if (isHoje)              cls += ' hoje';
-        else if (isAmanha)       cls += ' amanha';
-        else if (isAtras && temPendente) cls += ' atrasado';
+        if (isHoje)        cls += ' hoje';
+        else if (isAmanha) cls += ' amanha';
 
         // label do cabeçalho
         const dowLabel = isHoje ? 'Hoje' : isAmanha ? 'Amanhã' : DIAS_PT[dia.getDay()];
@@ -287,7 +289,7 @@ function renderizar(de) {
             html += `<div class="ck-empty">—</div>`;
         } else {
             pagamentos.forEach(p => {
-                html += _cardHtml(p);
+                html += _cardHtml(p, isAtras);
             });
         }
         html += `</div></div>`;
@@ -305,10 +307,14 @@ function renderizar(de) {
     });
 }
 
-function _cardHtml(p) {
-    const isPago = p.status === 'pago';
-    const valor  = parseFloat(p.valor_previsto || 0) - parseFloat(p.desconto || 0);
-    return `<div class="ck-card${isPago ? ' pago' : ''}" id="card_${p.id}"
+function _cardHtml(p, isAtras) {
+    const isPago      = p.status === 'pago';
+    const isAtrasado  = !isPago && !!isAtras;
+    const valor       = parseFloat(p.valor_previsto || 0) - parseFloat(p.desconto || 0);
+    let cardCls = 'ck-card';
+    if (isPago)     cardCls += ' pago';
+    if (isAtrasado) cardCls += ' atrasado';
+    return `<div class="${cardCls}" id="card_${p.id}" data-atras="${isAtras ? 1 : 0}"
                  onclick="toggleCard(${p.id}, ${!isPago})">
         <div class="ck-row1">
             <div class="ck-chk">${isPago ? CHECK_SVG : ''}</div>
@@ -326,10 +332,12 @@ async function toggleCard(id, pagar) {
 
     // Atualização otimista
     if (pagar) {
+        card.classList.remove('atrasado');
         card.classList.add('pago');
         card.querySelector('.ck-chk').innerHTML = CHECK_SVG;
     } else {
         card.classList.remove('pago');
+        if (card.dataset.atras === '1') card.classList.add('atrasado');
         card.querySelector('.ck-chk').innerHTML = '';
     }
 
@@ -348,29 +356,12 @@ async function toggleCard(id, pagar) {
             if (p) { p.status = r.status; break; }
         }
 
-        // Atualiza classe vencido nas colunas passadas
-        _atualizarColClasses();
-
         showToast(pagar ? 'Pagamento registrado!' : 'Pagamento revertido.', pagar ? 'success' : 'warning');
     } catch {
         // Reverte
         if (pagar) { card.classList.remove('pago'); card.querySelector('.ck-chk').innerHTML = ''; }
         else       { card.classList.add('pago');    card.querySelector('.ck-chk').innerHTML = CHECK_SVG; }
         showToast('Erro ao salvar', 'error');
-    }
-}
-
-function _atualizarColClasses() {
-    const hojeStr = _iso(_hoje());
-    for (const [dia, grupo] of Object.entries(_dados)) {
-        const col = document.getElementById('col_' + dia);
-        if (!col) continue;
-        const temPend = grupo.some(p => p.status === 'pendente');
-        const isAtras = dia < hojeStr;
-        if (isAtras && !col.classList.contains('hoje') && !col.classList.contains('amanha')) {
-            if (temPend) col.classList.add('atrasado');
-            else         col.classList.remove('atrasado');
-        }
     }
 }
 
