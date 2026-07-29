@@ -33,9 +33,15 @@
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Agendamentos de Locações</h3>
-            <a href="/reservas" class="btn btn-primary" style="font-size:.8rem;padding:6px 14px;">
-                <i class="fas fa-plus"></i> Novo agendamento
-            </a>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button onclick="abrirValCNH()" style="background:none;border:none;cursor:pointer;
+                    font-size:.75rem;font-weight:600;color:#4f46e5;padding:0;display:flex;align-items:center;gap:5px;">
+                    <i class="fas fa-id-card"></i> Validade - CNH dos condutores <i class="fas fa-chevron-right" style="font-size:.6rem;"></i>
+                </button>
+                <a href="/reservas" class="btn btn-primary" style="font-size:.8rem;padding:6px 14px;">
+                    <i class="fas fa-plus"></i> Novo agendamento
+                </a>
+            </div>
         </div>
         <div id="agendamentosContainer" style="padding:28px 20px;text-align:center;">
             <i class="fas fa-box-open" style="font-size:2.8rem;color:#cbd5e1;display:block;margin-bottom:14px;"></i>
@@ -1442,6 +1448,87 @@
 
     window.addEventListener('load', carregarDados);
 
+/* ── Validade CNH dos condutores ─────────────────────────────── */
+async function abrirValCNH() {
+    const ov = document.getElementById('overlayValCNH');
+    ov.style.display = 'flex';
+    const lista = document.getElementById('listaCNH');
+    lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:.85rem;">Carregando...</div>';
+    try {
+        const resp = await fetch('/api/locacoes/cnh-condutores');
+        const data = await resp.json();
+        if (!data.length) {
+            lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:.85rem;">Nenhuma locação ativa encontrada</div>';
+            return;
+        }
+        const hoje = new Date();
+        lista.innerHTML = data.map(r => {
+            const val = r.cnh_validade ? r.cnh_validade.split('T')[0] : null;
+            const dataFmt = val ? new Date(val + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+            let alerta = '';
+            let cor = '#0f172a';
+            if (val) {
+                const diff = (new Date(val) - hoje) / (1000*60*60*24);
+                if (diff < 0)       { cor='#be123c'; alerta='<span style="font-size:.62rem;background:#fff1f2;color:#be123c;padding:1px 6px;border-radius:6px;font-weight:700;margin-left:6px;">VENCIDA</span>'; }
+                else if (diff < 30) { cor='#d97706'; alerta='<span style="font-size:.62rem;background:#fff8e6;color:#d97706;padding:1px 6px;border-radius:6px;font-weight:700;margin-left:6px;">Vence em breve</span>'; }
+            }
+            return `<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+                        padding:12px 20px;border-bottom:1px solid #f1f5f9;transition:background .1s;"
+                        onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+                <div>
+                    <div style="font-weight:700;color:#0f172a;font-size:.84rem;letter-spacing:.03em;">${r.placa}</div>
+                    <div style="font-size:.74rem;color:#64748b;margin-top:2px;">Condutor: <strong style="color:#475569;">${r.condutor}</strong></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:.82rem;font-weight:600;color:${cor};font-variant-numeric:tabular-nums;">${dataFmt}${alerta}</span>
+                    <button onclick="editarValCNH(${r.cliente_id},'${val||''}')"
+                        style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:.95rem;padding:4px;"
+                        title="Editar validade CNH">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        lista.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;font-size:.85rem;">Erro ao carregar dados</div>';
+    }
+}
+
+function fecharValCNH() {
+    document.getElementById('overlayValCNH').style.display = 'none';
+}
+
+function editarValCNH(clienteId, valAtual) {
+    abrirModal('Validade da CNH', `
+        <div class="form-group" style="margin-bottom:18px;">
+            <label style="font-size:.72rem;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Data de Vencimento da CNH</label>
+            <input type="date" class="form-control" id="inputValCNH" value="${valAtual}" style="font-size:.88rem;">
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+            <button class="btn" onclick="fecharModal()" style="background:#f1f5f9;color:#64748b;">Cancelar</button>
+            <button class="btn btn-primary" onclick="_salvarValCNH(${clienteId})" style="background:#6366f1;border-color:#6366f1;">
+                <i class="fas fa-check"></i> Salvar
+            </button>
+        </div>
+    `);
+}
+
+async function _salvarValCNH(clienteId) {
+    const val = document.getElementById('inputValCNH').value;
+    try {
+        const resp = await fetch(`/api/clientes/${clienteId}/cnh-validade`, {
+            method:'PUT',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({cnh_validade: val || null})
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Erro');
+        showToast('Validade CNH atualizada!', 'success');
+        fecharModal();
+        abrirValCNH(); // recarrega a lista
+    } catch(e) { showToast(e.message, 'error'); }
+}
+
 </script>
 
 <!-- ── Lightbox Galeria de Fotos ────────────────────────────── -->
@@ -1489,6 +1576,36 @@
     <!-- Miniaturas -->
     <div id="lbThumbs" onclick="event.stopPropagation()"
          style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:400px;">
+    </div>
+</div>
+
+<!-- ── Modal Validade CNH dos Condutores ────────────────────── -->
+<div id="overlayValCNH" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+     z-index:600;align-items:flex-start;justify-content:flex-end;" onclick="if(event.target===this)fecharValCNH()">
+    <div style="background:#fff;height:100%;width:100%;max-width:500px;overflow-y:auto;
+                box-shadow:-4px 0 30px rgba(0,0,0,.18);display:flex;flex-direction:column;">
+        <!-- header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:18px 20px;border-bottom:1px solid #f1f5f9;position:sticky;top:0;background:#fff;z-index:1;">
+            <h3 style="font-size:.95rem;font-weight:700;color:#0f172a;margin:0;">
+                <i class="fas fa-id-card" style="color:#4f46e5;margin-right:8px;"></i>Validade - CNH
+            </h3>
+            <button onclick="fecharValCNH()" style="background:#f1f5f9;border:none;cursor:pointer;
+                width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
+                justify-content:center;color:#64748b;font-size:.9rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <!-- colunas -->
+        <div style="display:grid;grid-template-columns:1fr auto;gap:0;
+                    padding:10px 20px 6px;border-bottom:1px solid #f1f5f9;">
+            <span style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Locação</span>
+            <span style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Validade</span>
+        </div>
+        <!-- lista -->
+        <div id="listaCNH" style="flex:1;padding:0 4px;">
+            <div style="text-align:center;padding:40px;color:#94a3b8;font-size:.85rem;">Carregando...</div>
+        </div>
     </div>
 </div>
 

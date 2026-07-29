@@ -368,6 +368,7 @@ def init_db():
     cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS valor_semanal NUMERIC(10,2)")
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS observacao TEXT")
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS forma_pagamento TEXT")
+    cur.execute("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cnh_validade DATE")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS observacao TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS pdf_url TEXT")
 
@@ -1179,10 +1180,10 @@ def add_cliente():
     try:
         with _db() as (conn, cur):
             cur.execute('''
-                INSERT INTO clientes (nome, cpf, cnh, telefone, email, cep, endereco, bairro, cidade, estado, status, observacoes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (data['nome'], data.get('cpf'), data.get('cnh'), data.get('telefone'),
-                  data.get('email'), data.get('cep') or None, data.get('endereco'),
+                INSERT INTO clientes (nome, cpf, cnh, cnh_validade, telefone, email, cep, endereco, bairro, cidade, estado, status, observacoes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (data['nome'], data.get('cpf'), data.get('cnh'), data.get('cnh_validade') or None,
+                  data.get('telefone'), data.get('email'), data.get('cep') or None, data.get('endereco'),
                   data.get('bairro') or None, data.get('cidade'),
                   data.get('estado'), data.get('status', 'ativo'), data.get('observacoes')))
         return jsonify({'success': True})
@@ -1199,11 +1200,12 @@ def update_cliente(id):
     data = request.json
     with _db() as (conn, cur):
         cur.execute('''
-            UPDATE clientes SET nome=%s, cpf=%s, cnh=%s, telefone=%s, email=%s,
-            cep=%s, endereco=%s, bairro=%s, cidade=%s, estado=%s, status=%s, observacoes=%s
+            UPDATE clientes SET nome=%s, cpf=%s, cnh=%s, cnh_validade=%s,
+            telefone=%s, email=%s, cep=%s, endereco=%s, bairro=%s,
+            cidade=%s, estado=%s, status=%s, observacoes=%s
             WHERE id=%s
-        ''', (data['nome'], data.get('cpf'), data.get('cnh'), data.get('telefone'),
-              data.get('email'), data.get('cep') or None, data.get('endereco'),
+        ''', (data['nome'], data.get('cpf'), data.get('cnh'), data.get('cnh_validade') or None,
+              data.get('telefone'), data.get('email'), data.get('cep') or None, data.get('endereco'),
               data.get('bairro') or None, data.get('cidade'),
               data.get('estado'), data.get('status'), data.get('observacoes'), id))
     return jsonify({'success': True})
@@ -2582,6 +2584,40 @@ def delete_manutencao(id):
     return jsonify({'success': True})
 
 # ==================== API LOCAÇÕES ====================
+
+@app.route('/api/locacoes/cnh-condutores', methods=['GET'])
+@login_required
+def get_cnh_condutores():
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT
+                l.id          AS locacao_id,
+                v.placa,
+                v.marca,
+                v.modelo,
+                c.id          AS cliente_id,
+                c.nome        AS condutor,
+                c.cnh,
+                c.cnh_validade
+            FROM locacoes l
+            JOIN veiculos v ON v.id = l.veiculo_id
+            JOIN clientes c ON c.id = l.cliente_id
+            WHERE l.status = 'ativa'
+            ORDER BY c.cnh_validade ASC NULLS LAST, c.nome
+        ''')
+        result = rows_to_dict(cur)
+    return jsonify(result)
+
+
+@app.route('/api/clientes/<int:id>/cnh-validade', methods=['PUT'])
+@login_required
+def update_cnh_validade(id):
+    data = request.json
+    val  = data.get('cnh_validade') or None
+    with _db() as (conn, cur):
+        cur.execute('UPDATE clientes SET cnh_validade=%s WHERE id=%s', (val, id))
+    return jsonify({'success': True})
+
 
 @app.route('/api/locacoes', methods=['GET'])
 @login_required
