@@ -1,8 +1,9 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Finanças - Locadora{% endblock %}
 {% block content %}
 
 <style>
+/* ── KPI cards ──────────────────────────────────────────────── */
 .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
 .kpi-card { position:relative; background:#fff; border-radius:12px; padding:18px 20px;
             box-shadow:0 1px 4px rgba(0,0,0,.08); overflow:hidden; }
@@ -22,35 +23,11 @@
 .kpi-card.amber  .kpi-value { color:#d4a800; } .kpi-card.amber  .kpi-icon-bg { color:#d4a800; }
 .kpi-card.red    .kpi-value { color:#c73a2e; } .kpi-card.red    .kpi-icon-bg { color:#c73a2e; }
 .kpi-card.purple .kpi-value { color:#7c3aed; } .kpi-card.purple .kpi-icon-bg { color:#7c3aed; }
-
 .taxa-bar-wrap { margin-top:8px; }
 .taxa-bar-bg   { background:#e2e8f0; border-radius:4px; height:6px; overflow:hidden; }
 .taxa-bar-fill { height:100%; border-radius:4px; background:#16a34a; transition:width .5s; }
 
-.evolucao-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-top:4px; }
-.ev-cell { background:#f8fafc; border-radius:8px; padding:10px 12px; text-align:center; }
-.ev-cell .ev-mes   { font-size:.62rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
-.ev-cell .ev-val   { font-size:.95rem; font-weight:700; color:#0f172a; font-variant-numeric:tabular-nums; }
-.ev-cell .ev-rec   { font-size:.72rem; color:#16a34a; margin-top:2px; font-variant-numeric:tabular-nums; }
-.ev-cell.atual     { background:#e8f5ff; border:1px solid #b1dcfb; }
-.ev-cell.atual .ev-mes { color:#008cdd; }
-
-.veiculo-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f1f5f9; }
-.veiculo-row:last-child { border-bottom:none; }
-.veiculo-placa { background:#1e293b; color:#fff; font-size:.72rem; font-weight:700; padding:3px 8px;
-                 border-radius:5px; letter-spacing:.05em; flex-shrink:0; }
-.veiculo-nome  { flex:1; font-size:.82rem; font-weight:500; color:#0f172a; }
-.veiculo-val   { font-size:.88rem; font-weight:700; color:#16a34a; font-variant-numeric:tabular-nums; flex-shrink:0; }
-.veiculo-bar   { height:4px; border-radius:2px; background:#16a34a; transition:width .4s; }
-
-.periodo-box   { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:18px 20px; }
-.periodo-box h3{ font-size:.78rem; font-weight:700; color:#15803d; text-transform:uppercase;
-                 letter-spacing:.07em; margin-bottom:14px; }
-.periodo-kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
-.periodo-kpi { text-align:center; }
-.periodo-kpi .pk-val { font-size:1.3rem; font-weight:700; color:#15803d; font-variant-numeric:tabular-nums; }
-.periodo-kpi .pk-lbl { font-size:.62rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
-
+/* ── filter row ─────────────────────────────────────────────── */
 .filter-row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
 .filter-row label { font-size:.72rem; font-weight:600; color:#64748b; margin-bottom:3px; display:block; }
 .filter-row select,
@@ -60,8 +37,119 @@
                                   color:#0f172a; background:#fff; outline:none; }
 .filter-row select:focus,
 .filter-row input:focus { border-color:#008cdd; }
+
+/* ── evolução ────────────────────────────────────────────────── */
+.evolucao-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-top:4px; }
+.ev-cell { background:#f8fafc; border-radius:8px; padding:10px 12px; text-align:center; }
+.ev-cell .ev-mes   { font-size:.62rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+.ev-cell .ev-val   { font-size:.95rem; font-weight:700; color:#0f172a; font-variant-numeric:tabular-nums; }
+.ev-cell .ev-rec   { font-size:.72rem; color:#16a34a; margin-top:2px; font-variant-numeric:tabular-nums; }
+.ev-cell.atual     { background:#e8f5ff; border:1px solid #b1dcfb; }
+.ev-cell.atual .ev-mes { color:#008cdd; }
+
+/* ── veículo row ─────────────────────────────────────────────── */
+.veiculo-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f1f5f9; }
+.veiculo-row:last-child { border-bottom:none; }
+.veiculo-placa { background:#1e293b; color:#fff; font-size:.72rem; font-weight:700; padding:3px 8px;
+                 border-radius:5px; letter-spacing:.05em; flex-shrink:0; }
+.veiculo-nome  { flex:1; font-size:.82rem; font-weight:500; color:#0f172a; }
+.veiculo-val   { font-size:.88rem; font-weight:700; color:#16a34a; font-variant-numeric:tabular-nums; flex-shrink:0; }
+.veiculo-bar   { height:4px; border-radius:2px; background:#16a34a; transition:width .4s; }
+
+/* ── histórico de entradas ───────────────────────────────────── */
+.hist-tabs { display:flex; gap:6px; }
+.hist-tab  { padding:5px 14px; border-radius:20px; font-size:.76rem; font-weight:600;
+             cursor:pointer; border:1px solid #e2e8f0; color:#64748b; background:#fff; transition:all .15s; }
+.hist-tab.active      { background:#4f46e5; color:#fff; border-color:#4f46e5; }
+.hist-tab:hover:not(.active) { background:#f1f5f9; }
+
+.ent-row { display:flex; align-items:center; gap:12px; padding:10px 14px;
+           border-bottom:1px solid #f1f5f9; transition:background .1s; }
+.ent-row:hover { background:#f8fafc; }
+.ent-row:last-child { border-bottom:none; }
+
+.ent-avatar { width:38px; height:38px; border-radius:10px; flex-shrink:0;
+              display:flex; align-items:center; justify-content:center;
+              color:#fff; font-size:.85rem; font-weight:700; }
+.ent-info   { flex:1; min-width:0; }
+.ent-nome   { font-size:.84rem; font-weight:600; color:#0f172a;
+              white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ent-sub    { font-size:.71rem; color:#64748b; margin-top:2px; }
+.ent-val    { font-size:.92rem; font-weight:700; color:#0f172a;
+              font-variant-numeric:tabular-nums; flex-shrink:0; min-width:88px; text-align:right; }
+
+.bdg-pend { background:#fff8e6; color:#d97706; border:1px solid #fde68a;
+            padding:3px 10px; border-radius:10px; font-size:.7rem; font-weight:700;
+            cursor:pointer; transition:background .15s; white-space:nowrap; }
+.bdg-pend:hover { background:#fef3c7; }
+.bdg-venc { background:#fff1f2; color:#be123c; border:1px solid #fecdd3;
+            padding:3px 10px; border-radius:10px; font-size:.7rem; font-weight:700;
+            cursor:pointer; transition:background .15s; white-space:nowrap; }
+.bdg-venc:hover { background:#ffe4e6; }
+.bdg-pago { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0;
+            padding:3px 10px; border-radius:10px; font-size:.7rem; font-weight:700; white-space:nowrap; }
+
+.ent-menu-wrap { position:relative; flex-shrink:0; }
+.ent-menu-btn  { width:30px; height:30px; border:1px solid #e2e8f0; border-radius:8px;
+                 display:flex; align-items:center; justify-content:center;
+                 cursor:pointer; color:#64748b; font-size:1rem; background:#fff; transition:all .1s; }
+.ent-menu-btn:hover { background:#f1f5f9; }
+.ent-dropdown { position:absolute; right:0; top:34px; background:#fff;
+                border:1px solid #e2e8f0; border-radius:12px;
+                box-shadow:0 8px 24px rgba(0,0,0,.12);
+                min-width:210px; z-index:200; padding:6px 0; display:none; }
+.ent-dropdown.open { display:block; }
+.ent-dd-item  { display:flex; align-items:center; gap:10px;
+                padding:9px 14px; font-size:.82rem; color:#0f172a;
+                cursor:pointer; transition:background .1s; }
+.ent-dd-item:hover { background:#f8fafc; }
+.ent-dd-item i { width:16px; text-align:center; color:#64748b; }
+.ent-dd-item.danger { color:#ef4444; }
+.ent-dd-item.danger i { color:#ef4444; }
+.ent-dd-sep { border:none; border-top:1px solid #f1f5f9; margin:4px 0; }
+
+/* ── modal overlay genérico ──────────────────────────────────── */
+.fn-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500;
+              display:flex; align-items:center; justify-content:center; }
+.fn-card    { background:#fff; border-radius:16px; padding:28px;
+              width:100%; max-width:430px; box-shadow:0 20px 60px rgba(0,0,0,.22);
+              position:relative; }
+.fn-card h3 { font-size:.9rem; font-weight:700; color:#0f172a; margin-bottom:20px; text-align:center; }
+.fn-close   { position:absolute; top:14px; right:14px; width:28px; height:28px;
+              border-radius:8px; background:#f1f5f9; border:none; cursor:pointer;
+              display:flex; align-items:center; justify-content:center; color:#64748b;
+              font-size:.95rem; transition:background .1s; }
+.fn-close:hover { background:#e2e8f0; }
+
+.fn-label   { font-size:.7rem; font-weight:700; color:#6366f1; display:block; margin-bottom:5px;
+              text-transform:uppercase; letter-spacing:.06em; }
+.fn-input   { width:100%; border:1px solid #e2e8f0; border-radius:10px;
+              padding:10px 14px; font-size:.88rem; color:#0f172a;
+              font-family:'Poppins',sans-serif; box-sizing:border-box; }
+.fn-input:focus { outline:none; border-color:#6366f1; }
+.fn-group   { margin-bottom:16px; }
+
+.fn-toggle-wrap { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+.fn-toggle { position:relative; width:40px; height:22px; cursor:pointer; flex-shrink:0; }
+.fn-toggle input { display:none; }
+.fn-toggle-sl { position:absolute; inset:0; background:#e2e8f0; border-radius:11px; transition:.3s; }
+.fn-toggle-sl:before { content:''; position:absolute; left:3px; top:3px;
+                         width:16px; height:16px; border-radius:50%; background:#fff; transition:.3s; }
+.fn-toggle input:checked + .fn-toggle-sl { background:#6366f1; }
+.fn-toggle input:checked + .fn-toggle-sl:before { transform:translateX(18px); }
+.fn-toggle-label { font-size:.82rem; color:#0f172a; font-weight:500; }
+
+.fn-footer  { display:flex; gap:10px; justify-content:flex-end; margin-top:4px; }
+
+/* info modal */
+.if-val { display:flex; align-items:center; gap:8px;
+          border:1px solid #e2e8f0; border-radius:8px;
+          padding:9px 12px; font-size:.84rem; color:#0f172a; background:#f8fafc; }
+.if-val i { color:#94a3b8; width:16px; flex-shrink:0; }
+.info-2col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 </style>
 
+<!-- ── cabeçalho ──────────────────────────────────────────────── -->
 <div class="page-header">
     <div>
         <h1><i class="fas fa-chart-pie"></i> Finanças</h1>
@@ -72,7 +160,7 @@
     </button>
 </div>
 
-<!-- Filtro de mês -->
+<!-- ── filtro de mês ─────────────────────────────────────────── -->
 <div class="card" style="margin-bottom:20px;">
     <div class="filter-row">
         <div>
@@ -81,7 +169,7 @@
         </div>
         <div style="height:1px;width:24px;background:#e2e8f0;align-self:center;"></div>
         <div>
-            <label>Período customizado — De</label>
+            <label>Período — De</label>
             <input type="date" id="periodoIni" onchange="carregarFinancas()">
         </div>
         <div>
@@ -92,12 +180,12 @@
             <i class="fas fa-sync-alt"></i> Atualizar
         </button>
         <button class="btn" onclick="limparPeriodo()" style="height:38px;align-self:flex-end;background:#f1f5f9;color:#64748b;">
-            <i class="fas fa-times"></i> Limpar Período
+            <i class="fas fa-times"></i> Limpar
         </button>
     </div>
 </div>
 
-<!-- KPIs do mês -->
+<!-- ── KPIs ──────────────────────────────────────────────────── -->
 <div id="tituloMes" style="font-size:.78rem;font-weight:700;color:#94a3b8;text-transform:uppercase;
      letter-spacing:.08em;margin-bottom:10px;">Carregando...</div>
 <div class="kpi-grid" style="margin-bottom:20px;">
@@ -148,10 +236,8 @@
     </div>
 </div>
 
-<!-- Layout 2 colunas -->
+<!-- ── evolução + receita por veículo ────────────────────────── -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
-
-    <!-- Evolução mensal -->
     <div class="card">
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
             <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin:0;">
@@ -162,8 +248,6 @@
             <div style="color:#94a3b8;font-size:.8rem;grid-column:1/-1;padding:20px;text-align:center;">Carregando...</div>
         </div>
     </div>
-
-    <!-- Receita por veículo -->
     <div class="card">
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
             <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin:0;">
@@ -175,71 +259,182 @@
             <div style="color:#94a3b8;font-size:.8rem;padding:20px;text-align:center;">Carregando...</div>
         </div>
     </div>
-
 </div>
 
-<!-- Bloco período customizado -->
-<div class="periodo-box" id="periodoBox" style="display:none;margin-bottom:20px;">
-    <h3><i class="fas fa-calendar-alt" style="margin-right:6px;"></i>Resultado do Período Selecionado</h3>
-    <div class="periodo-kpi-grid">
-        <div class="periodo-kpi">
-            <div class="pk-val" id="perPrevisto">—</div>
-            <div class="pk-lbl">Previsto</div>
-        </div>
-        <div class="periodo-kpi">
-            <div class="pk-val" id="perRecebido" style="color:#16a34a;">—</div>
-            <div class="pk-lbl">Recebido</div>
-        </div>
-        <div class="periodo-kpi">
-            <div class="pk-val" id="perContratos" style="color:#008cdd;">—</div>
-            <div class="pk-lbl">Contratos</div>
-        </div>
-        <div class="periodo-kpi">
-            <div class="pk-val" id="perQtdPago">—</div>
-            <div class="pk-lbl">Parcelas Pagas</div>
+<!-- ── histórico de entradas ─────────────────────────────────── -->
+<div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin:0;">
+            <i class="fas fa-arrow-down" style="color:#16a34a;margin-right:6px;"></i>Histórico de Entradas
+        </h3>
+        <div class="hist-tabs">
+            <div class="hist-tab active" onclick="filtrarEntradas('todos', this)">Todos</div>
+            <div class="hist-tab" onclick="filtrarEntradas('pendente', this)">Pendente</div>
+            <div class="hist-tab" onclick="filtrarEntradas('pago', this)">Pago</div>
+            <div class="hist-tab" onclick="filtrarEntradas('vencido', this)">Vencido</div>
         </div>
     </div>
-    <p style="font-size:.72rem;color:#64748b;margin-top:12px;margin-bottom:0;" id="periodoTexto"></p>
+    <div id="listaEntradas">
+        <div style="text-align:center;padding:30px;color:#94a3b8;font-size:.85rem;">Carregando...</div>
+    </div>
 </div>
 
-<!-- Atalhos rápidos -->
+<!-- ── atalhos rápidos ────────────────────────────────────────── -->
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;">
     <a href="/cobrancas" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,.1);display:flex;align-items:center;justify-content:center;color:#6366f1;flex-shrink:0;">
-            <i class="fas fa-calendar-check"></i>
-        </div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,.1);display:flex;align-items:center;justify-content:center;color:#6366f1;flex-shrink:0;"><i class="fas fa-calendar-check"></i></div>
         <div>
             <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Calendário de Locações</div>
             <div style="font-size:.72rem;color:#94a3b8;">Checklist de pagamentos</div>
         </div>
     </a>
     <a href="/contas-receber" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(22,163,74,.1);display:flex;align-items:center;justify-content:center;color:#16a34a;flex-shrink:0;">
-            <i class="fas fa-money-bill-wave"></i>
-        </div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(22,163,74,.1);display:flex;align-items:center;justify-content:center;color:#16a34a;flex-shrink:0;"><i class="fas fa-money-bill-wave"></i></div>
         <div>
             <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Contas a Receber</div>
             <div style="font-size:.72rem;color:#94a3b8;">Pendentes e recebidos</div>
         </div>
     </a>
     <a href="/locacoes" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(37,99,235,.1);display:flex;align-items:center;justify-content:center;color:#008cdd;flex-shrink:0;">
-            <i class="fas fa-key"></i>
-        </div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(37,99,235,.1);display:flex;align-items:center;justify-content:center;color:#008cdd;flex-shrink:0;"><i class="fas fa-key"></i></div>
         <div>
             <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Locações</div>
             <div style="font-size:.72rem;color:#94a3b8;">Gerenciar contratos</div>
         </div>
     </a>
     <a href="/relatorios" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(217,119,6,.1);display:flex;align-items:center;justify-content:center;color:#d4a800;flex-shrink:0;">
-            <i class="fas fa-chart-bar"></i>
-        </div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(217,119,6,.1);display:flex;align-items:center;justify-content:center;color:#d4a800;flex-shrink:0;"><i class="fas fa-chart-bar"></i></div>
         <div>
             <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Relatórios</div>
             <div style="font-size:.72rem;color:#94a3b8;">Análises detalhadas</div>
         </div>
     </a>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- MODAL: Confirmar Pagamento (Figura 2/3)                     -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div id="overlayPagamento" class="fn-overlay" style="display:none;" onclick="if(event.target===this)fecharModalPagamento()">
+    <div class="fn-card" style="max-width:400px;">
+        <button class="fn-close" onclick="fecharModalPagamento()"><i class="fas fa-times"></i></button>
+        <h3 style="text-align:center;font-size:.88rem;font-weight:700;color:#0f172a;margin-bottom:22px;line-height:1.4;">
+            Clique em salvar para confirmar o pagamento!
+        </h3>
+
+        <div class="fn-group">
+            <label class="fn-label">Data de recebimento:</label>
+            <input type="date" id="pmDataRec" class="fn-input">
+        </div>
+
+        <div class="fn-group">
+            <label class="fn-label">Forma de Pagamento:</label>
+            <select id="pmForma" class="fn-input">
+                <option value="">Forma de pgto</option>
+                <option value="PIX">PIX</option>
+                <option value="Boleto">Boleto</option>
+                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                <option value="Cartão de Débito">Cartão de Débito</option>
+                <option value="TED">TED</option>
+                <option value="Em Espécie">Em Espécie</option>
+                <option value="Faturamento Mensal">Faturamento Mensal</option>
+            </select>
+        </div>
+
+        <!-- banco sugerido baseado no cliente — placeholder visual -->
+        <div id="pmBancoSug" style="display:none;margin-bottom:14px;">
+            <div style="display:inline-flex;align-items:center;gap:8px;background:#f0fdf4;
+                        border:1px solid #bbf7d0;border-radius:8px;padding:6px 12px;font-size:.78rem;color:#15803d;">
+                <i class="fas fa-university"></i>
+                <span id="pmBancoNome"></span>
+                <i class="fas fa-chevron-right" style="font-size:.6rem;"></i>
+            </div>
+        </div>
+
+        <div class="fn-toggle-wrap">
+            <label class="fn-toggle">
+                <input type="checkbox" id="pmParcial">
+                <span class="fn-toggle-sl"></span>
+            </label>
+            <span class="fn-toggle-label">Pagamento parcial</span>
+        </div>
+
+        <div id="pmParcialVal" style="display:none;" class="fn-group">
+            <label class="fn-label">Valor recebido:</label>
+            <input type="number" id="pmValorParcial" class="fn-input" step="0.01" placeholder="0,00">
+        </div>
+
+        <div class="fn-footer">
+            <button class="btn" onclick="fecharModalPagamento()" style="background:#f1f5f9;color:#64748b;">Cancelar</button>
+            <button class="btn btn-primary" onclick="confirmarPagamento()" style="background:#6366f1;border-color:#6366f1;">
+                <i class="fas fa-check"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- MODAL: Mais Informações (Figura 4)                          -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div id="overlayInfo" class="fn-overlay" style="display:none;" onclick="if(event.target===this)fecharModalInfo()">
+    <div class="fn-card" style="max-width:460px;">
+        <button class="fn-close" onclick="fecharModalInfo()"><i class="fas fa-times"></i></button>
+        <h3>Mais informações</h3>
+
+        <div class="fn-group">
+            <label class="fn-label">Tipo de entrada</label>
+            <div class="if-val"><i class="fas fa-list-ul"></i><span id="infoTipo">—</span></div>
+        </div>
+        <div class="fn-group">
+            <label class="fn-label">Veículo</label>
+            <div class="if-val"><i class="fas fa-motorcycle"></i><span id="infoVeiculo">—</span></div>
+        </div>
+        <div class="fn-group">
+            <label class="fn-label">Locação</label>
+            <div class="if-val"><i class="fas fa-lock"></i><span id="infoLocacao">—</span></div>
+        </div>
+        <div class="fn-group">
+            <label class="fn-label">Valor</label>
+            <div class="if-val"><i class="fas fa-dollar-sign" style="color:#94a3b8;"></i>
+                <span id="infoValor" style="font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">—</span>
+            </div>
+        </div>
+        <div class="info-2col" style="margin-bottom:14px;">
+            <div>
+                <label class="fn-label">Multa</label>
+                <div class="if-val"><span id="infoMulta" style="font-variant-numeric:tabular-nums;">R$0,00</span></div>
+            </div>
+            <div>
+                <label class="fn-label">Juros</label>
+                <div class="if-val"><span id="infoJuros">0,00</span></div>
+            </div>
+        </div>
+        <div class="fn-group">
+            <label class="fn-label">Data prevista do pagamento</label>
+            <div class="if-val"><i class="fas fa-calendar-alt"></i><span id="infoDataPrev">—</span></div>
+        </div>
+        <div class="fn-group">
+            <label class="fn-label">Descrição</label>
+            <div class="if-val" style="min-height:42px;align-items:flex-start;padding-top:10px;">
+                <i class="fas fa-comment-alt" style="margin-top:2px;"></i>
+                <span id="infoDescricao" style="color:#64748b;font-style:italic;">Sem descrição</span>
+            </div>
+        </div>
+
+        <div class="fn-toggle-wrap" style="margin-bottom:20px;">
+            <label class="fn-toggle">
+                <input type="checkbox" id="infoPendente" disabled>
+                <span class="fn-toggle-sl"></span>
+            </label>
+            <span class="fn-toggle-label">Pagamento pendente</span>
+        </div>
+
+        <div class="fn-footer">
+            <button class="btn" onclick="fecharModalInfo()" style="background:#f1f5f9;color:#64748b;">Fechar</button>
+            <button class="btn btn-primary" onclick="editarDoInfo()" style="background:#6366f1;border-color:#6366f1;">
+                <i class="fas fa-pencil-alt"></i> Editar
+            </button>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
@@ -248,65 +443,70 @@
 const MESES_PT = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-function fmtR(v) {
-    return 'R$ ' + (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
+function fmtR(v)  { return 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmtRk(v) {
-    if (v >= 1000) return 'R$ ' + (v/1000).toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}) + 'k';
+    if(v>=1000) return 'R$ '+(v/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'k';
     return fmtR(v);
 }
-
+function fmtDate(s) {
+    if(!s) return '—';
+    const d = new Date(s+'T00:00:00');
+    return d.toLocaleDateString('pt-BR');
+}
 function el(id) { return document.getElementById(id); }
 
+/* ── dados locais ─────────────────────────────────────────────── */
+let todasEntradas = [];
+let filtroAtualEnt = 'todos';
+let itemAtualPag   = null;   // item selecionado para modal pag
+let itemAtualInfo  = null;   // item selecionado para modal info
+let menuAberto     = null;   // id do dropdown aberto
+
+/* ── carregar tudo ───────────────────────────────────────────── */
 async function carregarFinancas() {
-    const mesInput = el('filtroMes').value; // YYYY-MM
+    const mesInput = el('filtroMes').value;
     const de  = el('periodoIni').value;
     const ate = el('periodoFim').value;
-
-    const [ano, mes] = mesInput ? mesInput.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth()+1];
+    const [ano, mes] = mesInput
+        ? mesInput.split('-').map(Number)
+        : [new Date().getFullYear(), new Date().getMonth()+1];
 
     let url = `/api/financas?mes=${mes}&ano=${ano}`;
-    if (de)  url += `&de=${de}`;
-    if (ate) url += `&ate=${ate}`;
+    if(de)  url += `&de=${de}`;
+    if(ate) url += `&ate=${ate}`;
 
-    const r = await fetch(url);
-    const d = await r.json();
+    const [r1, r2] = await Promise.all([
+        fetch(url),
+        fetch('/api/contas-receber')
+    ]);
+    const d = await r1.json();
+    const contasRaw = await r2.json();
 
-    // Título
+    // ── KPIs ──────────────────────────────────────────────────
     el('tituloMes').textContent = MESES_PT[d.mes] + ' de ' + d.ano;
+    el('kpiPrevisto').textContent   = fmtRk(d.receita_prevista);
+    el('kpiPrevistoSub').textContent= (d.qtd_pendente+d.qtd_pago)+' período(s)';
+    el('kpiRecebido').textContent   = fmtRk(d.receita_recebida);
+    el('taxaBarFill').style.width   = Math.min(100,d.taxa_recebimento)+'%';
+    el('kpiTaxa').textContent       = d.taxa_recebimento.toFixed(1)+'% recebido';
+    el('kpiPendente').textContent   = fmtRk(d.receita_prevista-d.receita_recebida);
+    el('kpiPendenteSub').textContent= d.qtd_pendente+' parcela(s)';
+    el('kpiVencido').textContent    = d.qtd_vencido;
+    el('kpiVencidoSub').textContent = d.qtd_vencido>0?'períodos em atraso':'sem atrasos';
+    el('kpiCaucao').textContent     = fmtRk(d.caucao_pendente_total);
+    el('kpiCaucaoSub').textContent  = d.qtd_caucao_pendente+' contrato(s) com caução';
+    el('kpiKmExc').textContent      = fmtRk(d.km_exc_total);
+    el('kpiKmExcSub').textContent   = d.qtd_km_exc+' devolução(ões) com excedente';
+    el('kpiAtivas').textContent     = d.loc_ativas;
+    el('kpiAtivasSub').textContent  = d.loc_vencidas>0?d.loc_vencidas+' com vencimento expirado':'todas no prazo';
 
-    // KPIs
-    el('kpiPrevisto').textContent = fmtRk(d.receita_prevista);
-    el('kpiPrevistoSub').textContent = (d.qtd_pendente + d.qtd_pago) + ' período(s)';
-
-    el('kpiRecebido').textContent = fmtRk(d.receita_recebida);
-    el('taxaBarFill').style.width = Math.min(100, d.taxa_recebimento) + '%';
-    el('kpiTaxa').textContent = d.taxa_recebimento.toFixed(1) + '% recebido';
-
-    el('kpiPendente').textContent = fmtRk(d.receita_prevista - d.receita_recebida);
-    el('kpiPendenteSub').textContent = d.qtd_pendente + ' parcela(s)';
-
-    el('kpiVencido').textContent = d.qtd_vencido;
-    el('kpiVencidoSub').textContent = d.qtd_vencido > 0 ? 'períodos em atraso' : 'sem atrasos';
-
-    el('kpiCaucao').textContent = fmtRk(d.caucao_pendente_total);
-    el('kpiCaucaoSub').textContent = d.qtd_caucao_pendente + ' contrato(s) com caução pendente';
-
-    el('kpiKmExc').textContent = fmtRk(d.km_exc_total);
-    el('kpiKmExcSub').textContent = d.qtd_km_exc + ' devolução(ões) com excedente';
-
-    el('kpiAtivas').textContent = d.loc_ativas;
-    el('kpiAtivasSub').textContent = d.loc_vencidas > 0
-        ? d.loc_vencidas + ' com vencimento expirado'
-        : 'todas no prazo';
-
-    // Evolução mensal
-    const evolHtml = d.evolucao.length === 0
+    // ── evolução ───────────────────────────────────────────────
+    const evolHtml = d.evolucao.length===0
         ? '<div style="color:#94a3b8;padding:20px;text-align:center;grid-column:1/-1;">Sem dados</div>'
-        : d.evolucao.map(e => {
-            const [eAno, eMes] = e.mes.split('-').map(Number);
-            const isAtual = (eAno === d.ano && eMes === d.mes);
-            return `<div class="ev-cell${isAtual ? ' atual' : ''}">
+        : d.evolucao.map(e=>{
+            const [eAno,eMes]=e.mes.split('-').map(Number);
+            const isAt=(eAno===d.ano&&eMes===d.mes);
+            return `<div class="ev-cell${isAt?' atual':''}">
                 <div class="ev-mes">${MESES_PT[eMes].slice(0,3)} ${String(eAno).slice(2)}</div>
                 <div class="ev-val">${fmtRk(e.previsto)}</div>
                 <div class="ev-rec">${fmtRk(e.recebido)} rec.</div>
@@ -314,13 +514,13 @@ async function carregarFinancas() {
         }).join('');
     el('evolucaoGrid').innerHTML = evolHtml;
 
-    // Receita por veículo
-    el('veiculoMesTxt').textContent = MESES_PT[d.mes] + '/' + d.ano;
-    const maxRec = d.receita_por_veiculo.length > 0 ? d.receita_por_veiculo[0].receita : 1;
-    const veicHtml = d.receita_por_veiculo.length === 0
+    // ── receita por veículo ────────────────────────────────────
+    el('veiculoMesTxt').textContent = MESES_PT[d.mes]+'/'+d.ano;
+    const maxRec = d.receita_por_veiculo.length>0?d.receita_por_veiculo[0].receita:1;
+    el('veiculoList').innerHTML = d.receita_por_veiculo.length===0
         ? '<div style="color:#94a3b8;padding:20px;text-align:center;">Sem locações no período</div>'
-        : d.receita_por_veiculo.map(v => {
-            const pct = Math.round(v.receita / maxRec * 100);
+        : d.receita_por_veiculo.map(v=>{
+            const pct=Math.round(v.receita/maxRec*100);
             return `<div class="veiculo-row">
                 <span class="veiculo-placa">${v.placa}</span>
                 <div style="flex:1;min-width:0;">
@@ -330,37 +530,278 @@ async function carregarFinancas() {
                 <span class="veiculo-val">${fmtRk(v.receita)}</span>
             </div>`;
         }).join('');
-    el('veiculoList').innerHTML = veicHtml;
 
-    // Período customizado
-    if (de || ate) {
-        const p = d.periodo;
-        el('perPrevisto').textContent  = fmtRk(p.previsto);
-        el('perRecebido').textContent  = fmtRk(p.recebido);
-        el('perContratos').textContent = p.contratos;
-        el('perQtdPago').textContent   = p.qtd_pago;
-        el('periodoTexto').textContent = 'Período: ' + (de || '—') + ' a ' + (ate || '—');
-        el('periodoBox').style.display = 'block';
-    } else {
-        el('periodoBox').style.display = 'none';
-    }
+    // ── histórico de entradas ──────────────────────────────────
+    const hoje = new Date().toISOString().split('T')[0];
+    todasEntradas = contasRaw
+        .filter(c=>c.tipo==='contrato')
+        .map(c=>({
+            ...c,
+            vencido: c.status==='pendente' && c.data_vencimento && c.data_vencimento < hoje
+        }));
+    aplicarFiltroEntradas();
 }
 
+function filtrarEntradas(filtro, btn) {
+    filtroAtualEnt = filtro;
+    document.querySelectorAll('.hist-tab').forEach(t=>t.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    aplicarFiltroEntradas();
+}
+
+function aplicarFiltroEntradas() {
+    let lista = todasEntradas;
+    if(filtroAtualEnt==='pendente') lista = lista.filter(c=>c.status==='pendente'&&!c.vencido);
+    else if(filtroAtualEnt==='pago')    lista = lista.filter(c=>c.status==='pago');
+    else if(filtroAtualEnt==='vencido') lista = lista.filter(c=>c.vencido);
+    renderEntradas(lista);
+}
+
+function _avatarBg(nome) {
+    const cores=['#4f46e5','#0891b2','#16a34a','#d97706','#be123c','#7c3aed'];
+    const i=(nome||'A').charCodeAt(0)%cores.length;
+    return cores[i];
+}
+
+function renderEntradas(lista) {
+    const el_le = el('listaEntradas');
+    if(!lista.length) {
+        el_le.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-size:.85rem;">Nenhum lançamento encontrado</div>';
+        return;
+    }
+    el_le.innerHTML = lista.slice(0,50).map(c=>{
+        const ini = fmtDate(c.data_inicio_period);
+        const fim = fmtDate(c.data_fim_period);
+        const per = ini!=='—'&&fim!=='—' ? `${ini} – ${fim}` : (c.data_vencimento?'Venc. '+fmtDate(c.data_vencimento):'—');
+        const bg  = _avatarBg(c.cliente);
+        const ini_l = (c.cliente||'?')[0].toUpperCase();
+
+        let badge = '';
+        if(c.status==='pago') {
+            badge = `<span class="bdg-pago">Pago</span>`;
+        } else if(c.vencido) {
+            badge = `<span class="bdg-venc" onclick="abrirModalPagamento(${c.id})" title="Confirmar pagamento">Vencido</span>`;
+        } else {
+            badge = `<span class="bdg-pend" onclick="abrirModalPagamento(${c.id})" title="Confirmar pagamento">Pendente</span>`;
+        }
+
+        return `<div class="ent-row">
+            <div class="ent-avatar" style="background:${bg};">${ini_l}</div>
+            <div class="ent-info">
+                <div class="ent-nome">${c.cliente||'—'}</div>
+                <div class="ent-sub">${c.descricao||c.placa||'—'} &nbsp;·&nbsp; ${per}</div>
+            </div>
+            <div class="ent-val">${fmtR(c.valor)}</div>
+            ${badge}
+            <div class="ent-menu-wrap">
+                <div class="ent-menu-btn" onclick="toggleMenuEnt(${c.id},event)">⋯</div>
+                <div class="ent-dropdown" id="entDD_${c.id}">
+                    <div class="ent-dd-item" onclick="abrirMaisInfo(${c.id})">
+                        <i class="fas fa-info-circle"></i> Mais informações
+                    </div>
+                    <div class="ent-dd-item" onclick="gerarLinkPagamento(${c.id})">
+                        <i class="fas fa-link"></i> Gerar link de pagamento
+                    </div>
+                    ${c.status!=='pago'?`<hr class="ent-dd-sep">
+                    <div class="ent-dd-item" onclick="abrirModalPagamento(${c.id})">
+                        <i class="fas fa-check-circle"></i> Confirmar pagamento
+                    </div>`:'' }
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+/* ── menu dropdown ⋯ ─────────────────────────────────────────── */
+function toggleMenuEnt(id, evt) {
+    evt.stopPropagation();
+    const dd = el('entDD_'+id);
+    if(!dd) return;
+    const isOpen = dd.classList.contains('open');
+    fecharTodosMenus();
+    if(!isOpen) { dd.classList.add('open'); menuAberto=id; }
+}
+
+function fecharTodosMenus() {
+    document.querySelectorAll('.ent-dropdown.open').forEach(d=>d.classList.remove('open'));
+    menuAberto=null;
+}
+document.addEventListener('click', fecharTodosMenus);
+
+/* ── modal confirmar pagamento ───────────────────────────────── */
+function abrirModalPagamento(id) {
+    fecharTodosMenus();
+    itemAtualPag = todasEntradas.find(c=>c.id===id);
+    if(!itemAtualPag) return;
+    // data padrão = hoje
+    el('pmDataRec').value = new Date().toISOString().split('T')[0];
+    el('pmForma').value   = '';
+    el('pmParcial').checked = false;
+    el('pmParcialVal').style.display='none';
+    el('pmValorParcial').value='';
+    el('overlayPagamento').style.display='flex';
+}
+
+function fecharModalPagamento() {
+    el('overlayPagamento').style.display='none';
+    itemAtualPag=null;
+}
+
+el('pmParcial').addEventListener('change', function() {
+    el('pmParcialVal').style.display = this.checked?'block':'none';
+});
+
+async function confirmarPagamento() {
+    if(!itemAtualPag) return;
+    const dataRec = el('pmDataRec').value;
+    const forma   = el('pmForma').value;
+    if(!dataRec) { showToast('Informe a data de recebimento','error'); return; }
+    if(!forma)   { showToast('Selecione a forma de pagamento','error'); return; }
+
+    try {
+        const resp = await fetch('/api/contas-receber/baixa', {
+            method:'PUT',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                tipo:'contrato',
+                id: itemAtualPag.id,
+                data_recebimento: dataRec,
+                forma_pagamento: forma,
+                desconto: 0
+            })
+        });
+        const data = await resp.json();
+        if(!resp.ok) throw new Error(data.error||'Erro');
+        showToast('Pagamento confirmado com sucesso!','success');
+        fecharModalPagamento();
+        carregarFinancas();
+    } catch(e) { showToast(e.message,'error'); }
+}
+
+/* ── modal mais informações ──────────────────────────────────── */
+function abrirMaisInfo(id) {
+    fecharTodosMenus();
+    const c = todasEntradas.find(x=>x.id===id);
+    if(!c) return;
+    itemAtualInfo = c;
+
+    const tipoMap = {contrato:'Aluguel', multa:'Multa', avulsa:'Cobrança Avulsa'};
+    el('infoTipo').textContent      = tipoMap[c.tipo] || c.tipo || '—';
+    el('infoVeiculo').textContent   = c.placa || c.descricao || '—';
+    el('infoLocacao').textContent   = c.locacao_id ? '#'+c.locacao_id+' '+c.cliente : '—';
+    el('infoValor').textContent     = fmtR(c.valor);
+    el('infoMulta').textContent     = 'R$0,00';
+    el('infoJuros').textContent     = '0,00';
+    el('infoDataPrev').textContent  = fmtDate(c.data_vencimento);
+    el('infoDescricao').textContent = c.observacao || c.descricao || 'Sem descrição';
+    el('infoPendente').checked      = c.status!=='pago';
+
+    el('overlayInfo').style.display='flex';
+}
+
+function fecharModalInfo() {
+    el('overlayInfo').style.display='none';
+    itemAtualInfo=null;
+}
+
+function editarDoInfo() {
+    if(!itemAtualInfo) return;
+    fecharModalInfo();
+    // abre modal de pagamento se ainda pendente
+    if(itemAtualInfo.status!=='pago') abrirModalPagamento(itemAtualInfo.id);
+}
+
+/* ── gerar link de pagamento (Asaas) ────────────────────────── */
+async function gerarLinkPagamento(id) {
+    fecharTodosMenus();
+    const c = todasEntradas.find(x=>x.id===id);
+    if(!c) return;
+
+    // Pede forma de pagamento
+    abrirModal('Gerar Link de Pagamento', `
+        <p style="font-size:.82rem;color:#64748b;margin-bottom:16px;">
+            Selecione a forma de pagamento para <strong>${c.cliente}</strong><br>
+            Valor: <strong>${fmtR(c.valor)}</strong>
+        </p>
+        <div class="form-group">
+            <label style="font-size:.72rem;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.06em;">Forma de Pagamento</label>
+            <select class="form-control" id="linkBilling" style="margin-top:6px;">
+                <option value="PIX">PIX</option>
+                <option value="BOLETO">Boleto Bancário</option>
+                <option value="CREDIT_CARD">Cartão de Crédito</option>
+                <option value="UNDEFINED">Indefinido</option>
+            </select>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+            <button class="btn" onclick="fecharModal()" style="background:#f1f5f9;color:#64748b;">Cancelar</button>
+            <button class="btn btn-primary" onclick="_executarGerarLink(${id})" style="background:#6366f1;border-color:#6366f1;">
+                <i class="fas fa-link"></i> Gerar Link
+            </button>
+        </div>
+    `);
+}
+
+async function _executarGerarLink(id) {
+    const billing = (el('linkBilling')||{}).value || 'PIX';
+    fecharModal();
+    showToast('Gerando link no Asaas...','info');
+
+    try {
+        const resp = await fetch(`/api/pagamentos/${id}/gerar-link`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({billing_type: billing})
+        });
+        const data = await resp.json();
+        if(!resp.ok) throw new Error(data.error||'Erro ao gerar link');
+
+        const url = data.invoice_url;
+        if(!url) { showToast('Link gerado mas URL não disponível','warning'); return; }
+
+        const c = todasEntradas.find(x=>x.id===id);
+        const extra = data.already_exists ? '<p style="font-size:.72rem;color:#94a3b8;margin-top:8px;">Este pagamento já tinha um link — exibindo o existente.</p>' : '';
+
+        abrirModal('Link de Pagamento Gerado', `
+            <div style="text-align:center;padding:10px 0;">
+                <i class="fas fa-check-circle" style="color:#16a34a;font-size:2rem;margin-bottom:12px;"></i>
+                <p style="font-size:.85rem;font-weight:600;color:#0f172a;margin-bottom:8px;">Link gerado com sucesso!</p>
+                <p style="font-size:.78rem;color:#64748b;margin-bottom:16px;">${(c||{}).cliente||''}</p>
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;
+                            font-size:.72rem;color:#6366f1;word-break:break-all;margin-bottom:16px;text-align:left;">
+                    ${url}
+                </div>
+                ${extra}
+                <div style="display:flex;gap:10px;justify-content:center;">
+                    <button class="btn" onclick="navigator.clipboard.writeText('${url}');showToast('Link copiado!','success')"
+                            style="background:#f1f5f9;color:#64748b;">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <button class="btn btn-primary" onclick="window.open('${url}','_blank')"
+                            style="background:#6366f1;border-color:#6366f1;">
+                        <i class="fas fa-external-link-alt"></i> Abrir no Asaas
+                    </button>
+                </div>
+            </div>
+        `);
+    } catch(e) { showToast(e.message,'error'); }
+}
+
+/* ── utilitários ─────────────────────────────────────────────── */
 function limparPeriodo() {
-    el('periodoIni').value = '';
-    el('periodoFim').value = '';
+    el('periodoIni').value='';
+    el('periodoFim').value='';
     carregarFinancas();
 }
 
 function exportarRelatorio() {
     const mesInput = el('filtroMes').value;
-    const [ano, mes] = mesInput ? mesInput.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth()+1];
-    window.open(`/relatorios?mes=${mes}&ano=${ano}`, '_blank');
+    const [ano,mes] = mesInput?mesInput.split('-').map(Number):[new Date().getFullYear(),new Date().getMonth()+1];
+    window.open(`/relatorios?mes=${mes}&ano=${ano}`,'_blank');
 }
 
-// Inicializa com mês atual
+/* ── init ────────────────────────────────────────────────────── */
 const hoje = new Date();
-el('filtroMes').value = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
+el('filtroMes').value = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
 carregarFinancas();
 </script>
 {% endblock %}

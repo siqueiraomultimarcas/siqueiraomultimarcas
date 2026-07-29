@@ -367,6 +367,7 @@ def init_db():
     cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS frequencia_cobranca TEXT DEFAULT 'avulso'")
     cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS valor_semanal NUMERIC(10,2)")
     cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS observacao TEXT")
+    cur.execute("ALTER TABLE pagamentos_locacao ADD COLUMN IF NOT EXISTS forma_pagamento TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS observacao TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS pdf_url TEXT")
 
@@ -4659,6 +4660,7 @@ def baixa_contas_receber():
     data_rec   = data.get('data_recebimento') or str(_date.today())
     desconto   = float(data.get('desconto') or 0)
     justific   = data.get('justificativa_desconto') or ''
+    forma_pag  = (data.get('forma_pagamento') or '').strip() or None
     with _db() as (conn, cur):
         if tipo == 'contrato':
             cur.execute('SELECT valor_previsto FROM pagamentos_locacao WHERE id=%s', (rid,))
@@ -4667,9 +4669,10 @@ def baixa_contas_receber():
             valor_pago = max(0, round(val_prev - desconto, 2))
             cur.execute('''UPDATE pagamentos_locacao
                            SET status='pago', data_pagamento=%s,
-                               valor_pago=%s, desconto=%s, justificativa_desconto=%s
+                               valor_pago=%s, desconto=%s, justificativa_desconto=%s,
+                               forma_pagamento=%s
                            WHERE id=%s''',
-                        (data_rec, valor_pago, desconto, justific, rid))
+                        (data_rec, valor_pago, desconto, justific, forma_pag, rid))
         elif tipo == 'multa':
             cur.execute('''UPDATE multas SET status='pago', data_pagamento=%s,
                                desconto=%s, justificativa_desconto=%s WHERE id=%s''',
@@ -4679,6 +4682,56 @@ def baixa_contas_receber():
                                desconto=%s, justificativa_desconto=%s WHERE id=%s''',
                         (data_rec, desconto, justific, rid))
     return jsonify({'success': True})
+
+@app.route('/api/pagamentos/<int:id>/gerar-link', methods=['POST'])
+@login_required
+def gerar_link_pagamento(id):
+    data     = request.json or {}
+    billing  = data.get('billing_type', 'PIX')
+    with _db() as (conn, cur):
+        cur.execute('''
+            SELECT pl.valor_previsto, pl.data_fim, pl.asaas_link, pl.asaas_id,
+                   c.nome, c.cpf, c.telefone, c.email,
+                   v.placa, v.marca, v.modelo
+            FROM pagamentos_locacao pl
+            JOIN locacoes l ON l.id = pl.locacao_id
+            JOIN clientes c ON c.id = l.cliente_id
+            JOIN veiculos v ON v.id = l.veiculo_id
+            WHERE pl.id = %s
+        ''', (id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Pagamento não encontrado'}), 404
+        val_prev, d_fim, asaas_link_ex, asaas_id_ex, nome, cpf, tel, email, placa, marca, modelo = row
+        if asaas_link_ex:
+            return jsonify({'success': True, 'invoice_url': asaas_link_ex, 'already_exists': True})
+        customer_id, err = _asaas_get_or_create_customer(cpf or '', nome, email or '', tel or '')
+        if err:
+            return jsonify({'error': f'Asaas: {err}'}), 500
+        valor    = float(val_prev or 0)
+        due_date = str(d_fim) if d_fim else str(_date.today())
+        charge, sc = _asaas_req('POST', '/payments', {
+            'customer':    customer_id,
+            'billingType': billing,
+            'dueDate':     due_date,
+            'value':       valor,
+            'description': f'Locação {placa} {marca} {modelo}',
+        })
+        if sc not in (200, 201):
+            errs = charge.get('errors', [{}])
+            return jsonify({'error': errs[0].get('description', 'Erro Asaas')}), 500
+        asaas_id_new   = charge.get('id')
+        asaas_link_new = charge.get('invoiceUrl', '')
+        cur.execute('''UPDATE pagamentos_locacao
+                       SET asaas_id=%s, asaas_link=%s, asaas_status='PENDING'
+                       WHERE id=%s''', (asaas_id_new, asaas_link_new, id))
+        result = {'success': True, 'invoice_url': asaas_link_new, 'asaas_id': asaas_id_new}
+        if billing == 'PIX':
+            pix, _ = _asaas_req('GET', f'/payments/{asaas_id_new}/pixQrCode')
+            result['pix_qrcode']  = pix.get('encodedImage', '')
+            result['pix_payload'] = pix.get('payload', '')
+    return jsonify(result)
+
 
 # ==================== CONTAS A PAGAR ====================
 
