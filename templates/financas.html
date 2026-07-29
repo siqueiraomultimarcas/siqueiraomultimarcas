@@ -3,29 +3,40 @@
 {% block content %}
 
 <style>
-/* ── KPI cards ──────────────────────────────────────────────── */
-.kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
-.kpi-card { position:relative; background:#fff; border-radius:12px; padding:18px 20px;
-            box-shadow:0 1px 4px rgba(0,0,0,.08); overflow:hidden; }
-.kpi-card .kpi-label   { font-size:.65rem; font-weight:700; text-transform:uppercase;
-                          letter-spacing:.07em; color:#64748b; margin-bottom:4px; }
-.kpi-card .kpi-value   { font-size:1.55rem; font-weight:700; color:#0f172a;
-                          font-variant-numeric:tabular-nums; }
-.kpi-card .kpi-sub     { font-size:.72rem; color:#94a3b8; margin-top:2px; }
-.kpi-card .kpi-icon-bg { position:absolute; right:12px; bottom:8px; font-size:2.8rem; opacity:.07; }
-.kpi-card.blue  { border-left:3px solid #008cdd; }
-.kpi-card.green { border-left:3px solid #16a34a; }
-.kpi-card.amber { border-left:3px solid #d4a800; }
-.kpi-card.red   { border-left:3px solid #c73a2e; }
-.kpi-card.purple{ border-left:3px solid #7c3aed; }
-.kpi-card.blue   .kpi-value { color:#008cdd; } .kpi-card.blue   .kpi-icon-bg { color:#008cdd; }
-.kpi-card.green  .kpi-value { color:#16a34a; } .kpi-card.green  .kpi-icon-bg { color:#16a34a; }
-.kpi-card.amber  .kpi-value { color:#d4a800; } .kpi-card.amber  .kpi-icon-bg { color:#d4a800; }
-.kpi-card.red    .kpi-value { color:#c73a2e; } .kpi-card.red    .kpi-icon-bg { color:#c73a2e; }
-.kpi-card.purple .kpi-value { color:#7c3aed; } .kpi-card.purple .kpi-icon-bg { color:#7c3aed; }
-.taxa-bar-wrap { margin-top:8px; }
-.taxa-bar-bg   { background:#e2e8f0; border-radius:4px; height:6px; overflow:hidden; }
-.taxa-bar-fill { height:100%; border-radius:4px; background:#16a34a; transition:width .5s; }
+/* ── KPI Velo-style cards (4 grandes) ───────────────────────── */
+.vl-kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:16px; }
+@media(max-width:960px) { .vl-kpi-grid { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:520px) { .vl-kpi-grid { grid-template-columns:1fr; } }
+
+.vl-kpi { border-radius:16px; padding:20px 20px; display:flex; align-items:center; gap:16px; }
+.vl-kpi.purple { background:linear-gradient(135deg,rgba(124,58,237,.13),rgba(124,58,237,.04)); }
+.vl-kpi.red    { background:linear-gradient(135deg,rgba(239,68,68,.13),rgba(239,68,68,.04)); }
+.vl-kpi.green  { background:linear-gradient(135deg,rgba(22,163,74,.13),rgba(22,163,74,.04)); }
+.vl-kpi.amber  { background:linear-gradient(135deg,rgba(217,119,6,.13),rgba(217,119,6,.04)); }
+
+.vl-kpi-icon { width:50px; height:50px; border-radius:50%;
+               display:flex; align-items:center; justify-content:center;
+               color:#fff; font-size:1.15rem; flex-shrink:0; }
+.vl-kpi.purple .vl-kpi-icon { background:#7c3aed; }
+.vl-kpi.red    .vl-kpi-icon { background:#ef4444; }
+.vl-kpi.green  .vl-kpi-icon { background:#16a34a; }
+.vl-kpi.amber  .vl-kpi-icon { background:#d97706; }
+
+.vl-kpi-text { flex:1; min-width:0; }
+.vl-kpi-val  { font-size:1.35rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.2; }
+.vl-kpi.purple .vl-kpi-val { color:#7c3aed; }
+.vl-kpi.red    .vl-kpi-val { color:#ef4444; }
+.vl-kpi.green  .vl-kpi-val { color:#16a34a; }
+.vl-kpi.amber  .vl-kpi-val { color:#d97706; }
+.vl-kpi-lbl   { font-size:.73rem; color:#64748b; margin-top:5px; line-height:1.35; }
+
+/* ── chips secundários ───────────────────────────────────────── */
+.stat-chips { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+.stat-chip  { background:#fff; border:1px solid #e2e8f0; border-radius:12px;
+              padding:10px 16px; display:flex; align-items:center; gap:10px;
+              box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.stat-chip .sc-val { font-size:.95rem; font-weight:700; font-variant-numeric:tabular-nums; }
+.stat-chip .sc-lbl { font-size:.68rem; color:#64748b; margin-top:1px; }
 
 /* ── filter row ─────────────────────────────────────────────── */
 .filter-row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
@@ -185,54 +196,83 @@
     </div>
 </div>
 
-<!-- ── KPIs ──────────────────────────────────────────────────── -->
-<div id="tituloMes" style="font-size:.78rem;font-weight:700;color:#94a3b8;text-transform:uppercase;
-     letter-spacing:.08em;margin-bottom:10px;">Carregando...</div>
-<div class="kpi-grid" style="margin-bottom:20px;">
-    <div class="kpi-card blue">
-        <div class="kpi-label">Receita Prevista</div>
-        <div class="kpi-value" id="kpiPrevisto">R$ 0</div>
-        <div class="kpi-sub" id="kpiPrevistoSub">—</div>
-        <i class="fas fa-file-invoice-dollar kpi-icon-bg"></i>
-    </div>
-    <div class="kpi-card green">
-        <div class="kpi-label">Receita Recebida</div>
-        <div class="kpi-value" id="kpiRecebido">R$ 0</div>
-        <div class="taxa-bar-wrap">
-            <div class="taxa-bar-bg"><div class="taxa-bar-fill" id="taxaBarFill" style="width:0%"></div></div>
+<!-- ── label do mês + 4 KPIs Velo-style ──────────────────────── -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div id="tituloMes" style="font-size:.78rem;font-weight:700;color:#94a3b8;
+         text-transform:uppercase;letter-spacing:.08em;">Carregando...</div>
+</div>
+
+<div class="vl-kpi-grid">
+    <!-- Entradas -->
+    <div class="vl-kpi purple">
+        <div class="vl-kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+        <div class="vl-kpi-text">
+            <div class="vl-kpi-val" id="kpiPrevisto">R$ 0</div>
+            <div class="vl-kpi-lbl" id="kpiPrevistoSub">Entradas do mês</div>
         </div>
-        <div class="kpi-sub" id="kpiTaxa">0% recebido</div>
-        <i class="fas fa-check-circle kpi-icon-bg"></i>
     </div>
-    <div class="kpi-card amber">
-        <div class="kpi-label">A Receber</div>
-        <div class="kpi-value" id="kpiPendente">0</div>
-        <div class="kpi-sub" id="kpiPendenteSub">—</div>
-        <i class="fas fa-clock kpi-icon-bg"></i>
+    <!-- A Receber -->
+    <div class="vl-kpi red">
+        <div class="vl-kpi-icon"><i class="fas fa-clock"></i></div>
+        <div class="vl-kpi-text">
+            <div class="vl-kpi-val" id="kpiPendente">R$ 0</div>
+            <div class="vl-kpi-lbl" id="kpiPendenteSub">A Receber</div>
+        </div>
     </div>
-    <div class="kpi-card red">
-        <div class="kpi-label">Vencidos sem Pagar</div>
-        <div class="kpi-value" id="kpiVencido">0</div>
-        <div class="kpi-sub" id="kpiVencidoSub">—</div>
-        <i class="fas fa-exclamation-triangle kpi-icon-bg"></i>
+    <!-- Recebido -->
+    <div class="vl-kpi green">
+        <div class="vl-kpi-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="vl-kpi-text">
+            <div class="vl-kpi-val" id="kpiRecebido">R$ 0</div>
+            <div class="vl-kpi-lbl" id="kpiTaxa">Receita Recebida</div>
+        </div>
     </div>
-    <div class="kpi-card purple">
-        <div class="kpi-label">Caução Pendente</div>
-        <div class="kpi-value" id="kpiCaucao">R$ 0</div>
-        <div class="kpi-sub" id="kpiCaucaoSub">—</div>
-        <i class="fas fa-shield-alt kpi-icon-bg"></i>
+    <!-- Taxa -->
+    <div class="vl-kpi amber">
+        <div class="vl-kpi-icon"><i class="fas fa-percent"></i></div>
+        <div class="vl-kpi-text">
+            <div class="vl-kpi-val" id="kpiTaxaVal">0%</div>
+            <div class="vl-kpi-lbl">Margem de Recebimento</div>
+        </div>
     </div>
-    <div class="kpi-card" style="border-left:3px solid #0891b2;">
-        <div class="kpi-label" style="color:#0891b2;">KM Excedente</div>
-        <div class="kpi-value" id="kpiKmExc" style="color:#0891b2;">R$ 0</div>
-        <div class="kpi-sub" id="kpiKmExcSub">—</div>
-        <i class="fas fa-road kpi-icon-bg" style="color:#0891b2;"></i>
+</div>
+
+<!-- chips secundários -->
+<div class="stat-chips">
+    <div class="stat-chip">
+        <i class="fas fa-exclamation-triangle" style="color:#c73a2e;font-size:.9rem;"></i>
+        <div>
+            <div class="sc-val" style="color:#c73a2e;" id="kpiVencido">0</div>
+            <div class="sc-lbl">Vencidos sem pagar</div>
+        </div>
     </div>
-    <div class="kpi-card" style="border-left:3px solid #0f172a;">
-        <div class="kpi-label">Locações Ativas</div>
-        <div class="kpi-value" id="kpiAtivas">0</div>
-        <div class="kpi-sub" id="kpiAtivasSub">—</div>
-        <i class="fas fa-key kpi-icon-bg"></i>
+    <div class="stat-chip">
+        <i class="fas fa-shield-alt" style="color:#7c3aed;font-size:.9rem;"></i>
+        <div>
+            <div class="sc-val" style="color:#7c3aed;" id="kpiCaucao">R$ 0</div>
+            <div class="sc-lbl">Caução Pendente</div>
+        </div>
+    </div>
+    <div class="stat-chip">
+        <i class="fas fa-road" style="color:#0891b2;font-size:.9rem;"></i>
+        <div>
+            <div class="sc-val" style="color:#0891b2;" id="kpiKmExc">R$ 0</div>
+            <div class="sc-lbl">KM Excedente</div>
+        </div>
+    </div>
+    <div class="stat-chip">
+        <i class="fas fa-key" style="color:#0f172a;font-size:.9rem;"></i>
+        <div>
+            <div class="sc-val" id="kpiAtivas">0</div>
+            <div class="sc-lbl">Locações Ativas</div>
+        </div>
+    </div>
+    <div class="stat-chip">
+        <i class="fas fa-file-invoice-dollar" style="color:#008cdd;font-size:.9rem;"></i>
+        <div>
+            <div class="sc-val" style="color:#008cdd;" id="kpiVencidoSub">—</div>
+            <div class="sc-lbl">Status vencidos</div>
+        </div>
     </div>
 </div>
 
@@ -492,21 +532,20 @@ async function carregarFinancas() {
 
     // ── KPIs ──────────────────────────────────────────────────
     el('tituloMes').textContent = MESES_PT[d.mes] + ' de ' + d.ano;
-    el('kpiPrevisto').textContent   = fmtRk(d.receita_prevista);
-    el('kpiPrevistoSub').textContent= (d.qtd_pendente+d.qtd_pago)+' período(s)';
-    el('kpiRecebido').textContent   = fmtRk(d.receita_recebida);
-    el('taxaBarFill').style.width   = Math.min(100,d.taxa_recebimento)+'%';
-    el('kpiTaxa').textContent       = d.taxa_recebimento.toFixed(1)+'% recebido';
-    el('kpiPendente').textContent   = fmtRk(d.receita_prevista-d.receita_recebida);
-    el('kpiPendenteSub').textContent= d.qtd_pendente+' parcela(s)';
-    el('kpiVencido').textContent    = d.qtd_vencido;
-    el('kpiVencidoSub').textContent = d.qtd_vencido>0?'períodos em atraso':'sem atrasos';
-    el('kpiCaucao').textContent     = fmtRk(d.caucao_pendente_total);
-    el('kpiCaucaoSub').textContent  = d.qtd_caucao_pendente+' contrato(s) com caução';
-    el('kpiKmExc').textContent      = fmtRk(d.km_exc_total);
-    el('kpiKmExcSub').textContent   = d.qtd_km_exc+' devolução(ões) com excedente';
-    el('kpiAtivas').textContent     = d.loc_ativas;
-    el('kpiAtivasSub').textContent  = d.loc_vencidas>0?d.loc_vencidas+' com vencimento expirado':'todas no prazo';
+    // 4 cards principais
+    el('kpiPrevisto').textContent    = fmtRk(d.receita_prevista);
+    el('kpiPrevistoSub').textContent = 'Entradas — '+(d.qtd_pendente+d.qtd_pago)+' período(s)';
+    el('kpiPendente').textContent    = fmtRk(d.receita_prevista - d.receita_recebida);
+    el('kpiPendenteSub').textContent = 'A Receber — '+d.qtd_pendente+' parcela(s)';
+    el('kpiRecebido').textContent    = fmtRk(d.receita_recebida);
+    el('kpiTaxa').textContent        = 'Recebido — '+d.taxa_recebimento.toFixed(1)+'% do previsto';
+    el('kpiTaxaVal').textContent     = d.taxa_recebimento.toFixed(1)+'%';
+    // chips secundários
+    el('kpiVencido').textContent     = d.qtd_vencido;
+    el('kpiVencidoSub').textContent  = d.qtd_vencido>0?d.qtd_vencido+' período(s) em atraso':'Sem atrasos';
+    el('kpiCaucao').textContent      = fmtRk(d.caucao_pendente_total);
+    el('kpiKmExc').textContent       = fmtRk(d.km_exc_total);
+    el('kpiAtivas').textContent      = d.loc_ativas;
 
     // ── evolução ───────────────────────────────────────────────
     const evolHtml = d.evolucao.length===0
