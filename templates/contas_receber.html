@@ -3,6 +3,70 @@
 {% block content %}
 
 <style>
+/* ── Resumo financeiro (topo) ───────────────────────────────────── */
+.cr-resumo {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:12px;
+}
+.cr-box {
+    background:#fff; border:1px solid #e2e8f0; border-radius:14px;
+    padding:14px 16px; border-left:4px solid #cbd5e1;
+    box-shadow:0 1px 3px rgba(15,23,42,.05);
+    transition:box-shadow .18s, transform .18s;
+}
+.cr-box.critico { border-left-color:#B91C1C; cursor:pointer; }
+.cr-box.critico:hover { box-shadow:0 6px 18px rgba(185,28,28,.14); transform:translateY(-1px); }
+.cr-box.alerta  { border-left-color:#CA8A04; }
+.cr-box.neutro  { border-left-color:#008cdd; }
+.cr-box.ok      { border-left-color:#15803D; }
+.cr-box-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; }
+.cr-box-lbl {
+    font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:#64748b; display:flex; align-items:center; gap:5px; white-space:nowrap;
+}
+.cr-box.critico .cr-box-lbl { color:#B91C1C; }
+.cr-box.alerta  .cr-box-lbl { color:#A16207; }
+.cr-box-qtd {
+    background:#f1f5f9; color:#475569; font-size:.68rem; font-weight:700;
+    padding:1px 8px; border-radius:20px; flex-shrink:0;
+}
+.cr-box.critico .cr-box-qtd { background:#FEF2F2; color:#B91C1C; }
+.cr-box-val {
+    font-size:1.45rem; font-weight:800; color:#0f172a; line-height:1.1;
+    font-variant-numeric:tabular-nums;
+}
+.cr-box.critico .cr-box-val { color:#B91C1C; }
+.cr-box.ok      .cr-box-val { color:#15803D; }
+.cr-box-sub { font-size:.68rem; color:#94a3b8; margin-top:4px; }
+
+/* ── Faixa de projeção ──────────────────────────────────────────── */
+.cr-proj {
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;
+    padding:10px 16px; margin-bottom:14px;
+}
+.cr-proj-tit {
+    font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:#64748b; display:flex; align-items:center; gap:6px;
+}
+.cr-proj-item { display:flex; align-items:baseline; gap:7px; }
+.cr-proj-lbl  { font-size:.72rem; color:#64748b; }
+.cr-proj-val  { font-size:.95rem; font-weight:700; color:#0f172a; font-variant-numeric:tabular-nums; }
+.cr-proj-sep  { width:1px; height:20px; background:#e2e8f0; }
+.cr-proj-nota { font-size:.66rem; color:#94a3b8; margin-left:auto; font-style:italic; }
+
+@media (max-width:1100px) { .cr-resumo { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:560px)  {
+    .cr-resumo { grid-template-columns:1fr; }
+    .cr-proj-nota { display:none; }
+}
+
+/* Marca cobranças criadas a partir de um pagamento parcial */
+.cr-tag-residual {
+    display:inline-block; background:#FFFBEB; color:#A16207; border:1px solid #fde68a;
+    font-size:.58rem; font-weight:800; letter-spacing:.05em;
+    padding:1px 5px; border-radius:4px; margin-right:6px; vertical-align:middle;
+}
+
 /* ── Tabs / filtros ─────────────────────────────────────────────── */
 .tabs { display:flex; gap:6px; flex-wrap:wrap; }
 .tab-btn { padding:6px 14px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
@@ -153,64 +217,56 @@
     </button>
 </div>
 
-<!-- KPIs -->
-<div class="kpi-grid" style="margin-bottom:20px;">
-    <div class="kpi-card blue">
-        <div class="kpi-icon"><i class="fas fa-clock"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="kpiPendente">R$ 0,00</div>
-            <div class="kpi-label">Total Pendente</div>
+<!-- Resumo financeiro — o que exige ação vem primeiro -->
+<div class="cr-resumo">
+    <div class="cr-box critico" onclick="filtrarVencidos()" title="Ver apenas vencidos">
+        <div class="cr-box-top">
+            <span class="cr-box-lbl"><i class="fas fa-triangle-exclamation"></i> Vencido</span>
+            <span class="cr-box-qtd" id="kpiVencidos">0</span>
         </div>
+        <div class="cr-box-val" id="kpiVencidoValor">R$ 0,00</div>
+        <div class="cr-box-sub">clique para filtrar</div>
     </div>
-    <div class="kpi-card green">
-        <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="kpiRecebidoMes">R$ 0,00</div>
-            <div class="kpi-label">Recebido Este Mês</div>
+
+    <div class="cr-box alerta">
+        <div class="cr-box-top">
+            <span class="cr-box-lbl"><i class="fas fa-calendar-day"></i> Vence hoje</span>
         </div>
+        <div class="cr-box-val" id="kpiVenceHoje">R$ 0,00</div>
+        <div class="cr-box-sub">a receber até o fim do dia</div>
     </div>
-    <div class="kpi-card orange">
-        <div class="kpi-icon"><i class="fas fa-list"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="kpiQtdPendente">0</div>
-            <div class="kpi-label">Qtd Pendente</div>
+
+    <div class="cr-box neutro">
+        <div class="cr-box-top">
+            <span class="cr-box-lbl"><i class="fas fa-clock"></i> Total pendente</span>
+            <span class="cr-box-qtd" id="kpiQtdPendente">0</span>
         </div>
+        <div class="cr-box-val" id="kpiPendente">R$ 0,00</div>
+        <div class="cr-box-sub">todas as cobranças em aberto</div>
     </div>
-    <div class="kpi-card red">
-        <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="kpiVencidos">0</div>
-            <div class="kpi-label">Vencidos</div>
+
+    <div class="cr-box ok">
+        <div class="cr-box-top">
+            <span class="cr-box-lbl"><i class="fas fa-circle-check"></i> Recebido no mês</span>
         </div>
+        <div class="cr-box-val" id="kpiRecebidoMes">R$ 0,00</div>
+        <div class="cr-box-sub">desconto concedido: <strong id="kpiDescontos">R$ 0,00</strong></div>
     </div>
-    <div class="kpi-card purple">
-        <div class="kpi-icon"><i class="fas fa-tag"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="kpiDescontos">R$ 0,00</div>
-            <div class="kpi-label">Descontos no Mês</div>
-        </div>
+</div>
+
+<!-- Projeção de caixa — leitura rápida, sem competir com os cards acima -->
+<div class="cr-proj">
+    <span class="cr-proj-tit"><i class="fas fa-chart-line"></i> Projeção de caixa</span>
+    <div class="cr-proj-item">
+        <span class="cr-proj-lbl">Próximos 7 dias</span>
+        <span class="cr-proj-val" id="kpiVenceSemana">R$ 0,00</span>
     </div>
-    <div class="kpi-card amber">
-        <div class="kpi-icon"><i class="fas fa-calendar-day"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="kpiVenceHoje">R$ 0,00</div>
-            <div class="kpi-label">Vence Hoje</div>
-        </div>
+    <div class="cr-proj-sep"></div>
+    <div class="cr-proj-item">
+        <span class="cr-proj-lbl">Próximos 30 dias</span>
+        <span class="cr-proj-val" id="kpiProjecaoMes">R$ 0,00</span>
     </div>
-    <div class="kpi-card teal">
-        <div class="kpi-icon"><i class="fas fa-calendar-week"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="kpiVenceSemana">R$ 0,00</div>
-            <div class="kpi-label">Vence esta Semana</div>
-        </div>
-    </div>
-    <div class="kpi-card blue">
-        <div class="kpi-icon"><i class="fas fa-chart-line"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="kpiProjecaoMes">R$ 0,00</div>
-            <div class="kpi-label">Próximos 30 Dias</div>
-        </div>
-    </div>
+    <span class="cr-proj-nota">inclui períodos ainda não gerados dos contratos ativos</span>
 </div>
 
 <!-- Filtros -->
@@ -320,35 +376,85 @@
 </div>
 
 <!-- Modal Baixa Manual -->
-<div id="modalBaixa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-        <div style="font-size:1.1rem;font-weight:700;color:#0f172a;margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+<div id="modalBaixa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:16px;padding:26px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:94vh;overflow-y:auto;">
+        <div style="font-size:1.1rem;font-weight:700;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
             <i class="fas fa-check-circle" style="color:#15803D;"></i> Dar Baixa
         </div>
         <div id="resumoBaixa" style="background:#f1f5f9;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.82rem;color:#374151;"></div>
-        <div style="margin-bottom:12px;">
-            <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Data do Recebimento</label>
-            <input type="date" id="dataBaixaInput" class="form-control">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div>
+                <label class="bx-lbl">Data do Recebimento</label>
+                <input type="date" id="dataBaixaInput" class="form-control">
+            </div>
+            <div>
+                <label class="bx-lbl">Forma de Pagamento</label>
+                <select id="baixaFormaPag" class="form-control">
+                    <option value="">—</option>
+                    <option>PIX</option><option>Dinheiro</option><option>Cartão de Débito</option>
+                    <option>Cartão de Crédito</option><option>Transferência</option><option>Boleto</option>
+                </select>
+            </div>
         </div>
-        <div style="margin-bottom:12px;">
-            <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Desconto (R$)</label>
-            <input type="number" id="baixaDesconto" class="form-control" value="0" min="0" step="0.01"
-                   oninput="document.getElementById('baixaJustWrap').style.display=parseFloat(this.value||0)>0?'block':'none'">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div>
+                <label class="bx-lbl">Desconto (R$)</label>
+                <input type="number" id="baixaDesconto" class="form-control" value="0" min="0" step="0.01"
+                       oninput="recalcBaixa()">
+            </div>
+            <div>
+                <label class="bx-lbl" style="color:#15803D;">Valor Recebido (R$)</label>
+                <input type="number" id="baixaRecebido" class="form-control" min="0" step="0.01"
+                       oninput="recalcBaixa()" style="font-weight:700;">
+            </div>
         </div>
+
+        <!-- Painel de saldo: aparece só quando o pagamento é parcial -->
+        <div id="baixaSaldoBox" style="display:none;border-radius:10px;padding:12px 14px;margin-bottom:12px;
+             background:#FFFBEB;border:1px solid #fde68a;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="font-size:.78rem;font-weight:700;color:#A16207;">
+                    <i class="fas fa-scale-unbalanced"></i> Pagamento parcial
+                </span>
+                <span id="baixaSaldoVal" style="font-size:.95rem;font-weight:800;color:#A16207;font-variant-numeric:tabular-nums;"></span>
+            </div>
+            <label class="bx-lbl" style="margin-bottom:6px;">O que fazer com o saldo?</label>
+            <label class="bx-radio">
+                <input type="radio" name="tratSaldo" value="residual" checked onchange="recalcBaixa()">
+                <span><strong>Gerar residual</strong> — cria nova cobrança pendente com o saldo</span>
+            </label>
+            <label class="bx-radio">
+                <input type="radio" name="tratSaldo" value="desconto" onchange="recalcBaixa()">
+                <span><strong>Perdoar</strong> — lança o saldo como desconto (não será cobrado)</span>
+            </label>
+        </div>
+
         <div id="baixaJustWrap" style="display:none;margin-bottom:14px;">
-            <label style="font-size:.78rem;font-weight:600;color:#B91C1C;display:block;margin-bottom:6px;">
-                <i class="fas fa-exclamation-circle"></i> Justificativa do Desconto *
+            <label class="bx-lbl" style="color:#B91C1C;">
+                <i class="fas fa-exclamation-circle"></i> Justificativa *
             </label>
             <input type="text" id="baixaJustificativa" class="form-control" placeholder="Ex: Veículo ficou 2 dias na oficina">
         </div>
+
+        <div id="baixaErro" style="display:none;font-size:.76rem;color:#B91C1C;margin-bottom:10px;font-weight:600;"></div>
+
         <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button class="btn" onclick="fecharModalBaixa()" style="background:#6b7280;color:#fff;">Cancelar</button>
-            <button class="btn" onclick="confirmarBaixa()" style="background:#15803D;color:#fff;font-weight:600;">
-                <i class="fas fa-check"></i> Confirmar Baixa
+            <button class="btn" id="btnConfirmarBaixa" onclick="confirmarBaixa()" style="background:#15803D;color:#fff;font-weight:600;">
+                <i class="fas fa-check"></i> Confirmar
             </button>
         </div>
     </div>
 </div>
+<style>
+.bx-lbl { font-size:.75rem; font-weight:600; color:#374151; display:block; margin-bottom:5px; }
+.bx-radio { display:flex; align-items:flex-start; gap:8px; padding:7px 9px; border-radius:8px;
+            cursor:pointer; font-size:.76rem; color:#374151; line-height:1.35; }
+.bx-radio:hover { background:rgba(255,255,255,.7); }
+.bx-radio input { margin-top:2px; accent-color:#CA8A04; flex-shrink:0; }
+</style>
 
 <!-- Área de impressão -->
 <div id="printArea" style="display:none;"></div>
@@ -602,24 +708,44 @@ async function carregarClientes() {
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 function calcularKPIs() {
     const mesAtual = hoje.slice(0,7);
-    let pendente=0, recebidoMes=0, qtdPendente=0, vencidos=0, descontosMes=0;
+    let pendente=0, recebidoMes=0, qtdPendente=0, vencidos=0, vencidoValor=0, descontosMes=0;
     dados.forEach(d => {
         const isPago = d.status==='pago'||d.status==='recebido';
+        const val = parseFloat(d.valor||0);
         if (!isPago) {
-            pendente += parseFloat(d.valor||0); qtdPendente++;
-            if (d.data_vencimento && d.data_vencimento < hoje) vencidos++;
+            pendente += val; qtdPendente++;
+            if (d.data_vencimento && d.data_vencimento < hoje) { vencidos++; vencidoValor += val; }
         } else {
-            if (d.data_recebimento && d.data_recebimento.slice(0,7)===mesAtual)
-                recebidoMes += parseFloat(d.valor||0);
-            if (d.data_recebimento && d.data_recebimento.slice(0,7)===mesAtual && parseFloat(d.desconto||0)>0)
-                descontosMes += parseFloat(d.desconto||0);
+            if (d.data_recebimento && d.data_recebimento.slice(0,7)===mesAtual) {
+                recebidoMes += val;
+                if (parseFloat(d.desconto||0) > 0) descontosMes += parseFloat(d.desconto||0);
+            }
         }
     });
-    document.getElementById('kpiPendente').textContent    = fmtCurrency(pendente);
-    document.getElementById('kpiRecebidoMes').textContent = fmtCurrency(recebidoMes);
-    document.getElementById('kpiQtdPendente').textContent = qtdPendente;
-    document.getElementById('kpiVencidos').textContent    = vencidos;
-    document.getElementById('kpiDescontos').textContent   = fmtCurrency(descontosMes);
+    document.getElementById('kpiPendente').textContent     = fmtCurrency(pendente);
+    document.getElementById('kpiRecebidoMes').textContent  = fmtCurrency(recebidoMes);
+    document.getElementById('kpiQtdPendente').textContent  = qtdPendente;
+    document.getElementById('kpiVencidos').textContent     = vencidos;
+    document.getElementById('kpiVencidoValor').textContent = fmtCurrency(vencidoValor);
+    document.getElementById('kpiDescontos').textContent    = fmtCurrency(descontosMes);
+}
+
+/* Atalho do card "Vencido": filtra a tela só nas cobranças em atraso */
+function filtrarVencidos() {
+    document.querySelectorAll('#tabsStatus .tab-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.status === 'pendente');
+    });
+    filtroStatus = 'pendente';
+    const btnVig = document.getElementById('btnVigente');
+    if (btnVig) btnVig.classList.remove('active');
+    document.getElementById('filtroDe').value = '';
+    // Até ontem = tudo que já venceu
+    const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+    const pad = v => String(v).padStart(2,'0');
+    document.getElementById('filtroAte').value =
+        `${ontem.getFullYear()}-${pad(ontem.getMonth()+1)}-${pad(ontem.getDate())}`;
+    renderizar();
+    showToast('Mostrando apenas cobranças vencidas', 'info');
 }
 
 // ── Filtros ───────────────────────────────────────────────────────────────────
@@ -766,6 +892,7 @@ function renderTableContratos(lista, busca) {
                               :`<i class="fas fa-calendar"></i> ${fmtDate(d.data_vencimento)||'—'}`;
                 const shortDesc=(d.descricao||'—').split(' · ')[0];
                 const subDesc=(d.descricao||'').includes(' · ')?(d.descricao||'').split(' · ').slice(1).join(' · ').substring(0,60):'';
+                const isResidual=/^Residual de pagamento parcial/i.test(d.observacao||'');
                 let statusHtml;
                 if(isPago) statusHtml=`<span class="badge-status pago"><i class="fas fa-check-circle"></i> Pago${hasObs?` 💬`:''}</span>`;
                 else if(vencido) statusHtml=`<span class="badge-status vencido" onclick="abrirBaixa('contrato',${d.id})"><i class="fas fa-exclamation-circle"></i> Vencido</span>`;
@@ -781,7 +908,9 @@ function renderTableContratos(lista, busca) {
                     </div>
                     <div><span class="cr-placa">${_esc(d.placa||'—')}</span></div>
                     <div style="min-width:0;">
-                        <div class="cr-desc" title="${_esc(d.descricao||'')}">${_esc(shortDesc)}</div>
+                        <div class="cr-desc" title="${_esc(d.descricao||'')}">
+                            ${isResidual?`<span class="cr-tag-residual" title="${_esc(d.observacao||'')}">RESIDUAL</span>`:''}${_esc(shortDesc)}
+                        </div>
                         ${subDesc?`<div class="cr-desc-sub">${_esc(subDesc)}</div>`:''}
                     </div>
                     <div><span class="cr-date ${dc}">${dateTxt}</span></div>
@@ -950,8 +1079,9 @@ function renderTableAvulsas(lista, busca) {
                 <button onclick="closeCRMenus();abrirObservacao('avulsa',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
                 <div class="cr-dd-sep"></div>
                 <button class="danger" onclick="closeCRMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>`;
+            const isResidualA=/^Residual de pagamento parcial/i.test(d.observacao||'');
             return `<div class="cr-item cr-item-a ${isPago?'cr-pago':''}">
-                <div class="cr-desc" title="${_esc(d.descricao||'')}">${_esc((d.descricao||'—').substring(0,60))}</div>
+                <div class="cr-desc" title="${_esc(d.descricao||'')}">${isResidualA?`<span class="cr-tag-residual" title="${_esc(d.observacao||'')}">RESIDUAL</span>`:''}${_esc((d.descricao||'—').substring(0,60))}</div>
                 <div><span class="cr-date ${dc}">${dateTxt}</span></div>
                 <div class="cr-val ${dc}">${fmtCurrency(d.valor)}</div>
                 <div>${statusHtml}</div>
@@ -1154,13 +1284,60 @@ function abrirBaixa(tipo, id) {
     const d = _findConta(tipo, id);
     const descricao = d.descricao || '—';
     const valor = parseFloat(d.valor || 0);
-    pendenteBaixa = {tipo, id};
-    document.getElementById('resumoBaixa').innerHTML = `<strong>${_esc(descricao)}</strong><br>Valor: <strong>${fmtCurrency(valor)}</strong>`;
+    pendenteBaixa = {tipo, id, valorOriginal: valor};
+    document.getElementById('resumoBaixa').innerHTML =
+        `<strong>${_esc(descricao)}</strong><br>Valor da cobrança: <strong>${fmtCurrency(valor)}</strong>`;
     document.getElementById('dataBaixaInput').value = hoje;
+    document.getElementById('baixaFormaPag').value = '';
     document.getElementById('baixaDesconto').value = '0';
+    document.getElementById('baixaRecebido').value = valor.toFixed(2);
     document.getElementById('baixaJustificativa').value = '';
-    document.getElementById('baixaJustWrap').style.display = 'none';
+    const radioRes = document.querySelector('input[name="tratSaldo"][value="residual"]');
+    if (radioRes) radioRes.checked = true;
+    document.getElementById('baixaErro').style.display = 'none';
+    recalcBaixa();
     document.getElementById('modalBaixa').style.display = 'flex';
+}
+
+/* Recalcula devido/saldo e decide quais campos aparecem */
+function recalcBaixa() {
+    if (!pendenteBaixa) return null;
+    const original = parseFloat(pendenteBaixa.valorOriginal || 0);
+    const desconto = parseFloat(document.getElementById('baixaDesconto').value || 0);
+    const devido   = Math.max(0, +(original - desconto).toFixed(2));
+    const campoRec = document.getElementById('baixaRecebido');
+    const recebido = campoRec.value === '' ? devido : parseFloat(campoRec.value || 0);
+    const saldo    = +(devido - recebido).toFixed(2);
+
+    campoRec.max = devido.toFixed(2);
+
+    const parcial  = saldo > 0.009;
+    const trat     = (document.querySelector('input[name="tratSaldo"]:checked') || {}).value || 'residual';
+    const box      = document.getElementById('baixaSaldoBox');
+    box.style.display = parcial ? 'block' : 'none';
+    if (parcial) {
+        document.getElementById('baixaSaldoVal').textContent = 'Saldo: ' + fmtCurrency(saldo);
+    }
+
+    // Justificativa é obrigatória para desconto ou para perdoar saldo
+    const precisaJust = desconto > 0 || (parcial && trat === 'desconto');
+    document.getElementById('baixaJustWrap').style.display = precisaJust ? 'block' : 'none';
+
+    const btn = document.getElementById('btnConfirmarBaixa');
+    const excedeu = recebido > devido + 0.009;
+    const erroEl = document.getElementById('baixaErro');
+    if (excedeu) {
+        erroEl.textContent = `Valor recebido maior que o devido (${fmtCurrency(devido)}). Aumente o desconto.`;
+        erroEl.style.display = 'block';
+        btn.disabled = true; btn.style.opacity = '.5'; btn.style.cursor = 'not-allowed';
+    } else {
+        erroEl.style.display = 'none';
+        btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
+        btn.innerHTML = parcial && trat === 'residual'
+            ? '<i class="fas fa-check"></i> Baixar e gerar residual'
+            : '<i class="fas fa-check"></i> Confirmar';
+    }
+    return { original, desconto, devido, recebido, saldo, parcial, trat, precisaJust, excedeu };
 }
 
 function fecharModalBaixa() {
@@ -1170,19 +1347,50 @@ function fecharModalBaixa() {
 
 async function confirmarBaixa() {
     if (!pendenteBaixa) return;
+    const st = recalcBaixa();
+    if (!st || st.excedeu) return;
+
     const dataRec  = document.getElementById('dataBaixaInput').value;
-    const desconto = parseFloat(document.getElementById('baixaDesconto').value||0);
+    const formaPag = document.getElementById('baixaFormaPag').value;
     const justific = document.getElementById('baixaJustificativa').value.trim();
-    if (desconto>0 && !justific) { showToast('Informe a justificativa do desconto','warning'); return; }
+    if (st.precisaJust && !justific) {
+        showToast('Informe a justificativa', 'warning');
+        document.getElementById('baixaJustificativa').focus();
+        return;
+    }
+
+    const btn = document.getElementById('btnConfirmarBaixa');
+    const htmlOrig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
     try {
-        const r = await fetch('/api/contas-receber/baixa',{method:'PUT',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({...pendenteBaixa,data_recebimento:dataRec,desconto,justificativa_desconto:justific||null})});
-        if (r.ok) {
-            fecharModalBaixa();
-            showToast(desconto>0?`Baixa com desconto de ${fmtCurrency(desconto)}!`:'Baixa registrada!','success');
-            carregarDados();
-        } else showToast('Erro ao registrar baixa','error');
-    } catch { showToast('Erro de conexão','error'); }
+        const r = await fetch('/api/contas-receber/baixa', {
+            method: 'PUT', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                tipo: pendenteBaixa.tipo, id: pendenteBaixa.id,
+                data_recebimento: dataRec,
+                desconto: st.desconto,
+                valor_recebido: st.recebido,
+                tratamento_saldo: st.trat,
+                forma_pagamento: formaPag || null,
+                justificativa_desconto: justific || null
+            })
+        });
+        const res = await r.json().catch(() => ({}));
+        if (!r.ok) { showToast(res.error || 'Erro ao registrar baixa', 'error'); return; }
+
+        fecharModalBaixa();
+        if (res.residual_gerado)
+            showToast(`Baixa de ${fmtCurrency(res.valor_recebido)} registrada. Residual de ${fmtCurrency(res.saldo)} gerado.`, 'success', 6000);
+        else if (st.desconto > 0 || st.saldo > 0.009)
+            showToast(`Baixa registrada com desconto de ${fmtCurrency(st.desconto + (st.trat === 'desconto' ? st.saldo : 0))}`, 'success');
+        else
+            showToast('Baixa registrada!', 'success');
+        carregarDados();
+    } catch {
+        showToast('Erro de conexão', 'error');
+    } finally {
+        btn.disabled = false; btn.innerHTML = htmlOrig;
+    }
 }
 
 // ── Excluir Período (contrato) ────────────────────────────────────────────────

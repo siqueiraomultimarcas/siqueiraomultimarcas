@@ -7,9 +7,10 @@ Três suítes independentes que rodam **sem banco e sem tocar no Asaas**
 
 ```bash
 cd siqueiraomultimarcas
-python tests/test_calculos.py    # cálculo de contratos, períodos e km excedente
-python tests/test_seguranca.py   # auth, SQL injection, segredos, brute force, XSS
-python tests/test_templates.py   # Jinja, XSS em onclick, paleta, ids órfãos
+python tests/test_calculos.py       # cálculo de contratos, períodos e km excedente
+python tests/test_baixa_parcial.py  # pagamento parcial, residual e validações
+python tests/test_seguranca.py      # auth, SQL injection, segredos, brute force, XSS
+python tests/test_templates.py      # Jinja, XSS em onclick, paleta, ids órfãos
 ```
 
 Saída `TODOS OS TESTES PASSARAM` / `NENHUMA VULNERABILIDADE ENCONTRADA` /
@@ -26,6 +27,17 @@ Saída `TODOS OS TESTES PASSARAM` / `NENHUMA VULNERABILIDADE ENCONTRADA` /
 - convenção de dias **inclusiva** (03→09 = 7 dias) igual em todos os endpoints
 - helpers `_normalize_date`, `_float_or_none`, `_int_or_none`, `_fim_do_mes`
 - fórmula de km excedente da devolução
+
+**test_baixa_parcial.py** — usa um banco fake em memória para exercitar o
+endpoint real `PUT /api/contas-receber/baixa`:
+- pagamento integral não gera residual
+- pagamento parcial gera **uma** cobrança pendente com o saldo exato,
+  vinculada ao mesmo contrato e ao mesmo período
+- opção "perdoar" lança o saldo como desconto, sem criar cobrança
+- desconto e perdão exigem justificativa; receber mais que o devido é rejeitado
+- residual de multa vira cobrança avulsa vinculada ao motorista
+- precisão de centavos (222.22 sem erro de ponto flutuante) e tolerância
+  de 1 centavo para não gerar residual irrisório
 
 **test_seguranca.py** — auditoria estática do `app.py`:
 - toda rota privada tem `@login_required`
