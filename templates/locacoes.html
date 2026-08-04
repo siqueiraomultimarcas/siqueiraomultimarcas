@@ -181,7 +181,8 @@
     let clientes = [];
     let fotosFilesParaUpload = [];
 
-    function _fetchTimeout(url, ms = 20000) {
+    // 45s: o primeiro acesso após ociosidade paga o cold start do servidor
+    function _fetchTimeout(url, ms = 45000) {
         const ctrl = new AbortController();
         const tid = setTimeout(() => ctrl.abort(), ms);
         return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(tid));
@@ -542,10 +543,23 @@
             '<div style="font-size:.72rem;color:#64748b;">' + desc + '</div></div></label>';
     }
 
-    function abrirModalLocacao(locacao = null) {
+    async function abrirModalLocacao(locacao = null) {
       try {
         const isEdit = locacao !== null;
         fotosFilesParaUpload = [];
+
+        // Sem cadastros em memória a lista sairia vazia: recarrega antes de abrir
+        if (!Array.isArray(veiculos) || !veiculos.length ||
+            !Array.isArray(clientes) || !clientes.length) {
+            showToast('Carregando veículos e clientes...', 'info', 2000);
+            await carregarDados();
+        }
+        if (!veiculos.length || !clientes.length) {
+            const faltando = [!veiculos.length ? 'veículos' : null,
+                              !clientes.length ? 'clientes' : null].filter(Boolean).join(' e ');
+            showToast(`Não foi possível carregar ${faltando}. Verifique a conexão e tente novamente.`, 'error', 7000);
+            return;
+        }
 
         const _veiculos = Array.isArray(veiculos) ? veiculos : [];
         const _clientes = Array.isArray(clientes) ? clientes : [];
@@ -559,14 +573,21 @@
                 + ' data-caucao="' + (v.caucao_padrao||0) + '"'
                 + ' data-freq="' + (v.frequencia_padrao||'avulso') + '"'
                 + ' data-tempo="' + (v.tempo_minimo_padrao||30) + '"'
-                + ' ' + sel + '>' + v.placa + ' - ' + v.marca + ' ' + v.modelo + '</option>';
+                + ' ' + sel + '>' + escHtml(v.placa) + ' - ' + escHtml(v.marca) + ' ' + escHtml(v.modelo) + '</option>';
         });
 
+        // Cliente bloqueado não pode alugar, mas continua visível ao EDITAR
+        // uma locação existente que já é dele
+        const _cliDisponiveis = _clientes.filter(c =>
+            c.status === 'ativo' || (isEdit && locacao.cliente_id === c.id));
         let optCli = '<option value="">Selecione o cliente</option>';
-        _clientes.filter(c => c.status === 'ativo').forEach(c => {
+        _cliDisponiveis.forEach(c => {
             const sel = isEdit && locacao.cliente_id === c.id ? 'selected' : '';
-            optCli += '<option value="' + c.id + '" ' + sel + '>' + c.nome + '</option>';
+            const tag = c.status !== 'ativo' ? ' [' + String(c.status || '').toUpperCase() + ']' : '';
+            optCli += '<option value="' + c.id + '" ' + sel + '>' + escHtml(c.nome) + tag + '</option>';
         });
+        if (!_cliDisponiveis.length)
+            showToast('Nenhum cliente ativo cadastrado. Cadastre um cliente antes de criar a locação.', 'warning', 6000);
 
         const checklistItens = [
             {id:'combustivel',label:'Combustível'},{id:'freios',label:'Freios'},

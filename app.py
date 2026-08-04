@@ -159,12 +159,37 @@ def row_to_dict(cursor):
 
 _db_initialized = False
 
+# Versão do schema. INCREMENTE SEMPRE que adicionar CREATE TABLE / ALTER TABLE
+# em init_db(), senão a migração não roda em produção.
+SCHEMA_VERSION = 1
+
 def init_db():
+    """Cria/atualiza o schema. As migrações só rodam quando SCHEMA_VERSION muda —
+    sem isso, o Vercel executaria ~60 comandos DDL a cada cold start (≈37 s),
+    estourando o timeout do frontend e deixando as telas sem dados."""
     global _db_initialized
     if _db_initialized:
         return
     conn = get_conn()
     cur = conn.cursor()
+
+    # Controle de versão: 2 queries baratas em vez de dezenas de DDL
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS schema_version (
+            versao      INTEGER PRIMARY KEY,
+            aplicado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cur.execute('SELECT COALESCE(MAX(versao), 0) FROM schema_version')
+    versao_atual = cur.fetchone()[0] or 0
+    if versao_atual >= SCHEMA_VERSION:
+        conn.commit()
+        cur.close()
+        conn.close()
+        _db_initialized = True
+        return
+
+    print(f'[init_db] migrando schema {versao_atual} -> {SCHEMA_VERSION}...')
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
@@ -583,11 +608,15 @@ def init_db():
         )
     ''')
 
+    # Marca o schema como atualizado — próximos cold starts pulam tudo acima
+    cur.execute('INSERT INTO schema_version (versao) VALUES (%s) ON CONFLICT (versao) DO NOTHING',
+                (SCHEMA_VERSION,))
+
     conn.commit()
     cur.close()
     conn.close()
     _db_initialized = True
-    print('Banco de dados inicializado com sucesso!')
+    print(f'[init_db] schema atualizado para a versão {SCHEMA_VERSION}.')
 
 # ==================== ASAAS ====================
 
