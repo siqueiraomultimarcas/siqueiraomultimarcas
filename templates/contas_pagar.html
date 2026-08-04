@@ -19,15 +19,15 @@
     font-size:1.1rem; flex-shrink:0;
 }
 .cp-grupo-avatar.af  { background:linear-gradient(135deg,rgba(0,140,221,.18),rgba(0,140,221,.06)); color:#008cdd; }
-.cp-grupo-avatar.loc { background:linear-gradient(135deg,rgba(22,163,74,.18),rgba(22,163,74,.06)); color:#16a34a; }
+.cp-grupo-avatar.loc { background:linear-gradient(135deg,rgba(22,163,74,.18),rgba(22,163,74,.06)); color:#15803D; }
 .cp-grupo-info { flex:1; min-width:0; }
 .cp-grupo-nome { font-weight:700; font-size:.95rem; color:#0f172a; }
 .cp-grupo-sub  { font-size:.72rem; color:#64748b; margin-top:2px; }
 .cp-grupo-right { display:flex; align-items:center; gap:16px; flex-shrink:0; }
-.cp-grupo-total { font-weight:800; font-size:1.15rem; color:#ef4444; font-variant-numeric:tabular-nums; }
+.cp-grupo-total { font-weight:800; font-size:1.15rem; color:#B91C1C; font-variant-numeric:tabular-nums; }
 .cp-grupo-badge { font-size:.68rem; font-weight:700; padding:3px 10px; border-radius:20px; }
-.cp-grupo-badge.pend { background:#fef2f2; color:#c73a2e; }
-.cp-grupo-badge.ok   { background:#f0fdf4; color:#16a34a; }
+.cp-grupo-badge.pend { background:#fef2f2; color:#B91C1C; }
+.cp-grupo-badge.ok   { background:#f0fdf4; color:#15803D; }
 .cp-grupo-arrow { color:#94a3b8; font-size:.8rem; transition:transform .2s; }
 .cp-grupo-arrow.open { transform:rotate(90deg); }
 
@@ -82,23 +82,23 @@
     font-size:.74rem; font-weight:600;
     padding:3px 10px; border-radius:8px;
 }
-.data-chip.ok   { background:#f0fdf4; color:#16a34a; }
-.data-chip.venc { background:#fef2f2; color:#c73a2e; }
+.data-chip.ok   { background:#f0fdf4; color:#15803D; }
+.data-chip.venc { background:#fef2f2; color:#B91C1C; }
 .data-chip.pend { background:#f1f5f9; color:#475569; }
 
 /* Valor */
 .cp-valor { font-size:.9rem; font-weight:700; font-variant-numeric:tabular-nums; text-align:right; }
-.cp-valor.venc { color:#ef4444; }
-.cp-valor.ok   { color:#16a34a; }
+.cp-valor.venc { color:#B91C1C; }
+.cp-valor.ok   { color:#15803D; }
 .cp-valor.pend { color:#0f172a; }
 
 /* Status badge */
 .cp-status { display:inline-flex; align-items:center; gap:5px; font-size:.7rem; font-weight:600; padding:4px 10px; border-radius:8px; cursor:pointer; transition:.1s; white-space:nowrap; }
 .cp-status.pendente { background:#fffbeb; color:#7a6000; border:1px solid #fde68a; }
 .cp-status.pendente:hover { background:#fef3c7; }
-.cp-status.vencido  { background:#fef2f2; color:#c73a2e; border:1px solid #fecaca; }
+.cp-status.vencido  { background:#fef2f2; color:#B91C1C; border:1px solid #fecaca; }
 .cp-status.vencido:hover  { background:#fee2e2; }
-.cp-status.pago     { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; cursor:default; }
+.cp-status.pago     { background:#f0fdf4; color:#15803D; border:1px solid #bbf7d0; cursor:default; }
 
 /* Menu ⋯ */
 .cp-act-wrap { position:relative; }
@@ -108,7 +108,7 @@
 .cp-act-menu.open  { display:block; }
 .cp-act-menu button { display:flex; align-items:center; gap:9px; width:100%; padding:10px 14px; border:none; background:transparent; cursor:pointer; font-size:.82rem; color:#374151; transition:.1s; }
 .cp-act-menu button:hover { background:#f8fafc; }
-.cp-act-menu button.danger { color:#c73a2e; }
+.cp-act-menu button.danger { color:#B91C1C; }
 .cp-act-menu .cp-dd-sep { height:1px; background:#f1f5f9; margin:2px 0; }
 
 /* ── Barra flutuante de seleção ────────────────────────────────────── */
@@ -219,10 +219,10 @@
     </div>
     <div style="width:1px;height:22px;background:#334155;flex-shrink:0;"></div>
     <span id="selPendente" style="font-size:.85rem;color:#94a3b8;"></span>
-    <button onclick="abrirBaixaLote()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:6px;">
+    <button onclick="abrirBaixaLote()" style="background:#15803D;color:#fff;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:6px;">
         <i class="fas fa-check"></i> Dar Baixa (<span id="selCountBaixa">0</span>)
     </button>
-    <button id="btnExcluirLote" onclick="excluirEmLote()" style="background:#c73a2e;color:#fff;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.82rem;font-weight:600;display:none;align-items:center;gap:6px;">
+    <button id="btnExcluirLote" onclick="excluirEmLote()" style="background:#B91C1C;color:#fff;border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.82rem;font-weight:600;display:none;align-items:center;gap:6px;">
         <i class="fas fa-trash"></i> Excluir (<span id="selCountExcluir">0</span>)
     </button>
     <button onclick="limparSel()" style="background:transparent;border:none;color:#64748b;cursor:pointer;font-size:1.1rem;padding:2px 6px;" title="Cancelar">✕</button>
@@ -233,7 +233,7 @@
     <div style="background:#fff;border-radius:16px;width:90%;max-width:440px;padding:28px;">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
             <div style="width:40px;height:40px;border-radius:12px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="fas fa-check-circle" style="color:#16a34a;font-size:1.1rem;"></i>
+                <i class="fas fa-check-circle" style="color:#15803D;font-size:1.1rem;"></i>
             </div>
             <div>
                 <div style="font-size:.95rem;font-weight:700;color:#0f172a;">Dar Baixa</div>
@@ -263,7 +263,7 @@
                 <div style="margin-top:8px;background:#f8fafc;border-radius:10px;padding:10px 14px;display:flex;gap:10px;align-items:center;font-size:.8rem;color:#475569;">
                     <span>Original: <strong id="baixa-orig-txt">—</strong></span>
                     <i class="fas fa-arrow-right" style="color:#94a3b8;font-size:.7rem;"></i>
-                    <span>A pagar: <strong id="baixa-final-txt" style="color:#16a34a;">—</strong></span>
+                    <span>A pagar: <strong id="baixa-final-txt" style="color:#15803D;">—</strong></span>
                 </div>
             </div>
             <div>
@@ -315,7 +315,7 @@ async function carregarTudo() {
         showToast('Erro ao carregar contas: ' + e.message, 'error');
         document.getElementById('acordeon').innerHTML =
             `<div style="text-align:center;padding:56px;background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,.07);">
-                <i class="fas fa-exclamation-circle" style="font-size:2.5rem;color:#ef4444;display:block;margin-bottom:14px;"></i>
+                <i class="fas fa-exclamation-circle" style="font-size:2.5rem;color:#B91C1C;display:block;margin-bottom:14px;"></i>
                 <p style="color:#374151;font-weight:600;">Falha ao carregar dados.</p>
                 <p style="color:#94a3b8;font-size:.82rem;margin-top:4px;">Verifique a conexão e recarregue a página.</p>
             </div>`;
@@ -392,7 +392,7 @@ function renderizarGrupos(lista) {
     if (!Object.keys(grupos).length) {
         el.innerHTML = `
             <div style="text-align:center;padding:56px;background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,.07);">
-                <i class="fas fa-check-circle" style="font-size:3rem;color:#16a34a;display:block;margin-bottom:14px;"></i>
+                <i class="fas fa-check-circle" style="font-size:3rem;color:#15803D;display:block;margin-bottom:14px;"></i>
                 <p style="color:#374151;font-weight:700;font-size:1.05rem;">Nenhuma conta pendente!</p>
                 <p style="color:#94a3b8;font-size:.84rem;margin-top:6px;">Todas as OS e manutenções estão em dia.</p>
             </div>`;
@@ -444,7 +444,7 @@ function renderizarGrupos(lista) {
             // Menu
             const menuItems = r.pago
                 ? `<button class="danger" onclick="removerBaixa('${r.fonte}',${r.id})"><i class="fas fa-undo"></i> Remover Baixa</button>`
-                : `<button onclick="abrirBaixa('${r.fonte}',${r.id},'${escHtml(r.prestador)}',${r.valor})"><i class="fas fa-check-circle" style="color:#16a34a;"></i> Dar Baixa</button>`;
+                : `<button onclick="abrirBaixa('${r.fonte}',${r.id},'${escHtml(r.prestador)}',${r.valor})"><i class="fas fa-check-circle" style="color:#15803D;"></i> Dar Baixa</button>`;
             const excItem = r.fonte==='manutencao'
                 ? `<div class="cp-dd-sep"></div><button class="danger" onclick="excluirConta(${r.id})"><i class="fas fa-trash"></i> Excluir</button>`
                 : '';
@@ -575,7 +575,7 @@ function calcValorFinal() {
     const final=Math.max(0,orig-desc);
     document.getElementById('baixa-orig-txt').textContent =fmtR(orig);
     document.getElementById('baixa-final-txt').textContent=fmtR(final);
-    document.getElementById('baixa-final-txt').style.color=(desc>0&&desc<orig)?'#d97706':'#16a34a';
+    document.getElementById('baixa-final-txt').style.color=(desc>0&&desc<orig)?'#CA8A04':'#15803D';
 }
 
 function abrirBaixa(fonte,id,prestador,valorOrig) {
@@ -624,7 +624,7 @@ function calcValorFinalLote(){
     const desc =parseFloat(document.getElementById('lote-desconto').value||0);
     const final=Math.max(0,total-desc);
     document.getElementById('lote-final-txt').textContent=fmtR(final);
-    document.getElementById('lote-final-txt').style.color=(desc>0&&desc<total)?'#d97706':'#16a34a';
+    document.getElementById('lote-final-txt').style.color=(desc>0&&desc<total)?'#CA8A04':'#15803D';
 }
 
 function abrirBaixaLote(){
@@ -633,9 +633,9 @@ function abrirBaixaLote(){
     const total=lista.reduce((s,r)=>s+r.valor,0);
     abrirModal('Dar Baixa em Lote',`
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
-            <i class="fas fa-check-double" style="font-size:1.6rem;color:#16a34a;"></i>
+            <i class="fas fa-check-double" style="font-size:1.6rem;color:#15803D;"></i>
             <div>
-                <div style="font-weight:700;color:#15803d;font-size:.95rem;">${lista.length} OS selecionadas</div>
+                <div style="font-weight:700;color:#15803D;font-size:.95rem;">${lista.length} OS selecionadas</div>
                 <div style="font-size:.82rem;color:#166534;">Total: <strong>${fmtR(total)}</strong></div>
             </div>
         </div>
@@ -654,7 +654,7 @@ function abrirBaixaLote(){
                 <div style="margin-top:8px;background:#f8fafc;border-radius:10px;padding:10px 14px;display:flex;gap:10px;align-items:center;font-size:.8rem;color:#475569;">
                     <span>Total: <strong>${fmtR(total)}</strong></span>
                     <i class="fas fa-arrow-right" style="color:#94a3b8;font-size:.7rem;"></i>
-                    <span>A pagar: <strong id="lote-final-txt" style="color:#16a34a;">${fmtR(total)}</strong></span>
+                    <span>A pagar: <strong id="lote-final-txt" style="color:#15803D;">${fmtR(total)}</strong></span>
                 </div>
             </div>
             <div><label class="cp-filter-label">Observações — opcional</label><textarea id="lote-obs" class="form-control" rows="2" style="resize:vertical;" placeholder="Ex: pagamento em conjunto..."></textarea></div>
@@ -700,7 +700,7 @@ async function confirmarBaixaLote(){
 function removerBaixa(fonte,id){
     abrirModal('Remover Baixa',`
         <div style="text-align:center;padding:20px 0;">
-            <i class="fas fa-undo" style="font-size:3rem;color:#ef4444;margin-bottom:16px;display:block;"></i>
+            <i class="fas fa-undo" style="font-size:3rem;color:#B91C1C;margin-bottom:16px;display:block;"></i>
             <p style="color:#374151;font-weight:600;">Remover pagamento registrado?</p>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:22px;">
                 <button class="btn" onclick="fecharModal()" style="background:#f1f5f9;color:#475569;">Cancelar</button>
@@ -729,7 +729,7 @@ function excluirEmLote(){
     if(!lista.length){showToast('Nenhuma manutenção local selecionada para excluir','warning');return;}
     abrirModal('Excluir em Lote',`
         <div style="text-align:center;padding:10px 0 20px;">
-            <i class="fas fa-exclamation-triangle" style="font-size:2.8rem;color:#ef4444;margin-bottom:14px;display:block;"></i>
+            <i class="fas fa-exclamation-triangle" style="font-size:2.8rem;color:#B91C1C;margin-bottom:14px;display:block;"></i>
             <p style="color:#374151;font-weight:600;">Excluir <strong>${lista.length} manutenção${lista.length>1?'ões':''}</strong>?</p>
             <p style="font-size:.8rem;color:#94a3b8;margin-top:6px;">Esta ação não pode ser desfeita.</p>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:22px;">
@@ -762,7 +762,7 @@ function excluirConta(id){
     const label=item?`${item.placa} — ${(item.descricao||'').substring(0,40)}`:`#${id}`;
     abrirModal('Excluir Manutenção',`
         <div style="text-align:center;padding:10px 0 20px;">
-            <i class="fas fa-exclamation-triangle" style="font-size:2.8rem;color:#ef4444;margin-bottom:14px;display:block;"></i>
+            <i class="fas fa-exclamation-triangle" style="font-size:2.8rem;color:#B91C1C;margin-bottom:14px;display:block;"></i>
             <p style="color:#374151;font-weight:600;">Excluir <strong>${escHtml(label)}</strong>?</p>
             <p style="font-size:.8rem;color:#94a3b8;margin-top:6px;">Esta ação não pode ser desfeita.</p>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:22px;">

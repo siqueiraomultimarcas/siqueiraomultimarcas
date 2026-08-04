@@ -22,23 +22,27 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: #f0fdf4;
+        background: #F0FDF4;
         border: 1px solid #bbf7d0;
         border-radius: 20px;
         padding: 5px 12px;
         font-size: .72rem;
-        color: #16a34a;
+        color: #15803D;
         font-weight: 600;
     }
     .online-dot {
         width: 6px; height: 6px;
         border-radius: 50%;
-        background: #22c55e;
-        box-shadow: 0 0 5px #22c55e;
+        background: #15803D;
+        box-shadow: 0 0 5px rgba(21,128,61,.6);
         animation: pulse-dot 2s infinite;
     }
     @keyframes pulse-dot {
         0%,100% { opacity: 1; } 50% { opacity: .5; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .online-dot { animation: none; }
+        .skel { animation: none !important; }
     }
 
     /* ── KPI grid (5 colunas no desktop, herda Velo de base.html) */
@@ -48,9 +52,19 @@
         font-size: .65rem; font-weight: 600; padding: 1px 7px;
         border-radius: 20px; margin-top: 4px;
     }
-    .kpi-trend.up   { background: #f0fdf4; color: #16a34a; }
-    .kpi-trend.down { background: #fff1f2; color: #c73a2e; }
+    .kpi-trend.up   { background: #F0FDF4; color: #15803D; }
+    .kpi-trend.down { background: #FEF2F2; color: #B91C1C; }
     .kpi-trend.flat { background: #f8fafc; color: #64748b; }
+
+    /* ── Skeleton de carregamento ────────────────────────── */
+    .skel {
+        display: inline-block; border-radius: 5px;
+        background: linear-gradient(90deg,#eef2f7 25%,#e2e8f0 50%,#eef2f7 75%);
+        background-size: 200% 100%;
+        animation: skel-slide 1.3s ease-in-out infinite;
+        color: transparent !important;
+    }
+    @keyframes skel-slide { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     /* ── Ações rápidas ───────────────────────────────────── */
     .qa-grid {
@@ -71,11 +85,14 @@
     }
     .qa-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); }
     .qa-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
-    .qa-icon.blue   { background: #e8f5ff; color: #008cdd; }
-    .qa-icon.green  { background: #f0fdf4; color: #27a84f; }
-    .qa-icon.amber  { background: #fffbeb; color: #d4a800; }
-    .qa-icon.red    { background: #fff1f2; color: #c73a2e; }
+    .qa-icon.blue   { background: #e8f5ff; color: #015E94; }
+    .qa-icon.green  { background: #F0FDF4; color: #15803D; }
+    .qa-icon.amber  { background: #FFFBEB; color: #A16207; }
+    .qa-icon.red    { background: #FEF2F2; color: #B91C1C; }
     .qa-icon.purple { background: #f5f3ff; color: #7c3aed; }
+    /* Destaque quando o atalho tem pendência real */
+    .qa-card.alerta { border-color: #fecaca; background: #fffafa; }
+    .qa-card.alerta .qa-value { color: #B91C1C; }
     .qa-label { font-size: .63rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
     .qa-value { font-size: .92rem; font-weight: 700; color: #1e293b; margin-top: 1px; white-space: nowrap; }
     .qa-arrow { margin-left: auto; color: #cbd5e1; font-size: .68rem; flex-shrink: 0; }
@@ -94,7 +111,7 @@
     .loc-info { flex: 1; min-width: 0; }
     .loc-info strong { font-size: .82rem; color: #0f172a; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .loc-info small { font-size: .7rem; color: #94a3b8; }
-    .loc-valor { font-size: .8rem; font-weight: 600; color: #16a34a; flex-shrink: 0; }
+    .loc-valor { font-size: .8rem; font-weight: 600; color: #15803D; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 
     @media (max-width: 1024px) {
         .kpi-grid { grid-template-columns: repeat(3, 1fr); }
@@ -246,7 +263,7 @@
         </div>
         <div id="alertas">
             <div class="empty-state">
-                <i class="fas fa-check-circle" style="color:#33cd5f;"></i>
+                <i class="fas fa-check-circle" style="color:#15803D;"></i>
                 <p>Nenhuma pendência</p>
             </div>
         </div>
@@ -273,26 +290,46 @@
     // Saudação por horário
     const hora = new Date().getHours();
     const saud = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
-    document.getElementById('saudacao').textContent = saud + ', {{ current_user.nome.split()[0] }}!';
+    document.getElementById('saudacao').textContent =
+        saud + ', ' + {{ current_user.nome.split()[0] | tojson }} + '!';
     document.getElementById('dataAtual').textContent = new Date().toLocaleDateString('pt-BR', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 
     let chartFaturamento, chartFrota;
 
+    /* Marca os campos numéricos como "carregando" até a API responder */
+    const CAMPOS_KPI = ['totalVeiculos','veiculosDisponiveis','faturamentoMes','taxaOcupacao',
+                        'totalClientes','locacoesAtivas','totalReservas','despesasMes',
+                        'manutencoesPendentes','devHoje','cobVencidas'];
+    function marcarCarregando() {
+        CAMPOS_KPI.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.classList.add('skel'); el.textContent = '000'; }
+        });
+    }
+    function pronto(id, valor) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.remove('skel');
+        el.textContent = valor;
+    }
+
     async function carregarDashboard() {
         try {
-            const data = await fetch('/api/dashboard').then(r => r.json());
+            const resp = await fetch('/api/dashboard');
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
 
-            document.getElementById('totalVeiculos').textContent       = data.total_veiculos;
-            document.getElementById('veiculosDisponiveis').textContent  = data.veiculos_disponiveis;
-            document.getElementById('faturamentoMes').textContent       = formatCurrency(data.faturamento_mes);
-            document.getElementById('taxaOcupacao').textContent         = data.taxa_ocupacao + '%';
-            document.getElementById('totalClientes').textContent        = data.total_clientes;
-            document.getElementById('locacoesAtivas').textContent       = data.locacoes_ativas;
-            document.getElementById('manutencoesPendentes').textContent = data.manutencoes_pendentes;
-            document.getElementById('totalReservas').textContent        = data.total_reservas ?? '—';
-            document.getElementById('despesasMes').textContent          = data.despesas_mes ? formatCurrency(data.despesas_mes) : '—';
+            pronto('totalVeiculos',       data.total_veiculos);
+            pronto('veiculosDisponiveis', data.veiculos_disponiveis);
+            pronto('faturamentoMes',      formatCurrency(data.faturamento_mes));
+            pronto('taxaOcupacao',        data.taxa_ocupacao + '%');
+            pronto('totalClientes',       data.total_clientes);
+            pronto('locacoesAtivas',      data.locacoes_ativas);
+            pronto('manutencoesPendentes',data.manutencoes_pendentes);
+            pronto('totalReservas',       data.total_reservas ?? '—');
+            pronto('despesasMes',         data.despesas_mes ? formatCurrency(data.despesas_mes) : 'R$ 0,00');
             window.multasPendentes = data.multas_pendentes;
 
             // Trend: mês atual vs mês anterior
@@ -312,7 +349,14 @@
             atualizarGraficos(data);
             atualizarTabelaVeiculos(data.veiculos_mais_locados);
             verificarAlertas(data);
-        } catch(e) { console.error('Erro dashboard:', e); }
+        } catch(e) {
+            console.error('Erro dashboard:', e);
+            CAMPOS_KPI.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.classList.remove('skel'); el.textContent = '—'; }
+            });
+            showToast('Não foi possível carregar os indicadores. Recarregue a página.', 'error');
+        }
     }
 
     function atualizarGraficos(data) {
@@ -328,18 +372,28 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'Faturamento (R$)', data: valores, backgroundColor: 'rgba(37,99,235,0.85)', borderRadius: 5, borderSkipped: false },
-                    { label: 'Custo Manutenção', data: custos,  backgroundColor: 'rgba(239,68,68,0.75)', borderRadius: 5, borderSkipped: false }
+                    { label: 'Faturamento', data: valores, backgroundColor: '#008cdd', borderRadius: 5, borderSkipped: false },
+                    { label: 'Custo Manutenção', data: custos,  backgroundColor: '#B91C1C', borderRadius: 5, borderSkipped: false }
                 ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                animation: { duration: 400 },
                 plugins: {
-                    legend: { position: 'bottom', labels: { font: { family: 'Poppins', size: 11 }, boxWidth: 10, padding: 16 } }
+                    legend: { position: 'bottom', labels: { font: { family: 'Open Sans', size: 11 }, boxWidth: 10, padding: 16, usePointStyle: true, pointStyle: 'circle' } },
+                    tooltip: {
+                        backgroundColor: '#0f172a', padding: 10, cornerRadius: 8,
+                        titleFont: { family: 'Open Sans', size: 12 },
+                        bodyFont: { family: 'Open Sans', size: 12 },
+                        callbacks: { label: c => `${c.dataset.label}: ${formatCurrency(c.parsed.y)}` }
+                    }
                 },
                 scales: {
-                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { family: 'Poppins', size: 11 }, callback: v => 'R$ ' + v.toLocaleString('pt-BR') } },
-                    x: { grid: { display: false }, ticks: { font: { family: 'Poppins', size: 11 } } }
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false },
+                         ticks: { font: { family: 'Open Sans', size: 11 }, color: '#64748b',
+                                  callback: v => 'R$ ' + (v >= 1000 ? (v/1000) + 'k' : v) } },
+                    x: { grid: { display: false }, border: { display: false },
+                         ticks: { font: { family: 'Open Sans', size: 11 }, color: '#64748b' } }
                 }
             }
         });
@@ -347,7 +401,7 @@
         const ctxFr = document.getElementById('chartFrota').getContext('2d');
         if (chartFrota) chartFrota.destroy();
         const frotaData = [data.veiculos_disponiveis, data.veiculos_locados, data.veiculos_manutencao];
-        const frotaColors = ['#33cd5f','#008cdd','#ffc900'];
+        const frotaColors = ['#15803D','#008cdd','#CA8A04'];
         const frotaLabels = ['Disponível','Locado','Manutenção'];
         chartFrota = new Chart(ctxFr, {
             type: 'doughnut',
@@ -357,7 +411,15 @@
             },
             options: {
                 responsive: true, maintainAspectRatio: false, cutout: '72%',
-                plugins: { legend: { display: false } }
+                animation: { duration: 400 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a', padding: 10, cornerRadius: 8,
+                        bodyFont: { family: 'Open Sans', size: 12 },
+                        callbacks: { label: c => ` ${c.label}: ${c.parsed} veículo(s)` }
+                    }
+                }
             }
         });
         // Legenda lateral personalizada
@@ -376,26 +438,31 @@
     }
 
     async function carregarLocacoesAtivas() {
+        const el = document.getElementById('locacoesAtivasList');
         try {
             const locs = await fetch('/api/locacoes?status=ativa').then(r => r.json());
-            const el = document.getElementById('locacoesAtivasList');
-            if (!locs.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-key"></i><p>Nenhuma locação ativa</p></div>'; return; }
+            if (!Array.isArray(locs) || !locs.length) {
+                el.innerHTML = '<div class="empty-state"><i class="fas fa-key"></i><p>Nenhuma locação ativa</p></div>';
+                return;
+            }
             el.innerHTML = locs.slice(0, 7).map(l => `
                 <div class="loc-row">
-                    <span class="loc-placa">${l.placa || '—'}</span>
+                    <span class="loc-placa">${escHtml(l.placa) || '—'}</span>
                     <div class="loc-info">
-                        <strong>${l.nome_cliente || '—'}</strong>
-                        <small>${l.marca || ''} ${l.modelo || ''} · Desde ${formatDate(l.data_inicio)}</small>
+                        <strong>${escHtml(l.nome_cliente) || '—'}</strong>
+                        <small>${escHtml(l.marca)} ${escHtml(l.modelo)} · Desde ${formatDate(l.data_inicio)}</small>
                     </div>
                     <span class="loc-valor">${l.diaria ? formatCurrency(l.diaria) + '/d' : '—'}</span>
                 </div>`).join('') +
                 (locs.length > 7 ? `<div style="text-align:center;padding:10px;font-size:.74rem;color:#94a3b8;">+${locs.length - 7} locações</div>` : '');
-        } catch(e) {}
+        } catch(e) {
+            el.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Erro ao carregar locações</p></div>';
+        }
     }
 
     function atualizarTabelaVeiculos(veiculos) {
         const tbody = document.querySelector('#tabelaVeiculosLocados tbody');
-        if (!veiculos.length) {
+        if (!Array.isArray(veiculos) || !veiculos.length) {
             tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:24px;">Nenhuma locação registrada</td></tr>';
             return;
         }
@@ -403,8 +470,8 @@
         tbody.innerHTML = veiculos.map((v, i) => `
             <tr>
                 <td style="color:#94a3b8;font-size:.78rem;font-weight:600;text-align:center;">${medals[i] || (i+1)}</td>
-                <td><strong>${v.placa}</strong> <span style="color:#64748b;">— ${v.marca} ${v.modelo}</span></td>
-                <td style="text-align:center;"><span class="badge badge-info">${v.total_locacoes}</span></td>
+                <td><strong>${escHtml(v.placa)}</strong> <span style="color:#64748b;">— ${escHtml(v.marca)} ${escHtml(v.modelo)}</span></td>
+                <td style="text-align:center;"><span class="badge badge-info">${parseInt(v.total_locacoes) || 0}</span></td>
             </tr>`).join('');
     }
 
@@ -421,7 +488,7 @@
 
         const div = document.getElementById('alertas');
         div.innerHTML = items.length === 0
-            ? `<div class="empty-state"><i class="fas fa-check-circle" style="color:#33cd5f;"></i><p>Nenhuma pendência</p></div>`
+            ? `<div class="empty-state"><i class="fas fa-check-circle" style="color:#15803D;"></i><p>Nenhuma pendência</p></div>`
             : items.map(a => `
                 <div class="alert-item ${a.type}" ${a.url ? `onclick="location.href='${a.url}'"` : ''}>
                     <i class="fas ${a.icon} alert-icon"></i>
@@ -439,8 +506,8 @@
                 <div class="alert-item ${a.km_restante <= 200 ? 'danger' : 'warning'}" onclick="location.href='/manutencoes'">
                     <i class="fas fa-wrench alert-icon"></i>
                     <div class="alert-text">
-                        <strong>${a.placa} — Revisão ${a.tipo || ''}</strong>
-                        <small>Faltam ${parseInt(a.km_restante).toLocaleString()} km</small>
+                        <strong>${escHtml(a.placa)} — Revisão ${escHtml(a.tipo)}</strong>
+                        <small>Faltam ${(parseInt(a.km_restante) || 0).toLocaleString('pt-BR')} km</small>
                     </div>
                     <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.7rem;"></i>
                 </div>`).join('');
@@ -465,16 +532,18 @@
                 grupos[key].count++;
             }
 
-            const extras = Object.values(grupos).map(g => `
+            const extras = Object.values(grupos)
+                .sort((a, b) => b.total - a.total)
+                .map(g => `
                 <div class="alert-item danger" onclick="location.href='/contas-receber'" style="cursor:pointer;">
                     <i class="fas fa-money-bill-wave alert-icon"></i>
                     <div class="alert-text" style="flex:1;">
-                        <strong style="color:#0f172a;">${g.cliente}</strong>
+                        <strong style="color:#0f172a;">${escHtml(g.cliente)}</strong>
                         <small style="display:block;color:#374151;">
-                            <span style="font-family:monospace;font-weight:700;background:#1e293b;color:#f8fafc;border-radius:4px;padding:1px 6px;font-size:.72rem;margin-right:6px;">${g.placa}</span>
-                            ${g.marca} ${g.modelo}
+                            <span style="font-family:monospace;font-weight:700;background:#1e293b;color:#f8fafc;border-radius:4px;padding:1px 6px;font-size:.72rem;margin-right:6px;">${escHtml(g.placa)}</span>
+                            ${escHtml(g.marca)} ${escHtml(g.modelo)}
                         </small>
-                        <small style="color:#c73a2e;font-weight:600;">${g.count} cobrança${g.count > 1 ? 's' : ''} vencida${g.count > 1 ? 's' : ''} · ${fmtR(g.total)}</small>
+                        <small style="color:#B91C1C;font-weight:600;">${g.count} cobrança${g.count > 1 ? 's' : ''} vencida${g.count > 1 ? 's' : ''} · ${fmtR(g.total)}</small>
                     </div>
                     <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.7rem;"></i>
                 </div>`).join('');
@@ -486,15 +555,60 @@
     async function carregarOpsSnippet() {
         try {
             const d = await fetch('/api/operacional').then(r => r.json());
-            document.getElementById('devHoje').textContent     = (d.devolucoes_hoje   || []).length;
-            document.getElementById('cobVencidas').textContent = (d.cobrancas_vencidas || []).length;
+            const nDev = (d.devolucoes_hoje    || []).length;
+            const nCob = (d.cobrancas_vencidas || []).length;
+            pronto('devHoje', nDev);
+            pronto('cobVencidas', nCob);
+            // Destaca visualmente o atalho quando existe pendência real
+            document.getElementById('devHoje')?.closest('.qa-card')?.classList.toggle('alerta', nDev > 0);
+            document.getElementById('cobVencidas')?.closest('.qa-card')?.classList.toggle('alerta', nCob > 0);
+        } catch {
+            pronto('devHoje', '—');
+            pronto('cobVencidas', '—');
+        }
+    }
+
+    /* Alerta de CNH vencida/vencendo dos condutores com locação ativa */
+    async function carregarAlertasCnh() {
+        try {
+            const lista = await fetch('/api/locacoes/cnh-condutores').then(r => r.json());
+            if (!Array.isArray(lista)) return;
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
+            const criticos = lista.filter(c => {
+                if (!c.cnh_validade) return false;
+                const dias = Math.ceil((new Date(c.cnh_validade + 'T00:00:00') - hoje) / 86400000);
+                c._dias = dias;
+                return dias <= 30;
+            }).sort((a, b) => a._dias - b._dias);
+            if (!criticos.length) return;
+
+            const div = document.getElementById('alertas');
+            const extras = criticos.slice(0, 5).map(c => {
+                const venceu = c._dias < 0;
+                const txt = venceu ? `CNH vencida há ${Math.abs(c._dias)} dia(s)`
+                                   : c._dias === 0 ? 'CNH vence hoje'
+                                   : `CNH vence em ${c._dias} dia(s)`;
+                return `
+                <div class="alert-item ${venceu ? 'danger' : 'warning'}" onclick="location.href='/locacoes'" style="cursor:pointer;">
+                    <i class="fas fa-id-card alert-icon"></i>
+                    <div class="alert-text">
+                        <strong>${escHtml(c.condutor)}</strong>
+                        <small>${escHtml(c.placa)} · ${txt}</small>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.7rem;"></i>
+                </div>`;
+            }).join('');
+            if (div.innerHTML.includes('fa-check-circle')) div.innerHTML = extras;
+            else div.innerHTML += extras;
         } catch {}
     }
 
     window.addEventListener('load', async () => {
+        marcarCarregando();
         await carregarDashboard();
         carregarAlertasRevisao();
         carregarAlertasCobranca();
+        carregarAlertasCnh();
         carregarOpsSnippet();
         carregarLocacoesAtivas();
     });

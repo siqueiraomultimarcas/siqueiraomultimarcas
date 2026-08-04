@@ -1481,7 +1481,7 @@ async function abrirValCNH() {
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="font-size:.82rem;font-weight:600;color:${cor};font-variant-numeric:tabular-nums;">${dataFmt}${alerta}</span>
-                    <button onclick="editarValCNH(${r.cliente_id},'${val||''}')"
+                    <button onclick="editarValCNH(${r.cliente_id},'${escJsAttr(val)}')"
                         style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:.95rem;padding:4px;"
                         title="Editar validade CNH">
                         <i class="fas fa-pen"></i>

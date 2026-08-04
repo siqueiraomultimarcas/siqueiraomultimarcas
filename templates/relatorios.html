@@ -55,7 +55,7 @@
     border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
     font-size: 0.83rem;
-    box-shadow: 0 2px 8px rgba(37,99,235,0.28);
+    box-shadow: 0 2px 8px rgba(0,140,221,0.28);
     flex-shrink: 0;
 }
 .rel-param-body { padding: 20px 22px 22px; }
@@ -263,7 +263,7 @@
 
 /* ── Table enhancements ───────────────────────────────────── */
 .row-profit { background: rgba(16,185,129,0.04); }
-.row-loss   { background: rgba(239,68,68,0.04); }
+.row-loss   { background: rgba(185,28,28,0.05); }
 .row-total  { background: #f8fafc; font-weight: 700; border-top: 2px solid #e2e8f0; }
 .row-total td { color: #0f172a !important; }
 .margin-wrap { display: flex; align-items: center; gap: 8px; }
@@ -924,23 +924,23 @@ function exibirResultados(data, di, df) {
     tbody.innerHTML = data.resultados.map(r => {
         const lucroPos = r.lucro >= 0;
         const margemPct = r.margem ?? (r.receita > 0 ? (r.lucro/r.receita)*100 : 0);
-        const barColor  = lucroPos ? '#33cd5f' : '#ef473a';
+        const barColor  = lucroPos ? '#15803D' : '#B91C1C';
         const barWidth  = Math.min(Math.abs(margemPct), 100);
         return `<tr class="${lucroPos ? 'row-profit' : 'row-loss'}">
             <td>
-                <div style="font-weight:600;color:#1e293b;">${r.veiculo.placa}</div>
-                <div style="font-size:0.75rem;color:#94a3b8;">${r.veiculo.marca} ${r.veiculo.modelo}</div>
+                <div style="font-weight:600;color:#1e293b;">${escHtml(r.veiculo.placa)}</div>
+                <div style="font-size:0.75rem;color:#94a3b8;">${escHtml(r.veiculo.marca)} ${escHtml(r.veiculo.modelo)}</div>
             </td>
             <td style="text-align:center;font-weight:600;color:#374151;">${r.qtd_locacoes || 0}</td>
-            <td style="text-align:right;color:#27a84f;font-weight:600;">${fmtR(r.receita)}</td>
+            <td style="text-align:right;color:#15803D;font-weight:600;">${fmtR(r.receita)}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(r.custo_manutencao)}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(r.custo_abastecimento)}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(r.custo_multas)}</td>
-            <td style="text-align:right;color:#c73a2e;font-weight:600;">${fmtR(r.total_custos)}</td>
-            <td style="text-align:right;font-weight:700;color:${lucroPos ? '#27a84f' : '#c73a2e'};">${fmtR(r.lucro)}</td>
+            <td style="text-align:right;color:#B91C1C;font-weight:600;">${fmtR(r.total_custos)}</td>
+            <td style="text-align:right;font-weight:700;color:${lucroPos ? '#15803D' : '#B91C1C'};">${fmtR(r.lucro)}</td>
             <td>
                 <div class="margin-wrap">
-                    <span style="font-size:0.78rem;font-weight:600;color:${lucroPos?'#27a84f':'#c73a2e'};min-width:40px;">${margemPct.toFixed(1)}%</span>
+                    <span style="font-size:0.78rem;font-weight:600;color:${lucroPos?'#15803D':'#B91C1C'};min-width:40px;">${margemPct.toFixed(1)}%</span>
                     <div class="margin-bar-bg">
                         <div class="margin-bar-fill" style="width:${barWidth}%;background:${barColor};"></div>
                     </div>
@@ -955,11 +955,11 @@ function exibirResultados(data, di, df) {
         <tr class="row-total">
             <td><strong>TOTAL GERAL</strong></td>
             <td style="text-align:center;">${totalLocs}</td>
-            <td style="text-align:right;color:#27a84f;">${fmtR(totalReceita)}</td>
+            <td style="text-align:right;color:#15803D;">${fmtR(totalReceita)}</td>
             <td style="text-align:right;" colspan="3"></td>
-            <td style="text-align:right;color:#c73a2e;">${fmtR(totalCustos)}</td>
-            <td style="text-align:right;color:${totalLucro>=0?'#27a84f':'#c73a2e'};">${fmtR(totalLucro)}</td>
-            <td><span style="font-weight:700;font-size:0.85rem;color:${totalLucro>=0?'#27a84f':'#c73a2e'};">${margTotal.toFixed(1)}%</span></td>
+            <td style="text-align:right;color:#B91C1C;">${fmtR(totalCustos)}</td>
+            <td style="text-align:right;color:${totalLucro>=0?'#15803D':'#B91C1C'};">${fmtR(totalLucro)}</td>
+            <td><span style="font-weight:700;font-size:0.85rem;color:${totalLucro>=0?'#15803D':'#B91C1C'};">${margTotal.toFixed(1)}%</span></td>
         </tr>`;
 
     if (data.dados_mensais?.length) renderizarGrafico(data.dados_mensais);
@@ -978,20 +978,25 @@ function renderizarGrafico(dados) {
         data: {
             labels,
             datasets: [
-                { type:'bar',  label:'Receitas', data: dados.map(d=>d.receita), backgroundColor:'rgba(16,185,129,0.75)', borderRadius:5, order:2 },
-                { type:'bar',  label:'Custos',   data: dados.map(d=>d.custos),  backgroundColor:'rgba(239,68,68,0.7)',   borderRadius:5, order:2 },
-                { type:'line', label:'Lucro',    data: dados.map(d=>d.lucro),   borderColor:'#008cdd', backgroundColor:'rgba(37,99,235,0.08)', borderWidth:2.5, tension:0.35, fill:true, pointBackgroundColor:'#008cdd', pointRadius:4, order:1 }
+                { type:'bar',  label:'Receitas', data: dados.map(d=>d.receita), backgroundColor:'#15803D', borderRadius:5, order:2 },
+                { type:'bar',  label:'Custos',   data: dados.map(d=>d.custos),  backgroundColor:'#B91C1C', borderRadius:5, order:2 },
+                { type:'line', label:'Lucro',    data: dados.map(d=>d.lucro),   borderColor:'#008cdd', backgroundColor:'rgba(0,140,221,0.10)', borderWidth:2.5, tension:0.35, fill:true, pointBackgroundColor:'#008cdd', pointRadius:4, order:1 }
             ]
         },
         options: {
             responsive:true, maintainAspectRatio:false,
+            animation:{ duration:400 },
             plugins: {
-                legend: { position:'bottom', labels:{ boxWidth:10, padding:20, font:{ size:12 } } },
-                tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtR(ctx.raw)}` } }
+                legend: { position:'bottom', labels:{ boxWidth:10, padding:20, font:{ size:12 }, usePointStyle:true, pointStyle:'circle' } },
+                tooltip: {
+                    backgroundColor:'#0f172a', padding:10, cornerRadius:8,
+                    callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtR(ctx.raw)}` }
+                }
             },
             scales: {
-                x: { grid:{ display:false }, ticks:{ font:{ size:11 } } },
-                y: { beginAtZero:true, grid:{ color:'#f1f5f9' }, ticks:{ callback: v => fmtR(v), font:{ size:11 } } }
+                x: { grid:{ display:false }, border:{ display:false }, ticks:{ font:{ size:11 }, color:'#64748b' } },
+                y: { beginAtZero:true, grid:{ color:'#f1f5f9' }, border:{ display:false },
+                     ticks:{ callback: v => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000)+'k' : v), font:{ size:11 }, color:'#64748b' } }
             }
         }
     });
@@ -1052,11 +1057,11 @@ function exibirResultadosFornecedor(data) {
         const ticket = f.qtd_servicos > 0 ? f.total_gasto / f.qtd_servicos : 0;
         const part   = totalGasto > 0 ? (f.total_gasto / totalGasto) * 100 : 0;
         return `<tr>
-            <td><strong>${f.nome}</strong></td>
-            <td><span class="badge badge-info" style="font-size:0.7rem;">${f.tipo_nome || 'Geral'}</span></td>
+            <td><strong>${escHtml(f.nome)}</strong></td>
+            <td><span class="badge badge-info" style="font-size:0.7rem;">${escHtml(f.tipo_nome) || 'Geral'}</span></td>
             <td style="text-align:center;font-weight:600;">${f.qtd_servicos}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(ticket)}</td>
-            <td style="text-align:right;font-weight:700;color:#c73a2e;">${fmtR(f.total_gasto)}</td>
+            <td style="text-align:right;font-weight:700;color:#B91C1C;">${fmtR(f.total_gasto)}</td>
             <td>
                 <div class="part-wrap">
                     <span style="font-size:0.78rem;font-weight:600;color:#008cdd;min-width:38px;">${part.toFixed(1)}%</span>
@@ -1075,7 +1080,7 @@ function exibirResultadosFornecedor(data) {
 function renderizarGraficoFornecedor(resultados) {
     const ctx = document.getElementById('chartFornecedores').getContext('2d');
     if (chartFornecedores) chartFornecedores.destroy();
-    const cores = ['#008cdd','#33cd5f','#ffc900','#ef473a','#8b5cf6','#06b6d4','#ec4899'];
+    const cores = ['#008cdd','#15803D','#CA8A04','#B91C1C','#8b5cf6','#06b6d4','#ec4899'];
     chartFornecedores = new Chart(ctx, {
         type:'bar',
         data: {
@@ -1089,13 +1094,16 @@ function renderizarGraficoFornecedor(resultados) {
         },
         options:{
             responsive:true, maintainAspectRatio:false,
+            animation:{ duration:400 },
             plugins:{
                 legend:{ display:false },
-                tooltip:{ callbacks:{ label: ctx => ` ${fmtR(ctx.raw)}` } }
+                tooltip:{ backgroundColor:'#0f172a', padding:10, cornerRadius:8,
+                          callbacks:{ label: ctx => ` ${fmtR(ctx.raw)}` } }
             },
             scales:{
-                x:{ grid:{ display:false }, ticks:{ font:{ size:11 } } },
-                y:{ beginAtZero:true, grid:{ color:'#f1f5f9' }, ticks:{ callback: v => fmtR(v), font:{ size:11 } } }
+                x:{ grid:{ display:false }, border:{ display:false }, ticks:{ font:{ size:11 }, color:'#64748b' } },
+                y:{ beginAtZero:true, grid:{ color:'#f1f5f9' }, border:{ display:false },
+                    ticks:{ callback: v => 'R$ ' + (v >= 1000 ? (v/1000)+'k' : v), font:{ size:11 }, color:'#64748b' } }
             }
         }
     });
@@ -1158,12 +1166,12 @@ function exibirResultadosLocacoes(data, di, df) {
         return `<tr>
             <td style="font-size:0.8rem;color:#94a3b8;font-weight:600;">${i < 3 ? medalhas[i] : i+1}</td>
             <td>
-                <div style="font-weight:600;color:#1e293b;font-size:0.83rem;">${c.nome}</div>
+                <div style="font-weight:600;color:#1e293b;font-size:0.83rem;">${escHtml(c.nome)}</div>
                 <div style="font-size:0.7rem;color:#94a3b8;">${c.qtd} locação${c.qtd > 1 ? 'ões' : ''}</div>
             </td>
             <td style="text-align:center;font-weight:600;color:#374151;">${c.qtd}</td>
             <td style="text-align:right;">
-                <div style="font-weight:700;color:#27a84f;font-size:0.83rem;">${fmtR(c.receita)}</div>
+                <div style="font-weight:700;color:#15803D;font-size:0.83rem;">${fmtR(c.receita)}</div>
                 <div style="font-size:0.68rem;color:#94a3b8;">${part}% do total</div>
             </td>
         </tr>`;
@@ -1177,15 +1185,15 @@ function exibirResultadosLocacoes(data, di, df) {
         return `<tr>
             <td style="font-size:0.8rem;color:#94a3b8;font-weight:600;">${i < 3 ? medalhas[i] : i+1}</td>
             <td>
-                <span style="font-family:monospace;font-weight:700;background:#1e293b;color:#f8fafc;border-radius:4px;padding:1px 6px;font-size:.72rem;">${v.placa}</span>
-                <div style="font-size:0.7rem;color:#94a3b8;margin-top:2px;">${v.marca} ${v.modelo}</div>
+                <span style="font-family:monospace;font-weight:700;background:#1e293b;color:#f8fafc;border-radius:4px;padding:1px 6px;font-size:.72rem;">${escHtml(v.placa)}</span>
+                <div style="font-size:0.7rem;color:#94a3b8;margin-top:2px;">${escHtml(v.marca)} ${escHtml(v.modelo)}</div>
             </td>
             <td style="text-align:center;">
                 <div style="font-weight:700;color:#008cdd;">${v.qtd_locacoes}</div>
                 <div class="part-bar-bg" style="min-width:36px;margin-top:3px;"><div class="part-bar-fill" style="width:${barW}%;"></div></div>
             </td>
             <td style="text-align:center;color:#64748b;font-weight:600;">${v.dias_locado}d</td>
-            <td style="text-align:right;font-weight:600;color:#27a84f;font-size:0.83rem;">${fmtR(v.receita)}</td>
+            <td style="text-align:right;font-weight:600;color:#15803D;font-size:0.83rem;">${fmtR(v.receita)}</td>
         </tr>`;
     }).join('') || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Sem dados</td></tr>';
 

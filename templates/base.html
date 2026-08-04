@@ -993,6 +993,22 @@
     document.addEventListener('click', () => document.querySelectorAll('.act-menu').forEach(m => m.style.display = 'none'));
 
     /* ── Utilitários ───────────────────────────────────────── */
+    /* Escapa texto antes de injetar via innerHTML — previne XSS de dados do banco */
+    function escHtml(v) {
+        if (v === null || v === undefined) return '';
+        return String(v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    /* Escapa valor usado como string JS DENTRO de um atributo HTML.
+       Ex: onclick="fn('${escJsAttr(x)}')" — escapa primeiro p/ JS, depois p/ HTML. */
+    function escJsAttr(v) {
+        const js = String(v === null || v === undefined ? '' : v)
+            .replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return js.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function formatCurrency(value) {
         return 'R$ ' + parseFloat(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     }

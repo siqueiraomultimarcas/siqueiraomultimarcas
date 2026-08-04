@@ -11,6 +11,7 @@ import re
 import time
 import io
 from contextlib import contextmanager
+from functools import wraps
 from datetime import datetime, date as _date, timedelta
 from calendar import monthrange
 from dotenv import load_dotenv
@@ -117,6 +118,16 @@ def _brute_record(ip: str) -> None:
             cur.execute("DELETE FROM login_attempts WHERE attempted_at < NOW() - INTERVAL '1 day'")
     except Exception:
         pass
+
+
+def admin_required(f):
+    """Exige perfil admin. Sempre aplicar DEPOIS de @login_required."""
+    @wraps(f)
+    def _wrapper(*args, **kwargs):
+        if getattr(current_user, 'nivel', None) != 'admin':
+            return jsonify({'error': 'Acesso negado — esta ação requer perfil administrador.'}), 403
+        return f(*args, **kwargs)
+    return _wrapper
 
 
 @app.after_request
@@ -1439,7 +1450,7 @@ def get_cobrancas():
                     'semana_numero':        p['semana_numero'],
                     'data_inicio':          str(p['data_inicio']) if p['data_inicio'] else None,
                     'data_fim':             str(p['data_fim']) if p['data_fim'] else None,
-                    'dias':                 (((_date.fromisoformat(str(p['data_fim'])) - _date.fromisoformat(str(p['data_inicio']))).days)
+                    'dias':                 (((_date.fromisoformat(str(p['data_fim'])) - _date.fromisoformat(str(p['data_inicio']))).days + 1)
                                              if p['data_inicio'] and p['data_fim'] else 0),
                     'valor_previsto':       float(p['valor_previsto'] or 0),
                     'valor_pago':           float(p['valor_pago'] or 0),
@@ -1512,18 +1523,26 @@ def registrar_pagamento():
         cur.execute('''
             SELECT id, data_inicio, data_fim FROM pagamentos_locacao
             WHERE locacao_id = %s AND status IN ('pago','pendente')
-              AND data_inicio < %s AND data_fim > %s
+              AND data_inicio <= %s AND data_fim >= %s
         ''', (locacao_id, d_fim, d_ini))
         overlap = cur.fetchone()
         if overlap:
             return jsonify({'error': f'Período sobrepõe registro já existente ({overlap[1]} a {overlap[2]})'}), 400
 
-        dias = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days
-        cur.execute('SELECT diaria FROM locacoes WHERE id=%s', (locacao_id,))
+        # Convenção inclusiva (mesma do gerador de períodos e do Asaas): 03→09 = 7 dias
+        dias = (_date.fromisoformat(d_fim) - _date.fromisoformat(d_ini)).days + 1
+        cur.execute('SELECT diaria, valor_semanal, frequencia_cobranca FROM locacoes WHERE id=%s', (locacao_id,))
         row = cur.fetchone()
-        diaria = float(row[0]) if row else 0
-        valor_prev = round(diaria * dias)
-        valor_pago = round(valor_prev - desconto) if status == 'pago' else 0
+        diaria = float(row[0]) if row and row[0] else 0
+        valor_semanal_loc = float(row[1]) if row and row[1] else 0
+        freq_loc = row[2] if row else None
+        freq_dias_map = {'semanal': 7, 'quinzenal': 14, 'mensal': 28}
+        # Período cheio de contrato com valor fechado usa o valor fechado (sem arredondamento de diária)
+        if valor_semanal_loc > 0 and freq_loc in freq_dias_map and dias == freq_dias_map[freq_loc]:
+            valor_prev = round(valor_semanal_loc, 2)
+        else:
+            valor_prev = round(diaria * dias, 2)
+        valor_pago = round(valor_prev - desconto, 2) if status == 'pago' else 0
         data_pag   = data.get('data_pagamento') or (str(_date.today()) if status == 'pago' else None)
 
         cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s', (locacao_id,))
@@ -1775,6 +1794,7 @@ def verificar_pagamento(pagamento_id):
 
 @app.route('/api/cobrancas/<int:pagamento_id>', methods=['DELETE'])
 @login_required
+@admin_required
 def cancelar_pagamento(pagamento_id):
     with _db() as (conn, cur):
         cur.execute("UPDATE pagamentos_locacao SET status='cancelado' WHERE id=%s", (pagamento_id,))
@@ -1783,6 +1803,7 @@ def cancelar_pagamento(pagamento_id):
 
 @app.route('/api/cobrancas/mes/<int:locacao_id>/<int:ano>/<int:mes>', methods=['DELETE'])
 @login_required
+@admin_required
 def excluir_mes_cobrancas(locacao_id, ano, mes):
     """Exclui todos os períodos pendentes de um mês específico de um contrato."""
     with _db() as (conn, cur):
@@ -2630,6 +2651,7 @@ def importar_manutencao_pdf():
 
 @app.route('/api/manutencoes/<int:id>', methods=['DELETE'])
 @login_required
+@admin_required
 def delete_manutencao(id):
     with _db() as (conn, cur):
         cur.execute('DELETE FROM manutencoes WHERE id=%s', (id,))
@@ -2674,14 +2696,20 @@ def update_cnh_validade(id):
 @app.route('/api/locacoes', methods=['GET'])
 @login_required
 def get_locacoes():
+    status_f = (request.args.get('status') or '').strip().lower()
+    sql = '''
+        SELECT l.*, v.placa, v.marca, v.modelo, c.nome as nome_cliente
+        FROM locacoes l
+        LEFT JOIN veiculos v ON l.veiculo_id = v.id
+        LEFT JOIN clientes c ON l.cliente_id = c.id
+    '''
+    params = ()
+    if status_f in ('ativa', 'concluida', 'cancelada'):
+        sql += ' WHERE l.status = %s'
+        params = (status_f,)
+    sql += ' ORDER BY l.data_inicio DESC'
     with _db() as (conn, cur):
-        cur.execute('''
-            SELECT l.*, v.placa, v.marca, v.modelo, c.nome as nome_cliente
-            FROM locacoes l
-            LEFT JOIN veiculos v ON l.veiculo_id = v.id
-            LEFT JOIN clientes c ON l.cliente_id = c.id
-            ORDER BY l.data_inicio DESC
-        ''')
+        cur.execute(sql, params)
         result = rows_to_dict(cur)
     return jsonify(result)
 
@@ -3075,6 +3103,7 @@ def add_abastecimento():
 
 @app.route('/api/abastecimentos/<int:id>', methods=['DELETE'])
 @login_required
+@admin_required
 def delete_abastecimento(id):
     with _db() as (conn, cur):
         cur.execute('DELETE FROM abastecimentos WHERE id=%s', (id,))
@@ -3470,6 +3499,7 @@ def update_fornecedor(id):
 
 @app.route('/api/fornecedores/<int:id>', methods=['DELETE'])
 @login_required
+@admin_required
 def delete_fornecedor(id):
     with _db() as (conn, cur):
         cur.execute('DELETE FROM fornecedores WHERE id=%s', (id,))
@@ -3497,6 +3527,7 @@ def add_tipo_fornecedor():
 
 @app.route('/api/tipos-fornecedor/<int:id>', methods=['DELETE'])
 @login_required
+@admin_required
 def delete_tipo_fornecedor(id):
     with _db() as (conn, cur):
         cur.execute('DELETE FROM tipos_fornecedor WHERE id=%s', (id,))
@@ -4566,6 +4597,7 @@ def update_cobranca_avulsa(id):
 
 @app.route('/api/cobrancas-avulsas/<int:id>', methods=['DELETE'])
 @login_required
+@admin_required
 def delete_cobranca_avulsa(id):
     with _db() as (conn, cur):
         cur.execute('DELETE FROM cobrancas_avulsas WHERE id=%s', (id,))
@@ -5003,6 +5035,7 @@ def dar_baixa_manutencao(id):
 
 @app.route('/api/manutencoes/<int:id>/baixa', methods=['DELETE'])
 @login_required
+@admin_required
 def remover_baixa_manutencao(id):
     with _db() as (conn, cur):
         cur.execute("""
@@ -5185,6 +5218,7 @@ def dar_baixa_os(os_id):
 
 @app.route('/api/lserp/os/<int:os_id>/baixa', methods=['DELETE'])
 @login_required
+@admin_required
 def remover_baixa_os(os_id):
     with _db() as (conn, cur):
         cur.execute('DELETE FROM os_baixas WHERE lserp_os_id = %s', (os_id,))
@@ -5226,6 +5260,7 @@ def get_lserp_os_ocultos():
 
 @app.route('/api/lserp/os/<int:os_id>', methods=['DELETE'])
 @login_required
+@admin_required
 def ocultar_lserp_os(os_id):
     with _db() as (conn, cur):
         cur.execute("""
@@ -5706,10 +5741,10 @@ def update_despesa(did):
 
 @app.route('/api/despesas/<int:did>', methods=['DELETE'])
 @login_required
+@admin_required
 def delete_despesa(did):
     with _db() as (conn, cur):
         cur.execute('DELETE FROM despesas WHERE id=%s', (did,))
-        conn.commit()
     return jsonify({'message': 'Despesa excluída!'})
 
 

@@ -348,7 +348,7 @@
                 <tr style="background:#f8fbff;">
                     <td style="white-space:nowrap;">${formatDate(m.data_manutencao)}</td>
                     <td>
-                        <span style="font-weight:600;color:#008cdd;cursor:pointer;text-decoration:underline;" onclick="buscarHistorico('${m.placa}')" title="Ver histórico do veículo">${m.placa || '—'}</span>
+                        <span style="font-weight:600;color:#008cdd;cursor:pointer;text-decoration:underline;" onclick="buscarHistorico('${escJsAttr(m.placa)}')" title="Ver histórico do veículo">${m.placa || '—'}</span>
                         ${(m.marca || m.modelo) ? `<span style="color:#64748b;font-size:0.8rem;"> ${m.marca||''} ${m.modelo||''}</span>` : ''}
                     </td>
                     <td>${tipoLbl}</td>
@@ -367,7 +367,7 @@
                                 <button onclick="toggleActMenu(event,-1);verOSLSERP(${m.id})"><i class="fas fa-search" style="color:#008cdd;"></i> Ver OS</button>
                                 <button onclick="toggleActMenu(event,-1);definirTipoOS(${m.id})"><i class="fas fa-tag" style="color:#8b5cf6;"></i> Definir Tipo</button>
                                 <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
-                                <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${m.placa}')"><i class="fas fa-car" style="color:#16a34a;"></i> Status do Veículo</button>
+                                <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${escJsAttr(m.placa)}')"><i class="fas fa-car" style="color:#16a34a;"></i> Status do Veículo</button>
                                 <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
                                 <button class="danger" onclick="toggleActMenu(event,-1);ocultarOSLSERP(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
                             </div>
@@ -394,7 +394,7 @@
                     <td style="white-space:nowrap;">${formatDate(m.data_manutencao)}</td>
                     <td>
                         ${pedidoBadge}
-                        <span style="font-weight:600;color:#008cdd;cursor:pointer;text-decoration:underline;" onclick="buscarHistorico('${m.placa}')" title="Ver histórico do veículo">${m.placa || '-'}</span>
+                        <span style="font-weight:600;color:#008cdd;cursor:pointer;text-decoration:underline;" onclick="buscarHistorico('${escJsAttr(m.placa)}')" title="Ver histórico do veículo">${m.placa || '-'}</span>
                         <span style="color:#64748b;font-size:0.8rem;"> ${m.marca || ''} ${m.modelo || ''}</span>
                     </td>
                     <td>${m.tipo}</td>
@@ -409,7 +409,7 @@
                             <div id="actmenu_${m.id}" class="act-menu" onclick="event.stopPropagation()">
                                 ${temItens ? `<button onclick="toggleActMenu(event,-1);verDetalhes(${m.id})"><i class="fas fa-list-ul"></i> Ver Itens</button>` : ''}
                                 <button onclick="toggleActMenu(event,-1);editarManutencao(${m.id})"><i class="fas fa-edit"></i> Editar</button>
-                                <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${m.placa}')"><i class="fas fa-car" style="color:#16a34a;"></i> Status do Veículo</button>
+                                <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${escJsAttr(m.placa)}')"><i class="fas fa-car" style="color:#16a34a;"></i> Status do Veículo</button>
                                 <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
                                 <button class="danger" onclick="toggleActMenu(event,-1);excluirManutencao(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
                             </div>
