@@ -903,7 +903,8 @@ function renderTableContratos(lista, busca) {
                 else statusHtml=`<span class="badge-status pendente" onclick="abrirBaixa('contrato',${d.id})"><i class="fas fa-clock"></i> Pendente</span>`;
                 const menuItems=`${!isPago?`<button onclick="closeCRMenus();abrirBaixa('contrato',${d.id})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
                     ${!isPago?`<button onclick="closeCRMenus();abrirAsaasContrato(${d.id})"><i class="fas fa-bolt"></i> Asaas</button>`:''}
-                    <button onclick="closeCRMenus();abrirObservacao('contrato',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
+                    ${isPago?`<button onclick="closeCRMenus();abrirComprovante('contrato',${d.id})"><i class="fas fa-receipt"></i> Comprovante</button>`:''}
+                <button onclick="closeCRMenus();abrirObservacao('contrato',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
                     <div class="cr-dd-sep"></div>
                     <button class="danger" onclick="closeCRMenus();excluirPeriodo(${d.id})"><i class="fas fa-trash"></i> Excluir</button>`;
                 return `<div class="cr-item cr-item-c ${isPago?'cr-pago':''}">
@@ -1007,6 +1008,7 @@ function renderTableMultas(lista, busca) {
             else statusHtml=`<span class="badge-status pendente" onclick="abrirBaixa('multa',${d.id})"><i class="fas fa-clock"></i> Pendente</span>`;
             const menuItems=`${!isPago?`<button onclick="closeCRMenus();abrirBaixa('multa',${d.id})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
                 ${!isPago?`<button onclick="closeCRMenus();abrirAsaasMulta(${d.id})"><i class="fas fa-bolt"></i> Asaas</button>`:''}
+                ${isPago?`<button onclick="closeCRMenus();abrirComprovante('multa',${d.id})"><i class="fas fa-receipt"></i> Comprovante</button>`:''}
                 <button onclick="closeCRMenus();abrirObservacao('multa',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
                 <div class="cr-dd-sep"></div>
                 <button class="danger" onclick="closeCRMenus();excluirMultaCR(${d.id})"><i class="fas fa-trash"></i> Excluir</button>`;
@@ -1080,6 +1082,7 @@ function renderTableAvulsas(lista, busca) {
             else statusHtml=`<span class="badge-status pendente" onclick="abrirBaixa('avulsa',${d.id})"><i class="fas fa-clock"></i> Pendente</span>`;
             const menuItems=`${!isPago?`<button onclick="closeCRMenus();abrirBaixa('avulsa',${d.id})"><i class="fas fa-check"></i> Dar Baixa</button>`:''}
                 <button onclick="closeCRMenus();editarAvulsa(${d.id})"><i class="fas fa-edit"></i> Editar</button>
+                ${isPago?`<button onclick="closeCRMenus();abrirComprovante('avulsa',${d.id})"><i class="fas fa-receipt"></i> Comprovante</button>`:''}
                 <button onclick="closeCRMenus();abrirObservacao('avulsa',${d.id})"><i class="fas fa-sticky-note"></i> Observação</button>
                 <div class="cr-dd-sep"></div>
                 <button class="danger" onclick="closeCRMenus();excluirAvulsa(${d.id})"><i class="fas fa-trash"></i> Excluir</button>`;
@@ -1392,6 +1395,7 @@ async function confirmarBaixa() {
         const res = await r.json().catch(() => ({}));
         if (!r.ok) { showToast(res.error || 'Erro ao registrar baixa', 'error'); return; }
 
+        const {tipo: tp, id: rid} = pendenteBaixa;
         fecharModalBaixa();
         if (res.residual_gerado)
             showToast(`Recebido ${fmtCurrency(res.valor_recebido)}. Residual de ${fmtCurrency(res.saldo)} `
@@ -1400,7 +1404,8 @@ async function confirmarBaixa() {
             showToast(`Baixa registrada com desconto de ${fmtCurrency(st.desconto + (st.trat === 'desconto' ? st.saldo : 0))}`, 'success');
         else
             showToast('Baixa registrada!', 'success');
-        carregarDados();
+        await carregarDados();
+        abrirComprovante(tp, rid);   // recibo pronto para imprimir ou enviar
     } catch {
         showToast('Erro de conexão', 'error');
     } finally {

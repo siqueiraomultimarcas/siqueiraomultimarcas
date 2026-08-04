@@ -501,6 +501,7 @@ async function _enviarBaixa(id, pagar, payload) {
                       pagar ? 'success' : 'warning');
 
         if (r.residual_gerado) carregarChecklist();
+        if (pagar) setTimeout(() => abrirComprovante('contrato', id), 400);
     } catch (e) {
         if (pagar) { card.classList.remove('pago'); card.querySelector('.ck-chk').innerHTML = ''; }
         else       { card.classList.add('pago');    card.querySelector('.ck-chk').innerHTML = CHECK_SVG; }

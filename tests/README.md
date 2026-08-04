@@ -9,6 +9,7 @@ Três suítes independentes que rodam **sem banco e sem tocar no Asaas**
 cd siqueiraomultimarcas
 python tests/test_calculos.py       # cálculo de contratos, períodos e km excedente
 python tests/test_baixa_parcial.py  # pagamento parcial, residual e validações
+python tests/test_comprovante.py    # recibo de pagamento (dados, formatação, regras)
 python tests/test_seguranca.py      # auth, SQL injection, segredos, brute force, XSS
 python tests/test_templates.py      # Jinja, XSS em onclick, paleta, ids órfãos
 ```
@@ -38,6 +39,13 @@ endpoint real `PUT /api/contas-receber/baixa`:
 - residual de multa vira cobrança avulsa vinculada ao motorista
 - precisão de centavos (222.22 sem erro de ponto flutuante) e tolerância
   de 1 centavo para não gerar residual irrisório
+
+**test_comprovante.py** — endpoint `GET /api/comprovante/<tipo>/<id>`:
+- monta o recibo de contrato, multa e cobrança avulsa
+- numeração (`CON-000007`), datas em dd/mm/aaaa, telefone só com dígitos
+  (pronto para o link do WhatsApp)
+- expõe desconto com justificativa e o saldo em aberto com vencimento
+- recusa comprovante de conta ainda não paga (400) e id inexistente (404)
 
 **test_seguranca.py** — auditoria estática do `app.py`:
 - toda rota privada tem `@login_required`

@@ -615,6 +615,7 @@ async function executarBaixaDireto(pagId, lid, valor) {
             ? `Recebido ${fmtR(res.valor_recebido)}. Residual de ${fmtR(res.saldo)} gerado.`
             : 'Pagamento registrado!', 'success', res.residual_gerado ? 6000 : 4000);
         await carregarCobrancas();
+        abrirComprovante('contrato', pagId);
     } catch { showToast('Erro de conexão', 'error'); }
 }
 

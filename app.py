@@ -4982,6 +4982,120 @@ def _aplicar_baixa(cur, tipo, rid, *, data_rec, desconto=0.0, justific='',
     }
 
 
+@app.route('/api/comprovante/<tipo>/<int:rid>')
+@login_required
+def get_comprovante(tipo, rid):
+    """Dados de um pagamento já baixado, para emitir o comprovante ao locatário."""
+    if tipo not in ('contrato', 'multa', 'avulsa'):
+        return jsonify({'error': 'Tipo inválido'}), 400
+
+    with _db() as (conn, cur):
+        if tipo == 'contrato':
+            cur.execute('''
+                SELECT pl.id, pl.data_inicio, pl.data_fim, pl.valor_previsto, pl.valor_pago,
+                       pl.desconto, pl.data_pagamento, pl.forma_pagamento, pl.status,
+                       pl.observacao, pl.justificativa_desconto,
+                       c.nome, c.cpf, c.telefone, c.email,
+                       v.placa, v.marca, v.modelo, l.id AS locacao_id
+                FROM pagamentos_locacao pl
+                JOIN locacoes l ON l.id = pl.locacao_id
+                JOIN veiculos v ON v.id = l.veiculo_id
+                JOIN clientes c ON c.id = l.cliente_id
+                WHERE pl.id = %s
+            ''', (rid,))
+            r = row_to_dict(cur)
+            if not r:
+                return jsonify({'error': 'Cobrança não encontrada'}), 404
+            periodo = (f"{_fmt_br(r['data_inicio'])} a {_fmt_br(r['data_fim'])}"
+                       if r['data_inicio'] and r['data_fim'] else '')
+            dados = {
+                'referencia': f"{r['placa']} — {r['marca']} {r['modelo']}",
+                'periodo':    periodo,
+                'descricao':  f"Locação do veículo {r['placa']}",
+            }
+        elif tipo == 'multa':
+            cur.execute('''
+                SELECT m.id, m.valor AS valor_previsto, m.valor AS valor_pago, m.desconto,
+                       m.data_pagamento, NULL AS forma_pagamento, m.status,
+                       m.observacao, m.justificativa_desconto, m.descricao, m.numero_auto,
+                       c.nome, c.cpf, c.telefone, c.email, v.placa, v.marca, v.modelo
+                FROM multas m
+                LEFT JOIN clientes c ON c.id = m.motorista_id
+                LEFT JOIN veiculos v ON v.id = m.veiculo_id
+                WHERE m.id = %s
+            ''', (rid,))
+            r = row_to_dict(cur)
+            if not r:
+                return jsonify({'error': 'Multa não encontrada'}), 404
+            dados = {
+                'referencia': f"{r.get('placa') or ''} {r.get('numero_auto') or ''}".strip(),
+                'periodo':    '',
+                'descricao':  f"Multa: {r.get('descricao') or ''}".strip(),
+            }
+        else:
+            cur.execute('''
+                SELECT ca.id, ca.valor AS valor_previsto, ca.valor AS valor_pago, ca.desconto,
+                       ca.data_recebimento AS data_pagamento, NULL AS forma_pagamento, ca.status,
+                       ca.observacoes AS observacao, ca.justificativa_desconto, ca.descricao,
+                       c.nome, c.cpf, c.telefone, c.email
+                FROM cobrancas_avulsas ca
+                LEFT JOIN clientes c ON c.id = ca.cliente_id
+                WHERE ca.id = %s
+            ''', (rid,))
+            r = row_to_dict(cur)
+            if not r:
+                return jsonify({'error': 'Cobrança não encontrada'}), 404
+            dados = {'referencia': '', 'periodo': '',
+                     'descricao': r.get('descricao') or 'Cobrança avulsa'}
+
+        if r.get('status') not in ('pago', 'recebido'):
+            return jsonify({'error': 'Esta cobrança ainda não foi paga — comprovante indisponível.'}), 400
+
+        # Saldo em aberto gerado a partir deste pagamento (residual)
+        residual = None
+        if tipo == 'contrato':
+            cur.execute('''SELECT id, valor_previsto, (data_fim + INTERVAL '1 day')::date AS vencimento
+                           FROM pagamentos_locacao
+                           WHERE locacao_id = (SELECT locacao_id FROM pagamentos_locacao WHERE id=%s)
+                             AND status = 'pendente'
+                             AND observacao LIKE %s
+                           ORDER BY id DESC LIMIT 1''',
+                        (rid, 'Residual de pagamento parcial em %s%%' % str(r.get('data_pagamento') or '')))
+            residual = row_to_dict(cur)
+
+    previsto = float(r.get('valor_previsto') or 0)
+    desconto = float(r.get('desconto') or 0)
+    pago     = float(r.get('valor_pago') or 0)
+
+    return jsonify({
+        'numero':          f"{tipo[:3].upper()}-{rid:06d}",
+        'tipo':            tipo,
+        'cliente':         r.get('nome') or '—',
+        'cpf':             r.get('cpf') or '',
+        'telefone':        re.sub(r'\D', '', r.get('telefone') or ''),
+        'email':           r.get('email') or '',
+        'data_pagamento':  _fmt_br(r.get('data_pagamento')),
+        'forma_pagamento': r.get('forma_pagamento') or '',
+        'valor_previsto':  previsto,
+        'desconto':        desconto,
+        'valor_pago':      pago,
+        'justificativa':   r.get('justificativa_desconto') or '',
+        'residual': ({'valor': float(residual['valor_previsto'] or 0),
+                      'vencimento': _fmt_br(residual['vencimento'])} if residual else None),
+        'emitido_em':      _date.today().strftime('%d/%m/%Y'),
+        **dados,
+    })
+
+
+def _fmt_br(d):
+    if not d:
+        return ''
+    try:
+        return _date.fromisoformat(str(d)[:10]).strftime('%d/%m/%Y')
+    except Exception:
+        return str(d)
+
+
 @app.route('/api/contas-receber/baixa', methods=['PUT'])
 @login_required
 def baixa_contas_receber():

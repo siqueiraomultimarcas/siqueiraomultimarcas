@@ -1020,6 +1020,160 @@
         return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('pt-BR', {timeZone:'UTC'});
     }
 
+    /* ══════════ COMPROVANTE DE PAGAMENTO ══════════════════════
+       Abre um modal com o recibo, botão de imprimir/salvar PDF e
+       envio por WhatsApp. Usado após cada baixa. */
+    async function abrirComprovante(tipo, id) {
+        let d;
+        try {
+            const r = await fetch(`/api/comprovante/${tipo}/${id}`);
+            d = await r.json();
+            if (!r.ok) { showToast(d.error || 'Erro ao gerar comprovante', 'error'); return; }
+        } catch { showToast('Erro de conexão ao gerar comprovante', 'error'); return; }
+
+        window._compAtual = d;
+        const fmt = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        const linha = (lbl, val, destaque) => `
+            <div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;
+                 ${destaque ? 'border-top:1px solid #e2e8f0;margin-top:5px;padding-top:9px;' : ''}">
+                <span style="font-size:.8rem;color:#64748b;">${lbl}</span>
+                <span style="font-size:${destaque ? '.98rem' : '.82rem'};font-weight:${destaque ? '800' : '600'};
+                      color:${destaque ? '#15803D' : '#0f172a'};font-variant-numeric:tabular-nums;">${val}</span>
+            </div>`;
+
+        abrirModal('Comprovante de Pagamento', `
+            <div id="areaComprovante">
+                <div style="border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;background:#f8fafc;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                        <div>
+                            <div style="font-weight:800;color:#0f172a;font-size:.95rem;">Siqueirão Multimarcas</div>
+                            <div style="font-size:.7rem;color:#94a3b8;">Recibo nº ${escHtml(d.numero)}</div>
+                        </div>
+                        <div style="text-align:right;font-size:.7rem;color:#94a3b8;">
+                            Emitido em<br><strong style="color:#475569;">${escHtml(d.emitido_em)}</strong>
+                        </div>
+                    </div>
+                    <div style="background:#fff;border-radius:9px;padding:11px 13px;margin-bottom:10px;">
+                        <div style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">Recebemos de</div>
+                        <div style="font-weight:700;color:#0f172a;font-size:.88rem;">${escHtml(d.cliente)}</div>
+                        ${d.cpf ? `<div style="font-size:.74rem;color:#64748b;">CPF ${escHtml(d.cpf)}</div>` : ''}
+                    </div>
+                    <div style="background:#fff;border-radius:9px;padding:11px 13px;">
+                        <div style="font-size:.78rem;color:#374151;margin-bottom:2px;">${escHtml(d.descricao)}</div>
+                        ${d.periodo ? `<div style="font-size:.73rem;color:#94a3b8;">Período: ${escHtml(d.periodo)}</div>` : ''}
+                        ${linha('Valor da cobrança', fmt(d.valor_previsto))}
+                        ${d.desconto > 0 ? linha('Desconto', '− ' + fmt(d.desconto)) : ''}
+                        ${linha('Valor recebido', fmt(d.valor_pago), true)}
+                        ${linha('Data do pagamento', escHtml(d.data_pagamento))}
+                        ${d.forma_pagamento ? linha('Forma', escHtml(d.forma_pagamento)) : ''}
+                    </div>
+                    ${d.residual ? `
+                    <div style="background:#FFFBEB;border:1px solid #fde68a;border-radius:9px;padding:10px 13px;margin-top:10px;">
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="font-size:.78rem;font-weight:700;color:#A16207;">Saldo em aberto</span>
+                            <span style="font-size:.88rem;font-weight:800;color:#A16207;">${fmt(d.residual.valor)}</span>
+                        </div>
+                        <div style="font-size:.72rem;color:#A16207;margin-top:3px;">
+                            Vencimento: <strong>${escHtml(d.residual.vencimento)}</strong>
+                        </div>
+                    </div>` : ''}
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+                <button class="btn" onclick="imprimirComprovante()"
+                        style="flex:1;min-width:130px;background:#008cdd;color:#fff;font-weight:600;">
+                    <i class="fas fa-print"></i> Imprimir / PDF
+                </button>
+                <button class="btn" onclick="enviarComprovanteWhats()"
+                        style="flex:1;min-width:130px;background:#15803D;color:#fff;font-weight:600;">
+                    <i class="fab fa-whatsapp"></i> Enviar no WhatsApp
+                </button>
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Fechar</button>
+            </div>
+            ${!d.telefone ? `<div style="font-size:.72rem;color:#A16207;margin-top:8px;">
+                <i class="fas fa-circle-info"></i> Cliente sem telefone cadastrado — o WhatsApp abrirá sem destinatário.
+            </div>` : ''}
+        `);
+    }
+
+    /* Recibo em janela própria, pronto para imprimir ou salvar em PDF */
+    function imprimirComprovante() {
+        const d = window._compAtual;
+        if (!d) return;
+        const fmt = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        const w = window.open('', '_blank', 'width=780,height=900');
+        w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+        <title>Recibo ${d.numero}</title><style>
+        body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#111;padding:34px;max-width:700px;margin:auto;}
+        h1{font-size:19px;text-align:center;border-bottom:2px solid #111;padding-bottom:9px;margin:0 0 4px;}
+        .sub{text-align:center;color:#555;font-size:11px;margin-bottom:22px;}
+        .bloco{border:1px solid #ccc;border-radius:6px;padding:13px 15px;margin-bottom:12px;}
+        .rot{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px;}
+        .lin{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dotted #ddd;}
+        .lin:last-child{border-bottom:none;}
+        .tot{border-top:2px solid #111;margin-top:8px;padding-top:9px;font-size:16px;font-weight:bold;}
+        .saldo{background:#fffbeb;border:1px solid #e0c068;}
+        .ass{margin-top:52px;text-align:center;}
+        .ass div{border-top:1px solid #111;width:290px;margin:0 auto;padding-top:5px;font-size:11px;}
+        @media print{body{padding:14px;} .noprint{display:none;}}
+        </style></head><body>
+        <h1>RECIBO DE PAGAMENTO</h1>
+        <div class="sub">Siqueirão Multimarcas · Recibo nº ${d.numero} · Emitido em ${d.emitido_em}</div>
+        <div class="bloco">
+            <div class="rot">Recebemos de</div>
+            <div style="font-size:15px;font-weight:bold;margin-top:2px;">${d.cliente}</div>
+            ${d.cpf ? `<div style="color:#555;">CPF: ${d.cpf}</div>` : ''}
+        </div>
+        <div class="bloco">
+            <div class="rot">Referente a</div>
+            <div style="margin:3px 0 9px;">${d.descricao}${d.periodo ? ' — período de ' + d.periodo : ''}</div>
+            <div class="lin"><span>Valor da cobrança</span><span>${fmt(d.valor_previsto)}</span></div>
+            ${d.desconto > 0 ? `<div class="lin"><span>Desconto${d.justificativa ? ' (' + d.justificativa + ')' : ''}</span><span>− ${fmt(d.desconto)}</span></div>` : ''}
+            <div class="lin"><span>Data do pagamento</span><span>${d.data_pagamento}</span></div>
+            ${d.forma_pagamento ? `<div class="lin"><span>Forma de pagamento</span><span>${d.forma_pagamento}</span></div>` : ''}
+            <div class="lin tot"><span>VALOR RECEBIDO</span><span>${fmt(d.valor_pago)}</span></div>
+        </div>
+        ${d.residual ? `<div class="bloco saldo">
+            <div class="rot">Saldo em aberto</div>
+            <div class="lin" style="font-weight:bold;font-size:15px;">
+                <span>A receber</span><span>${fmt(d.residual.valor)}</span></div>
+            <div style="font-size:12px;color:#7a5b00;">Vencimento: <strong>${d.residual.vencimento}</strong></div>
+        </div>` : ''}
+        <p style="font-size:11.5px;color:#444;margin-top:16px;">
+            Para clareza e documento, firmamos o presente recibo referente ao valor
+            de ${fmt(d.valor_pago)} recebido em ${d.data_pagamento}.
+        </p>
+        <div class="ass"><div>Siqueirão Multimarcas</div></div>
+        <script>window.onload=function(){window.print();}<\/script>
+        </body></html>`);
+        w.document.close();
+    }
+
+    /* Resumo do pagamento em texto, pronto para enviar ao locatário */
+    function enviarComprovanteWhats() {
+        const d = window._compAtual;
+        if (!d) return;
+        const fmt = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        let msg = `*Comprovante de Pagamento*\n`
+                + `Siqueirão Multimarcas — Recibo ${d.numero}\n\n`
+                + `Olá, ${d.cliente.split(' ')[0]}! Confirmamos o recebimento:\n\n`
+                + `${d.descricao}\n`;
+        if (d.periodo)  msg += `Período: ${d.periodo}\n`;
+        msg += `\nValor da cobrança: ${fmt(d.valor_previsto)}\n`;
+        if (d.desconto > 0) msg += `Desconto: -${fmt(d.desconto)}\n`;
+        msg += `*Valor recebido: ${fmt(d.valor_pago)}*\n`
+             + `Data: ${d.data_pagamento}\n`;
+        if (d.forma_pagamento) msg += `Forma: ${d.forma_pagamento}\n`;
+        if (d.residual)
+            msg += `\n_Saldo em aberto: ${fmt(d.residual.valor)} — vence em ${d.residual.vencimento}_\n`;
+        msg += `\nObrigado!`;
+
+        const url = d.telefone
+            ? `https://wa.me/55${d.telefone}?text=${encodeURIComponent(msg)}`
+            : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+    }
+
     /* ── Máscaras ──────────────────────────────────────────── */
     function aplicarMascaras() {
         Inputmask({"mask": "(99) 99999-9999"}).mask(document.querySelectorAll('input[name="telefone"]'));
