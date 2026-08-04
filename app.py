@@ -28,6 +28,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True
 
 cloudinary.config(
     cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
@@ -98,15 +99,24 @@ def _db():
 
 # ==================== SEGURANÇA ====================
 
-_failed_logins: dict = {}
-
 def _brute_check(ip: str) -> bool:
-    now = time.time()
-    _failed_logins[ip] = [t for t in _failed_logins.get(ip, []) if now - t < 600]
-    return len(_failed_logins.get(ip, [])) >= 5
+    try:
+        with _db() as (conn, cur):
+            cur.execute(
+                "SELECT COUNT(*) FROM login_attempts WHERE ip=%s AND attempted_at > NOW() - INTERVAL '600 seconds'",
+                (ip,)
+            )
+            return (cur.fetchone()[0] or 0) >= 5
+    except Exception:
+        return False  # fail open em erro de DB — não bloqueia usuário legítimo
 
 def _brute_record(ip: str) -> None:
-    _failed_logins.setdefault(ip, []).append(time.time())
+    try:
+        with _db() as (conn, cur):
+            cur.execute("INSERT INTO login_attempts (ip) VALUES (%s)", (ip,))
+            cur.execute("DELETE FROM login_attempts WHERE attempted_at < NOW() - INTERVAL '1 day'")
+    except Exception:
+        pass
 
 
 @app.after_request
@@ -543,6 +553,24 @@ def init_db():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_avulsas_cliente    ON cobrancas_avulsas(cliente_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_avulsas_status     ON cobrancas_avulsas(status)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_veiculos_placa_up  ON veiculos(UPPER(placa))")
+
+    # ── Segurança: tentativas de login (brute-force persistente) ────────────
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS login_attempts (
+            id SERIAL PRIMARY KEY,
+            ip TEXT NOT NULL,
+            attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_login_attempts_ip ON login_attempts(ip, attempted_at)")
+
+    # ── Configurações internas do app ────────────────────────────────────────
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS app_config (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    ''')
 
     conn.commit()
     cur.close()
@@ -1108,6 +1136,8 @@ def upload_foto_generica():
         file = request.files['foto']
         if file.filename == '' or not allowed_file(file.filename):
             return jsonify({'error': 'Arquivo inválido'}), 400
+        if not _valid_image_magic(file):
+            return jsonify({'error': 'Arquivo não é uma imagem válida'}), 400
         folder = request.form.get('folder', 'siqueirao/misc')
         result = cloudinary.uploader.upload(
             file,
@@ -1127,6 +1157,26 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+_IMAGE_SIGNATURES = [
+    b'\xff\xd8\xff',       # JPEG
+    b'\x89PNG\r\n\x1a\n', # PNG
+    b'GIF87a',             # GIF87
+    b'GIF89a',             # GIF89
+    b'RIFF',               # WEBP (valida WEBP no byte 8 abaixo)
+]
+
+def _valid_image_magic(file) -> bool:
+    header = file.read(12)
+    file.seek(0)
+    if not header:
+        return False
+    for sig in _IMAGE_SIGNATURES:
+        if header.startswith(sig):
+            if sig == b'RIFF' and b'WEBP' not in header:
+                continue
+            return True
+    return False
+
 
 @app.route('/api/veiculos/<int:id>/foto', methods=['POST'])
 @login_required
@@ -1137,6 +1187,8 @@ def upload_foto_veiculo(id):
         file = request.files['foto']
         if file.filename == '' or not allowed_file(file.filename):
             return jsonify({'error': 'Arquivo inválido'}), 400
+        if not _valid_image_magic(file):
+            return jsonify({'error': 'Arquivo não é uma imagem válida'}), 400
 
         public_id = f'siqueirao/veiculo_{id}_{int(datetime.now().timestamp())}'
         result = cloudinary.uploader.upload(file, public_id=public_id, overwrite=True)
@@ -3805,29 +3857,55 @@ def get_relatorio_lucratividade():
                     'margem': round(lucro / receita * 100, 2) if receita > 0 else 0
                 })
 
-            dados_mensais = []
-            ph_v = ','.join(['%s'] * len(veiculos_ids))
-            for mes in meses:
+            # 6) Dados mensais — 4 queries groupadas (antes era N×4 queries em loop)
+            cur.execute(f"""
+                SELECT TO_CHAR(pl.data_fim,'YYYY-MM'),
+                       COALESCE(SUM(COALESCE(pl.valor_previsto,0)-COALESCE(pl.desconto,0)),0)
+                FROM pagamentos_locacao pl
+                JOIN locacoes l ON l.id=pl.locacao_id
+                WHERE l.veiculo_id IN ({ph_ids})
+                  AND pl.data_fim>=%s AND pl.data_fim<=%s AND pl.status!='cancelado'
+                GROUP BY 1
+            """, tuple(veiculos_ids) + (data_inicio, data_fim))
+            rec_mes = {r[0]: float(r[1]) for r in cur.fetchall()}
+
+            manut_mes = {}
+            if inc_manut:
                 cur.execute(f"""
-                    SELECT COALESCE(SUM(COALESCE(pl.valor_previsto,0) - COALESCE(pl.desconto,0)), 0)
-                    FROM pagamentos_locacao pl
-                    JOIN locacoes l ON l.id = pl.locacao_id
-                    WHERE l.veiculo_id IN ({ph_v})
-                      AND TO_CHAR(pl.data_fim,'YYYY-MM') = %s
-                      AND pl.status != 'cancelado'
-                """, tuple(veiculos_ids) + (mes,))
-                mr = float(cur.fetchone()[0])
-                mm = ma = mmul = 0.0
-                if inc_manut:
-                    cur.execute(f"SELECT COALESCE(SUM(custo),0) FROM manutencoes WHERE veiculo_id IN ({ph_v}) AND TO_CHAR(data_manutencao,'YYYY-MM')=%s", tuple(veiculos_ids) + (mes,))
-                    mm = float(cur.fetchone()[0])
-                if inc_abast:
-                    cur.execute(f"SELECT COALESCE(SUM(total),0) FROM abastecimentos WHERE veiculo_id IN ({ph_v}) AND TO_CHAR(data_abastecimento,'YYYY-MM')=%s", tuple(veiculos_ids) + (mes,))
-                    ma = float(cur.fetchone()[0])
-                if inc_multas:
-                    cur.execute(f"SELECT COALESCE(SUM(valor),0) FROM multas WHERE veiculo_id IN ({ph_v}) AND TO_CHAR(data_infracao,'YYYY-MM')=%s AND status='pago'", tuple(veiculos_ids) + (mes,))
-                    mmul = float(cur.fetchone()[0])
-                dados_mensais.append({'mes': mes, 'receita': round(mr, 2), 'custos': round(mm + ma + mmul, 2), 'lucro': round(mr - mm - ma - mmul, 2)})
+                    SELECT TO_CHAR(data_manutencao,'YYYY-MM'), COALESCE(SUM(custo),0)
+                    FROM manutencoes WHERE veiculo_id IN ({ph_ids})
+                      AND data_manutencao>=%s AND data_manutencao<=%s
+                    GROUP BY 1
+                """, tuple(veiculos_ids) + (data_inicio, data_fim))
+                manut_mes = {r[0]: float(r[1]) for r in cur.fetchall()}
+
+            abast_mes = {}
+            if inc_abast:
+                cur.execute(f"""
+                    SELECT TO_CHAR(data_abastecimento,'YYYY-MM'), COALESCE(SUM(total),0)
+                    FROM abastecimentos WHERE veiculo_id IN ({ph_ids})
+                      AND data_abastecimento>=%s AND data_abastecimento<=%s
+                    GROUP BY 1
+                """, tuple(veiculos_ids) + (data_inicio, data_fim))
+                abast_mes = {r[0]: float(r[1]) for r in cur.fetchall()}
+
+            multas_mes = {}
+            if inc_multas:
+                cur.execute(f"""
+                    SELECT TO_CHAR(data_infracao,'YYYY-MM'), COALESCE(SUM(valor),0)
+                    FROM multas WHERE veiculo_id IN ({ph_ids})
+                      AND data_infracao>=%s AND data_infracao<=%s AND status='pago'
+                    GROUP BY 1
+                """, tuple(veiculos_ids) + (data_inicio, data_fim))
+                multas_mes = {r[0]: float(r[1]) for r in cur.fetchall()}
+
+            dados_mensais = []
+            for mes in meses:
+                mr   = rec_mes.get(mes, 0.0)
+                mm   = manut_mes.get(mes, 0.0)
+                ma   = abast_mes.get(mes, 0.0)
+                mmul = multas_mes.get(mes, 0.0)
+                dados_mensais.append({'mes': mes, 'receita': round(mr, 2), 'custos': round(mm+ma+mmul, 2), 'lucro': round(mr-mm-ma-mmul, 2)})
 
         return jsonify({'resultados': resultados, 'dados_mensais': dados_mensais, 'periodo': {'inicio': data_inicio, 'fim': data_fim}})
 
@@ -4165,17 +4243,20 @@ def contas_receber_page():
 
 # ==================== GERAÇÃO AUTOMÁTICA DE PERÍODOS RECORRENTES ====================
 
-_gerar_periodos_last_run = None  # cache diário — evita rodar em todo request
-
 def gerar_periodos_pendentes(force=False):
     """Cria registros pendentes para contratos recorrentes com períodos já vencidos.
-    Executa no máximo 1x por dia por processo — cache em memória.
+    Executa no máximo 1x por dia — controle persiste no banco (funciona em serverless).
     Passe force=True para ignorar o cache (ex: após editar um contrato)."""
-    global _gerar_periodos_last_run
     hoje = _date.today()
-    if not force and _gerar_periodos_last_run == hoje:
-        return  # já rodou hoje, pular
-    _gerar_periodos_last_run = hoje
+    if not force:
+        try:
+            with _db() as (conn, cur):
+                cur.execute("SELECT value FROM app_config WHERE key='gerar_periodos_last_run'")
+                row = cur.fetchone()
+                if row and row[0] == str(hoje):
+                    return
+        except Exception:
+            pass
 
     freq_dias = {'semanal': 7, 'quinzenal': 14, 'mensal': 28}
     try:
@@ -4248,8 +4329,15 @@ def gerar_periodos_pendentes(force=False):
 
             if gerados:
                 app.logger.info('[gerar_periodos_pendentes] %d períodos gerados', gerados)
+        # Persiste data de último run no banco para funcionar em serverless
+        try:
+            cur.execute("""
+                INSERT INTO app_config (key, value) VALUES ('gerar_periodos_last_run', %s)
+                ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value
+            """, (str(hoje),))
+        except Exception:
+            pass
     except Exception as e:
-        _gerar_periodos_last_run = None  # permite tentar de novo se falhou
         app.logger.error('[gerar_periodos_pendentes] %s', e)
 
 
@@ -5660,7 +5748,6 @@ def negativar_cliente(cid):
             UPDATE clientes SET negativado=TRUE, motivo_negativacao=%s, data_negativacao=CURRENT_DATE
             WHERE id=%s
         ''', (data.get('motivo', ''), cid))
-        conn.commit()
     return jsonify({'message': 'Cliente negativado!'})
 
 
@@ -5672,7 +5759,6 @@ def remover_negativacao(cid):
             UPDATE clientes SET negativado=FALSE, motivo_negativacao=NULL, data_negativacao=NULL
             WHERE id=%s
         ''', (cid,))
-        conn.commit()
     return jsonify({'message': 'Negativação removida!'})
 
 
