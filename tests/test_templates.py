@@ -55,15 +55,16 @@ SEGURO = re.compile(r"""^(
       (\s*[-+]\s*\d+)?                                                    #   com aritmética simples
     | \d+
     )$""", re.X)
-TEXTUAL = re.compile(r'(?i)(nome|desc|descricao|cliente|obs|observ|placa|titulo|just|motivo|email|texto|label|marca|modelo|val)')
+TEXTUAL = re.compile(r'(?i)(nome|descricao|\bdesc\b|cliente|\bobs\b|observ|placa|titulo'
+                     r'|\bjust\b|motivo|email|texto|label|marca|modelo|\bval\b)')
 ESCAPADO = ('_esc(', 'escHtml(', 'escJsAttr(', 'encodeURIComponent(')
-# identificadores terminados em id/Id/_id são chaves numéricas, não texto livre
-ID_NUMERICO = re.compile(r'(?i)(_id|\bid|[a-z]Id)$')
+# nomes que denotam número — não podem quebrar o atributo
+NUMERICO = re.compile(r'(?i)(_id|\bid|[a-z]Id|valor|total|saldo|qtd|quant|num|idx|indice|dias|km)$')
 for f, t in conteudo.items():
     for m in re.finditer(r'onclick="[^"]*?\$\{([^}]+)\}[^"]*"', t):
         expr = m.group(1).strip()
-        if expr.startswith(ESCAPADO):        continue
-        if ID_NUMERICO.search(expr):          continue
+        if expr.startswith(ESCAPADO):  continue
+        if NUMERICO.search(expr):      continue
         if SEGURO.match(expr) and not TEXTUAL.search(expr): continue
         if TEXTUAL.search(expr):
             riscos.append(f"{f}:{t[:m.start()].count(chr(10))+1} {{{expr}}}")

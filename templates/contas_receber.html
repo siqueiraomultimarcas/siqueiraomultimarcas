@@ -429,6 +429,10 @@
                 <input type="radio" name="tratSaldo" value="desconto" onchange="recalcBaixa()">
                 <span><strong>Perdoar</strong> — lança o saldo como desconto (não será cobrado)</span>
             </label>
+            <div id="baixaVencWrap" style="margin-top:10px;">
+                <label class="bx-lbl" style="margin-bottom:5px;">Vencimento do residual</label>
+                <input type="date" id="baixaVencResidual" class="form-control">
+            </div>
         </div>
 
         <div id="baixaJustWrap" style="display:none;margin-bottom:14px;">
@@ -1294,6 +1298,11 @@ function abrirBaixa(tipo, id) {
     document.getElementById('baixaJustificativa').value = '';
     const radioRes = document.querySelector('input[name="tratSaldo"][value="residual"]');
     if (radioRes) radioRes.checked = true;
+    // Sugere 7 dias como prazo para quitar o saldo
+    const v7 = new Date(); v7.setDate(v7.getDate() + 7);
+    const campoVenc = document.getElementById('baixaVencResidual');
+    campoVenc.value = v7.toLocaleDateString('sv-SE');
+    campoVenc.min = hoje;
     document.getElementById('baixaErro').style.display = 'none';
     recalcBaixa();
     document.getElementById('modalBaixa').style.display = 'flex';
@@ -1318,6 +1327,9 @@ function recalcBaixa() {
     if (parcial) {
         document.getElementById('baixaSaldoVal').textContent = 'Saldo: ' + fmtCurrency(saldo);
     }
+    // Data de vencimento só faz sentido quando o saldo vira nova cobrança
+    document.getElementById('baixaVencWrap').style.display =
+        (parcial && trat === 'residual') ? 'block' : 'none';
 
     // Justificativa é obrigatória para desconto ou para perdoar saldo
     const precisaJust = desconto > 0 || (parcial && trat === 'desconto');
@@ -1371,6 +1383,8 @@ async function confirmarBaixa() {
                 desconto: st.desconto,
                 valor_recebido: st.recebido,
                 tratamento_saldo: st.trat,
+                vencimento_residual: (st.parcial && st.trat === 'residual')
+                    ? document.getElementById('baixaVencResidual').value : null,
                 forma_pagamento: formaPag || null,
                 justificativa_desconto: justific || null
             })
@@ -1380,7 +1394,8 @@ async function confirmarBaixa() {
 
         fecharModalBaixa();
         if (res.residual_gerado)
-            showToast(`Baixa de ${fmtCurrency(res.valor_recebido)} registrada. Residual de ${fmtCurrency(res.saldo)} gerado.`, 'success', 6000);
+            showToast(`Recebido ${fmtCurrency(res.valor_recebido)}. Residual de ${fmtCurrency(res.saldo)} `
+                    + `criado com vencimento em ${fmtDate(res.vencimento_residual)}.`, 'success', 7000);
         else if (st.desconto > 0 || st.saldo > 0.009)
             showToast(`Baixa registrada com desconto de ${fmtCurrency(st.desconto + (st.trat === 'desconto' ? st.saldo : 0))}`, 'success');
         else

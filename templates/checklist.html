@@ -325,8 +325,145 @@ function _cardHtml(p, isAtras) {
     </div>`;
 }
 
-/* ── Toggle pago/pendente ── */
-async function toggleCard(id, pagar) {
+/* ── Busca o registro em memória ── */
+function _acharPag(id) {
+    for (const grupo of Object.values(_dados)) {
+        const p = grupo.find(x => x.id === id);
+        if (p) return p;
+    }
+    return null;
+}
+
+/* ── Clique no checkbox: integral é direto, parcial abre o modal ── */
+function toggleCard(id, pagar) {
+    if (!pagar) return _enviarBaixa(id, false, {});
+    const p = _acharPag(id);
+    const valor = parseFloat((p && (p.valor ?? p.valor_previsto)) || 0);
+    abrirModalBaixaCk(id, valor, p);
+}
+
+/* ── Modal de recebimento com opção de pagamento parcial ── */
+function abrirModalBaixaCk(id, valor, p) {
+    const hoje = new Date().toLocaleDateString('sv-SE');   // AAAA-MM-DD local
+    const venc = new Date(); venc.setDate(venc.getDate() + 7);
+    const vencStr = venc.toLocaleDateString('sv-SE');
+    const titulo = p ? `${p.placa || ''} — ${(p.cliente || '').split(' ')[0]}` : '';
+
+    abrirModal('Confirmar Recebimento', `
+        <div style="padding:4px 0;">
+            <div style="background:#f1f5f9;border-radius:10px;padding:11px 14px;margin-bottom:14px;">
+                <div style="font-weight:700;color:#0f172a;font-size:.86rem;">${escHtml(titulo)}</div>
+                <div style="font-size:.8rem;color:#475569;margin-top:2px;">
+                    Valor da cobrança: <strong>${_fmtR(valor)}</strong>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div>
+                    <label class="ck-lbl">Data do recebimento</label>
+                    <input type="date" id="ckData" class="form-control" value="${hoje}">
+                </div>
+                <div>
+                    <label class="ck-lbl" style="color:#15803D;">Valor recebido (R$)</label>
+                    <input type="number" id="ckValor" class="form-control" step="0.01" min="0"
+                           max="${valor.toFixed(2)}" value="${valor.toFixed(2)}"
+                           style="font-weight:700;" oninput="_ckRecalc(${valor})">
+                </div>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <button type="button" class="btn" onclick="_ckSetIntegral(${valor})"
+                        style="flex:1;background:#f1f5f9;color:#334155;font-size:.78rem;border:1px solid #e2e8f0;">
+                    Recebeu tudo
+                </button>
+                <button type="button" class="btn" onclick="document.getElementById('ckValor').focus();document.getElementById('ckValor').select();"
+                        style="flex:1;background:#FFFBEB;color:#A16207;font-size:.78rem;border:1px solid #fde68a;">
+                    Pagamento parcial
+                </button>
+            </div>
+
+            <div id="ckSaldoBox" style="display:none;background:#FFFBEB;border:1px solid #fde68a;
+                 border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <span style="font-size:.78rem;font-weight:700;color:#A16207;">
+                        <i class="fas fa-scale-unbalanced"></i> Falta receber
+                    </span>
+                    <span id="ckSaldoVal" style="font-size:1rem;font-weight:800;color:#A16207;
+                          font-variant-numeric:tabular-nums;"></span>
+                </div>
+                <label class="ck-lbl" style="margin-bottom:5px;">Vencimento do residual</label>
+                <input type="date" id="ckVencResidual" class="form-control" value="${vencStr}" min="${hoje}">
+                <div style="font-size:.7rem;color:#A16207;margin-top:7px;line-height:1.4;">
+                    <i class="fas fa-arrow-right-long"></i>
+                    O saldo vira uma nova cobrança pendente em <strong>Contas a Receber</strong>.
+                </div>
+            </div>
+
+            <div id="ckErro" style="display:none;font-size:.76rem;color:#B91C1C;
+                 font-weight:600;margin-bottom:10px;"></div>
+
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+                <button class="btn" id="ckBtnOk" onclick="_ckConfirmar(${id},${valor})"
+                        style="background:#15803D;color:#fff;font-weight:700;">
+                    <i class="fas fa-check"></i> Confirmar
+                </button>
+            </div>
+        </div>
+        <style>.ck-lbl{font-size:.74rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;}</style>
+    `);
+    _ckRecalc(valor);
+}
+
+function _ckSetIntegral(valor) {
+    document.getElementById('ckValor').value = valor.toFixed(2);
+    _ckRecalc(valor);
+}
+
+function _ckRecalc(valor) {
+    const rec   = parseFloat(document.getElementById('ckValor').value || 0);
+    const saldo = +(valor - rec).toFixed(2);
+    const box   = document.getElementById('ckSaldoBox');
+    const btn   = document.getElementById('ckBtnOk');
+    const erro  = document.getElementById('ckErro');
+    if (!box || !btn) return null;
+
+    const parcial = saldo > 0.009;
+    box.style.display = parcial ? 'block' : 'none';
+    if (parcial) document.getElementById('ckSaldoVal').textContent = _fmtR(saldo);
+
+    if (rec > valor + 0.009) {
+        erro.textContent = `Valor recebido maior que a cobrança (${_fmtR(valor)}).`;
+        erro.style.display = 'block';
+        btn.disabled = true; btn.style.opacity = '.5'; btn.style.cursor = 'not-allowed';
+    } else {
+        erro.style.display = 'none';
+        btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
+        btn.innerHTML = parcial
+            ? '<i class="fas fa-check"></i> Baixar e gerar residual'
+            : '<i class="fas fa-check"></i> Confirmar';
+    }
+    return { rec, saldo, parcial };
+}
+
+async function _ckConfirmar(id, valor) {
+    const st = _ckRecalc(valor);
+    if (!st || st.rec > valor + 0.009) return;
+    const payload = {
+        pago: true,
+        data_pagamento: document.getElementById('ckData').value,
+        valor_recebido: st.rec
+    };
+    if (st.parcial) {
+        payload.tratamento_saldo    = 'residual';
+        payload.vencimento_residual = document.getElementById('ckVencResidual').value;
+    }
+    fecharModal();
+    await _enviarBaixa(id, true, payload);
+}
+
+/* ── Envia ao servidor e atualiza o card ── */
+async function _enviarBaixa(id, pagar, payload) {
     const card = document.getElementById('card_' + id);
     if (!card) return;
 
@@ -345,24 +482,36 @@ async function toggleCard(id, pagar) {
         const resp = await fetch(`/api/checklist/${id}/toggle`, {
             method: 'PUT',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({pago: pagar})
+            body: JSON.stringify({ pago: pagar, ...payload })
         });
         const r = await resp.json();
-        if (!r.success) throw new Error();
+        if (!resp.ok || !r.success) throw new Error(r.error || 'falha');
 
-        // Sincroniza _dados
         for (const grupo of Object.values(_dados)) {
             const p = grupo.find(x => x.id === id);
             if (p) { p.status = r.status; break; }
         }
 
-        showToast(pagar ? 'Pagamento registrado!' : 'Pagamento revertido.', pagar ? 'success' : 'warning');
-    } catch {
-        // Reverte
+        if (r.residual_gerado)
+            showToast(`Recebido ${_fmtR(r.valor_recebido)}. Residual de ${_fmtR(r.saldo)} `
+                    + `criado em Contas a Receber (vence ${_fmtDataBR(r.vencimento_residual)}).`,
+                      'success', 7000);
+        else
+            showToast(pagar ? 'Pagamento registrado!' : 'Pagamento revertido.',
+                      pagar ? 'success' : 'warning');
+
+        if (r.residual_gerado) carregarChecklist();
+    } catch (e) {
         if (pagar) { card.classList.remove('pago'); card.querySelector('.ck-chk').innerHTML = ''; }
         else       { card.classList.add('pago');    card.querySelector('.ck-chk').innerHTML = CHECK_SVG; }
-        showToast('Erro ao salvar', 'error');
+        showToast(e.message && e.message !== 'falha' ? e.message : 'Erro ao salvar', 'error');
     }
+}
+
+function _fmtDataBR(iso) {
+    if (!iso) return '';
+    const [a, m, d] = String(iso).slice(0,10).split('-');
+    return `${d}/${m}/${a}`;
 }
 
 function moverSemana(dias) {

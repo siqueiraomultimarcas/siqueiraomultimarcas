@@ -13,7 +13,7 @@ os.environ['DATABASE_URL'] = 'postgresql://x:x@127.0.0.1:1/none?connect_timeout=
 os.environ.setdefault('SECRET_KEY', 'test-only')
 
 import app as APP
-from datetime import date
+from datetime import date, timedelta
 from contextlib import contextmanager
 
 # Testa a regra de negócio, não o login — Flask-Login respeita esta flag
@@ -46,8 +46,9 @@ class FakeDB:
         if s.startswith('SELECT valor_previsto, locacao_id'):
             r = self.pagamentos.get(p[0])
             self._last = (r['valor_previsto'], r['locacao_id'], r['data_inicio'], r['data_fim']) if r else None
-        elif s.startswith('SELECT valor FROM multas'):
-            r = self.multas.get(p[0]);  self._last = (r['valor'],) if r else None
+        elif s.startswith('SELECT valor, motorista_id, descricao FROM multas'):
+            r = self.multas.get(p[0])
+            self._last = (r['valor'], r['motorista_id'], r['descricao']) if r else None
         elif s.startswith('SELECT valor, cliente_id, descricao FROM cobrancas_avulsas'):
             r = self.avulsas.get(p[0])
             self._last = (r['valor'], r['cliente_id'], r['descricao']) if r else None
@@ -58,7 +59,10 @@ class FakeDB:
         elif s.startswith('UPDATE pagamentos_locacao'):
             self.updates.append(('pagamento', p))
             pid = p[-1]
-            self.pagamentos[pid].update(status='pago', valor_pago=p[1], desconto=p[2])
+            if "status='pendente'" in s:          # reversão: só o id vem em params
+                self.pagamentos[pid].update(status='pendente', valor_pago=None, desconto=0)
+            else:
+                self.pagamentos[pid].update(status='pago', valor_pago=p[1], desconto=p[2])
         elif s.startswith('UPDATE multas'):
             self.updates.append(('multa', p))
         elif s.startswith('UPDATE cobrancas_avulsas'):
@@ -72,7 +76,8 @@ class FakeDB:
         elif s.startswith('INSERT INTO cobrancas_avulsas'):
             self._seq += 1
             self.inseridos.append({'tabela': 'cobrancas_avulsas', 'cliente_id': p[0],
-                                   'descricao': p[1], 'valor': p[2], 'observacoes': p[4]})
+                                   'descricao': p[1], 'valor': p[2],
+                                   'data_vencimento': p[3], 'observacoes': p[4]})
             self._last = (self._seq,)
         else:
             self._last = (0,)
@@ -125,8 +130,14 @@ if db.inseridos:
     check('residual vai para pagamentos_locacao', novo['tabela'] == 'pagamentos_locacao')
     check('residual tem valor 250', novo['valor_previsto'] == 250.0, f"={novo['valor_previsto']}")
     check('residual mantém o mesmo contrato (locacao_id=10)', novo['locacao_id'] == 10)
-    check('residual mantém o período original', str(novo['data_fim']) == '2026-08-09')
     check('observação explica a origem', 'Residual' in (novo['observacao'] or ''))
+    # Vencimento exibido = data_fim + 1 dia
+    venc_calc = novo['data_fim'] + timedelta(days=1)
+    esperado  = date.today() + timedelta(days=APP.PRAZO_RESIDUAL_DIAS)
+    check(f'residual NÃO nasce vencido — vence em +{APP.PRAZO_RESIDUAL_DIAS} dias por padrão',
+          venc_calc == esperado, f'vence {venc_calc}, esperado {esperado}')
+    check('vencimento do residual retornado na resposta',
+          r.get('vencimento_residual') == str(esperado), r.get('vencimento_residual'))
 check('conta original marcada como paga com R$400',
       db.pagamentos[1]['status'] == 'pago' and db.pagamentos[1]['valor_pago'] == 400.0,
       f"pago={db.pagamentos[1]['valor_pago']}")
@@ -222,6 +233,82 @@ r, st = baixar({'tipo': 'contrato', 'id': 1, 'valor_recebido': 99.995,
                 'data_recebimento': HOJE}, db)
 check('diferença abaixo de 1 centavo NÃO gera residual', r['residual_gerado'] is False,
       f"saldo={r['saldo']}")
+
+# ═══════════ 8. Vencimento do residual ═══════════
+print('\n== 8. DATA DE VENCIMENTO DO RESIDUAL ==')
+db = FakeDB(650.0)
+r, st = baixar({'tipo': 'contrato', 'id': 1, 'valor_recebido': 400,
+                'tratamento_saldo': 'residual', 'data_recebimento': HOJE,
+                'vencimento_residual': '2026-09-15'}, db)
+check('aceita vencimento informado pelo operador', st == 200, f'status={st}')
+check('resposta confirma o vencimento escolhido', r.get('vencimento_residual') == '2026-09-15',
+      r.get('vencimento_residual'))
+if db.inseridos:
+    venc = db.inseridos[0]['data_fim'] + timedelta(days=1)
+    check('residual do contrato vence na data escolhida', str(venc) == '2026-09-15', f'={venc}')
+    check('data_inicio <= data_fim (período coerente)',
+          db.inseridos[0]['data_inicio'] <= db.inseridos[0]['data_fim'])
+
+db = FakeDB(650.0)
+r, st = baixar({'tipo': 'contrato', 'id': 1, 'valor_recebido': 400,
+                'data_recebimento': HOJE, 'vencimento_residual': '2020-01-01'}, db)
+check('vencimento anterior ao recebimento é rejeitado', st == 400, f'status={st}')
+
+db = FakeDB(650.0)
+r, st = baixar({'tipo': 'contrato', 'id': 1, 'valor_recebido': 400,
+                'data_recebimento': HOJE, 'vencimento_residual': 'xx/yy'}, db)
+check('data inválida é rejeitada', st == 400, f'status={st}')
+
+db = FakeDB()
+r, st = baixar({'tipo': 'multa', 'id': 1, 'valor_recebido': 100,
+                'data_recebimento': HOJE, 'vencimento_residual': '2026-10-20'}, db)
+check('residual de multa usa o vencimento escolhido',
+      db.inseridos and str(db.inseridos[0].get('data_vencimento')) == '2026-10-20',
+      str(db.inseridos[0].get('data_vencimento')) if db.inseridos else 'nada inserido')
+
+# ═══════════ 9. Checklist usa a mesma regra ═══════════
+print('\n== 9. CHECKLIST — parcial pelo mesmo caminho ==')
+
+def toggle(pid, payload, db):
+    @contextmanager
+    def _fake_db():
+        yield (None, db)
+    orig = APP._db
+    APP._db = _fake_db
+    try:
+        with APP.app.test_request_context(f'/api/checklist/{pid}/toggle',
+                                          method='PUT', json=payload):
+            resp = APP.toggle_checklist(pid)
+    finally:
+        APP._db = orig
+    body, status = (resp if isinstance(resp, tuple) else (resp, 200))
+    return json.loads(body.get_data(as_text=True)), status
+
+db = FakeDB(650.0)
+r, st = toggle(1, {'pago': True, 'data_pagamento': HOJE}, db)
+check('marcar pago integral funciona', st == 200 and r['status'] == 'pago', f'status={st}')
+check('integral não gera residual', not r.get('residual_gerado'))
+check('valor_pago = valor previsto', db.pagamentos[1]['valor_pago'] == 650.0,
+      f"={db.pagamentos[1]['valor_pago']}")
+
+db = FakeDB(650.0)
+r, st = toggle(1, {'pago': True, 'valor_recebido': 400, 'data_pagamento': HOJE,
+                   'vencimento_residual': '2026-09-01'}, db)
+check('checklist aceita pagamento parcial', st == 200, f'status={st}')
+check('checklist gera residual de 250', r.get('saldo') == 250.0 and r.get('residual_gerado'),
+      f"saldo={r.get('saldo')}")
+check('residual do checklist alimenta contas a receber (pagamentos_locacao)',
+      db.inseridos and db.inseridos[0]['tabela'] == 'pagamentos_locacao')
+check('residual do checklist respeita o vencimento informado',
+      r.get('vencimento_residual') == '2026-09-01', r.get('vencimento_residual'))
+
+db = FakeDB(650.0)
+r, st = toggle(1, {'pago': True, 'valor_recebido': 900}, db)
+check('checklist rejeita valor maior que o devido', st == 400, f'status={st}')
+
+db = FakeDB(650.0)
+r, st = toggle(1, {'pago': False}, db)
+check('desmarcar volta para pendente', st == 200 and r['status'] == 'pendente')
 
 # ═══════════ Resumo ═══════════
 print('\n' + '=' * 64)

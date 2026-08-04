@@ -4843,128 +4843,164 @@ def salvar_observacao_cr():
     return jsonify({'success': True})
 
 
+class BaixaInvalida(Exception):
+    """Erro de negócio na baixa — vira resposta JSON com status apropriado."""
+    def __init__(self, msg, status=400):
+        super().__init__(msg)
+        self.msg = msg
+        self.status = status
+
+
+# Prazo padrão para o cliente quitar o saldo, quando o operador não informa
+PRAZO_RESIDUAL_DIAS = 7
+
+
+def _aplicar_baixa(cur, tipo, rid, *, data_rec, desconto=0.0, justific='',
+                   forma_pag=None, valor_recebido=None,
+                   tratamento_saldo='residual', vencimento_residual=None):
+    """Baixa uma conta a receber, com suporte a pagamento PARCIAL.
+
+    Se `valor_recebido` < devido, o saldo é tratado conforme `tratamento_saldo`:
+      • 'residual' → gera nova cobrança pendente, vencendo em `vencimento_residual`
+                     (padrão: hoje + PRAZO_RESIDUAL_DIAS)
+      • 'desconto' → perdoa o saldo (exige justificativa)
+
+    Usado por /api/contas-receber/baixa e pelo checklist — mantém uma única
+    regra de negócio para as duas telas.
+    """
+    if tipo not in ('contrato', 'multa', 'avulsa'):
+        raise BaixaInvalida('Tipo de conta inválido')
+    desconto = float(desconto or 0)
+    if desconto < 0:
+        raise BaixaInvalida('Desconto não pode ser negativo')
+    justific = (justific or '').strip()
+    tratamento_saldo = (tratamento_saldo or 'residual').lower()
+
+    # ── 1. Valor original da conta ──────────────────────────────────────────
+    av_cliente = av_desc = locacao_id = p_ini = p_fim = None
+    if tipo == 'contrato':
+        cur.execute('''SELECT valor_previsto, locacao_id, data_inicio, data_fim
+                       FROM pagamentos_locacao WHERE id=%s''', (rid,))
+        row = cur.fetchone()
+        if not row:
+            raise BaixaInvalida('Cobrança não encontrada', 404)
+        val_original, locacao_id, p_ini, p_fim = float(row[0] or 0), row[1], row[2], row[3]
+    elif tipo == 'multa':
+        cur.execute('SELECT valor, motorista_id, descricao FROM multas WHERE id=%s', (rid,))
+        row = cur.fetchone()
+        if not row:
+            raise BaixaInvalida('Multa não encontrada', 404)
+        val_original, av_cliente, av_desc = float(row[0] or 0), row[1], row[2]
+    else:
+        cur.execute('SELECT valor, cliente_id, descricao FROM cobrancas_avulsas WHERE id=%s', (rid,))
+        row = cur.fetchone()
+        if not row:
+            raise BaixaInvalida('Cobrança não encontrada', 404)
+        val_original, av_cliente, av_desc = float(row[0] or 0), row[1], row[2]
+
+    # ── 2. Quanto deve e quanto pagou ───────────────────────────────────────
+    valor_devido = round(max(0.0, val_original - desconto), 2)
+    recebido = valor_devido if valor_recebido in (None, '') else round(float(valor_recebido), 2)
+    if recebido < 0:
+        raise BaixaInvalida('Valor recebido não pode ser negativo')
+    if recebido > valor_devido + 0.009:
+        raise BaixaInvalida(f'Valor recebido (R$ {recebido:.2f}) é maior que o devido '
+                            f'(R$ {valor_devido:.2f}). Ajuste o desconto.')
+
+    saldo = round(valor_devido - recebido, 2)
+    if desconto > 0 and not justific:
+        raise BaixaInvalida('Justificativa obrigatória quando há desconto')
+    if saldo > 0.009 and tratamento_saldo == 'desconto' and not justific:
+        raise BaixaInvalida('Justificativa obrigatória para perdoar o saldo restante')
+
+    gerar_residual = saldo > 0.009 and tratamento_saldo == 'residual'
+    desconto_final = desconto if gerar_residual else round(desconto + saldo, 2)
+
+    # ── 3. Baixa da conta original ──────────────────────────────────────────
+    if tipo == 'contrato':
+        cur.execute('''UPDATE pagamentos_locacao
+                       SET status='pago', data_pagamento=%s, valor_pago=%s,
+                           desconto=%s, justificativa_desconto=%s, forma_pagamento=%s
+                       WHERE id=%s''',
+                    (data_rec, recebido, desconto_final, justific or None, forma_pag, rid))
+    elif tipo == 'multa':
+        cur.execute('''UPDATE multas SET status='pago', data_pagamento=%s,
+                           desconto=%s, justificativa_desconto=%s WHERE id=%s''',
+                    (data_rec, desconto_final, justific or None, rid))
+    else:
+        cur.execute('''UPDATE cobrancas_avulsas SET status='recebido', data_recebimento=%s,
+                           desconto=%s, justificativa_desconto=%s WHERE id=%s''',
+                    (data_rec, desconto_final, justific or None, rid))
+
+    # ── 4. Residual: nova cobrança pendente com o saldo ─────────────────────
+    residual_id = None
+    venc_res = None
+    if gerar_residual:
+        base = _date.fromisoformat(str(data_rec)[:10]) if data_rec else _date.today()
+        if vencimento_residual:
+            try:
+                venc_res = _date.fromisoformat(str(vencimento_residual)[:10])
+            except ValueError:
+                raise BaixaInvalida('Data de vencimento do residual inválida')
+        else:
+            venc_res = base + timedelta(days=PRAZO_RESIDUAL_DIAS)
+        if venc_res < base:
+            raise BaixaInvalida('O vencimento do residual não pode ser anterior à data do recebimento')
+
+        obs_res = (f'Residual de pagamento parcial em {data_rec} '
+                   f'(devido R$ {valor_devido:.2f}, recebido R$ {recebido:.2f})')
+        if tipo == 'contrato':
+            # Vencimento exibido = data_fim + 1 dia; ajusta para cair no dia escolhido
+            novo_fim = venc_res - timedelta(days=1)
+            novo_ini = p_ini if (p_ini and p_ini <= novo_fim) else novo_fim
+            cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s',
+                        (locacao_id,))
+            seq = cur.fetchone()[0]
+            cur.execute('''INSERT INTO pagamentos_locacao
+                               (locacao_id, semana_numero, data_inicio, data_fim,
+                                valor_previsto, valor_pago, desconto, status, observacao)
+                           VALUES (%s,%s,%s,%s,%s,0,0,'pendente',%s) RETURNING id''',
+                        (locacao_id, seq, novo_ini, novo_fim, saldo, obs_res))
+            residual_id = cur.fetchone()[0]
+        else:
+            # Multa não se parcela: o saldo vira cobrança avulsa do mesmo cliente
+            prefixo = 'Saldo de multa' if tipo == 'multa' else 'Saldo'
+            cur.execute('''INSERT INTO cobrancas_avulsas
+                               (cliente_id, descricao, valor, data_vencimento, status, observacoes)
+                           VALUES (%s,%s,%s,%s,'pendente',%s) RETURNING id''',
+                        (av_cliente, f'{prefixo}: {(av_desc or "")[:80]}', saldo, venc_res, obs_res))
+            residual_id = cur.fetchone()[0]
+
+    return {
+        'success':         True,
+        'valor_devido':    valor_devido,
+        'valor_recebido':  recebido,
+        'saldo':           saldo,
+        'residual_id':     residual_id,
+        'residual_gerado': gerar_residual,
+        'vencimento_residual': str(venc_res) if venc_res else None,
+    }
+
+
 @app.route('/api/contas-receber/baixa', methods=['PUT'])
 @login_required
 def baixa_contas_receber():
-    """Dá baixa em uma conta a receber.
-
-    Aceita pagamento PARCIAL: se `valor_recebido` for menor que o devido,
-    o saldo é tratado conforme `tratamento_saldo`:
-      • 'residual' (padrão) → gera uma nova cobrança pendente com o saldo
-      • 'desconto'          → perdoa o saldo (exige justificativa)
-    """
-    data       = request.json or {}
-    tipo       = data.get('tipo')
-    rid        = data.get('id')
-    data_rec   = data.get('data_recebimento') or str(_date.today())
-    desconto   = float(data.get('desconto') or 0)
-    justific   = (data.get('justificativa_desconto') or '').strip()
-    forma_pag  = (data.get('forma_pagamento') or '').strip() or None
-    trat_saldo = (data.get('tratamento_saldo') or 'residual').lower()
-    v_recebido = data.get('valor_recebido')
-
-    if tipo not in ('contrato', 'multa', 'avulsa'):
-        return jsonify({'error': 'Tipo de conta inválido'}), 400
-    if desconto < 0:
-        return jsonify({'error': 'Desconto não pode ser negativo'}), 400
-
-    with _db() as (conn, cur):
-        # ── 1. Valor original da conta ──────────────────────────────────────
-        if tipo == 'contrato':
-            cur.execute('''SELECT valor_previsto, locacao_id, data_inicio, data_fim
-                           FROM pagamentos_locacao WHERE id=%s''', (rid,))
-            row = cur.fetchone()
-            if not row:
-                return jsonify({'error': 'Cobrança não encontrada'}), 404
-            val_original, locacao_id, p_ini, p_fim = float(row[0] or 0), row[1], row[2], row[3]
-        elif tipo == 'multa':
-            cur.execute('SELECT valor FROM multas WHERE id=%s', (rid,))
-            row = cur.fetchone()
-            if not row:
-                return jsonify({'error': 'Multa não encontrada'}), 404
-            val_original = float(row[0] or 0)
-        else:
-            cur.execute('SELECT valor, cliente_id, descricao FROM cobrancas_avulsas WHERE id=%s', (rid,))
-            row = cur.fetchone()
-            if not row:
-                return jsonify({'error': 'Cobrança não encontrada'}), 404
-            val_original, av_cliente, av_desc = float(row[0] or 0), row[1], row[2]
-
-        # ── 2. Quanto o cliente deve e quanto pagou ─────────────────────────
-        valor_devido = round(max(0.0, val_original - desconto), 2)
-        recebido = valor_devido if v_recebido in (None, '') else round(float(v_recebido), 2)
-
-        if recebido < 0:
-            return jsonify({'error': 'Valor recebido não pode ser negativo'}), 400
-        if recebido > valor_devido + 0.009:
-            return jsonify({'error': f'Valor recebido (R$ {recebido:.2f}) é maior que o devido '
-                                     f'(R$ {valor_devido:.2f}). Ajuste o desconto.'}), 400
-
-        saldo = round(valor_devido - recebido, 2)
-        if desconto > 0 and not justific:
-            return jsonify({'error': 'Justificativa obrigatória quando há desconto'}), 400
-        if saldo > 0.009 and trat_saldo == 'desconto' and not justific:
-            return jsonify({'error': 'Justificativa obrigatória para perdoar o saldo restante'}), 400
-
-        gerar_residual = saldo > 0.009 and trat_saldo == 'residual'
-        # Saldo perdoado entra como desconto adicional na própria conta
-        desconto_final = desconto if gerar_residual else round(desconto + saldo, 2)
-
-        # ── 3. Baixa da conta original ──────────────────────────────────────
-        if tipo == 'contrato':
-            cur.execute('''UPDATE pagamentos_locacao
-                           SET status='pago', data_pagamento=%s, valor_pago=%s,
-                               desconto=%s, justificativa_desconto=%s, forma_pagamento=%s
-                           WHERE id=%s''',
-                        (data_rec, recebido, desconto_final, justific or None, forma_pag, rid))
-        elif tipo == 'multa':
-            cur.execute('''UPDATE multas SET status='pago', data_pagamento=%s,
-                               desconto=%s, justificativa_desconto=%s WHERE id=%s''',
-                        (data_rec, desconto_final, justific or None, rid))
-        else:
-            cur.execute('''UPDATE cobrancas_avulsas SET status='recebido', data_recebimento=%s,
-                               desconto=%s, justificativa_desconto=%s WHERE id=%s''',
-                        (data_rec, desconto_final, justific or None, rid))
-
-        # ── 4. Residual: nova cobrança pendente com o saldo ─────────────────
-        residual_id = None
-        if gerar_residual:
-            obs_res = f'Residual de pagamento parcial em {data_rec} '\
-                      f'(devido R$ {valor_devido:.2f}, recebido R$ {recebido:.2f})'
-            if tipo == 'contrato':
-                cur.execute('SELECT COALESCE(MAX(semana_numero),0)+1 FROM pagamentos_locacao WHERE locacao_id=%s',
-                            (locacao_id,))
-                seq = cur.fetchone()[0]
-                cur.execute('''INSERT INTO pagamentos_locacao
-                                   (locacao_id, semana_numero, data_inicio, data_fim,
-                                    valor_previsto, valor_pago, desconto, status, observacao)
-                               VALUES (%s,%s,%s,%s,%s,0,0,'pendente',%s) RETURNING id''',
-                            (locacao_id, seq, p_ini, p_fim, saldo, obs_res))
-                residual_id = cur.fetchone()[0]
-            elif tipo == 'multa':
-                # Multa não se divide: registra o saldo como cobrança avulsa vinculada ao motorista
-                cur.execute('SELECT motorista_id, descricao FROM multas WHERE id=%s', (rid,))
-                mrow = cur.fetchone()
-                cur.execute('''INSERT INTO cobrancas_avulsas
-                                   (cliente_id, descricao, valor, data_vencimento, status, observacoes)
-                               VALUES (%s,%s,%s,%s,'pendente',%s) RETURNING id''',
-                            (mrow[0], f'Saldo de multa: {(mrow[1] or "")[:80]}', saldo, data_rec, obs_res))
-                residual_id = cur.fetchone()[0]
-            else:
-                cur.execute('''INSERT INTO cobrancas_avulsas
-                                   (cliente_id, descricao, valor, data_vencimento, status, observacoes)
-                               VALUES (%s,%s,%s,%s,'pendente',%s) RETURNING id''',
-                            (av_cliente, f'Saldo: {(av_desc or "")[:80]}', saldo, data_rec, obs_res))
-                residual_id = cur.fetchone()[0]
-
-    return jsonify({
-        'success':        True,
-        'valor_devido':   valor_devido,
-        'valor_recebido': recebido,
-        'saldo':          saldo,
-        'residual_id':    residual_id,
-        'residual_gerado': gerar_residual,
-    })
+    data = request.json or {}
+    try:
+        with _db() as (conn, cur):
+            res = _aplicar_baixa(
+                cur, data.get('tipo'), data.get('id'),
+                data_rec=data.get('data_recebimento') or str(_date.today()),
+                desconto=data.get('desconto') or 0,
+                justific=data.get('justificativa_desconto') or '',
+                forma_pag=(data.get('forma_pagamento') or '').strip() or None,
+                valor_recebido=data.get('valor_recebido'),
+                tratamento_saldo=data.get('tratamento_saldo') or 'residual',
+                vencimento_residual=data.get('vencimento_residual'),
+            )
+        return jsonify(res)
+    except BaixaInvalida as e:
+        return jsonify({'error': e.msg}), e.status
 
 @app.route('/api/pagamentos/<int:id>/gerar-link', methods=['POST'])
 @login_required
@@ -5453,31 +5489,35 @@ def get_checklist_diario():
 @app.route('/api/checklist/<int:pagamento_id>/toggle', methods=['PUT'])
 @login_required
 def toggle_checklist(pagamento_id):
+    """Marca/desmarca o pagamento no checklist.
+
+    Aceita pagamento parcial: informando `valor_recebido` menor que o previsto,
+    usa a mesma regra de /api/contas-receber/baixa e gera o residual.
+    """
     data = request.json or {}
     pago = data.get('pago', False)
-    from datetime import date as _d2
-    if pago:
-        cur_status = 'pago'
-        data_pag   = data.get('data_pagamento') or _d2.today().isoformat()
-        valor_pago = data.get('valor_pago')
-    else:
-        cur_status = 'pendente'
-        data_pag   = None
-        valor_pago = None
-    with _db() as (conn, cur):
-        if pago:
-            cur.execute('''
-                UPDATE pagamentos_locacao
-                   SET status=%s, data_pagamento=%s, valor_pago=COALESCE(%s, valor_previsto)
-                 WHERE id=%s
-            ''', (cur_status, data_pag, valor_pago, pagamento_id))
-        else:
-            cur.execute('''
-                UPDATE pagamentos_locacao
-                   SET status=%s, data_pagamento=NULL, valor_pago=NULL
-                 WHERE id=%s
-            ''', (cur_status, pagamento_id))
-    return jsonify({'success': True, 'status': cur_status})
+
+    if not pago:
+        with _db() as (conn, cur):
+            cur.execute('''UPDATE pagamentos_locacao
+                              SET status='pendente', data_pagamento=NULL, valor_pago=NULL
+                            WHERE id=%s''', (pagamento_id,))
+        return jsonify({'success': True, 'status': 'pendente'})
+
+    try:
+        with _db() as (conn, cur):
+            res = _aplicar_baixa(
+                cur, 'contrato', pagamento_id,
+                data_rec=data.get('data_pagamento') or str(_date.today()),
+                forma_pag=(data.get('forma_pagamento') or '').strip() or None,
+                valor_recebido=data.get('valor_recebido', data.get('valor_pago')),
+                tratamento_saldo=data.get('tratamento_saldo') or 'residual',
+                vencimento_residual=data.get('vencimento_residual'),
+                justific=data.get('justificativa_desconto') or '',
+            )
+        return jsonify({'success': True, 'status': 'pago', **res})
+    except BaixaInvalida as e:
+        return jsonify({'success': False, 'error': e.msg}), e.status
 
 
 @app.route('/api/veiculos/<int:id>/defaults', methods=['PUT'])
