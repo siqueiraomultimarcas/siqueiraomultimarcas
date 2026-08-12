@@ -5,4 +5,5 @@ nixPkgs = ["python311", "postgresql"]
 cmds = ["pip install -r requirements.txt"]
 
 [start]
-cmd = "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+# A porta vem de gunicorn.conf.py (lê PORT em Python), não da linha de comando
+cmd = "gunicorn -c gunicorn.conf.py app:app"
