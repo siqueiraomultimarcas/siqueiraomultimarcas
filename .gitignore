@@ -10,3 +10,11 @@ static/uploads/
 *.log
 
 .vercel
+
+# Ferramentas do ambiente local — não fazem parte do sistema
+skills/
+.claude/
+
+# Artefatos temporários de depuração
+_debug_script.js
+_test_put*.py

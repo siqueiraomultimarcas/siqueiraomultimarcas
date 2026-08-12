@@ -1,0 +1,39 @@
+# Segredos — NUNCA devem entrar na imagem.
+# Em produção as credenciais vêm das variáveis de ambiente do Railway.
+.env
+.env.*
+!.env.example
+
+# Git e metadados
+.git
+.gitignore
+.github
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Testes e ferramentas de desenvolvimento (não são necessários em runtime)
+tests/
+.pytest_cache/
+.claude/
+skills/
+deploy.ps1
+_debug_script.js
+_test_put*.py
+
+# Configuração de outras plataformas
+vercel.json
+
+# Editores e SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
