@@ -6078,11 +6078,15 @@ def remover_negativacao(cid):
     return jsonify({'message': 'Negativação removida!'})
 
 
-# Roda migrations no cold start do Vercel (e também localmente via __main__)
+# Roda no boot de cada worker gunicorn (Railway) e também localmente.
+# Protegido por SCHEMA_VERSION: só o primeiro worker aplica as migrações,
+# os demais fazem 2 queries e seguem — evita DDL concorrente no Postgres.
 try:
     init_db()
 except Exception as _e:
     print(f'[init_db] {_e}')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Execução local direta. Em produção quem serve é o gunicorn (Procfile).
+    porta = int(os.environ.get('PORT', 5000))
+    app.run(debug=os.environ.get('FLASK_DEBUG') == '1', host='0.0.0.0', port=porta)
