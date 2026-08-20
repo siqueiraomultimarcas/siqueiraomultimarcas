@@ -3451,9 +3451,11 @@ def _efrotas_cfg():
     if not token or not client:
         return None, ('Credenciais eFrotas nao configuradas. Defina EFROTAS_TOKEN e '
                       'EFROTAS_TOKEN_CLIENT nas variaveis de ambiente.')
-    auth = token if token.lower().startswith('bearer ') else 'Bearer ' + token
+    # O eFrotas aceita o token cru no header Authorization; forcar o prefixo
+    # "Bearer" faz a API devolver 401. Enviamos exatamente o que esta no .env,
+    # entao quem precisar do prefixo basta inclui-lo no proprio valor.
     return base, {
-        'Authorization':  auth,
+        'Authorization':  token,
         'x-token-client': client,
         'Accept':         'application/json',
     }
