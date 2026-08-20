@@ -161,7 +161,7 @@ _db_initialized = False
 
 # Versão do schema. INCREMENTE SEMPRE que adicionar CREATE TABLE / ALTER TABLE
 # em init_db(), senão a migração não roda em produção.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 def init_db():
     """Cria/atualiza o schema. As migrações só rodam quando SCHEMA_VERSION muda —
@@ -417,6 +417,9 @@ def init_db():
     cur.execute("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cnh_validade DATE")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS observacao TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS pdf_url TEXT")
+    # Identificadores do SNE/eFrotas — necessarios para baixar o PDF da notificacao
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS codigo_orgao TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS codigo_infracao TEXT")
 
     # ── Novos campos de locação (v2 — formulário completo) ───────────────────
     cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS caucao NUMERIC(10,2) DEFAULT 0")
@@ -3710,8 +3713,9 @@ def _sincronizar_multas_frota(forcar=False):
                     INSERT INTO multas (veiculo_id, motorista_id, data_infracao, hora_infracao,
                                         descricao, valor, local_infracao, status, observacoes,
                                         numero_auto, tipo_notificacao, data_limite_defesa,
-                                        numero_renainf, data_pagamento)
-                    VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 'multa', %s, %s, %s)
+                                        numero_renainf, data_pagamento,
+                                        codigo_orgao, codigo_infracao)
+                    VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 'multa', %s, %s, %s, %s, %s)
                     RETURNING id
                 ''', (veiculo_id,
                       (str(inf.get('dataAutuacao'))[:10] if inf.get('dataAutuacao') else None),
@@ -3720,7 +3724,8 @@ def _sincronizar_multas_frota(forcar=False):
                       'pago' if m['pago'] else 'pendente', obs,
                       auto, m['data_limite_defesa'],
                       str(inf.get('renainf')) if inf.get('renainf') else None,
-                      m['data_pagamento']))
+                      m['data_pagamento'],
+                      m['codigo_orgao'], m['codigo_infracao']))
                 nova_id = cur.fetchone()[0]
 
             registro = {'id': nova_id, 'placa': placa, 'numero_auto': auto,
@@ -3803,6 +3808,83 @@ def status_sincronia_multas():
         'multas_prazo_curto': urgentes,
         'configurado':       bool(os.environ.get('EFROTAS_TOKEN')),
     })
+
+
+@app.route('/api/multas/<int:multa_id>/pdf-sne')
+@login_required
+def pdf_sne_multa(multa_id):
+    """Baixa o PDF da notificacao direto pelo ID da multa.
+
+    Query string:
+      tipo=NA  Notificacao de Autuacao (padrao)
+      tipo=NP  Notificacao de Penalidade
+      salvar=1 tambem guarda o PDF no Cloudinary e preenche multas.pdf_url
+
+    Usa os identificadores gravados na importacao (codigo_orgao e
+    codigo_infracao); multas cadastradas a mao nao os possuem.
+    """
+    tipo = (request.args.get('tipo') or 'NA').upper()
+    if tipo not in ('NA', 'NP'):
+        return jsonify({'error': "Tipo deve ser 'NA' (autuacao) ou 'NP' (penalidade)"}), 400
+
+    base, headers = _efrotas_cfg()
+    if base is None:
+        return jsonify({'error': headers}), 503
+
+    with _db() as (conn, cur):
+        cur.execute('''SELECT m.numero_auto, m.codigo_orgao, m.codigo_infracao,
+                              COALESCE(v.placa, '') AS placa, m.pdf_url
+                       FROM multas m
+                       LEFT JOIN veiculos v ON v.id = m.veiculo_id
+                       WHERE m.id = %s''', (multa_id,))
+        row = cur.fetchone()
+
+    if not row:
+        return jsonify({'error': 'Multa nao encontrada'}), 404
+    auto, orgao, cod_inf, placa, pdf_url = row
+
+    if not all([auto, orgao, cod_inf, placa]):
+        return jsonify({'error': 'Esta multa nao tem os identificadores do SNE '
+                                 '(numero do AIT, codigo do orgao e codigo da infracao). '
+                                 'O PDF so fica disponivel para multas importadas do eFrotas.'}), 400
+
+    placa_lim = re.sub(r'[^A-Z0-9]', '', placa.upper())
+    url = ('%s/consultas/sne/pdf/placa/%s/codigoOrgao/%s/numeroAit/%s/codigoInfracao/%s/%s'
+           % (base, placa_lim, orgao, auto, cod_inf, tipo))
+
+    pdf_headers = dict(headers)
+    pdf_headers['Accept'] = 'application/pdf'
+    try:
+        resp = requests.get(url, headers=pdf_headers, timeout=45)
+    except requests.Timeout:
+        return jsonify({'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
+    except Exception as e:
+        app.logger.error('Erro em pdf_sne_multa: %s', e)
+        return jsonify({'error': 'Falha ao conectar no eFrotas.'}), 502
+
+    if resp.status_code == 404:
+        rotulo = 'de autuacao' if tipo == 'NA' else 'de penalidade'
+        return jsonify({'error': 'A notificacao %s ainda nao esta disponivel para esta multa.' % rotulo}), 404
+    if resp.status_code != 200:
+        return jsonify({'error': _efrotas_erro(resp)}), 502
+
+    nome = '%s_%s_%s.pdf' % (tipo, placa_lim, auto)
+
+    # Opcional: arquiva no Cloudinary para nao depender da API depois
+    if request.args.get('salvar') == '1':
+        try:
+            up = cloudinary.uploader.upload(
+                io.BytesIO(resp.content),
+                public_id='siqueirao/multas/sne_%s_%s' % (multa_id, tipo),
+                resource_type='raw', overwrite=True)
+            with _db() as (conn, cur):
+                cur.execute('UPDATE multas SET pdf_url=%s WHERE id=%s',
+                            (up.get('secure_url'), multa_id))
+        except Exception as e:
+            app.logger.warning('[pdf-sne] falha ao arquivar no Cloudinary: %s', e)
+
+    return Response(resp.content, mimetype='application/pdf',
+                    headers={'Content-Disposition': 'inline; filename="%s"' % nome})
 
 
 _APIBRASIL_ESTADOS = ['MG','AL','PB','GO','MS','RR','PE','MA','TO','PA','PI','AM','SC','SE','PR']

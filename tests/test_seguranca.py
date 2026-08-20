@@ -33,7 +33,12 @@ for node in ast.walk(tree):
     decs = [ast.unparse(d) for d in node.decorator_list]
     tem_rota = any('app.route' in d for d in decs)
     tem_auth = any('login_required' in d for d in decs)
-    if tem_rota and not tem_auth and node.name not in PUBLICAS_OK:
+    # Rotas de webhook/agendador usam checagem manual em vez do decorator:
+    # so valem se de fato barrarem visitante anonimo (401).
+    corpo = ast.unparse(node)
+    checa_manual = ('current_user.is_authenticated' in corpo
+                    and "401" in corpo)
+    if tem_rota and not tem_auth and not checa_manual and node.name not in PUBLICAS_OK:
         rota = next((d for d in decs if 'app.route' in d), '?')
         rotas_sem_auth.append(f'{node.name} {rota}')
 check('nenhuma rota privada sem @login_required',
