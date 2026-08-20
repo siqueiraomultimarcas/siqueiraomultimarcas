@@ -3608,6 +3608,203 @@ def baixar_pdf_efrotas():
     })
 
 
+# ── Sincronizacao quinzenal de multas com o eFrotas ──────────────────────────
+# Varre as placas da frota, importa as infracoes novas e sinaliza as que
+# chegam com pouco prazo de defesa. NAO faz indicacao de condutor: a multa
+# entra vinculada ao veiculo e o campo de motorista fica em branco.
+
+SINCRONIA_MULTAS_DIAS = 15      # intervalo entre sincronizacoes
+PRAZO_DEFESA_ALERTA   = 10      # abaixo disso a multa e marcada como urgente
+
+
+def _dias_ate(data_iso):
+    """Dias entre hoje e a data informada. None se a data for invalida."""
+    if not data_iso:
+        return None
+    try:
+        return (_date.fromisoformat(str(data_iso)[:10]) - _date.today()).days
+    except Exception:
+        return None
+
+
+def _sincronizar_multas_frota(forcar=False):
+    """Consulta o eFrotas para cada placa e importa as infracoes novas.
+
+    Retorna um dicionario com o relatorio da execucao.
+    """
+    base, headers = _efrotas_cfg()
+    if base is None:
+        return {'success': False, 'error': headers}
+
+    hoje = _date.today()
+
+    # Respeita o intervalo quinzenal, salvo quando forcado manualmente
+    with _db() as (conn, cur):
+        cur.execute("SELECT value FROM app_config WHERE key='multas_sync_last_run'")
+        row = cur.fetchone()
+        ultima = row[0] if row else None
+    if not forcar and ultima:
+        d = _dias_ate(ultima)
+        if d is not None and abs(d) < SINCRONIA_MULTAS_DIAS:
+            faltam = SINCRONIA_MULTAS_DIAS - abs(d)
+            return {'success': True, 'pulado': True, 'ultima_sincronia': ultima,
+                    'mensagem': 'Sincronizado ha %s dia(s). Proxima em %s dia(s).' % (abs(d), faltam)}
+
+    # Periodo consultado: cobre o intervalo com folga, para nao perder nada
+    d_ini = str(hoje - timedelta(days=SINCRONIA_MULTAS_DIAS * 3))
+    d_fim = str(hoje)
+
+    with _db() as (conn, cur):
+        cur.execute("SELECT id, placa FROM veiculos WHERE placa IS NOT NULL AND status != 'inativo'")
+        veiculos = cur.fetchall()
+
+    importadas, urgentes, erros = [], [], []
+    total_encontradas = 0
+
+    for veiculo_id, placa_raw in veiculos:
+        placa = re.sub(r'[^A-Z0-9]', '', (placa_raw or '').upper())
+        if not placa:
+            continue
+        try:
+            resp = requests.get('%s/consultas/v1/infracoes/placa/%s' % (base, placa),
+                                headers=headers, timeout=30,
+                                params={'dataInicial': d_ini, 'dataFinal': d_fim})
+        except Exception as e:
+            erros.append({'placa': placa, 'erro': 'falha de conexao'})
+            app.logger.warning('[sync-multas] %s: %s', placa, e)
+            continue
+
+        if resp.status_code != 200:
+            erros.append({'placa': placa, 'erro': _efrotas_erro(resp)})
+            continue
+
+        try:
+            dados = resp.json() if resp.text.strip() else []
+        except ValueError:
+            erros.append({'placa': placa, 'erro': 'resposta invalida'})
+            continue
+        if isinstance(dados, dict):
+            dados = dados.get('infracoes') or dados.get('content') or [dados]
+        dados = [i for i in dados if isinstance(i, dict)]
+        total_encontradas += len(dados)
+
+        for inf in dados:
+            auto = inf.get('numeroAutoInfracao')
+            if not auto:
+                continue
+            with _db() as (conn, cur):
+                cur.execute('SELECT 1 FROM multas WHERE numero_auto = %s', (auto,))
+                if cur.fetchone():
+                    continue    # ja cadastrada
+
+                m = _efrotas_map_infracao(inf)
+                dias_defesa = _dias_ate(m['data_limite_defesa'])
+                urgente = dias_defesa is not None and dias_defesa <= PRAZO_DEFESA_ALERTA
+
+                obs = 'Importada do eFrotas em %s' % hoje
+                if urgente:
+                    obs = 'PRAZO CURTO — defesa ate %s (%s dia(s)). %s' % (
+                        m['data_limite_defesa'], dias_defesa, obs)
+
+                cur.execute('''
+                    INSERT INTO multas (veiculo_id, motorista_id, data_infracao, hora_infracao,
+                                        descricao, valor, local_infracao, status, observacoes,
+                                        numero_auto, tipo_notificacao, data_limite_defesa,
+                                        numero_renainf, data_pagamento)
+                    VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 'multa', %s, %s, %s)
+                    RETURNING id
+                ''', (veiculo_id,
+                      (str(inf.get('dataAutuacao'))[:10] if inf.get('dataAutuacao') else None),
+                      inf.get('horaAutuacao'),
+                      m['descricao'], m['valor'], m['local_infracao'],
+                      'pago' if m['pago'] else 'pendente', obs,
+                      auto, m['data_limite_defesa'],
+                      str(inf.get('renainf')) if inf.get('renainf') else None,
+                      m['data_pagamento']))
+                nova_id = cur.fetchone()[0]
+
+            registro = {'id': nova_id, 'placa': placa, 'numero_auto': auto,
+                        'valor': m['valor'], 'descricao': m['descricao'],
+                        'data_limite_defesa': m['data_limite_defesa'],
+                        'dias_para_defesa': dias_defesa}
+            importadas.append(registro)
+            if urgente:
+                urgentes.append(registro)
+
+    with _db() as (conn, cur):
+        cur.execute('''INSERT INTO app_config (key, value) VALUES ('multas_sync_last_run', %s)
+                       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value''', (str(hoje),))
+
+    return {
+        'success':           True,
+        'pulado':            False,
+        'data':              str(hoje),
+        'periodo':           {'inicial': d_ini, 'final': d_fim},
+        'placas_consultadas': len(veiculos),
+        'infracoes_na_api':  total_encontradas,
+        'importadas':        len(importadas),
+        'urgentes':          len(urgentes),
+        'proxima_sincronia': str(hoje + timedelta(days=SINCRONIA_MULTAS_DIAS)),
+        'detalhe_importadas': importadas,
+        'detalhe_urgentes':   urgentes,
+        'erros':             erros,
+    }
+
+
+@app.route('/api/multas/sincronizar-frota', methods=['POST'])
+def sincronizar_multas_frota():
+    """Sincroniza as multas da frota com o eFrotas.
+
+    Aceita duas formas de chamada:
+      - operador logado (botao na tela), podendo forcar com {"forcar": true}
+      - agendador externo, enviando o header X-Cron-Token igual a CRON_TOKEN
+    """
+    cron_token = os.environ.get('CRON_TOKEN', '').strip()
+    veio_do_cron = bool(cron_token) and request.headers.get('X-Cron-Token', '') == cron_token
+
+    if not veio_do_cron and not current_user.is_authenticated:
+        return jsonify({'error': 'Nao autorizado'}), 401
+
+    body = request.json or {}
+    # Forcar so e permitido para operador logado, nunca pelo agendador
+    forcar = bool(body.get('forcar')) and not veio_do_cron
+
+    try:
+        resultado = _sincronizar_multas_frota(forcar=forcar)
+    except Exception as e:
+        app.logger.error('Erro em sincronizar_multas_frota: %s', e)
+        return jsonify({'success': False, 'error': 'Falha ao sincronizar multas.'}), 500
+
+    if not resultado.get('success'):
+        return jsonify(resultado), 503
+    return jsonify(resultado)
+
+
+@app.route('/api/multas/status-sincronia')
+@login_required
+def status_sincronia_multas():
+    """Informa quando foi a ultima sincronizacao e quando sera a proxima."""
+    with _db() as (conn, cur):
+        cur.execute("SELECT value FROM app_config WHERE key='multas_sync_last_run'")
+        row = cur.fetchone()
+        cur.execute("""SELECT COUNT(*) FROM multas
+                       WHERE status = 'pendente' AND data_limite_defesa IS NOT NULL
+                         AND data_limite_defesa >= CURRENT_DATE
+                         AND data_limite_defesa <= CURRENT_DATE + %s""", (PRAZO_DEFESA_ALERTA,))
+        urgentes = cur.fetchone()[0]
+
+    ultima = row[0] if row else None
+    dias = abs(_dias_ate(ultima)) if ultima else None
+    return jsonify({
+        'ultima_sincronia':  ultima,
+        'dias_desde_ultima': dias,
+        'intervalo_dias':    SINCRONIA_MULTAS_DIAS,
+        'proxima_em_dias':   (max(0, SINCRONIA_MULTAS_DIAS - dias) if dias is not None else 0),
+        'multas_prazo_curto': urgentes,
+        'configurado':       bool(os.environ.get('EFROTAS_TOKEN')),
+    })
+
+
 _APIBRASIL_ESTADOS = ['MG','AL','PB','GO','MS','RR','PE','MA','TO','PA','PI','AM','SC','SE','PR']
 
 def _apibrasil_consultar_estado(url_base, token, estado, placa, renavam):
