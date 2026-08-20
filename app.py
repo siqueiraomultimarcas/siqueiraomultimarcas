@@ -3424,6 +3424,190 @@ def buscar_multas_online():
         return jsonify({'success': False, 'error': 'Erro interno. Tente novamente.'}), 500
 
 
+# ==================== SERPRO eFROTAS (SNE — Notificação Eletrônica) ====================
+# Consulta de infrações pela placa e download do PDF da notificação.
+#
+# Autenticação: DOIS headers obrigatórios, ambos fornecidos pelo SERPRO no contrato:
+#   Authorization:  Bearer <JWT>
+#   x-token-client: <apiKey>
+#
+# Ambiente (EFROTAS_BASE_URL):
+#   homologação — https://hom-efrotas.np.estaleiro.serpro.gov.br
+#   produção    — conforme contrato com o SERPRO
+#
+# A API exige datas no formato AAAA-MM-DD.
+
+EFROTAS_BASE_PADRAO = 'https://hom-efrotas.np.estaleiro.serpro.gov.br'
+
+
+def _efrotas_cfg():
+    """Devolve (base_url, headers). Em caso de falta de credencial: (None, mensagem)."""
+    token  = os.environ.get('EFROTAS_TOKEN', '').strip()
+    client = os.environ.get('EFROTAS_TOKEN_CLIENT', '').strip()
+    base   = os.environ.get('EFROTAS_BASE_URL', EFROTAS_BASE_PADRAO).rstrip('/')
+    if not token or not client:
+        return None, ('Credenciais eFrotas nao configuradas. Defina EFROTAS_TOKEN e '
+                      'EFROTAS_TOKEN_CLIENT nas variaveis de ambiente.')
+    auth = token if token.lower().startswith('bearer ') else 'Bearer ' + token
+    return base, {
+        'Authorization':  auth,
+        'x-token-client': client,
+        'Accept':         'application/json',
+    }
+
+
+def _efrotas_erro(resp):
+    """Traduz o retorno da API para mensagem legivel ao operador."""
+    mapa = {
+        401: 'Token eFrotas invalido ou expirado — verifique EFROTAS_TOKEN.',
+        403: 'Acesso negado pelo eFrotas — verifique EFROTAS_TOKEN_CLIENT e as permissoes do contrato.',
+        404: 'Recurso nao encontrado no eFrotas.',
+    }
+    if resp.status_code in mapa:
+        return mapa[resp.status_code]
+    try:
+        d = resp.json()
+        return d.get('mensagem') or d.get('mensagemTecnica') or ('eFrotas retornou %s' % resp.status_code)
+    except Exception:
+        return 'eFrotas retornou %s' % resp.status_code
+
+
+def _efrotas_map_infracao(i):
+    """Converte o InfracaoDTO do SERPRO para os campos usados na tela de multas."""
+    def _d(v):
+        return str(v)[:10] if v else None
+    local = ' — '.join(p for p in [i.get('localAutuacao'),
+                                   i.get('descricaoMunicipioAutuacao')] if p)
+    return {
+        'numero_auto':        i.get('numeroAutoInfracao'),
+        'codigo_infracao':    i.get('codigoInfracao'),
+        'codigo_orgao':       i.get('codigoOrgaoAutuador'),
+        'uf_orgao':           i.get('ufOrgaoAutuador'),
+        'placa':              i.get('placa'),
+        'descricao':          i.get('descricaoInfracao'),
+        'gravidade':          i.get('gravidade'),
+        'valor':              float(i.get('valorIntegralInfracao') or 0),
+        'local_infracao':     local,
+        'data_limite_defesa': _d(i.get('dataLimiteDefesaAutuacao')),
+        'data_vencimento':    _d(i.get('dataVencimentoPenalidade')),
+        'data_pagamento':     _d(i.get('dataPagamento')),
+        'possuidor':          i.get('nomePossuidorOriginal'),
+        'pago':               bool(i.get('dataPagamento')),
+    }
+
+
+@app.route('/api/multas/consultar-efrotas', methods=['POST'])
+@login_required
+def consultar_multas_efrotas():
+    """Consulta infracoes de uma placa no SNE/SERPRO (eFrotas).
+
+    Body: {placa, data_inicial?, data_final?}
+    Sem datas informadas, usa os ultimos 12 meses.
+    """
+    base, headers = _efrotas_cfg()
+    if base is None:
+        return jsonify({'success': False, 'error': headers}), 503
+
+    body  = request.json or {}
+    placa = re.sub(r'[^A-Z0-9]', '', (body.get('placa') or '').upper())
+    if not placa:
+        return jsonify({'success': False, 'error': 'Placa nao informada'}), 400
+
+    hoje  = _date.today()
+    d_ini = body.get('data_inicial') or str(hoje - timedelta(days=365))
+    d_fim = body.get('data_final')   or str(hoje)
+    for rotulo, d in (('inicial', d_ini), ('final', d_fim)):
+        if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(d)):
+            return jsonify({'success': False,
+                            'error': 'Data %s deve estar no formato AAAA-MM-DD' % rotulo}), 400
+
+    url = '%s/consultas/v1/infracoes/placa/%s' % (base, placa)
+    try:
+        resp = requests.get(url, headers=headers, timeout=30,
+                            params={'dataInicial': d_ini, 'dataFinal': d_fim})
+    except requests.Timeout:
+        return jsonify({'success': False, 'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
+    except Exception as e:
+        app.logger.error('Erro em consultar_multas_efrotas: %s', e)
+        return jsonify({'success': False, 'error': 'Falha ao conectar no eFrotas.'}), 502
+
+    if resp.status_code != 200:
+        return jsonify({'success': False, 'error': _efrotas_erro(resp)}), 502
+
+    try:
+        dados = resp.json() if resp.text.strip() else []
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Resposta invalida do eFrotas.'}), 502
+    if isinstance(dados, dict):
+        dados = dados.get('infracoes') or dados.get('content') or [dados]
+
+    infracoes = [_efrotas_map_infracao(i) for i in dados if isinstance(i, dict)]
+
+    # Marca as ja existentes no sistema, para nao duplicar na importacao
+    autos = [i['numero_auto'] for i in infracoes if i.get('numero_auto')]
+    ja_cadastradas = set()
+    if autos:
+        with _db() as (conn, cur):
+            ph = ','.join(['%s'] * len(autos))
+            cur.execute('SELECT numero_auto FROM multas WHERE numero_auto IN (%s)' % ph, tuple(autos))
+            ja_cadastradas = {r[0] for r in cur.fetchall()}
+    for i in infracoes:
+        i['ja_cadastrada'] = i.get('numero_auto') in ja_cadastradas
+
+    return jsonify({
+        'success':   True,
+        'placa':     placa,
+        'periodo':   {'inicial': d_ini, 'final': d_fim},
+        'total':     len(infracoes),
+        'novas':     sum(1 for i in infracoes if not i['ja_cadastrada']),
+        'infracoes': infracoes,
+    })
+
+
+@app.route('/api/multas/efrotas-pdf', methods=['POST'])
+@login_required
+def baixar_pdf_efrotas():
+    """Baixa o PDF da notificacao no SNE.
+
+    Body: {placa, codigo_orgao, numero_ait, codigo_infracao, tipo}
+    tipo: 'NA' (Notificacao de Autuacao) ou 'NP' (Notificacao de Penalidade).
+    """
+    base, headers = _efrotas_cfg()
+    if base is None:
+        return jsonify({'error': headers}), 503
+
+    b      = request.json or {}
+    placa  = re.sub(r'[^A-Z0-9]', '', (b.get('placa') or '').upper())
+    orgao  = (b.get('codigo_orgao') or '').strip()
+    ait    = (b.get('numero_ait') or '').strip()
+    codinf = (b.get('codigo_infracao') or '').strip()
+    tipo   = (b.get('tipo') or 'NA').upper()
+
+    if not all([placa, orgao, ait, codinf]):
+        return jsonify({'error': 'Informe placa, codigo do orgao, numero do AIT e codigo da infracao'}), 400
+    if tipo not in ('NA', 'NP'):
+        return jsonify({'error': "Tipo deve ser 'NA' ou 'NP'"}), 400
+
+    url = ('%s/consultas/sne/pdf/placa/%s/codigoOrgao/%s/numeroAit/%s/codigoInfracao/%s/%s'
+           % (base, placa, orgao, ait, codinf, tipo))
+    pdf_headers = dict(headers)
+    pdf_headers['Accept'] = 'application/pdf'
+    try:
+        resp = requests.get(url, headers=pdf_headers, timeout=45)
+    except requests.Timeout:
+        return jsonify({'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
+    except Exception as e:
+        app.logger.error('Erro em baixar_pdf_efrotas: %s', e)
+        return jsonify({'error': 'Falha ao conectar no eFrotas.'}), 502
+
+    if resp.status_code != 200:
+        return jsonify({'error': _efrotas_erro(resp)}), 502
+
+    return Response(resp.content, mimetype='application/pdf', headers={
+        'Content-Disposition': 'inline; filename="%s_%s_%s.pdf"' % (tipo, placa, ait)
+    })
+
+
 _APIBRASIL_ESTADOS = ['MG','AL','PB','GO','MS','RR','PE','MA','TO','PA','PI','AM','SC','SE','PR']
 
 def _apibrasil_consultar_estado(url_base, token, estado, placa, renavam):
