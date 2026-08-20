@@ -3440,7 +3440,86 @@ def buscar_multas_online():
 #
 # A API exige datas no formato AAAA-MM-DD.
 
-EFROTAS_BASE_PADRAO = 'https://hom-efrotas.np.estaleiro.serpro.gov.br'
+EFROTAS_BASE_PADRAO = 'https://efrotas.estaleiro.serpro.gov.br'
+
+
+# ── Certificado digital (mTLS) do eFrotas ────────────────────────────────────
+# O eFrotas autentica por Certificado de Maquina e-CNPJ A1 (ICP-Brasil), nao
+# por token. O SERIAL que aparece no portal do SERPRO identifica o certificado
+# cadastrado, mas quem autentica e o par certificado + chave privada.
+#
+# Formas de fornecer, em ordem de preferencia:
+#   1. EFROTAS_PFX_BASE64 + EFROTAS_PFX_SENHA  (arquivo .pfx/.p12 em base64)
+#      — melhor para Railway/nuvem, onde nao ha como subir arquivo
+#   2. EFROTAS_CERT_PATH + EFROTAS_KEY_PATH    (dois arquivos PEM no disco)
+#      — pratico para rodar local
+#
+# O par extraido do .pfx e gravado uma unica vez em arquivo temporario com
+# permissao restrita, porque a biblioteca requests exige caminho em disco.
+
+_efrotas_cert_cache = None
+
+
+def _efrotas_cert():
+    """Devolve (caminho_cert, caminho_chave) para mTLS, ou None se nao configurado."""
+    global _efrotas_cert_cache
+    if _efrotas_cert_cache is not None:
+        return _efrotas_cert_cache or None
+
+    cert_path = os.environ.get('EFROTAS_CERT_PATH', '').strip()
+    key_path  = os.environ.get('EFROTAS_KEY_PATH', '').strip()
+    if cert_path and key_path and os.path.exists(cert_path) and os.path.exists(key_path):
+        _efrotas_cert_cache = (cert_path, key_path)
+        return _efrotas_cert_cache
+
+    pfx_b64 = os.environ.get('EFROTAS_PFX_BASE64', '').strip()
+    senha   = os.environ.get('EFROTAS_PFX_SENHA', '')
+    if not pfx_b64:
+        _efrotas_cert_cache = ()
+        return None
+
+    try:
+        from cryptography.hazmat.primitives.serialization import (
+            pkcs12, Encoding, PrivateFormat, NoEncryption)
+        import tempfile, base64 as _b64
+
+        chave, certificado, extras = pkcs12.load_key_and_certificates(
+            _b64.b64decode(pfx_b64), senha.encode() if senha else None)
+        if not chave or not certificado:
+            raise ValueError('PFX sem chave privada ou sem certificado')
+
+        pasta = tempfile.mkdtemp(prefix='efrotas_')
+        c_path = os.path.join(pasta, 'cert.pem')
+        k_path = os.path.join(pasta, 'key.pem')
+
+        pem_cert = certificado.public_bytes(Encoding.PEM)
+        # Cadeia intermediaria junto, quando o .pfx a traz
+        for extra in (extras or []):
+            pem_cert += extra.public_bytes(Encoding.PEM)
+        with open(c_path, 'wb') as f:
+            f.write(pem_cert)
+        with open(k_path, 'wb') as f:
+            f.write(chave.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()))
+        try:
+            os.chmod(k_path, 0o600)
+        except Exception:
+            pass
+
+        _efrotas_cert_cache = (c_path, k_path)
+        app.logger.info('[efrotas] certificado carregado do PFX')
+        return _efrotas_cert_cache
+    except Exception as e:
+        app.logger.error('[efrotas] falha ao carregar o certificado: %s', e)
+        _efrotas_cert_cache = ()
+        return None
+
+
+def _efrotas_get(url, **kwargs):
+    """GET no eFrotas ja com o certificado de cliente, quando houver."""
+    cert = _efrotas_cert()
+    if cert:
+        kwargs['cert'] = cert
+    return requests.get(url, **kwargs)
 
 
 def _efrotas_cfg():
@@ -3528,7 +3607,7 @@ def consultar_multas_efrotas():
 
     url = '%s/consultas/v1/infracoes/placa/%s' % (base, placa)
     try:
-        resp = requests.get(url, headers=headers, timeout=30,
+        resp = _efrotas_get(url, headers=headers, timeout=30,
                             params={'dataInicial': d_ini, 'dataFinal': d_fim})
     except requests.Timeout:
         return jsonify({'success': False, 'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
@@ -3598,7 +3677,7 @@ def baixar_pdf_efrotas():
     pdf_headers = dict(headers)
     pdf_headers['Accept'] = 'application/pdf'
     try:
-        resp = requests.get(url, headers=pdf_headers, timeout=45)
+        resp = _efrotas_get(url, headers=pdf_headers, timeout=45)
     except requests.Timeout:
         return jsonify({'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
     except Exception as e:
@@ -3671,7 +3750,7 @@ def _sincronizar_multas_frota(forcar=False):
         if not placa:
             continue
         try:
-            resp = requests.get('%s/consultas/v1/infracoes/placa/%s' % (base, placa),
+            resp = _efrotas_get('%s/consultas/v1/infracoes/placa/%s' % (base, placa),
                                 headers=headers, timeout=30,
                                 params={'dataInicial': d_ini, 'dataFinal': d_fim})
         except Exception as e:
@@ -3857,7 +3936,7 @@ def pdf_sne_multa(multa_id):
     pdf_headers = dict(headers)
     pdf_headers['Accept'] = 'application/pdf'
     try:
-        resp = requests.get(url, headers=pdf_headers, timeout=45)
+        resp = _efrotas_get(url, headers=pdf_headers, timeout=45)
     except requests.Timeout:
         return jsonify({'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
     except Exception as e:
