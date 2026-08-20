@@ -18,3 +18,9 @@ skills/
 # Artefatos temporários de depuração
 _debug_script.js
 _test_put*.py
+
+# Certificados digitais (e-CNPJ, chaves privadas)
+certs/
+*.pfx
+*.p12
+*.key

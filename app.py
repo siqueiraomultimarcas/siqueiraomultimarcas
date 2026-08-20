@@ -3472,9 +3472,10 @@ def _efrotas_cert():
         _efrotas_cert_cache = (cert_path, key_path)
         return _efrotas_cert_cache
 
-    pfx_b64 = os.environ.get('EFROTAS_PFX_BASE64', '').strip()
     senha   = os.environ.get('EFROTAS_PFX_SENHA', '')
-    if not pfx_b64:
+    pfx_b64 = os.environ.get('EFROTAS_PFX_BASE64', '').strip()
+    pfx_path = os.environ.get('EFROTAS_PFX_PATH', '').strip()
+    if not pfx_b64 and not pfx_path:
         _efrotas_cert_cache = ()
         return None
 
@@ -3483,8 +3484,17 @@ def _efrotas_cert():
             pkcs12, Encoding, PrivateFormat, NoEncryption)
         import tempfile, base64 as _b64
 
+        # Arquivo .pfx no disco (uso local) tem prioridade sobre o base64 (nuvem)
+        if pfx_path:
+            if not os.path.exists(pfx_path):
+                raise FileNotFoundError('arquivo nao encontrado: %s' % pfx_path)
+            with open(pfx_path, 'rb') as f:
+                bruto = f.read()
+        else:
+            bruto = _b64.b64decode(pfx_b64)
+
         chave, certificado, extras = pkcs12.load_key_and_certificates(
-            _b64.b64decode(pfx_b64), senha.encode() if senha else None)
+            bruto, senha.encode() if senha else None)
         if not chave or not certificado:
             raise ValueError('PFX sem chave privada ou sem certificado')
 

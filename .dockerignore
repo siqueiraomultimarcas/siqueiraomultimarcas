@@ -37,3 +37,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Certificados — entram por variavel de ambiente, nunca na imagem
+certs/
+*.pfx
+*.p12
+*.key
