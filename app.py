@@ -161,7 +161,7 @@ _db_initialized = False
 
 # Versão do schema. INCREMENTE SEMPRE que adicionar CREATE TABLE / ALTER TABLE
 # em init_db(), senão a migração não roda em produção.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 def init_db():
     """Cria/atualiza o schema. As migrações só rodam quando SCHEMA_VERSION muda —
@@ -423,6 +423,13 @@ def init_db():
     # Datas de emissao das notificacoes — dizem qual documento ja existe no SNE
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS data_emissao_na DATE")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS data_emissao_np DATE")
+    # Gravidade CTB e prazos — alimentam o painel de multas
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS gravidade TEXT")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS data_vencimento DATE")
+    # Indicacao formal do condutor ao orgao autuador (protocolo do FICI)
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS data_indicacao DATE")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_multas_data_infracao ON multas(data_infracao)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_multas_limite_defesa ON multas(data_limite_defesa)")
 
     # ── Novos campos de locação (v2 — formulário completo) ───────────────────
     cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS caucao NUMERIC(10,2) DEFAULT 0")
@@ -613,6 +620,24 @@ def init_db():
             value TEXT
         )
     ''')
+
+    # ── Backfill: gravidade e pontos das multas ja importadas ───────────────
+    # A sincronizacao antiga deduzia a gravidade mas nao gravava, entao o
+    # "Pontos acumulados" da tela ficava zerado. Deduz de novo pelo valor.
+    try:
+        cur.execute("""SELECT id, valor, descricao FROM multas
+                       WHERE gravidade IS NULL AND valor IS NOT NULL""")
+        pendentes = cur.fetchall()
+        for _id, _valor, _desc in pendentes:
+            grav, pts, _fator = _gravidade_e_pontos(_valor, _desc or '')
+            if grav:
+                cur.execute("""UPDATE multas SET gravidade = %s,
+                                      pontos = COALESCE(NULLIF(pontos, 0), %s)
+                               WHERE id = %s""", (grav, pts, _id))
+        if pendentes:
+            print('[init_db] gravidade preenchida em %s multa(s).' % len(pendentes))
+    except Exception as e:
+        print('[init_db] backfill de gravidade ignorado: %s' % e)
 
     # Marca o schema como atualizado — próximos cold starts pulam tudo acima
     cur.execute('INSERT INTO schema_version (versao) VALUES (%s) ON CONFLICT (versao) DO NOTHING',
@@ -3799,6 +3824,49 @@ def _dias_ate(data_iso):
         return None
 
 
+# Campos que o SNE mantem e o sistema so copia: (coluna no banco, chave do DTO)
+CAMPOS_SNE = [
+    ('data_emissao_na',    'data_emissao_na'),
+    ('data_emissao_np',    'data_emissao_np'),
+    ('data_limite_defesa', 'data_limite_defesa'),
+    ('data_vencimento',    'data_vencimento'),
+    ('gravidade',          'gravidade_ctb'),
+    ('pontos',             'pontos'),
+    ('codigo_orgao',       'codigo_orgao'),
+    ('codigo_infracao',    'codigo_infracao'),
+    ('data_pagamento',     'data_pagamento'),
+]
+
+
+def _campos_sne_faltantes(atual, m, inf=None):
+    """O que o SNE ja sabe e a multa ainda nao tem.
+
+    Nunca sobrescreve dado existente — o operador pode ter corrigido a mao.
+    Devolve {} quando nao ha o que fazer, e a sincronizacao nao conta a multa
+    como atualizada.
+    """
+    faltando = {}
+    for coluna, chave in CAMPOS_SNE:
+        novo = m.get(chave)
+        if novo in (None, ''):
+            continue
+        velho = atual.get(coluna)
+        vazio = velho is None or (coluna == 'pontos' and not velho)
+        if vazio:
+            faltando[coluna] = novo
+
+    renainf = (str(inf.get('renainf')) if inf and inf.get('renainf') else None)
+    if renainf and not atual.get('numero_renainf'):
+        faltando['numero_renainf'] = renainf
+
+    # Baixa oficial: o orgao registrou pagamento e o sistema ainda diz pendente.
+    # O contrario nunca — baixa manual local nao pode ser desfeita pela API.
+    if m.get('data_pagamento') and atual.get('status') != 'pago':
+        faltando['status'] = 'pago'
+
+    return faltando
+
+
 def _sincronizar_multas_frota(forcar=False):
     """Consulta o eFrotas para cada placa e importa as infracoes novas.
 
@@ -3830,7 +3898,7 @@ def _sincronizar_multas_frota(forcar=False):
         cur.execute("SELECT id, placa FROM veiculos WHERE placa IS NOT NULL AND status != 'inativo'")
         veiculos = cur.fetchall()
 
-    importadas, urgentes, erros = [], [], []
+    importadas, atualizadas, urgentes, erros = [], [], [], []
     total_encontradas = 0
 
     for veiculo_id, placa_raw in veiculos:
@@ -3865,11 +3933,34 @@ def _sincronizar_multas_frota(forcar=False):
             if not auto:
                 continue
             with _db() as (conn, cur):
-                cur.execute('SELECT 1 FROM multas WHERE numero_auto = %s', (auto,))
-                if cur.fetchone():
-                    continue    # ja cadastrada
-
+                cur.execute('''SELECT id, data_emissao_na, data_emissao_np,
+                                      data_limite_defesa, data_vencimento, gravidade,
+                                      pontos, codigo_orgao, codigo_infracao,
+                                      numero_renainf, data_pagamento, status
+                               FROM multas WHERE numero_auto = %s''', (auto,))
+                linha = cur.fetchone()
                 m = _efrotas_map_infracao(inf)
+
+                if linha:
+                    # Ja cadastrada — mas o processo anda no orgao: a multa nasce
+                    # sem notificacao e ganha NA, prazo de defesa e vencimento
+                    # semanas depois. Sem reprocessar as existentes o painel de
+                    # prazos nunca sairia do zero.
+                    colunas = ['id', 'data_emissao_na', 'data_emissao_np',
+                               'data_limite_defesa', 'data_vencimento', 'gravidade',
+                               'pontos', 'codigo_orgao', 'codigo_infracao',
+                               'numero_renainf', 'data_pagamento', 'status']
+                    atual = dict(zip(colunas, linha))
+                    mudancas = _campos_sne_faltantes(atual, m, inf)
+                    if mudancas:
+                        sets = ', '.join('%s = %%s' % c for c in mudancas)   # colunas fixas
+                        cur.execute('UPDATE multas SET %s WHERE id = %%s' % sets,
+                                    tuple(mudancas.values()) + (atual['id'],))
+                        atualizadas.append({'id': atual['id'], 'numero_auto': auto,
+                                            'placa': placa,
+                                            'campos': sorted(mudancas.keys())})
+                    continue
+
                 dias_defesa = _dias_ate(m['data_limite_defesa'])
                 urgente = dias_defesa is not None and dias_defesa <= PRAZO_DEFESA_ALERTA
 
@@ -3884,8 +3975,9 @@ def _sincronizar_multas_frota(forcar=False):
                                         numero_auto, tipo_notificacao, data_limite_defesa,
                                         numero_renainf, data_pagamento,
                                         codigo_orgao, codigo_infracao,
-                                        data_emissao_na, data_emissao_np)
-                    VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 'multa', %s, %s, %s, %s, %s, %s, %s)
+                                        data_emissao_na, data_emissao_np,
+                                        gravidade, pontos, data_vencimento)
+                    VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 'multa', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
                 ''', (veiculo_id,
                       (str(inf.get('dataAutuacao'))[:10] if inf.get('dataAutuacao') else None),
@@ -3896,7 +3988,9 @@ def _sincronizar_multas_frota(forcar=False):
                       str(inf.get('renainf')) if inf.get('renainf') else None,
                       m['data_pagamento'],
                       m['codigo_orgao'], m['codigo_infracao'],
-                      m.get('data_emissao_na'), m.get('data_emissao_np')))
+                      m.get('data_emissao_na'), m.get('data_emissao_np'),
+                      m.get('gravidade_ctb'), m.get('pontos'),
+                      m.get('data_vencimento')))
                 nova_id = cur.fetchone()[0]
 
             registro = {'id': nova_id, 'placa': placa, 'numero_auto': auto,
@@ -3919,6 +4013,7 @@ def _sincronizar_multas_frota(forcar=False):
         'placas_consultadas': len(veiculos),
         'infracoes_na_api':  total_encontradas,
         'importadas':        len(importadas),
+        'atualizadas':       len(atualizadas),
         'urgentes':          len(urgentes),
         'proxima_sincronia': str(hoje + timedelta(days=SINCRONIA_MULTAS_DIAS)),
         'detalhe_importadas': importadas,
@@ -3978,6 +4073,285 @@ def status_sincronia_multas():
         'proxima_em_dias':   (max(0, SINCRONIA_MULTAS_DIAS - dias) if dias is not None else 0),
         'multas_prazo_curto': urgentes,
         'configurado':       bool(os.environ.get('EFROTAS_TOKEN')),
+    })
+
+
+# ── Painel de multas ─────────────────────────────────────────────────────────
+# Prazos legais que regem a operacao (CTB art. 257 e 282):
+#   NA (aviso)     -> 30 dias para indicar o condutor ou apresentar defesa
+#   NP (cobranca)  -> pagar ate o vencimento garante 20% de desconto
+# O painel responde tres perguntas, nesta ordem:
+#   1. O que perco se nao agir hoje?   -> prazos e multas sem responsavel
+#   2. Quanto disso e prejuizo meu?    -> repassavel x absorvido
+#   3. Onde o problema se repete?      -> veiculo, infracao e cliente
+PAINEL_MESES_PADRAO = 12
+DESCONTO_MULTA      = 0.20      # abatimento por pagamento ate o vencimento
+
+
+def _fase_multa(m):
+    """Etapa do processo: registrada -> aviso -> cobranca."""
+    if m.get('data_emissao_np'):
+        return 'cobranca'
+    if m.get('data_emissao_na'):
+        return 'aviso'
+    return 'registrada'
+
+
+def _classe_prazo(dias):
+    """Semaforo do prazo. 'sem_prazo' quando a multa nao tem data limite."""
+    if dias is None:
+        return 'sem_prazo'
+    if dias < 0:
+        return 'vencido'
+    if dias <= 3:
+        return 'critico'
+    if dias <= PRAZO_DEFESA_ALERTA:
+        return 'atencao'
+    return 'ok'
+
+
+@app.route('/api/multas/painel')
+@login_required
+def painel_multas():
+    """Consolida a operacao de multas em um unico pacote para a tela.
+
+    Query string:
+      meses=12   janela da serie historica (1 a 36)
+    """
+    try:
+        meses = max(1, min(36, int(request.args.get('meses', PAINEL_MESES_PADRAO))))
+    except (TypeError, ValueError):
+        meses = PAINEL_MESES_PADRAO
+
+    hoje = _date.today()
+    # Primeiro dia do mes, recuando (meses - 1) meses
+    ini_mes = hoje.replace(day=1)
+    total_m = ini_mes.year * 12 + (ini_mes.month - 1) - (meses - 1)
+    corte = _date(total_m // 12, total_m % 12 + 1, 1)
+
+    with _db() as (conn, cur):
+        cur.execute("""
+            SELECT m.id, m.veiculo_id, m.motorista_id, m.data_infracao, m.descricao,
+                   m.valor, m.pontos, m.gravidade, m.status, m.tipo_notificacao,
+                   m.data_limite_defesa, m.data_vencimento, m.data_indicacao,
+                   m.data_emissao_na, m.data_emissao_np, m.numero_auto,
+                   v.placa, v.marca, v.modelo,
+                   cm.nome AS nome_motorista,
+                   loc.cliente_id AS locatario_id, cl.nome AS locatario_nome
+            FROM multas m
+            LEFT JOIN veiculos v  ON v.id  = m.veiculo_id
+            LEFT JOIN clientes cm ON cm.id = m.motorista_id
+            LEFT JOIN LATERAL (
+                SELECT l.cliente_id
+                FROM locacoes l
+                WHERE l.veiculo_id = m.veiculo_id
+                  AND m.data_infracao IS NOT NULL
+                  AND l.data_inicio <= m.data_infracao
+                  AND (COALESCE(l.data_devolucao_real, l.data_fim) IS NULL
+                       OR COALESCE(l.data_devolucao_real, l.data_fim) >= m.data_infracao)
+                ORDER BY l.data_inicio DESC
+                LIMIT 1
+            ) loc ON TRUE
+            LEFT JOIN clientes cl ON cl.id = loc.cliente_id
+            WHERE m.data_infracao IS NULL OR m.data_infracao >= %s
+            ORDER BY m.data_infracao DESC NULLS LAST
+        """, (corte,))
+        multas = rows_to_dict(cur)
+
+    def _f(v):
+        try:
+            return round(float(v or 0), 2)
+        except (TypeError, ValueError):
+            return 0.0
+
+    # ── Enriquecimento linha a linha ────────────────────────────────────────
+    for m in multas:
+        m['valor']  = _f(m.get('valor'))
+        m['pontos'] = int(m.get('pontos') or 0)
+        m['fase']   = _fase_multa(m)
+        m['dias_defesa']     = _dias_ate(m.get('data_limite_defesa'))
+        m['dias_vencimento'] = _dias_ate(m.get('data_vencimento'))
+        m['classe_prazo']    = _classe_prazo(m['dias_defesa'])
+        m['pendente']        = (m.get('status') != 'pago')
+
+        # Quem responde pela infracao
+        if m.get('motorista_id'):
+            m['responsavel'] = 'definido'
+            m['responsavel_nome'] = m.get('nome_motorista')
+        elif m.get('locatario_id'):
+            m['responsavel'] = 'a_vincular'      # havia locacao ativa na data
+            m['responsavel_nome'] = m.get('locatario_nome')
+        else:
+            m['responsavel'] = 'locadora'        # nao ha a quem repassar
+            m['responsavel_nome'] = None
+
+    pendentes = [m for m in multas if m['pendente']]
+
+    # ── 1. O que exige acao hoje ────────────────────────────────────────────
+    a_vincular = [m for m in pendentes if m['responsavel'] == 'a_vincular']
+    criticas   = [m for m in pendentes if m['classe_prazo'] in ('vencido', 'critico')]
+    atencao    = [m for m in pendentes if m['classe_prazo'] == 'atencao']
+    absorvidas = [m for m in pendentes if m['responsavel'] == 'locadora']
+    com_desconto = [m for m in pendentes
+                    if m['dias_vencimento'] is not None and m['dias_vencimento'] >= 0]
+
+    acoes = {
+        'a_vincular':    {'qtd': len(a_vincular),
+                          'valor': round(sum(m['valor'] for m in a_vincular), 2)},
+        'prazo_critico': {'qtd': len(criticas),
+                          'valor': round(sum(m['valor'] for m in criticas), 2),
+                          'vencidas': sum(1 for m in criticas if m['classe_prazo'] == 'vencido')},
+        'prazo_atencao': {'qtd': len(atencao)},
+        'absorvidas':    {'qtd': len(absorvidas),
+                          'valor': round(sum(m['valor'] for m in absorvidas), 2)},
+        'desconto':      {'qtd': len(com_desconto),
+                          'economia': round(sum(m['valor'] for m in com_desconto) * DESCONTO_MULTA, 2)},
+    }
+
+    # ── 2. Dinheiro ─────────────────────────────────────────────────────────
+    pagas      = [m for m in multas if not m['pendente']]
+    repassavel = [m for m in pendentes if m['responsavel'] in ('definido', 'a_vincular')]
+    financeiro = {
+        'total':      round(sum(m['valor'] for m in multas), 2),
+        'pago':       round(sum(m['valor'] for m in pagas), 2),
+        'aberto':     round(sum(m['valor'] for m in pendentes), 2),
+        'repassavel': round(sum(m['valor'] for m in repassavel), 2),
+        'absorvido':  round(sum(m['valor'] for m in absorvidas), 2),
+        'qtd_total':  len(multas),
+        'qtd_paga':   len(pagas),
+        'qtd_aberta': len(pendentes),
+    }
+
+    # ── 3. Etapa do processo ────────────────────────────────────────────────
+    fases = {'registrada': 0, 'aviso': 0, 'cobranca': 0}
+    for m in pendentes:
+        fases[m['fase']] = fases.get(m['fase'], 0) + 1
+
+    # ── 4. Serie historica por mes ──────────────────────────────────────────
+    serie = {}
+    cursor_m = total_m
+    for _ in range(meses):
+        d = _date(cursor_m // 12, cursor_m % 12 + 1, 1)
+        serie[d.strftime('%Y-%m')] = {'mes': d.strftime('%Y-%m'), 'valor': 0.0, 'qtd': 0}
+        cursor_m += 1
+    for m in multas:
+        if not m.get('data_infracao'):
+            continue
+        chave = str(m['data_infracao'])[:7]
+        if chave in serie:
+            serie[chave]['valor'] += m['valor']
+            serie[chave]['qtd']   += 1
+    evolucao = [dict(v, valor=round(v['valor'], 2)) for v in serie.values()]
+
+    # ── 5. Onde o problema se repete ────────────────────────────────────────
+    # NIC entra como categoria propria: nao pontua CNH nenhuma, mas custa caro
+    # a locadora — misturar com as demais esconde exatamente o que doi.
+    GRAVIDADES = ['Leve', 'Media', 'Grave', 'Gravissima', 'NIC']
+
+    def _grav(m):
+        g = (m.get('gravidade') or '').strip()
+        if 'NIC' in g.upper() or (m.get('tipo_notificacao') == 'nic'):
+            return 'NIC'
+        return g if g in GRAVIDADES else 'Outras'
+
+    gravidade_total = {g: 0 for g in GRAVIDADES + ['Outras']}
+    for m in multas:
+        gravidade_total[_grav(m)] += 1
+
+    veic = {}
+    for m in multas:
+        if not m.get('placa'):
+            continue
+        v = veic.setdefault(m['placa'], {
+            'placa':  m['placa'],
+            'modelo': ('%s %s' % (m.get('marca') or '', m.get('modelo') or '')).strip(),
+            'qtd': 0, 'valor': 0.0, 'pontos': 0, 'aberto': 0.0,
+            'gravidade': {g: 0 for g in GRAVIDADES + ['Outras']},
+        })
+        v['qtd']    += 1
+        v['valor']  += m['valor']
+        v['pontos'] += m['pontos']
+        v['gravidade'][_grav(m)] += 1
+        if m['pendente']:
+            v['aberto'] += m['valor']
+    top_veiculos = sorted(veic.values(), key=lambda x: (-x['qtd'], -x['valor']))[:10]
+    for v in top_veiculos:
+        v['valor']  = round(v['valor'], 2)
+        v['aberto'] = round(v['aberto'], 2)
+
+    infr = {}
+    for m in multas:
+        d = (m.get('descricao') or 'Sem descricao').strip()
+        i = infr.setdefault(d, {'descricao': d, 'qtd': 0, 'valor': 0.0, 'gravidade': None})
+        i['qtd']   += 1
+        i['valor'] += m['valor']
+        if i['gravidade'] is None:
+            i['gravidade'] = _grav(m)      # normalizada, para a tela achar a cor
+    top_infracoes = sorted(infr.values(), key=lambda x: (-x['qtd'], -x['valor']))[:8]
+    for i in top_infracoes:
+        i['valor'] = round(i['valor'], 2)
+
+    cli = {}
+    for m in multas:
+        nome = m.get('responsavel_nome')
+        if not nome:
+            continue
+        c = cli.setdefault(nome, {'nome': nome, 'qtd': 0, 'valor': 0.0,
+                                  'pontos': 0, 'aberto': 0.0, 'a_vincular': 0})
+        c['qtd']    += 1
+        c['valor']  += m['valor']
+        c['pontos'] += m['pontos']
+        if m['pendente']:
+            c['aberto'] += m['valor']
+        if m['responsavel'] == 'a_vincular':
+            c['a_vincular'] += 1
+    top_clientes = sorted(cli.values(), key=lambda x: (-x['qtd'], -x['valor']))[:8]
+    for c in top_clientes:
+        c['valor']  = round(c['valor'], 2)
+        c['aberto'] = round(c['aberto'], 2)
+
+    # ── 6. Fila de prazos — o que abrir primeiro ────────────────────────────
+    ordem = {'vencido': 0, 'critico': 1, 'atencao': 2, 'ok': 3, 'sem_prazo': 4}
+    fila = sorted(
+        [m for m in pendentes if m['classe_prazo'] != 'sem_prazo'],
+        key=lambda m: (ordem[m['classe_prazo']],
+                       m['dias_defesa'] if m['dias_defesa'] is not None else 999)
+    )[:12]
+    prazos = [{
+        'id':          m['id'],
+        'placa':       m.get('placa'),
+        'descricao':   m.get('descricao'),
+        'valor':       m['valor'],
+        'numero_auto': m.get('numero_auto'),
+        'dias':        m['dias_defesa'],
+        'classe':      m['classe_prazo'],
+        'data_limite': str(m['data_limite_defesa']) if m.get('data_limite_defesa') else None,
+        'responsavel': m['responsavel'],
+        'responsavel_nome': m.get('responsavel_nome'),
+        'fase':        m['fase'],
+    } for m in fila]
+
+    # IDs por grupo — a tela usa para filtrar a tabela pelo card clicado,
+    # garantindo que o numero do card e a lista mostrada sejam a mesma coisa
+    ids = {
+        'a_vincular':    [m['id'] for m in a_vincular],
+        'prazo_critico': [m['id'] for m in criticas],
+        'absorvidas':    [m['id'] for m in absorvidas],
+        'aberto':        [m['id'] for m in pendentes],
+    }
+
+    return jsonify({
+        'periodo':       {'meses': meses, 'de': str(corte), 'ate': str(hoje)},
+        'acoes':         acoes,
+        'ids':           ids,
+        'financeiro':    financeiro,
+        'fases':         fases,
+        'evolucao':      evolucao,
+        'gravidade':     gravidade_total,
+        'top_veiculos':  top_veiculos,
+        'top_infracoes': top_infracoes,
+        'top_clientes':  top_clientes,
+        'prazos':        prazos,
     })
 
 
@@ -4137,8 +4511,9 @@ def importar_multas_efrotas():
                                     descricao, valor, local_infracao, status, observacoes,
                                     numero_auto, tipo_notificacao, data_limite_defesa,
                                     data_pagamento, codigo_orgao, codigo_infracao,
-                                    data_emissao_na, data_emissao_np)
-                VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    data_emissao_na, data_emissao_np,
+                                    gravidade, pontos, data_vencimento)
+                VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             ''', (veiculo_id,
                   i.get('data_infracao') or None,
@@ -4154,7 +4529,10 @@ def importar_multas_efrotas():
                   i.get('codigo_orgao') or None,
                   i.get('codigo_infracao') or None,
                   i.get('data_emissao_na') or None,
-                  i.get('data_emissao_np') or None))
+                  i.get('data_emissao_np') or None,
+                  i.get('gravidade_ctb') or None,
+                  i.get('pontos'),
+                  i.get('data_vencimento') or None))
             importadas.append({'id': cur.fetchone()[0], 'numero_auto': auto, 'urgente': urgente})
 
     return jsonify({

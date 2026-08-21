@@ -17,7 +17,9 @@
     <meta name="msapplication-TileImage" content="/static/icon-192.png">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/inputmask.min.js"></script>
+    <!-- Inputmask: o cdnjs removeu a 5.0.8 e passou a devolver 404, o que
+         derrubava TODAS as mascaras de CPF, CNPJ e telefone do sistema. -->
+    <script src="https://cdn.jsdelivr.net/npm/inputmask@5.0.9/dist/inputmask.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1176,6 +1178,11 @@
 
     /* ── Máscaras ──────────────────────────────────────────── */
     function aplicarMascaras() {
+        // Se o CDN falhar, o formulario continua utilizavel — so sem mascara
+        if (typeof Inputmask === 'undefined') {
+            console.warn('Inputmask indisponivel — campos seguem sem mascara');
+            return;
+        }
         Inputmask({"mask": "(99) 99999-9999"}).mask(document.querySelectorAll('input[name="telefone"]'));
         Inputmask({"mask": "999.999.999-99"}).mask(document.querySelectorAll('input[name="cpf"]'));
         Inputmask({"mask": "99.999.999/9999-99"}).mask(document.querySelectorAll('input[name="cnpj"]'));

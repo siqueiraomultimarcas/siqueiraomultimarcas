@@ -102,34 +102,261 @@
     <i class="fas fa-spinner fa-spin"></i><span>Verificando integração eFrotas...</span>
 </div>
 
-<!-- Stats -->
-<div class="kpi-grid" style="margin-bottom: 20px;">
-    <div class="kpi-card orange">
-        <div class="kpi-icon"><i class="fas fa-clock"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="countPendente">0</div>
-            <div class="kpi-label">Pendentes</div>
+<!-- ═══ Painel de multas ═══ -->
+<style>
+/* Escala de gravidade — do laranja claro ao vinho, seguindo a cor de ação */
+:root {
+    --g-leve:  #FDBA74;
+    --g-media: #FB923C;
+    --g-grave: #EA580C;
+    --g-grav:  #9A3412;
+    --g-outra: #CBD5E1;
+    --p-vencido: #7F1D1D;
+    --p-critico: #B91C1C;
+    --p-atencao: #CA8A04;
+    --p-ok:      #15803D;
+}
+
+.pm-head {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;
+}
+.pm-head h2 {
+    font-size:.82rem; font-weight:700; color:#0f172a; text-transform:uppercase;
+    letter-spacing:.05em; margin:0;
+}
+.pm-periodo { font-size:.72rem; color:#94a3b8; }
+.pm-head-acoes { margin-left:auto; display:flex; gap:8px; align-items:center; }
+.pm-sel {
+    font-size:.74rem; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px;
+    background:#fff; color:#374151; cursor:pointer;
+}
+.pm-toggle {
+    font-size:.74rem; color:#008cdd; background:none; border:none; cursor:pointer;
+    font-weight:600; display:flex; align-items:center; gap:5px;
+}
+
+/* ── Cards de ação ── */
+.pm-acoes { display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr));
+            gap:12px; margin-bottom:14px; }
+.pm-acao {
+    background:#fff; border:1px solid #e2e8f0; border-left:3px solid #cbd5e1;
+    border-radius:10px; padding:13px 15px; cursor:pointer; text-align:left; width:100%;
+    transition:box-shadow .15s, transform .15s; box-shadow:var(--card-shadow);
+}
+.pm-acao:hover  { box-shadow:var(--card-shadow-hover); transform:translateY(-1px); }
+.pm-acao:focus-visible { outline:2px solid #008cdd; outline-offset:2px; }
+.pm-acao.ativo  { border-color:#008cdd; box-shadow:0 0 0 2px rgba(0,140,221,.15); }
+.pm-acao.critico { border-left-color:var(--p-critico); }
+.pm-acao.alerta  { border-left-color:var(--p-atencao); }
+.pm-acao.neutro  { border-left-color:#008cdd; }
+.pm-acao.perda   { border-left-color:var(--g-grav); }
+.pm-acao-lbl {
+    font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    color:#64748b; display:flex; align-items:center; gap:6px;
+}
+.pm-acao-val {
+    font-size:1.6rem; font-weight:800; color:#0f172a; line-height:1.1; margin-top:5px;
+    font-variant-numeric:tabular-nums;
+}
+.pm-acao.critico .pm-acao-val { color:var(--p-critico); }
+.pm-acao.perda   .pm-acao-val { color:var(--g-grav); }
+.pm-acao-sub { font-size:.72rem; color:#94a3b8; margin-top:3px; }
+.pm-acao-sub strong { color:#475569; }
+
+/* ── Grid dos blocos ── */
+.pm-grid   { display:grid; gap:12px; margin-bottom:12px; }
+.pm-grid.g6040 { grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); }
+.pm-grid.g6634 { grid-template-columns:minmax(0,1.9fr) minmax(0,1fr); }
+.pm-grid.g5050 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+@media (max-width:1080px) { .pm-grid { grid-template-columns:1fr !important; } }
+
+.pm-box {
+    background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px;
+    box-shadow:var(--card-shadow); min-width:0;
+}
+.pm-box-tit {
+    font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:#475569; margin-bottom:2px; display:flex; align-items:center; gap:7px;
+}
+.pm-box-sub { font-size:.7rem; color:#94a3b8; margin-bottom:11px; }
+.pm-vazio { text-align:center; padding:26px 10px; color:#94a3b8; font-size:.78rem; }
+
+/* ── Fila de prazos ── */
+.pm-prazos { max-height:268px; overflow-y:auto; margin:0 -6px; }
+.pm-prazo {
+    display:grid; grid-template-columns:56px 74px minmax(0,1fr) auto; gap:10px;
+    align-items:center; padding:8px 6px; border-bottom:1px solid #f1f5f9;
+    cursor:pointer; border-radius:6px;
+}
+.pm-prazo:last-child { border-bottom:none; }
+.pm-prazo:hover { background:#f8fafc; }
+.pm-dias {
+    text-align:center; border-radius:6px; padding:4px 0; font-weight:800;
+    font-size:.9rem; line-height:1; color:#fff; font-variant-numeric:tabular-nums;
+}
+.pm-dias small { display:block; font-size:.55rem; font-weight:600; opacity:.85;
+                 text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
+.pm-dias.vencido { background:var(--p-vencido); }
+.pm-dias.critico { background:var(--p-critico); }
+.pm-dias.atencao { background:var(--p-atencao); }
+.pm-dias.ok      { background:var(--p-ok); }
+.pm-placa {
+    font-family:monospace; font-weight:700; background:#1e293b; color:#f8fafc;
+    border-radius:4px; padding:3px 0; font-size:.72rem; text-align:center;
+}
+.pm-prazo-desc { font-size:.78rem; color:#0f172a; font-weight:600;
+                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pm-prazo-meta { font-size:.68rem; color:#94a3b8; margin-top:2px;
+                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pm-prazo-meta .semdono { color:#B45309; font-weight:600; }
+.pm-prazo-val { font-size:.8rem; font-weight:700; color:#334155;
+                font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+/* ── Exposição financeira ── */
+.pm-barra { display:flex; height:24px; border-radius:6px; overflow:hidden;
+            background:#f1f5f9; margin-bottom:9px; }
+.pm-barra span { display:block; height:100%; }
+.pm-leg { display:flex; flex-direction:column; gap:6px; }
+.pm-leg-item { display:flex; align-items:center; gap:8px; font-size:.75rem; color:#475569; }
+.pm-leg-dot  { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
+.pm-leg-val  { margin-left:auto; font-weight:700; color:#0f172a;
+               font-variant-numeric:tabular-nums; }
+.pm-leg-pct  { font-size:.68rem; color:#94a3b8; min-width:38px; text-align:right; }
+
+/* ── Funil de fases ── */
+.pm-fases { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px;
+            padding-top:13px; border-top:1px solid #f1f5f9; }
+.pm-fase { text-align:center; }
+.pm-fase-n { font-size:1.15rem; font-weight:800; color:#0f172a; line-height:1;
+             font-variant-numeric:tabular-nums; }
+.pm-fase-l { font-size:.62rem; color:#64748b; text-transform:uppercase;
+             letter-spacing:.03em; margin-top:4px; }
+.pm-fase-b { height:3px; border-radius:2px; margin-top:6px; background:#e2e8f0; }
+.pm-fase.f1 .pm-fase-b { background:#93C5FD; }
+.pm-fase.f2 .pm-fase-b { background:var(--p-atencao); }
+.pm-fase.f3 .pm-fase-b { background:var(--p-critico); }
+
+/* ── Rankings (barras empilhadas) ── */
+.pm-rank { display:flex; flex-direction:column; gap:9px; max-height:280px; overflow-y:auto; }
+.pm-rank-item { display:grid; grid-template-columns:76px minmax(0,1fr) auto;
+                gap:10px; align-items:center; }
+.pm-rank-lbl  { font-size:.74rem; color:#334155; font-weight:600;
+                overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pm-rank-lbl.mono { font-family:monospace; font-weight:700; background:#1e293b;
+                    color:#f8fafc; border-radius:4px; padding:3px 0; text-align:center;
+                    font-size:.71rem; }
+.pm-stack { display:flex; height:17px; border-radius:4px; overflow:hidden; background:#f8fafc; }
+.pm-stack span { height:100%; }
+.pm-rank-num { font-size:.75rem; font-weight:700; color:#0f172a; min-width:26px;
+               text-align:right; font-variant-numeric:tabular-nums; }
+.pm-rank-sub { font-size:.68rem; color:#94a3b8; }
+
+/* ── Legenda de gravidade ── */
+.pm-gleg { display:flex; flex-wrap:wrap; gap:11px; margin-top:11px;
+           padding-top:10px; border-top:1px solid #f1f5f9; }
+.pm-gleg span { display:flex; align-items:center; gap:5px; font-size:.68rem; color:#64748b; }
+.pm-gleg i { width:9px; height:9px; border-radius:2px; display:block; }
+
+/* ── Tabela de clientes ── */
+.pm-tab { width:100%; border-collapse:collapse; font-size:.76rem; }
+.pm-tab th { text-align:left; font-size:.62rem; text-transform:uppercase;
+             letter-spacing:.04em; color:#94a3b8; font-weight:700;
+             padding:0 8px 7px; border-bottom:1px solid #f1f5f9; }
+.pm-tab td { padding:7px 8px; border-bottom:1px solid #f8fafc; color:#334155; }
+.pm-tab tr:last-child td { border-bottom:none; }
+.pm-tab .num { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+.pm-tab .nome { font-weight:600; color:#0f172a; max-width:150px;
+                overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pm-pill { font-size:.63rem; font-weight:700; padding:2px 7px; border-radius:20px;
+           background:#FFFBEB; color:#A16207; border:1px solid #fde68a; white-space:nowrap; }
+
+.pm-rank-item.infr { grid-template-columns:minmax(0,1fr) 190px 66px; }
+.pm-tab-wrap { overflow-x:auto; }
+
+.pm-chart-wrap { position:relative; height:210px; }
+
+/* Telas estreitas: a descricao da infracao precisa da largura toda, senao
+   vira "TRANSITAR E..." e o ranking deixa de informar qualquer coisa. */
+@media (max-width:600px) {
+    .pm-rank-item.infr {
+        grid-template-columns:minmax(0,1fr) auto;
+        grid-template-areas:'desc num' 'barra barra';
+        row-gap:5px;
+    }
+    .pm-rank-item.infr .pm-rank-lbl { grid-area:desc; white-space:normal; }
+    .pm-rank-item.infr .pm-rank-num { grid-area:num; }
+    .pm-rank-item.infr > div:nth-child(2) { grid-area:barra; }
+    .pm-prazo { grid-template-columns:52px 68px minmax(0,1fr); row-gap:4px; }
+    .pm-prazo-val { grid-column:2 / -1; text-align:right; }
+    .pm-acao-val { font-size:1.35rem; }
+}
+</style>
+
+<div id="painelMultas">
+    <div class="pm-head">
+        <h2>Panorama das multas</h2>
+        <span class="pm-periodo" id="pmPeriodo"></span>
+        <div class="pm-head-acoes">
+            <select class="pm-sel" id="pmMeses" onchange="carregarPainel()">
+                <option value="3">Últimos 3 meses</option>
+                <option value="6">Últimos 6 meses</option>
+                <option value="12" selected>Últimos 12 meses</option>
+                <option value="24">Últimos 24 meses</option>
+            </select>
+            <button class="pm-toggle" onclick="togglePainel()">
+                <i class="fas fa-chevron-up" id="pmChevron"></i>
+                <span id="pmToggleTxt">Recolher</span>
+            </button>
         </div>
     </div>
-    <div class="kpi-card green">
-        <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="countPago">0</div>
-            <div class="kpi-label">Pagas</div>
+
+    <div id="pmCorpo">
+        <div class="pm-acoes" id="pmAcoes"></div>
+
+        <div class="pm-grid g6040">
+            <div class="pm-box">
+                <div class="pm-box-tit"><i class="fas fa-hourglass-half"></i> Prazos em curso</div>
+                <div class="pm-box-sub">Multas em aberto ordenadas pelo que vence primeiro — clique para abrir</div>
+                <div class="pm-prazos" id="pmPrazos"></div>
+            </div>
+            <div class="pm-box">
+                <div class="pm-box-tit"><i class="fas fa-scale-balanced"></i> Quem paga a conta</div>
+                <div class="pm-box-sub">Do total em aberto, quanto sai do bolso da locadora</div>
+                <div id="pmFinanceiro"></div>
+            </div>
         </div>
-    </div>
-    <div class="kpi-card red">
-        <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="totalMultas">R$ 0,00</div>
-            <div class="kpi-label">Total em Multas</div>
+
+        <div class="pm-grid g6634">
+            <div class="pm-box">
+                <div class="pm-box-tit"><i class="fas fa-chart-column"></i> Evolução</div>
+                <div class="pm-box-sub">Valor autuado e quantidade de infrações por mês</div>
+                <div class="pm-chart-wrap"><canvas id="pmChartEvolucao"></canvas></div>
+            </div>
+            <div class="pm-box">
+                <div class="pm-box-tit"><i class="fas fa-gauge-high"></i> Gravidade</div>
+                <div class="pm-box-sub">Peso das infrações no período</div>
+                <div class="pm-chart-wrap" style="height:160px;"><canvas id="pmChartGravidade"></canvas></div>
+                <div class="pm-gleg" id="pmGravLegenda"></div>
+            </div>
         </div>
-    </div>
-    <div class="kpi-card purple">
-        <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
-        <div class="kpi-text">
-            <div class="kpi-value" id="totalPontos">0</div>
-            <div class="kpi-label">Pontos Acumulados</div>
+
+        <div class="pm-grid g5050">
+            <div class="pm-box">
+                <div class="pm-box-tit"><i class="fas fa-car-side"></i> Veículos que mais infracionam</div>
+                <div class="pm-box-sub">Barras coloridas pela gravidade das infrações</div>
+                <div class="pm-rank" id="pmTopVeiculos"></div>
+            </div>
+            <div class="pm-box">
+                <div class="pm-box-tit"><i class="fas fa-user-tag"></i> Reincidência por cliente</div>
+                <div class="pm-box-sub">Inclui quem estava com o carro na data, mesmo sem vínculo salvo</div>
+                <div id="pmTopClientes"></div>
+            </div>
+        </div>
+
+        <div class="pm-box" style="margin-bottom:20px;">
+            <div class="pm-box-tit"><i class="fas fa-list-ol"></i> Infrações mais frequentes</div>
+            <div class="pm-box-sub">O que se repete na frota — orienta a conversa com o locatário</div>
+            <div class="pm-rank" id="pmTopInfracoes" style="max-height:none;"></div>
         </div>
     </div>
 </div>
@@ -139,6 +366,8 @@
     <div class="card-header">
         <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> Multas <span id="countMultasBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="text" class="form-control" id="buscaMulta" onkeyup="filtrarMultas()"
+                   placeholder="Placa, AIT, infração ou local..." style="width: 230px;">
             <select class="form-control" id="filtroVeiculoMulta" onchange="filtrarMultas()" style="width: 220px;">
                 <option value="todos">Todos os Veículos</option>
             </select>
@@ -152,6 +381,8 @@
             </select>
         </div>
     </div>
+    <div id="avisoVisao" style="display:none;align-items:center;gap:9px;padding:9px 16px;
+                background:#e8f5ff;border-bottom:1px solid #b1dcfb;font-size:.78rem;color:#015e94;"></div>
     <div>
         <table data-sortable style="width:100%;border-collapse:collapse;">
             <thead style="display:none;">
@@ -211,16 +442,10 @@
         }
     }
 
+    /* Os totais agora vivem no painel (/api/multas/painel), que calcula tambem
+       responsabilidade e prazo — coisas que a lista local nao sabe. */
     function atualizarEstatisticas() {
-        const pendentes = multas.filter(m => m.status === 'pendente').length;
-        const pagas = multas.filter(m => m.status === 'pago').length;
-        const totalValor = multas.reduce((sum, m) => sum + (parseFloat(m.valor) || 0), 0);
-        const totalPontos = multas.reduce((sum, m) => sum + (parseInt(m.pontos) || 0), 0);
-
-        document.getElementById('countPendente').textContent = pendentes;
-        document.getElementById('countPago').textContent = pagas;
-        document.getElementById('totalMultas').textContent = formatCurrency(totalValor);
-        document.getElementById('totalPontos').textContent = totalPontos;
+        return;
     }
 
     function getStatusBadge(status) {
@@ -276,7 +501,7 @@
             const totalPts  = g.itens.reduce((s, m) => s + parseInt(m.pontos || 0), 0);
 
             const subRows = g.itens.map(m => `
-                <tr style="background:#fafbfc;">
+                <tr id="mrow_${m.id}" style="background:#fafbfc;">
                     <td style="padding:7px 10px;">${m.tipo_notificacao === 'nic' ? `<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#e8f5ff;color:#015e94;border:1px solid #b1dcfb;">NIC</span>` : `<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#fef2f2;color:#c73a2e;border:1px solid #fecaca;">MULTA</span>`}</td>
                     <td style="padding:7px 10px;font-size:.8rem;">${formatDate(m.data_infracao)}</td>
                     <td style="padding:7px 10px;font-size:.8rem;">${m.nome_motorista || '—'}</td>
@@ -351,11 +576,17 @@
         const motorista = document.getElementById('filtroMotoristaMulta').value;
         const status = document.getElementById('filtroStatusMulta').value;
 
+        const termo = (document.getElementById('buscaMulta')?.value || '').trim().toLowerCase();
+
         const filtradas = multas.filter(m => {
             const matchVeiculo = veiculo === 'todos' || m.veiculo_id == veiculo;
             const matchMotorista = motorista === 'todos' || m.motorista_id == motorista;
             const matchStatus = status === 'todos' || m.status === status;
-            return matchVeiculo && matchMotorista && matchStatus;
+            const matchVisao = !_visaoIds || _visaoIds.has(m.id);
+            const matchTermo = !termo || [m.placa, m.numero_auto, m.descricao,
+                                          m.local_infracao, m.nome_motorista]
+                .some(c => (c || '').toString().toLowerCase().includes(termo));
+            return matchVeiculo && matchMotorista && matchStatus && matchVisao && matchTermo;
         });
 
         renderizarMultas(filtradas);
@@ -504,7 +735,7 @@
             if (response.ok) {
                 fecharModal();
                 showToast(id ? 'Multa atualizada com sucesso!' : 'Multa cadastrada com sucesso!', 'success');
-                carregarDados();
+                carregarMultas();   // lista + painel
             } else {
                 const err = await response.json();
                 showToast(err.error || 'Erro ao salvar multa', 'error');
@@ -545,7 +776,7 @@
             if (response.ok) {
                 fecharModal();
                 showToast(novoStatus === 'pago' ? 'Multa marcada como paga!' : 'Status revertido para pendente', 'success');
-                carregarDados();
+                carregarMultas();   // lista + painel
             } else {
                 showToast('Erro ao atualizar status', 'error');
             }
@@ -575,10 +806,483 @@
             await fetch(`/api/multas/${id}`, { method: 'DELETE' });
             fecharModal();
             showToast('Multa excluída com sucesso', 'success');
-            carregarDados();
+            carregarMultas();   // lista + painel
         } catch (error) {
             showToast('Erro ao excluir multa', 'error');
         }
+    }
+
+    // ==================== PAINEL DE MULTAS ====================
+    // Responde, nesta ordem: o que vence hoje, quanto disso e prejuizo da
+    // locadora, e onde o problema se repete. Cada card filtra a tabela abaixo.
+
+    let _painel = null;                 // ultimo pacote recebido de /api/multas/painel
+    let _visaoIds = null;               // ids do card selecionado (null = sem filtro)
+    let _visaoAtiva = null;
+    let _chartEvolucao = null, _chartGravidade = null;
+
+    const COR_GRAV = {
+        'Leve': '#FDBA74', 'Media': '#FB923C', 'Grave': '#EA580C',
+        'Gravissima': '#9A3412', 'NIC': '#7C3AED', 'Outras': '#CBD5E1'
+    };
+    const ROTULO_GRAV = {
+        'Leve': 'Leve', 'Media': 'Média', 'Grave': 'Grave',
+        'Gravissima': 'Gravíssima',
+        'NIC': 'Não identificação',      // nao pontua CNH — quem paga e a locadora
+        'Outras': 'Sem classificação'
+    };
+    const MES_CURTO = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+    function _mesLabel(iso) {
+        const [a, m] = String(iso).split('-');
+        return MES_CURTO[parseInt(m, 10) - 1] + '/' + a.slice(2);
+    }
+    function _moedaCurta(v) {
+        const n = Math.abs(v || 0);
+        if (n >= 1000) return 'R$ ' + (v / 1000).toFixed(n >= 10000 ? 0 : 1).replace('.', ',') + 'k';
+        return 'R$ ' + Math.round(v || 0);
+    }
+    function _pct(parte, total) {
+        return total > 0 ? Math.round(parte / total * 100) : 0;
+    }
+
+    /* Sequencia da requisicao: trocar o periodo duas vezes seguidas pode fazer a
+       resposta antiga chegar depois da nova — sem isso a tela mostraria o
+       periodo errado. So a ultima chamada disparada tem direito de pintar. */
+    let _painelSeq = 0;
+
+    async function carregarPainel() {
+        const meses = document.getElementById('pmMeses')?.value || 12;
+        const seq = ++_painelSeq;
+        try {
+            const r = await fetch('/api/multas/painel?meses=' + meses);
+            if (!r.ok) throw new Error('falha');
+            const dados = await r.json();
+            if (seq !== _painelSeq) return;      // chegou atrasada, ignora
+            _painel = dados;
+        } catch {
+            if (seq !== _painelSeq) return;
+            document.getElementById('pmAcoes').innerHTML =
+                '<div class="pm-vazio" style="grid-column:1/-1;">Não foi possível carregar o panorama.</div>';
+            return;
+        }
+        const p = _painel;
+        const pe = document.getElementById('pmPeriodo');
+        if (pe) pe.textContent = 'infrações de ' + formatDate(p.periodo.de) + ' até hoje';
+
+        renderAcoesPainel(p);
+        renderPrazosPainel(p);
+        renderFinanceiroPainel(p);
+        renderEvolucaoPainel(p);
+        renderGravidadePainel(p);
+        renderTopVeiculosPainel(p);
+        renderTopClientesPainel(p);
+        renderTopInfracoesPainel(p);
+    }
+
+    /* ── Cards de ação: o que fazer hoje ── */
+    function renderAcoesPainel(p) {
+        const a = p.acoes, f = p.financeiro;
+        const criticoSub = a.prazo_critico.vencidas > 0
+            ? `<strong>${a.prazo_critico.vencidas}</strong> já sem prazo · ${formatCurrency(a.prazo_critico.valor)}`
+            : (a.prazo_atencao.qtd > 0
+                ? `mais <strong>${a.prazo_atencao.qtd}</strong> vencendo em até 10 dias`
+                : 'nenhum prazo apertado');
+
+        const cards = [
+            {
+                chave: 'prazo_critico', classe: 'critico', icone: 'fa-triangle-exclamation',
+                label: 'Vence em até 3 dias', valor: a.prazo_critico.qtd, sub: criticoSub
+            },
+            {
+                chave: 'a_vincular', classe: 'alerta', icone: 'fa-user-slash',
+                label: 'Sem responsável definido', valor: a.a_vincular.qtd,
+                sub: a.a_vincular.qtd > 0
+                    ? `${formatCurrency(a.a_vincular.valor)} — há locação na data da infração`
+                    : 'todas as multas em aberto já têm dono'
+            },
+            {
+                chave: 'aberto', classe: 'neutro', icone: 'fa-file-invoice-dollar',
+                label: 'Em aberto', valor: formatCurrency(f.aberto),
+                sub: `<strong>${f.qtd_aberta}</strong> multa(s) · ${formatCurrency(f.repassavel)} repassável`
+            },
+            {
+                chave: 'absorvidas', classe: 'perda', icone: 'fa-building-circle-exclamation',
+                label: 'Prejuízo da locadora', valor: formatCurrency(a.absorvidas.valor),
+                sub: a.absorvidas.qtd > 0
+                    ? `<strong>${a.absorvidas.qtd}</strong> sem locação na data — não dá para repassar`
+                    : 'tudo repassável no período'
+            },
+        ];
+
+        document.getElementById('pmAcoes').innerHTML = cards.map(c => `
+            <button type="button" class="pm-acao ${c.classe} ${_visaoAtiva === c.chave ? 'ativo' : ''}"
+                    onclick="aplicarVisaoPainel('${c.chave}')"
+                    title="Clique para filtrar a lista abaixo">
+                <div class="pm-acao-lbl"><i class="fas ${c.icone}"></i> ${c.label}</div>
+                <div class="pm-acao-val">${c.valor}</div>
+                <div class="pm-acao-sub">${c.sub}</div>
+            </button>`).join('');
+    }
+
+    /* ── Fila de prazos: semáforo do que vence primeiro ── */
+    function renderPrazosPainel(p) {
+        const box = document.getElementById('pmPrazos');
+        if (!p.prazos.length) {
+            const emAberto = p.financeiro.qtd_aberta;
+            box.innerHTML = emAberto > 0
+                ? `<div class="pm-vazio" style="text-align:left;padding:16px 6px;">
+                     <i class="fas fa-hourglass-start" style="color:#CA8A04;"></i>
+                     <strong style="color:#475569;"> ${emAberto} multa(s) em aberto, nenhuma com prazo correndo.</strong>
+                     <div style="margin-top:7px;line-height:1.55;">
+                       O relógio só começa quando o órgão emite o aviso da infração (NA).
+                       Até lá não há data de defesa nem de indicação.
+                       A sincronização quinzenal traz essas datas assim que elas existirem.
+                     </div>
+                   </div>`
+                : '<div class="pm-vazio"><i class="fas fa-circle-check" style="color:#15803D;"></i><br>Nenhuma multa em aberto.</div>';
+            return;
+        }
+        box.innerHTML = p.prazos.map(m => {
+            const d = m.dias;
+            const num = d === null ? '—' : (d < 0 ? Math.abs(d) : d);
+            const uni = d === null ? '' : (d < 0 ? 'dias atrás' : (d === 1 ? 'dia' : 'dias'));
+            const dono = m.responsavel === 'locadora'
+                ? '<span class="semdono">sem locação na data</span>'
+                : (m.responsavel === 'a_vincular'
+                    ? `<span class="semdono">a vincular: ${escHtml(m.responsavel_nome || '')}</span>`
+                    : escHtml(m.responsavel_nome || ''));
+            return `
+            <div class="pm-prazo" onclick="focarMulta(${m.id})" title="Abrir na lista">
+                <div class="pm-dias ${m.classe}">${num}<small>${uni}</small></div>
+                <div class="pm-placa">${escHtml(m.placa || '—')}</div>
+                <div style="min-width:0;">
+                    <div class="pm-prazo-desc">${escHtml(m.descricao || 'Sem descrição')}</div>
+                    <div class="pm-prazo-meta">${dono} · limite ${formatDate(m.data_limite)}</div>
+                </div>
+                <div class="pm-prazo-val">${formatCurrency(m.valor)}</div>
+            </div>`;
+        }).join('');
+    }
+
+    /* ── Exposição financeira + etapa do processo ── */
+    function renderFinanceiroPainel(p) {
+        const f = p.financeiro, fa = p.fases;
+        const base = f.aberto || 1;
+        const pRep = _pct(f.repassavel, base), pAbs = 100 - pRep;
+
+        document.getElementById('pmFinanceiro').innerHTML = `
+            <div class="pm-barra" title="Composição do valor em aberto">
+                <span style="width:${pRep}%;background:#008cdd;"></span>
+                <span style="width:${pAbs}%;background:#9A3412;"></span>
+            </div>
+            <div class="pm-leg">
+                <div class="pm-leg-item">
+                    <i class="pm-leg-dot" style="background:#008cdd;"></i> Repassável ao locatário
+                    <span class="pm-leg-val">${formatCurrency(f.repassavel)}</span>
+                    <span class="pm-leg-pct">${pRep}%</span>
+                </div>
+                <div class="pm-leg-item">
+                    <i class="pm-leg-dot" style="background:#9A3412;"></i> Fica com a locadora
+                    <span class="pm-leg-val">${formatCurrency(f.absorvido)}</span>
+                    <span class="pm-leg-pct">${pAbs}%</span>
+                </div>
+                <div class="pm-leg-item" style="padding-top:7px;border-top:1px solid #f1f5f9;">
+                    <i class="pm-leg-dot" style="background:#15803D;"></i> Já quitado no período
+                    <span class="pm-leg-val">${formatCurrency(f.pago)}</span>
+                    <span class="pm-leg-pct">${f.qtd_paga}</span>
+                </div>
+                ${p.acoes.desconto.qtd > 0 ? `
+                <div class="pm-leg-item" style="color:#15803D;">
+                    <i class="fas fa-tag" style="font-size:.7rem;"></i>
+                    Desconto ainda no prazo (20%)
+                    <span class="pm-leg-val" style="color:#15803D;">−${formatCurrency(p.acoes.desconto.economia)}</span>
+                    <span class="pm-leg-pct">${p.acoes.desconto.qtd}</span>
+                </div>` : ''}
+            </div>
+            <div class="pm-fases">
+                <div class="pm-fase f1">
+                    <div class="pm-fase-n">${fa.registrada}</div>
+                    <div class="pm-fase-l">Registrada</div>
+                    <div class="pm-fase-b"></div>
+                </div>
+                <div class="pm-fase f2">
+                    <div class="pm-fase-n">${fa.aviso}</div>
+                    <div class="pm-fase-l">Aviso emitido</div>
+                    <div class="pm-fase-b"></div>
+                </div>
+                <div class="pm-fase f3">
+                    <div class="pm-fase-n">${fa.cobranca}</div>
+                    <div class="pm-fase-l">Cobrança emitida</div>
+                    <div class="pm-fase-b"></div>
+                </div>
+            </div>
+            <div style="font-size:.66rem;color:#94a3b8;margin-top:8px;line-height:1.45;">
+                Etapa das multas em aberto no órgão autuador. Depois da cobrança emitida
+                não cabe mais indicar condutor.
+            </div>`;
+    }
+
+    /* ── Evolução mensal: valor (barra) + quantidade (linha) ── */
+    function renderEvolucaoPainel(p) {
+        const ctx = document.getElementById('pmChartEvolucao');
+        if (!ctx) return;
+        if (_chartEvolucao) _chartEvolucao.destroy();
+        _chartEvolucao = new Chart(ctx, {
+            data: {
+                labels: p.evolucao.map(e => _mesLabel(e.mes)),
+                datasets: [
+                    {
+                        type: 'bar', label: 'Valor autuado', order: 2,
+                        data: p.evolucao.map(e => e.valor),
+                        backgroundColor: 'rgba(0,140,221,.75)', borderRadius: 4,
+                        maxBarThickness: 34, yAxisID: 'y',
+                    },
+                    {
+                        type: 'line', label: 'Quantidade', order: 1,
+                        data: p.evolucao.map(e => e.qtd),
+                        borderColor: '#C2440A', backgroundColor: '#C2440A',
+                        borderWidth: 2, pointRadius: 3, tension: .3, yAxisID: 'y1',
+                    },
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 }, usePointStyle: true } },
+                    tooltip: {
+                        callbacks: {
+                            label: c => c.dataset.yAxisID === 'y'
+                                ? ' ' + c.dataset.label + ': ' + formatCurrency(c.parsed.y)
+                                : ' ' + c.dataset.label + ': ' + c.parsed.y + ' multa(s)'
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                    y: {
+                        beginAtZero: true, position: 'left',
+                        grid: { color: '#f1f5f9' },
+                        ticks: { font: { size: 10 }, callback: v => _moedaCurta(v) }
+                    },
+                    y1: {
+                        beginAtZero: true, position: 'right',
+                        grid: { display: false },
+                        ticks: { font: { size: 10 }, precision: 0 }
+                    }
+                }
+            }
+        });
+    }
+
+    /* ── Distribuição por gravidade ── */
+    function renderGravidadePainel(p) {
+        const ctx = document.getElementById('pmChartGravidade');
+        if (!ctx) return;
+        const chaves = Object.keys(COR_GRAV).filter(g => (p.gravidade[g] || 0) > 0);
+        const legenda = document.getElementById('pmGravLegenda');
+
+        if (!chaves.length) {
+            if (_chartGravidade) { _chartGravidade.destroy(); _chartGravidade = null; }
+            ctx.parentElement.innerHTML = '<div class="pm-vazio">Sem infrações no período.</div>';
+            legenda.innerHTML = '';
+            return;
+        }
+        const total = chaves.reduce((s, g) => s + p.gravidade[g], 0);
+        if (_chartGravidade) _chartGravidade.destroy();
+        _chartGravidade = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: chaves.map(g => ROTULO_GRAV[g]),
+                datasets: [{
+                    data: chaves.map(g => p.gravidade[g]),
+                    backgroundColor: chaves.map(g => COR_GRAV[g]),
+                    borderWidth: 2, borderColor: '#fff',
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '62%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: c => ' ' + c.label + ': ' + c.parsed +
+                                        ' (' + _pct(c.parsed, total) + '%)'
+                        }
+                    }
+                }
+            }
+        });
+        legenda.innerHTML = chaves.map(g => `
+            <span><i style="background:${COR_GRAV[g]}"></i>${ROTULO_GRAV[g]} ${p.gravidade[g]}</span>`).join('');
+    }
+
+    /* Linha de apoio do ranking: evita repetir o mesmo numero duas vezes
+       quando nada foi pago ainda. */
+    function _subVeiculo(v) {
+        const partes = [];
+        if (v.aberto >= v.valor)      partes.push(formatCurrency(v.valor) + ' — tudo em aberto');
+        else if (v.aberto > 0)        partes.push(formatCurrency(v.valor) + ' · ' + formatCurrency(v.aberto) + ' em aberto');
+        else                          partes.push(formatCurrency(v.valor) + ' · quitado');
+        if (v.pontos) partes.push(v.pontos + ' pts');
+        return partes.join(' · ');
+    }
+
+    /* ── Veículos: barra empilhada por gravidade ── */
+    function renderTopVeiculosPainel(p) {
+        const box = document.getElementById('pmTopVeiculos');
+        if (!p.top_veiculos.length) {
+            box.innerHTML = '<div class="pm-vazio">Sem infrações no período.</div>';
+            return;
+        }
+        const maxQtd = Math.max(...p.top_veiculos.map(v => v.qtd));
+        box.innerHTML = p.top_veiculos.map(v => {
+            const larguraTotal = (v.qtd / maxQtd) * 100;
+            const faixas = Object.keys(COR_GRAV)
+                .filter(g => v.gravidade[g] > 0)
+                .map(g => `<span style="width:${v.gravidade[g] / v.qtd * 100}%;background:${COR_GRAV[g]};"
+                                 title="${ROTULO_GRAV[g]}: ${v.gravidade[g]}"></span>`).join('');
+            return `
+            <div class="pm-rank-item">
+                <div class="pm-rank-lbl mono">${escHtml(v.placa)}</div>
+                <div>
+                    <div class="pm-stack" style="width:${larguraTotal}%;min-width:26px;">${faixas}</div>
+                    <div class="pm-rank-sub">${_subVeiculo(v)}</div>
+                </div>
+                <div class="pm-rank-num">${v.qtd}</div>
+            </div>`;
+        }).join('');
+    }
+
+    /* ── Reincidência por cliente ── */
+    function renderTopClientesPainel(p) {
+        const box = document.getElementById('pmTopClientes');
+        if (!p.top_clientes.length) {
+            box.innerHTML = '<div class="pm-vazio">Nenhuma multa atribuída a cliente no período.</div>';
+            return;
+        }
+        box.innerHTML = `
+            <div class="pm-tab-wrap"><table class="pm-tab">
+                <thead><tr>
+                    <th>Cliente</th><th class="num">Multas</th><th class="num">Pontos</th>
+                    <th class="num">Em aberto</th><th></th>
+                </tr></thead>
+                <tbody>${p.top_clientes.map(c => `
+                    <tr>
+                        <td class="nome" title="${escHtml(c.nome)}">${escHtml(c.nome)}</td>
+                        <td class="num">${c.qtd}</td>
+                        <td class="num" style="color:${c.pontos >= 20 ? '#B91C1C' : '#334155'}">${c.pontos}</td>
+                        <td class="num">${c.aberto > 0 ? formatCurrency(c.aberto) : '—'}</td>
+                        <td>${c.a_vincular > 0 ? `<span class="pm-pill">${c.a_vincular} a vincular</span>` : ''}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table></div>
+            <div style="font-size:.66rem;color:#94a3b8;margin-top:9px;line-height:1.45;">
+                Pontos só vão para a CNH depois da indicação formal. Acima de 20 o cliente
+                fica perto da suspensão — vale avisar antes de renovar o contrato.
+            </div>`;
+    }
+
+    /* ── Infrações mais frequentes ── */
+    function renderTopInfracoesPainel(p) {
+        const box = document.getElementById('pmTopInfracoes');
+        if (!p.top_infracoes.length) {
+            box.innerHTML = '<div class="pm-vazio">Sem infrações no período.</div>';
+            return;
+        }
+        const max = Math.max(...p.top_infracoes.map(i => i.qtd));
+        box.innerHTML = p.top_infracoes.map(i => {
+            const cor = COR_GRAV[i.gravidade] || COR_GRAV['Outras'];
+            return `
+            <div class="pm-rank-item infr">
+                <div class="pm-rank-lbl" title="${escHtml(i.descricao)}">${escHtml(i.descricao)}</div>
+                <div><div class="pm-stack" style="width:${i.qtd / max * 100}%;min-width:22px;">
+                    <span style="width:100%;background:${cor};"></span>
+                </div></div>
+                <div class="pm-rank-num">${i.qtd}<span class="pm-rank-sub" style="display:block;font-weight:500;">${formatCurrency(i.valor)}</span></div>
+            </div>`;
+        }).join('');
+    }
+
+    /* ── Recolher o painel (fica salvo entre visitas) ── */
+    function togglePainel() {
+        const corpo = document.getElementById('pmCorpo');
+        const oculto = corpo.style.display === 'none';
+        corpo.style.display = oculto ? '' : 'none';
+        document.getElementById('pmChevron').className = 'fas fa-chevron-' + (oculto ? 'up' : 'down');
+        document.getElementById('pmToggleTxt').textContent = oculto ? 'Recolher' : 'Expandir';
+        try { localStorage.setItem('pmRecolhido', oculto ? '0' : '1'); } catch {}
+    }
+
+    function restaurarPainel() {
+        let recolhido = false;
+        try { recolhido = localStorage.getItem('pmRecolhido') === '1'; } catch {}
+        if (recolhido) togglePainel();
+    }
+
+    /* ── Card clicado filtra a tabela pelos mesmos IDs que ele conta ── */
+    function aplicarVisaoPainel(chave) {
+        if (!_painel) return;
+        if (_visaoAtiva === chave) {         // clicar de novo desfaz o filtro
+            _visaoAtiva = null; _visaoIds = null;
+        } else {
+            _visaoAtiva = chave;
+            _visaoIds = new Set(_painel.ids[chave] || []);
+        }
+        renderAcoesPainel(_painel);
+        atualizarAvisoVisao();
+        filtrarMultas();
+        document.getElementById('tabelaMultas')
+            ?.closest('.card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    const _ROTULO_VISAO = {
+        prazo_critico: 'vencendo em até 3 dias',
+        a_vincular:    'sem responsável definido',
+        aberto:        'em aberto',
+        absorvidas:    'sem locação na data — prejuízo da locadora',
+    };
+
+    function atualizarAvisoVisao() {
+        const box = document.getElementById('avisoVisao');
+        if (!box) return;
+        if (!_visaoAtiva) { box.style.display = 'none'; return; }
+        box.style.display = 'flex';
+        box.innerHTML = `
+            <i class="fas fa-filter"></i>
+            <span>Mostrando apenas multas <strong>${_ROTULO_VISAO[_visaoAtiva]}</strong></span>
+            <button onclick="aplicarVisaoPainel('${_visaoAtiva}')"
+                    style="margin-left:auto;background:none;border:none;color:#015e94;
+                           font-weight:700;cursor:pointer;font-size:.75rem;">
+                Limpar filtro
+            </button>`;
+    }
+
+    /* ── Abre a multa na lista, expandindo o grupo do veículo ── */
+    function focarMulta(id) {
+        let row = document.getElementById('mrow_' + id);
+        if (!row) {                       // pode estar escondida por um filtro ativo
+            _visaoAtiva = null; _visaoIds = null;
+            document.getElementById('filtroVeiculoMulta').value = 'todos';
+            document.getElementById('filtroMotoristaMulta').value = 'todos';
+            document.getElementById('filtroStatusMulta').value = 'todos';
+            const b = document.getElementById('buscaMulta');
+            if (b) b.value = '';
+            renderAcoesPainel(_painel);
+            atualizarAvisoVisao();
+            filtrarMultas();
+            row = document.getElementById('mrow_' + id);
+        }
+        if (!row) { showToast('Multa não encontrada na lista', 'warning'); return; }
+
+        const det = row.closest('tr[id^="detM_"]');
+        if (det && det.style.display === 'none') toggleGrupoMulta(det.id.replace('detM_', ''));
+
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.style.transition = 'background .5s';
+        row.style.background = '#FEF3C7';
+        setTimeout(() => { row.style.background = '#fafbfc'; }, 2400);
     }
 
     // ==================== INTEGRAÇÃO eFROTAS (SERPRO) ====================
@@ -655,13 +1359,17 @@
             const d = await r.json();
             if (!r.ok || !d.success) { showToast(d.error || 'Falha ao sincronizar', 'error'); return; }
 
-            if (d.importadas > 0) {
-                let msg = `${d.importadas} multa(s) importada(s) de ${d.placas_consultadas} placas`;
+            const atualizadas = d.atualizadas || 0;
+            if (d.importadas > 0 || atualizadas > 0) {
+                const partes = [];
+                if (d.importadas > 0) partes.push(`${d.importadas} nova(s)`);
+                if (atualizadas > 0)  partes.push(`${atualizadas} atualizada(s) com prazos e notificações`);
+                let msg = `${partes.join(' · ')} — ${d.placas_consultadas} placas consultadas`;
                 if (d.urgentes > 0) msg += ` — ${d.urgentes} com prazo curto!`;
                 showToast(msg, d.urgentes > 0 ? 'warning' : 'success', 7000);
                 carregarMultas();
             } else {
-                showToast(`Nenhuma multa nova. ${d.placas_consultadas} placas consultadas.`, 'info');
+                showToast(`Nada mudou. ${d.placas_consultadas} placas consultadas.`, 'info');
             }
             if ((d.erros || []).length) {
                 console.warn('Placas com erro:', d.erros);
@@ -928,9 +1636,8 @@
 
     /* Filtra a lista nas multas cujo prazo de defesa está próximo */
     function filtrarPrazoCurto() {
-        const busca = document.getElementById('busca');
-        if (busca) { busca.value = 'PRAZO CURTO'; filtrar(); }
-        showToast('Mostrando multas com prazo de defesa curto', 'info');
+        if (_visaoAtiva !== 'prazo_critico') aplicarVisaoPainel('prazo_critico');
+        showToast('Mostrando as multas com prazo mais curto', 'info');
     }
 
 
@@ -1016,8 +1723,16 @@
         } catch { showToast('Erro ao enviar PDF', 'error'); }
     }
 
+    /* As rotinas do eFrotas chamam carregarMultas() — recarrega lista e painel */
+    function carregarMultas() {
+        carregarDados();
+        carregarPainel();
+    }
+
     window.addEventListener('load', () => {
         carregarDados();
+        carregarPainel();            // panorama no topo da tela
+        restaurarPainel();           // respeita se o usuario deixou recolhido
         carregarStatusSincronia();   // barra de status da integracao eFrotas
     });
 </script>
