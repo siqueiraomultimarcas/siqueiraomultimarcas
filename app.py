@@ -4274,6 +4274,93 @@ def sugerir_condutor_multa(multa_id):
     })
 
 
+@app.route('/api/multas/cobertura-frota')
+@login_required
+def cobertura_frota_efrotas():
+    """Compara a frota do sistema com os veiculos vinculados ao contrato eFrotas.
+
+    Serve para acompanhar quais placas ja entraram no contrato e quais ainda
+    nao podem ser consultadas — sem isso, a sincronizacao simplesmente ignora
+    a placa e o operador nao fica sabendo.
+    """
+    base, headers = _efrotas_cfg()
+    if base is None:
+        return jsonify({'success': False, 'error': headers}), 503
+
+    # 1. Veiculos vinculados ao contrato, no SERPRO
+    try:
+        resp = _efrotas_get('%s/consultas/v1/veiculos' % base, headers=headers,
+                            params={'pagina': 1, 'quantidade': 500}, timeout=60)
+    except requests.Timeout:
+        return jsonify({'success': False, 'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
+    except Exception as e:
+        app.logger.error('Erro em cobertura_frota_efrotas: %s', e)
+        return jsonify({'success': False, 'error': 'Falha ao conectar no eFrotas.'}), 502
+
+    if resp.status_code != 200:
+        return jsonify({'success': False, 'error': _efrotas_erro(resp)}), 502
+
+    try:
+        lista = resp.json()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Resposta invalida do eFrotas.'}), 502
+    if isinstance(lista, dict):
+        lista = lista.get('veiculos') or lista.get('content') or []
+
+    def _limpa(p):
+        return re.sub(r'[^A-Z0-9]', '', (p or '').upper())
+
+    no_contrato = {}
+    for v in lista:
+        if isinstance(v, dict) and v.get('placa'):
+            no_contrato[_limpa(v['placa'])] = {
+                'placa':   v.get('placa'),
+                'renavam': v.get('renavam'),
+                'modelo':  v.get('descricaoMarcaModelo'),
+            }
+
+    # 2. Frota cadastrada no sistema
+    with _db() as (conn, cur):
+        cur.execute('''SELECT id, placa, marca, modelo, status
+                       FROM veiculos WHERE placa IS NOT NULL
+                       ORDER BY placa''')
+        frota = rows_to_dict(cur)
+
+    cobertas, descobertas = [], []
+    for v in frota:
+        chave = _limpa(v['placa'])
+        item = {
+            'id':     v['id'],
+            'placa':  v['placa'],
+            'modelo': ('%s %s' % (v.get('marca') or '', v.get('modelo') or '')).strip(),
+            'status': v.get('status'),
+        }
+        if chave in no_contrato:
+            item['renavam'] = no_contrato[chave].get('renavam')
+            cobertas.append(item)
+        else:
+            descobertas.append(item)
+
+    # 3. No contrato mas ausentes do sistema (comprados/vendidos sem cadastrar)
+    chaves_sistema = {_limpa(v['placa']) for v in frota}
+    so_no_efrotas = [d for k, d in no_contrato.items() if k not in chaves_sistema]
+
+    total = len(frota)
+    return jsonify({
+        'success': True,
+        'resumo': {
+            'frota_sistema':     total,
+            'no_contrato':       len(cobertas),
+            'fora_do_contrato':  len(descobertas),
+            'so_no_efrotas':     len(so_no_efrotas),
+            'percentual':        round(len(cobertas) / total * 100, 1) if total else 0,
+        },
+        'cobertas':      cobertas,
+        'descobertas':   descobertas,
+        'so_no_efrotas': so_no_efrotas,
+    })
+
+
 _APIBRASIL_ESTADOS = ['MG','AL','PB','GO','MS','RR','PE','MA','TO','PA','PI','AM','SC','SE','PR']
 
 def _apibrasil_consultar_estado(url_base, token, estado, placa, renavam):

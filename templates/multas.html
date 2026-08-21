@@ -44,6 +44,38 @@
 .cp-vazio { text-align:center; padding:22px; border-radius:8px; font-size:.84rem; margin-top:8px; }
 .cp-vazio.ok   { background:#F0FDF4; color:#15803D; border:1px solid #bbf7d0; }
 .cp-vazio.erro { background:#FEF2F2; color:#B91C1C; border:1px solid #fecaca; }
+
+/* ── Cobertura da frota no contrato ── */
+.cf-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
+.cf-card  { background:#f8fafc; border:1px solid #e2e8f0; border-left:3px solid #cbd5e1;
+            border-radius:9px; padding:11px 13px; text-align:center; }
+.cf-card.ok     { border-left-color:#15803D; }
+.cf-card.alerta { border-left-color:#B91C1C; background:#FEF2F2; }
+.cf-num   { font-size:1.5rem; font-weight:800; color:#0f172a; line-height:1; }
+.cf-card.ok .cf-num     { color:#15803D; }
+.cf-card.alerta .cf-num { color:#B91C1C; }
+.cf-lbl   { font-size:.66rem; color:#64748b; text-transform:uppercase;
+            letter-spacing:.04em; margin-top:4px; }
+.cf-barra { height:7px; background:#e2e8f0; border-radius:4px; overflow:hidden; margin-bottom:4px; }
+.cf-barra-fill { height:100%; background:#15803D; border-radius:4px; transition:width .4s; }
+.cf-sec   { margin-top:14px; }
+.cf-sec-tit { font-size:.78rem; font-weight:700; color:#374151; margin-bottom:7px;
+              display:flex; align-items:center; gap:6px; }
+.cf-sec-tit.alerta { color:#B91C1C; }
+.cf-lista { border:1px solid #e2e8f0; border-radius:8px; max-height:190px; overflow-y:auto; }
+.cf-item  { display:grid; grid-template-columns:92px 1fr auto; gap:10px; align-items:center;
+            padding:7px 11px; border-bottom:1px solid #f1f5f9; font-size:.79rem; }
+.cf-item:last-child { border-bottom:none; }
+.cf-placa { font-family:monospace; font-weight:700; background:#1e293b; color:#f8fafc;
+            border-radius:4px; padding:2px 7px; font-size:.73rem; text-align:center; }
+.cf-modelo{ color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cf-tag   { font-size:.64rem; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+.cf-tag.ok    { background:#F0FDF4; color:#15803D; border:1px solid #bbf7d0; }
+.cf-tag.fora  { background:#FEF2F2; color:#B91C1C; border:1px solid #fecaca; }
+.cf-tag.extra { background:#FFFBEB; color:#A16207; border:1px solid #fde68a; }
+.cf-nota  { font-size:.71rem; color:#64748b; margin-top:7px; line-height:1.45; }
+.cf-det   { margin-top:14px; }
+.cf-det summary { font-size:.76rem; color:#008cdd; cursor:pointer; }
 </style>
 
 <style>
@@ -587,6 +619,11 @@
                 <span>${quando} · ${proxima}</span>
                 ${urgentes}
                 <div class="sinc-acoes">
+                    <button class="btn btn-sm" onclick="verCoberturaFrota()"
+                            style="background:#fff;border:1px solid #e2e8f0;color:#374151;"
+                            title="Quais placas o contrato ja alcanca">
+                        <i class="fas fa-list-check"></i> Cobertura da frota
+                    </button>
                     <button class="btn btn-sm" onclick="consultarPlaca()"
                             style="background:#fff;border:1px solid #e2e8f0;color:#374151;">
                         <i class="fas fa-magnifying-glass"></i> Consultar placa
@@ -760,6 +797,106 @@
             carregarStatusSincronia();
         } catch {
             showToast('Erro de conexão ao importar', 'error');
+        }
+    }
+
+    /* Cobertura da frota: quais placas o contrato eFrotas ja alcanca */
+    async function verCoberturaFrota() {
+        abrirModal('Cobertura da frota no contrato eFrotas', `
+            <div style="text-align:center;padding:34px;color:#94a3b8;">
+                <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;"></i>
+                <p style="margin-top:10px;font-size:.84rem;">Consultando o contrato no SERPRO...</p>
+            </div>`);
+        try {
+            const d = await fetch('/api/multas/cobertura-frota').then(r => r.json());
+            if (!d.success) {
+                document.querySelector('.modal-content .modal-body, #modalBody, .modal-content > div:last-child')
+                    ?.setAttribute('data-erro','1');
+                abrirModal('Cobertura da frota', `
+                    <div class="cp-vazio erro"><i class="fas fa-circle-xmark"></i> ${escHtml(d.error || 'Falha na consulta')}</div>
+                    <div style="text-align:right;margin-top:14px;">
+                        <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Fechar</button>
+                    </div>`);
+                return;
+            }
+            const r = d.resumo;
+
+            const linha = (v, tipo) => `
+                <div class="cf-item">
+                    <span class="cf-placa">${escHtml(v.placa)}</span>
+                    <span class="cf-modelo">${escHtml(v.modelo || '')}</span>
+                    ${tipo === 'fora'
+                        ? `<span class="cf-tag fora">não consulta</span>`
+                        : tipo === 'extra'
+                          ? `<span class="cf-tag extra">sem cadastro</span>`
+                          : `<span class="cf-tag ok">ativa</span>`}
+                </div>`;
+
+            abrirModal('Cobertura da frota no contrato eFrotas', `
+                <div class="cf-cards">
+                    <div class="cf-card ok">
+                        <div class="cf-num">${r.no_contrato}</div>
+                        <div class="cf-lbl">no contrato</div>
+                    </div>
+                    <div class="cf-card ${r.fora_do_contrato > 0 ? 'alerta' : ''}">
+                        <div class="cf-num">${r.fora_do_contrato}</div>
+                        <div class="cf-lbl">fora do contrato</div>
+                    </div>
+                    <div class="cf-card">
+                        <div class="cf-num">${r.percentual}%</div>
+                        <div class="cf-lbl">da frota coberta</div>
+                    </div>
+                </div>
+
+                <div class="cf-barra">
+                    <div class="cf-barra-fill" style="width:${r.percentual}%"></div>
+                </div>
+                <div style="font-size:.72rem;color:#94a3b8;margin-bottom:14px;">
+                    ${r.no_contrato} de ${r.frota_sistema} veículos podem ser consultados no SERPRO
+                </div>
+
+                ${r.fora_do_contrato > 0 ? `
+                <div class="cf-sec">
+                    <div class="cf-sec-tit alerta">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        Fora do contrato — multas destas placas não são detectadas
+                    </div>
+                    <div class="cf-lista">${d.descobertas.map(v => linha(v,'fora')).join('')}</div>
+                    <div class="cf-nota">
+                        Solicite a inclusão destas placas no contrato eFrotas junto ao SERPRO.
+                        Enquanto não entrarem, a consulta as ignora.
+                    </div>
+                </div>` : `
+                <div class="cp-vazio ok"><i class="fas fa-circle-check"></i>
+                    Toda a frota cadastrada está coberta pelo contrato.</div>`}
+
+                ${d.so_no_efrotas.length ? `
+                <div class="cf-sec">
+                    <div class="cf-sec-tit">
+                        <i class="fas fa-circle-info"></i>
+                        No contrato, mas sem cadastro no sistema
+                    </div>
+                    <div class="cf-lista">${d.so_no_efrotas.map(v => linha(v,'extra')).join('')}</div>
+                    <div class="cf-nota">
+                        Veículos que o SERPRO reconhece como seus. Se ainda são da frota,
+                        vale cadastrá-los — o cadastro puxa os dados oficiais pela placa.
+                    </div>
+                </div>` : ''}
+
+                <details class="cf-det">
+                    <summary>Ver as ${r.no_contrato} placas cobertas</summary>
+                    <div class="cf-lista" style="margin-top:8px;">${d.cobertas.map(v => linha(v,'ok')).join('')}</div>
+                </details>
+
+                <div style="text-align:right;margin-top:16px;">
+                    <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Fechar</button>
+                </div>`);
+        } catch {
+            abrirModal('Cobertura da frota', `
+                <div class="cp-vazio erro"><i class="fas fa-circle-xmark"></i> Erro de conexão</div>
+                <div style="text-align:right;margin-top:14px;">
+                    <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Fechar</button>
+                </div>`);
         }
     }
 
