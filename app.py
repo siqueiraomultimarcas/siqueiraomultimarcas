@@ -3753,10 +3753,10 @@ def baixar_pdf_efrotas():
 
     url = ('%s/consultas/sne/pdf/placa/%s/codigoOrgao/%s/numeroAit/%s/codigoInfracao/%s/%s'
            % (base, placa, orgao, ait, codinf, tipo))
-    pdf_headers = dict(headers)
-    pdf_headers['Accept'] = 'application/pdf'
+    # O SNE responde JSON com o arquivo em base64 — pedir application/pdf
+    # faz o servidor devolver 500.
     try:
-        resp = _efrotas_get(url, headers=pdf_headers, timeout=45)
+        resp = _efrotas_get(url, headers=headers, timeout=45)
     except requests.Timeout:
         return jsonify({'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
     except Exception as e:
@@ -4012,10 +4012,10 @@ def pdf_sne_multa(multa_id):
     url = ('%s/consultas/sne/pdf/placa/%s/codigoOrgao/%s/numeroAit/%s/codigoInfracao/%s/%s'
            % (base, placa_lim, orgao, auto, cod_inf, tipo))
 
-    pdf_headers = dict(headers)
-    pdf_headers['Accept'] = 'application/pdf'
+    # O SNE responde JSON com o arquivo em base64 — pedir application/pdf
+    # faz o servidor devolver 500.
     try:
-        resp = _efrotas_get(url, headers=pdf_headers, timeout=45)
+        resp = _efrotas_get(url, headers=headers, timeout=45)
     except requests.Timeout:
         return jsonify({'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
     except Exception as e:
@@ -4028,13 +4028,28 @@ def pdf_sne_multa(multa_id):
     if resp.status_code != 200:
         return jsonify({'error': _efrotas_erro(resp)}), 502
 
+    # O SNE devolve JSON com o arquivo em base64, nao o PDF binario
+    conteudo = resp.content
     nome = '%s_%s_%s.pdf' % (tipo, placa_lim, auto)
+    if not conteudo.startswith(b'%PDF'):
+        try:
+            envelope = resp.json()
+            b64 = envelope.get('base64') or ''
+            if not b64:
+                return jsonify({'error': 'O eFrotas nao retornou o arquivo da notificacao.'}), 502
+            import base64 as _b64
+            conteudo = _b64.b64decode(b64)
+            nome = envelope.get('filename') or nome
+        except ValueError:
+            return jsonify({'error': 'Resposta invalida do eFrotas ao baixar o PDF.'}), 502
+    if not conteudo.startswith(b'%PDF'):
+        return jsonify({'error': 'O conteudo recebido nao e um PDF valido.'}), 502
 
     # Opcional: arquiva no Cloudinary para nao depender da API depois
     if request.args.get('salvar') == '1':
         try:
             up = cloudinary.uploader.upload(
-                io.BytesIO(resp.content),
+                io.BytesIO(conteudo),
                 public_id='siqueirao/multas/sne_%s_%s' % (multa_id, tipo),
                 resource_type='raw', overwrite=True)
             with _db() as (conn, cur):
@@ -4043,7 +4058,7 @@ def pdf_sne_multa(multa_id):
         except Exception as e:
             app.logger.warning('[pdf-sne] falha ao arquivar no Cloudinary: %s', e)
 
-    return Response(resp.content, mimetype='application/pdf',
+    return Response(conteudo, mimetype='application/pdf',
                     headers={'Content-Disposition': 'inline; filename="%s"' % nome})
 
 

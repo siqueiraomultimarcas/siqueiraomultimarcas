@@ -295,6 +295,10 @@
                                     ${m.status === 'pendente'
                                         ? `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-check"></i> Dar Baixa</button>`
                                         : `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-undo"></i> Desmarcar</button>`}
+                                    ${m.numero_auto && m.codigo_orgao && m.codigo_infracao ? `
+                                    <button onclick="toggleActMenu(event,-1);baixarPdfSne(${m.id},'NA')"><i class="fas fa-file-arrow-down" style="color:#008cdd;"></i> Notificação de Autuação</button>
+                                    <button onclick="toggleActMenu(event,-1);baixarPdfSne(${m.id},'NP')"><i class="fas fa-file-arrow-down" style="color:#008cdd;"></i> Notificação de Penalidade</button>
+                                    <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>` : ''}
                                     <button onclick="toggleActMenu(event,-1);abrirUploadPdf(${m.id})"><i class="fas fa-file-pdf" style="color:#c73a2e;"></i> ${m.pdf_url ? 'Trocar PDF' : 'Importar PDF'}</button>
                                     <button class="danger" onclick="toggleActMenu(event,-1);confirmarExcluir(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
                                 </div>
@@ -797,6 +801,27 @@
             carregarStatusSincronia();
         } catch {
             showToast('Erro de conexão ao importar', 'error');
+        }
+    }
+
+    /* Baixa a notificacao do SNE. O SERPRO devolve o arquivo em base64;
+       o servidor decodifica e entrega o PDF. Com salvar=1 tambem arquiva. */
+    async function baixarPdfSne(multaId, tipo) {
+        const rotulo = tipo === 'NA' ? 'Notificação de Autuação' : 'Notificação de Penalidade';
+        showToast(`Buscando ${rotulo} no SERPRO...`, 'info', 2500);
+        try {
+            const r = await fetch(`/api/multas/${multaId}/pdf-sne?tipo=${tipo}&salvar=1`);
+            if (!r.ok) {
+                const d = await r.json().catch(() => ({}));
+                showToast(d.error || 'Não foi possível obter a notificação', 'error', 6000);
+                return;
+            }
+            const blob = await r.blob();
+            window.open(URL.createObjectURL(blob), '_blank');
+            showToast(`${rotulo} aberta e arquivada na multa`, 'success');
+            carregarMultas();
+        } catch {
+            showToast('Erro de conexão ao buscar o PDF', 'error');
         }
     }
 
