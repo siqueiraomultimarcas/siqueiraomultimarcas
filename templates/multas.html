@@ -102,6 +102,20 @@
     <i class="fas fa-spinner fa-spin"></i><span>Verificando integração eFrotas...</span>
 </div>
 
+<!-- Abas: o panorama e a lista disputavam a mesma tela; agora cada um tem a sua -->
+<div class="aba-barra" role="tablist">
+    <button type="button" class="aba-btn ativa" id="abaBtnDashboard" role="tab"
+            aria-selected="true" onclick="trocarAba('dashboard')">
+        <i class="fas fa-chart-pie"></i> Dashboard
+        <span class="aba-badge" id="abaBadgeAcao" style="display:none;"></span>
+    </button>
+    <button type="button" class="aba-btn" id="abaBtnLista" role="tab"
+            aria-selected="false" onclick="trocarAba('lista')">
+        <i class="fas fa-car-side"></i> Veículos com multas
+        <span class="aba-badge" id="abaBadgeLista">0</span>
+    </button>
+</div>
+
 <!-- ═══ Painel de multas ═══ -->
 <style>
 /* Escala de gravidade — do laranja claro ao vinho, seguindo a cor de ação */
@@ -275,6 +289,28 @@
 
 .pm-chart-wrap { position:relative; height:210px; }
 
+/* ── Abas: separam o panorama da lista, para nenhum dos dois empurrar o outro ── */
+.aba-barra {
+    display:flex; gap:4px; border-bottom:2px solid #e2e8f0; margin-bottom:18px;
+    overflow-x:auto;
+}
+.aba-btn {
+    display:flex; align-items:center; gap:8px; background:none; border:none;
+    border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer;
+    padding:11px 18px; font-size:.84rem; font-weight:600; color:#64748b;
+    white-space:nowrap; transition:color .15s, border-color .15s;
+    font-family:inherit;
+}
+.aba-btn:hover { color:#334155; }
+.aba-btn.ativa { color:#008cdd; border-bottom-color:#008cdd; }
+.aba-btn:focus-visible { outline:2px solid #008cdd; outline-offset:-2px; border-radius:4px; }
+.aba-badge {
+    background:#eef2f7; color:#475569; border-radius:20px; padding:1px 9px;
+    font-size:.7rem; font-weight:700; font-variant-numeric:tabular-nums;
+}
+.aba-btn.ativa .aba-badge { background:#e8f5ff; color:#015e94; }
+.aba-badge.alerta { background:#FEF2F2; color:#B91C1C; }
+
 /* Telas estreitas: a descricao da infracao precisa da largura toda, senao
    vira "TRANSITAR E..." e o ranking deixa de informar qualquer coisa. */
 @media (max-width:600px) {
@@ -292,6 +328,7 @@
 }
 </style>
 
+<div id="abaDashboard" role="tabpanel" aria-labelledby="abaBtnDashboard">
 <div id="painelMultas">
     <div class="pm-head">
         <h2>Panorama das multas</h2>
@@ -303,10 +340,6 @@
                 <option value="12" selected>Últimos 12 meses</option>
                 <option value="24">Últimos 24 meses</option>
             </select>
-            <button class="pm-toggle" onclick="togglePainel()">
-                <i class="fas fa-chevron-up" id="pmChevron"></i>
-                <span id="pmToggleTxt">Recolher</span>
-            </button>
         </div>
     </div>
 
@@ -360,8 +393,10 @@
         </div>
     </div>
 </div>
+</div><!-- /abaDashboard -->
 
 <!-- Tabela de Multas (com filtros no card-header) -->
+<div id="abaLista" role="tabpanel" aria-labelledby="abaBtnLista" style="display:none;">
 <div class="card">
     <div class="card-header">
         <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> Multas <span id="countMultasBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
@@ -404,6 +439,7 @@
         </table>
     </div>
 </div>
+</div><!-- /abaLista -->
 
 <input type="file" id="pdfUploadInput" accept=".pdf" style="display:none" onchange="executarUploadPdf(this)">
 
@@ -474,6 +510,8 @@
         document.getElementById('countMultasBadge').textContent = lista.length;
         const tbody = document.getElementById('tabelaMultas');
         if (lista.length === 0) {
+            const vazio = document.getElementById('abaBadgeLista');
+            if (vazio) { vazio.textContent = '0'; vazio.title = 'nenhum veiculo nesta visao'; }
             tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px 20px;">
 <i class="fas fa-file-invoice-dollar" style="font-size:2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
 <div style="font-weight:600;color:#64748b;margin-bottom:4px;">Nenhuma multa encontrada</div>
@@ -492,6 +530,15 @@
             };
             grupos[key].itens.push(m);
         });
+
+        // A aba se chama "Veiculos com multas", entao conta veiculos; o card
+        // interno continua contando multas. Numeros diferentes, ambos corretos.
+        const badgeAba = document.getElementById('abaBadgeLista');
+        if (badgeAba) {
+            const n = Object.keys(grupos).length;
+            badgeAba.textContent = n;
+            badgeAba.title = n + ' veiculo(s) com ' + lista.length + ' multa(s)';
+        }
 
         tbody.innerHTML = Object.values(grupos).map((g, idx) => {
             const gId = 'mg_' + idx;
@@ -878,6 +925,7 @@
         renderTopVeiculosPainel(p);
         renderTopClientesPainel(p);
         renderTopInfracoesPainel(p);
+        atualizarBadgeAcao(p);
     }
 
     /* ── Cards de ação: o que fazer hoje ── */
@@ -1205,20 +1253,54 @@
         }).join('');
     }
 
-    /* ── Recolher o painel (fica salvo entre visitas) ── */
-    function togglePainel() {
-        const corpo = document.getElementById('pmCorpo');
-        const oculto = corpo.style.display === 'none';
-        corpo.style.display = oculto ? '' : 'none';
-        document.getElementById('pmChevron').className = 'fas fa-chevron-' + (oculto ? 'up' : 'down');
-        document.getElementById('pmToggleTxt').textContent = oculto ? 'Recolher' : 'Expandir';
-        try { localStorage.setItem('pmRecolhido', oculto ? '0' : '1'); } catch {}
+    /* ── Abas ──────────────────────────────────────────────────────────────
+       O Chart.js mede o container ao desenhar: se o dashboard estiver escondido
+       nesse momento, o grafico nasce com 0x0. Por isso os graficos sao
+       redesenhados toda vez que a aba volta a aparecer. */
+    let _abaAtual = 'dashboard';
+
+    function trocarAba(qual) {
+        _abaAtual = qual;
+        const paines = { dashboard: 'abaDashboard', lista: 'abaLista' };
+        const botoes = { dashboard: 'abaBtnDashboard', lista: 'abaBtnLista' };
+
+        for (const chave in paines) {
+            const ativa = (chave === qual);
+            const painel = document.getElementById(paines[chave]);
+            const botao  = document.getElementById(botoes[chave]);
+            if (painel) painel.style.display = ativa ? '' : 'none';
+            if (botao) {
+                botao.classList.toggle('ativa', ativa);
+                botao.setAttribute('aria-selected', ativa ? 'true' : 'false');
+            }
+        }
+        try { localStorage.setItem('multasAba', qual); } catch {}
+
+        if (qual === 'dashboard' && _painel) {
+            renderEvolucaoPainel(_painel);
+            renderGravidadePainel(_painel);
+        }
     }
 
-    function restaurarPainel() {
-        let recolhido = false;
-        try { recolhido = localStorage.getItem('pmRecolhido') === '1'; } catch {}
-        if (recolhido) togglePainel();
+    function restaurarAba() {
+        let salva = 'dashboard';
+        try { salva = localStorage.getItem('multasAba') || 'dashboard'; } catch {}
+        trocarAba(salva === 'lista' ? 'lista' : 'dashboard');
+    }
+
+    /* Chama atencao na aba do dashboard quando ha algo vencendo */
+    function atualizarBadgeAcao(p) {
+        const b = document.getElementById('abaBadgeAcao');
+        if (!b) return;
+        const urgentes = p.acoes.prazo_critico.qtd + p.acoes.a_vincular.qtd;
+        if (urgentes > 0) {
+            b.style.display = '';
+            b.className = 'aba-badge alerta';
+            b.textContent = urgentes;
+            b.title = urgentes + ' multa(s) exigindo ação';
+        } else {
+            b.style.display = 'none';
+        }
     }
 
     /* ── Card clicado filtra a tabela pelos mesmos IDs que ele conta ── */
@@ -1233,8 +1315,7 @@
         renderAcoesPainel(_painel);
         atualizarAvisoVisao();
         filtrarMultas();
-        document.getElementById('tabelaMultas')
-            ?.closest('.card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (_visaoAtiva) trocarAba('lista');      // o resultado esta na lista
     }
 
     const _ROTULO_VISAO = {
@@ -1261,6 +1342,7 @@
 
     /* ── Abre a multa na lista, expandindo o grupo do veículo ── */
     function focarMulta(id) {
+        trocarAba('lista');
         let row = document.getElementById('mrow_' + id);
         if (!row) {                       // pode estar escondida por um filtro ativo
             _visaoAtiva = null; _visaoIds = null;
@@ -1730,9 +1812,9 @@
     }
 
     window.addEventListener('load', () => {
+        restaurarAba();              // volta na aba em que o usuario estava
         carregarDados();
-        carregarPainel();            // panorama no topo da tela
-        restaurarPainel();           // respeita se o usuario deixou recolhido
+        carregarPainel();            // panorama da aba Dashboard
         carregarStatusSincronia();   // barra de status da integracao eFrotas
     });
 </script>
