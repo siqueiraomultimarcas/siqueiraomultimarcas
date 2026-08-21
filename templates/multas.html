@@ -4,6 +4,49 @@
 
 {% block content %}
 <style>
+/* ── Barra de status da sincronizacao com o eFrotas ── */
+.sinc-barra {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:#f0f9ff; border:1px solid #b1dcfb; border-radius:10px;
+    padding:10px 14px; margin-bottom:16px; font-size:.82rem; color:#015e94;
+}
+.sinc-barra.pendente { background:#FFFBEB; border-color:#fde68a; color:#A16207; }
+.sinc-barra.off      { background:#f8fafc; border-color:#e2e8f0; color:#64748b; }
+.sinc-acoes { margin-left:auto; display:flex; gap:8px; }
+.sinc-alerta {
+    background:#FEF2F2; color:#B91C1C; border:1px solid #fecaca; border-radius:20px;
+    padding:2px 10px; font-size:.74rem; font-weight:700; cursor:pointer;
+}
+.sinc-alerta:hover { background:#fee2e2; }
+
+/* ── Resultado da consulta por placa ── */
+.cp-resumo {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:9px 12px; background:#f8fafc; border-radius:8px;
+    font-size:.8rem; color:#374151; margin-bottom:8px;
+}
+.cp-novas { background:#008cdd; color:#fff; border-radius:20px; padding:2px 10px;
+            font-size:.72rem; font-weight:700; }
+.cp-lista { max-height:340px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; }
+.cp-item {
+    display:grid; grid-template-columns:28px 1fr auto; gap:10px; align-items:center;
+    padding:10px 12px; border-bottom:1px solid #f1f5f9;
+}
+.cp-item:last-child { border-bottom:none; }
+.cp-item.ja { background:#fafafa; opacity:.75; }
+.cp-desc  { font-size:.82rem; font-weight:600; color:#0f172a; line-height:1.3; }
+.cp-meta  { font-size:.71rem; color:#94a3b8; margin-top:2px; }
+.cp-pts   { background:#eef2f7; color:#475569; border-radius:4px; padding:1px 6px;
+            margin-left:6px; font-weight:600; }
+.cp-cond  { font-size:.72rem; color:#015e94; margin-top:3px; }
+.cp-ja    { font-size:.7rem; color:#15803D; margin-top:2px; font-weight:600; }
+.cp-valor { font-size:.88rem; font-weight:700; color:#B91C1C; font-variant-numeric:tabular-nums; }
+.cp-vazio { text-align:center; padding:22px; border-radius:8px; font-size:.84rem; margin-top:8px; }
+.cp-vazio.ok   { background:#F0FDF4; color:#15803D; border:1px solid #bbf7d0; }
+.cp-vazio.erro { background:#FEF2F2; color:#B91C1C; border:1px solid #fecaca; }
+</style>
+
+<style>
 .grupo-multa-row td { transition: background .12s; }
 .grupo-multa-row:hover td { background: #f1f5f9; }
 </style>
@@ -19,10 +62,12 @@
         <button class="btn" onclick="abrirModalMulta(null, 'nic')" style="margin-left:8px;background:#015e94;color:#fff;">
             <i class="fas fa-plus"></i> Nova NIC
         </button>
-        <button class="btn btn-info" onclick="abrirModalBuscarMultas()" style="margin-left: 8px;">
-            <i class="fas fa-satellite-dish"></i> Consultar SERPRO
-        </button>
     </div>
+</div>
+
+<!-- Status da integracao com o eFrotas -->
+<div id="barraSincronia" class="sinc-barra">
+    <i class="fas fa-spinner fa-spin"></i><span>Verificando integração eFrotas...</span>
 </div>
 
 <!-- Stats -->
@@ -501,186 +546,231 @@
         }
     }
 
-    // ==================== CONSULTA SERPRO ====================
+    // ==================== INTEGRAÇÃO eFROTAS (SERPRO) ====================
 
-    function abrirModalBuscarMultas() {
-        let optionsVeiculos = '<option value="">Selecione o veículo</option>';
-        veiculos.forEach(v => {
-            const renavam = v.renavam ? ` (RENAVAM: ${v.renavam})` : '';
-            optionsVeiculos += `<option value="${v.id}" data-placa="${v.placa}" data-renavam="${v.renavam || ''}">${v.placa} - ${v.marca} ${v.modelo}${renavam}</option>`;
-        });
+    /* Barra de status: última sincronização, próxima e multas com prazo curto */
+    async function carregarStatusSincronia() {
+        const box = document.getElementById('barraSincronia');
+        if (!box) return;
+        try {
+            const d = await fetch('/api/multas/status-sincronia').then(r => r.json());
 
-        const content = `
-            <div style="padding: 8px 0;">
-                <div style="background:#e8f5ff;border:1px solid #b1dcfb;border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px">
-                    <i class="fas fa-info-circle" style="color:#008cdd;margin-top:2px"></i>
-                    <div style="font-size:13px;color:#015e94">
-                        Consulta realizada via <strong>API SERPRO / SENATRAN</strong>. Requer credenciais configuradas no servidor
-                        (<code>SERPRO_CONSUMER_KEY</code> e <code>SERPRO_CONSUMER_SECRET</code>).
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Selecione o Veículo *</label>
-                    <select class="form-control" id="veiculoParaBuscar" onchange="preencherDadosVeiculo(this)">
-                        ${optionsVeiculos}
-                    </select>
+            if (!d.configurado) {
+                box.className = 'sinc-barra off';
+                box.innerHTML = `<i class="fas fa-plug-circle-xmark"></i>
+                    <span>Integração eFrotas não configurada — defina o certificado no servidor.</span>`;
+                return;
+            }
+
+            const dias = d.dias_desde_ultima;
+            const nunca = dias === null || dias === undefined;
+            const atrasado = !nunca && d.proxima_em_dias === 0;
+
+            let quando;
+            if (nunca)        quando = 'Nunca sincronizado';
+            else if (dias === 0) quando = 'Sincronizado hoje';
+            else              quando = `Última sincronização há ${dias} dia${dias > 1 ? 's' : ''}`;
+
+            const proxima = nunca || atrasado
+                ? '<strong style="color:#A16207;">sincronização pendente</strong>'
+                : `próxima em ${d.proxima_em_dias} dia${d.proxima_em_dias > 1 ? 's' : ''}`;
+
+            const urgentes = d.multas_prazo_curto > 0
+                ? `<span class="sinc-alerta" onclick="filtrarPrazoCurto()" title="Ver multas com prazo curto">
+                     <i class="fas fa-triangle-exclamation"></i>
+                     ${d.multas_prazo_curto} com prazo curto
+                   </span>` : '';
+
+            box.className = 'sinc-barra' + (nunca || atrasado ? ' pendente' : '');
+            box.innerHTML = `
+                <i class="fas fa-satellite-dish"></i>
+                <span>${quando} · ${proxima}</span>
+                ${urgentes}
+                <div class="sinc-acoes">
+                    <button class="btn btn-sm" onclick="consultarPlaca()"
+                            style="background:#fff;border:1px solid #e2e8f0;color:#374151;">
+                        <i class="fas fa-magnifying-glass"></i> Consultar placa
+                    </button>
+                    <button class="btn btn-sm" id="btnSincAgora" onclick="sincronizarAgora()"
+                            style="background:#008cdd;color:#fff;">
+                        <i class="fas fa-rotate"></i> Sincronizar agora
+                    </button>
+                </div>`;
+        } catch {
+            box.className = 'sinc-barra off';
+            box.innerHTML = '<i class="fas fa-plug-circle-xmark"></i><span>Não foi possível ler o status da sincronização.</span>';
+        }
+    }
+
+    /* Varre a frota inteira e importa as multas novas */
+    async function sincronizarAgora() {
+        const btn = document.getElementById('btnSincAgora');
+        const orig = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando frota...'; }
+        try {
+            const r = await fetch('/api/multas/sincronizar-frota', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({forcar: true})
+            });
+            const d = await r.json();
+            if (!r.ok || !d.success) { showToast(d.error || 'Falha ao sincronizar', 'error'); return; }
+
+            if (d.importadas > 0) {
+                let msg = `${d.importadas} multa(s) importada(s) de ${d.placas_consultadas} placas`;
+                if (d.urgentes > 0) msg += ` — ${d.urgentes} com prazo curto!`;
+                showToast(msg, d.urgentes > 0 ? 'warning' : 'success', 7000);
+                carregarMultas();
+            } else {
+                showToast(`Nenhuma multa nova. ${d.placas_consultadas} placas consultadas.`, 'info');
+            }
+            if ((d.erros || []).length) {
+                console.warn('Placas com erro:', d.erros);
+                showToast(`${d.erros.length} placa(s) não puderam ser consultadas — veja o console.`, 'warning', 6000);
+            }
+            carregarStatusSincronia();
+        } catch {
+            showToast('Erro de conexão ao sincronizar', 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+        }
+    }
+
+    /* Consulta pontual de uma placa, sem importar nada */
+    function consultarPlaca() {
+        let opts = '<option value="">Selecione o veículo</option>';
+        veiculos.forEach(v => { opts += `<option value="${escHtml(v.placa)}">${escHtml(v.placa)} — ${escHtml(v.marca)} ${escHtml(v.modelo)}</option>`; });
+
+        abrirModal('Consultar multas no eFrotas', `
+            <div style="padding:4px 0;">
+                <div style="background:#e8f5ff;border:1px solid #b1dcfb;border-radius:8px;padding:11px 14px;
+                            margin-bottom:16px;font-size:.8rem;color:#015e94;">
+                    <i class="fas fa-circle-info"></i>
+                    Consulta direta no SERPRO. Só mostra o resultado — você escolhe o que importar.
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
-                        <label>Placa</label>
-                        <input type="text" class="form-control" id="placaParaBuscar" placeholder="ABC1234" style="text-transform:uppercase">
+                        <label>Veículo</label>
+                        <select class="form-control" id="cpVeiculo"
+                                onchange="document.getElementById('cpPlaca').value=this.value">${opts}</select>
                     </div>
                     <div class="form-group">
-                        <label>RENAVAM <span style="color:#6b7280;font-size:12px">(opcional)</span></label>
-                        <input type="text" class="form-control" id="renavamParaBuscar" placeholder="Ex: 00123456789">
+                        <label>Placa</label>
+                        <input type="text" class="form-control" id="cpPlaca" placeholder="ABC1D23"
+                               style="text-transform:uppercase;">
                     </div>
                 </div>
-                <div id="resultadoSerpro"></div>
-                <div style="text-align:right;margin-top:20px">
-                    <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;margin-right:8px">Cancelar</button>
-                    <button class="btn btn-info" onclick="buscarMultasSerpro()" id="btnBuscar">
-                        <i class="fas fa-satellite-dish"></i> Consultar SERPRO
+                <div id="cpResultado" style="margin-top:6px;"></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+                    <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Fechar</button>
+                    <button class="btn btn-primary" id="btnCP" onclick="executarConsultaPlaca()">
+                        <i class="fas fa-magnifying-glass"></i> Consultar
                     </button>
                 </div>
-            </div>
-        `;
-        abrirModal('Consultar Multas — SERPRO', content);
+            </div>`);
     }
 
-    function preencherDadosVeiculo(select) {
-        const opt = select.options[select.selectedIndex];
-        const placa = opt.getAttribute('data-placa') || '';
-        const renavam = opt.getAttribute('data-renavam') || '';
-        document.getElementById('placaParaBuscar').value = placa;
-        document.getElementById('renavamParaBuscar').value = renavam;
-    }
+    let _cpInfracoes = [], _cpPlaca = '';
 
-    async function buscarMultasSerpro() {
-        const placa = document.getElementById('placaParaBuscar').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const renavam = document.getElementById('renavamParaBuscar').value.trim();
-
-        if (!placa) {
-            showToast('Selecione um veículo ou informe a placa', 'warning');
-            return;
-        }
-
-        const btn = document.getElementById('btnBuscar');
-        const resultado = document.getElementById('resultadoSerpro');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
-        resultado.innerHTML = '';
-
+    async function executarConsultaPlaca() {
+        const placa = (document.getElementById('cpPlaca').value || '').trim().toUpperCase();
+        if (!placa) { showToast('Informe a placa', 'warning'); return; }
+        const btn = document.getElementById('btnCP');
+        const area = document.getElementById('cpResultado');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
+        area.innerHTML = '';
         try {
-            const response = await fetch('/api/buscar-multas', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ placa, renavam })
+            const r = await fetch('/api/multas/consultar-efrotas', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({placa})
             });
-
-            const data = await response.json();
-
-            if (response.status === 503) {
-                resultado.innerHTML = `
-                    <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:16px;margin-top:16px">
-                        <strong><i class="fas fa-key"></i> Credenciais não configuradas</strong>
-                        <p style="margin:8px 0 0 0;font-size:13px;color:#713f12">${data.error}</p>
-                        <p style="margin:6px 0 0 0;font-size:12px;color:#7a6000">
-                            Adicione as chaves no arquivo <code>.env</code> do servidor e reinicie a aplicação.
-                        </p>
-                    </div>`;
+            const d = await r.json();
+            if (!r.ok || !d.success) {
+                area.innerHTML = `<div class="cp-vazio erro"><i class="fas fa-circle-xmark"></i> ${escHtml(d.error || 'Falha na consulta')}</div>`;
                 return;
             }
-
-            if (!data.success) {
-                resultado.innerHTML = `
-                    <div style="background:#fde8e7;border:1px solid #fca5a5;border-radius:8px;padding:16px;margin-top:16px">
-                        <strong><i class="fas fa-times-circle" style="color:#c73a2e"></i> Erro na consulta</strong>
-                        <p style="margin:8px 0 0 0;font-size:13px;color:#8c1a14">${data.error}</p>
-                    </div>`;
+            _cpInfracoes = d.infracoes || []; _cpPlaca = d.placa;
+            if (!_cpInfracoes.length) {
+                area.innerHTML = `<div class="cp-vazio ok"><i class="fas fa-circle-check"></i> Nenhuma infração encontrada para ${escHtml(d.placa)}.</div>`;
                 return;
             }
-
-            const infracoes = data.infracoes || [];
-            if (infracoes.length === 0) {
-                resultado.innerHTML = `
-                    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;margin-top:16px;text-align:center">
-                        <i class="fas fa-check-circle" style="font-size:32px;color:#16a34a;margin-bottom:8px"></i>
-                        <p style="font-weight:600;color:#15803d">Nenhuma infração encontrada!</p>
-                        <p style="font-size:13px;color:#166534">Placa <strong>${placa}</strong> não possui multas registradas no SENATRAN.</p>
-                    </div>`;
-                return;
-            }
-
-            let html = `
-                <div style="margin-top:16px">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                        <strong style="color:#c73a2e"><i class="fas fa-exclamation-triangle"></i> ${infracoes.length} infração(ões) encontrada(s) — Placa: ${placa}</strong>
-                    </div>
-                    <div style="max-height:300px;overflow-y:auto">`;
-
-            infracoes.forEach((inf, i) => {
-                const valor = inf.valor ? formatCurrency(parseFloat(inf.valor)) : '-';
-                const data_inf = inf.data_infracao || inf.dataInfracao || '-';
-                const descricao = inf.descricao || inf.enquadramento || inf.tipo || 'Infração de trânsito';
-                const local = inf.local || inf.municipio || '-';
-                const pontos = inf.pontos || inf.quantidadePontos || '-';
-                html += `
-                    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#fff">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                            <div>
-                                <strong style="font-size:14px">${descricao}</strong>
-                                <p style="margin:4px 0 0 0;font-size:12px;color:#6b7280">
-                                    <i class="fas fa-calendar"></i> ${data_inf} &nbsp;
-                                    <i class="fas fa-map-marker-alt"></i> ${local} &nbsp;
-                                    <i class="fas fa-exclamation"></i> ${pontos} pts
-                                </p>
-                            </div>
-                            <div style="text-align:right">
-                                <strong style="color:#c73a2e;font-size:16px">${valor}</strong>
-                                <br>
-                                <button class="btn btn-sm btn-primary" style="margin-top:6px;font-size:11px"
-                                    onclick="importarInfracao(${JSON.stringify(inf).replace(/"/g, '&quot;')})">
-                                    <i class="fas fa-plus"></i> Importar
-                                </button>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-
-            html += '</div></div>';
-            resultado.innerHTML = html;
-
-        } catch (error) {
-            resultado.innerHTML = `
-                <div style="background:#fde8e7;border:1px solid #fca5a5;border-radius:8px;padding:16px;margin-top:16px">
-                    <strong><i class="fas fa-times-circle" style="color:#c73a2e"></i> Erro de conexão</strong>
-                    <p style="margin:8px 0 0 0;font-size:13px;color:#8c1a14">${error.message}</p>
-                </div>`;
+            area.innerHTML = renderResultadoConsulta(d);
+        } catch {
+            area.innerHTML = '<div class="cp-vazio erro"><i class="fas fa-circle-xmark"></i> Erro de conexão</div>';
         } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-satellite-dish"></i> Consultar SERPRO';
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-magnifying-glass"></i> Consultar';
         }
     }
 
-    function importarInfracao(inf) {
-        const placa = document.getElementById('placaParaBuscar').value.trim().toUpperCase();
-        const veiculo = veiculos.find(v => v.placa.replace(/[^A-Z0-9]/gi, '').toUpperCase() === placa.replace(/[^A-Z0-9]/gi, '').toUpperCase());
+    function renderResultadoConsulta(d) {
+        const linhas = d.infracoes.map((i, idx) => {
+            const cond = i.condutor_sugerido;
+            const pts = i.pontos !== null && i.pontos !== undefined
+                ? `<span class="cp-pts">${i.gravidade_ctb || ''} · ${i.pontos} pt</span>` : '';
+            return `
+            <div class="cp-item ${i.ja_cadastrada ? 'ja' : ''}">
+                <div style="display:flex;align-items:center;">
+                    ${i.ja_cadastrada
+                        ? '<i class="fas fa-check" style="color:#15803D;" title="Já cadastrada"></i>'
+                        : `<input type="checkbox" class="cp-chk" data-idx="${idx}" checked>`}
+                </div>
+                <div style="min-width:0;">
+                    <div class="cp-desc">${escHtml(i.descricao || '')}</div>
+                    <div class="cp-meta">
+                        AIT ${escHtml(i.numero_auto || '')} ·
+                        ${i.data_infracao ? formatDate(i.data_infracao) : 'sem data'}
+                        ${i.hora_infracao ? ' ' + escHtml(i.hora_infracao.slice(0,5)) : ''}
+                        ${pts}
+                    </div>
+                    ${cond ? `<div class="cp-cond"><i class="fas fa-user"></i>
+                        Sugestão: <strong>${escHtml(cond.nome)}</strong> (${escHtml(cond.periodo)})</div>` : ''}
+                    ${i.ja_cadastrada ? '<div class="cp-ja">já cadastrada no sistema</div>' : ''}
+                </div>
+                <div class="cp-valor">${formatCurrency(i.valor)}</div>
+            </div>`;
+        }).join('');
 
-        fecharModal();
-
-        const multaImportada = {
-            veiculo_id: veiculo ? veiculo.id : null,
-            data_infracao: inf.data_infracao || inf.dataInfracao || '',
-            descricao: inf.descricao || inf.enquadramento || inf.tipo || '',
-            local_infracao: inf.local || inf.municipio || '',
-            valor: inf.valor || '',
-            pontos: inf.pontos || inf.quantidadePontos || '',
-            status: 'pendente'
-        };
-
-        abrirModalMulta(multaImportada);
-        showToast('Infração importada — revise os dados e salve', 'info');
+        return `
+            <div class="cp-resumo">
+                <span><strong>${d.total}</strong> infração(ões) em ${escHtml(d.placa)}</span>
+                <span class="cp-novas">${d.novas} nova(s)</span>
+            </div>
+            <div class="cp-lista">${linhas}</div>
+            ${d.novas > 0 ? `
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="importarSelecionadas()">
+                <i class="fas fa-file-import"></i> Importar selecionadas
+            </button>` : ''}`;
     }
+
+    async function importarSelecionadas() {
+        const marcados = [...document.querySelectorAll('.cp-chk:checked')].map(c => _cpInfracoes[+c.dataset.idx]);
+        if (!marcados.length) { showToast('Selecione ao menos uma infração', 'warning'); return; }
+        try {
+            const r = await fetch('/api/multas/importar-efrotas', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({placa: _cpPlaca, infracoes: marcados})
+            });
+            const d = await r.json();
+            if (!r.ok) { showToast(d.error || 'Falha ao importar', 'error'); return; }
+            fecharModal();
+            let msg = `${d.importadas} multa(s) importada(s)`;
+            if (d.ignoradas) msg += ` · ${d.ignoradas} já existia(m)`;
+            if (d.urgentes)  msg += ` · ${d.urgentes} com prazo curto!`;
+            showToast(msg, d.urgentes ? 'warning' : 'success', 6000);
+            carregarMultas();
+            carregarStatusSincronia();
+        } catch {
+            showToast('Erro de conexão ao importar', 'error');
+        }
+    }
+
+    /* Filtra a lista nas multas cujo prazo de defesa está próximo */
+    function filtrarPrazoCurto() {
+        const busca = document.getElementById('busca');
+        if (busca) { busca.value = 'PRAZO CURTO'; filtrar(); }
+        showToast('Mostrando multas com prazo de defesa curto', 'info');
+    }
+
+
 
     async function importarPdfMulta(input) {
         if (!input.files[0]) return;
@@ -763,6 +853,9 @@
         } catch { showToast('Erro ao enviar PDF', 'error'); }
     }
 
-    window.addEventListener('load', carregarDados);
+    window.addEventListener('load', () => {
+        carregarDados();
+        carregarStatusSincronia();   // barra de status da integracao eFrotas
+    });
 </script>
 {% endblock %}
