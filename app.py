@@ -3434,13 +3434,14 @@ def buscar_multas_online():
 #   Authorization:  Bearer <JWT>
 #   x-token-client: <apiKey>
 #
-# Ambiente (EFROTAS_BASE_URL):
-#   homologação — https://hom-efrotas.np.estaleiro.serpro.gov.br
-#   produção    — conforme contrato com o SERPRO
+# Ambiente (EFROTAS_BASE_URL) — atencao ao prefixo, que difere entre eles:
+#   producao    — https://efrotas.estaleiro.serpro.gov.br/efrotas/api
+#   homologacao — https://hom-efrotas.np.estaleiro.serpro.gov.br
+# Sem o /efrotas/api em producao o gateway devolve 403 antes de chegar na API.
 #
 # A API exige datas no formato AAAA-MM-DD.
 
-EFROTAS_BASE_PADRAO = 'https://efrotas.estaleiro.serpro.gov.br'
+EFROTAS_BASE_PADRAO = 'https://efrotas.estaleiro.serpro.gov.br/efrotas/api'
 
 
 # ── Certificado digital (mTLS) do eFrotas ────────────────────────────────────
