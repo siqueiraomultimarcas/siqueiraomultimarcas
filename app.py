@@ -3567,13 +3567,71 @@ def _efrotas_erro(resp):
         return 'eFrotas retornou %s' % resp.status_code
 
 
+# ── Gravidade e pontuacao da infracao ────────────────────────────────────────
+# O eFrotas devolve o valor da multa, mas nao a gravidade nem os pontos.
+# Como o CTB fixa um valor por gravidade, da para deduzir com seguranca:
+#
+#   Leve ........ R$  88,38 .... 3 pontos
+#   Media ....... R$ 130,16 .... 4 pontos
+#   Grave ....... R$ 195,23 .... 5 pontos
+#   Gravissima .. R$ 293,47 .... 7 pontos
+#
+# Multiplicadores (x2, x3, x5, x10, x20 e x60) existem em varias infracoes
+# gravissimas, entao o valor e dividido pelos fatores usuais antes de comparar.
+#
+# ATENCAO: quando a multa esta no CNPJ sem condutor indicado, os pontos NAO
+# vao para CNH nenhuma — a empresa paga a NIC (multa por nao identificacao) em
+# vez de pontuar alguem. Por isso a pontuacao aqui e potencial, e so se
+# concretiza na CNH de quem for indicado.
+
+TABELA_CTB = [
+    (88.38,  'Leve',       3),
+    (130.16, 'Media',      4),
+    (195.23, 'Grave',      5),
+    (293.47, 'Gravissima', 7),
+]
+FATORES_CTB = (1, 2, 3, 5, 10, 20, 60)
+
+
+def _gravidade_e_pontos(valor, descricao=''):
+    """Deduz (gravidade, pontos, fator) a partir do valor da infracao.
+
+    Devolve (None, None, None) quando o valor nao corresponde a nenhuma
+    combinacao conhecida — melhor deixar em branco do que registrar errado.
+    """
+    try:
+        v = round(float(valor or 0), 2)
+    except (TypeError, ValueError):
+        return None, None, None
+    if v <= 0:
+        return None, None, None
+
+    # NIC/NAO IDENTIFICACAO nao pontua: e penalidade administrativa da empresa
+    if 'NAO IDENTIFICACAO' in (descricao or '').upper():
+        return 'Nao pontua (NIC)', 0, None
+
+    for fator in FATORES_CTB:
+        for base, nome, pontos in TABELA_CTB:
+            if abs(v - round(base * fator, 2)) <= 0.05:
+                return nome, pontos, (fator if fator > 1 else None)
+    return None, None, None
+
+
 def _efrotas_map_infracao(i):
     """Converte o InfracaoDTO do SERPRO para os campos usados na tela de multas."""
     def _d(v):
         return str(v)[:10] if v else None
     local = ' — '.join(p for p in [i.get('localAutuacao'),
                                    i.get('descricaoMunicipioAutuacao')] if p)
+    grav, pontos, fator = _gravidade_e_pontos(i.get('valorIntegralInfracao'),
+                                              i.get('descricaoInfracao'))
     return {
+        'data_infracao':      _d(i.get('dataAutuacao')),
+        'hora_infracao':      i.get('horaAutuacao'),
+        'gravidade_ctb':      grav,
+        'pontos':             pontos,
+        'fator_multiplicador': fator,
+        'renainf':            str(i.get('renainf')) if i.get('renainf') else None,
         'numero_auto':        i.get('numeroAutoInfracao'),
         'codigo_infracao':    i.get('codigoInfracao'),
         'codigo_orgao':       i.get('codigoOrgaoAutuador'),
@@ -3648,6 +3706,16 @@ def consultar_multas_efrotas():
             ja_cadastradas = {r[0] for r in cur.fetchall()}
     for i in infracoes:
         i['ja_cadastrada'] = i.get('numero_auto') in ja_cadastradas
+
+    # Sugere quem estava com o veiculo em cada data — apenas informativo
+    with _db() as (conn, cur):
+        cur.execute('''SELECT id FROM veiculos
+                       WHERE UPPER(REGEXP_REPLACE(placa, %s, %s, %s)) = %s''',
+                    (r'[^A-Za-z0-9]', '', 'g', placa))
+        vrow = cur.fetchone()
+        if vrow:
+            for i in infracoes:
+                i['condutor_sugerido'] = _sugerir_condutor(cur, vrow[0], i.get('data_infracao'))
 
     return jsonify({
         'success':   True,
@@ -4145,6 +4213,64 @@ def consultar_veiculo_efrotas(placa):
         },
         'alertas': alertas,
         'proprietario': (d.get('proprietario') or {}).get('numeroDocumento'),
+    })
+
+
+def _sugerir_condutor(cur, veiculo_id, data_infracao):
+    """Quem estava com o veiculo na data da infracao, segundo as locacoes.
+
+    Apenas SUGERE — nao vincula nem indica nada. A decisao continua do operador.
+    Devolve None quando nao ha locacao cobrindo a data.
+    """
+    if not veiculo_id or not data_infracao:
+        return None
+    cur.execute('''
+        SELECT l.id, c.id, c.nome, c.cpf, COALESCE(c.telefone,''), COALESCE(c.cnh,''),
+               l.data_inicio, COALESCE(l.data_devolucao_real, l.data_fim) AS fim
+        FROM locacoes l
+        JOIN clientes c ON c.id = l.cliente_id
+        WHERE l.veiculo_id = %s
+          AND l.data_inicio <= %s
+          AND (COALESCE(l.data_devolucao_real, l.data_fim) IS NULL
+               OR COALESCE(l.data_devolucao_real, l.data_fim) >= %s)
+        ORDER BY l.data_inicio DESC
+        LIMIT 1
+    ''', (veiculo_id, data_infracao, data_infracao))
+    r = cur.fetchone()
+    if not r:
+        return None
+    return {
+        'locacao_id':  r[0],
+        'cliente_id':  r[1],
+        'nome':        r[2],
+        'cpf':         r[3],
+        'telefone':    r[4],
+        'cnh':         r[5],
+        'periodo':     '%s a %s' % (r[6], r[7] or 'em aberto'),
+        'observacao':  'Locacao ativa na data da infracao — confira antes de indicar.',
+    }
+
+
+@app.route('/api/multas/<int:multa_id>/sugerir-condutor')
+@login_required
+def sugerir_condutor_multa(multa_id):
+    """Sugere o condutor de uma multa ja cadastrada, pela locacao da data."""
+    with _db() as (conn, cur):
+        cur.execute('''SELECT veiculo_id, data_infracao, motorista_id
+                       FROM multas WHERE id = %s''', (multa_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Multa nao encontrada'}), 404
+        veiculo_id, data_inf, motorista_id = row
+        if not data_inf:
+            return jsonify({'sugestao': None,
+                            'motivo': 'Multa sem data de infracao registrada'})
+        sug = _sugerir_condutor(cur, veiculo_id, data_inf)
+
+    return jsonify({
+        'sugestao': sug,
+        'ja_tem_motorista': motorista_id is not None,
+        'motivo': None if sug else 'Nenhuma locacao cobre a data da infracao (%s)' % data_inf,
     })
 
 
