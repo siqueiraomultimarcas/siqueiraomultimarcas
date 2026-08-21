@@ -11,12 +11,12 @@
         margin-bottom: 22px;
     }
     .dash-greeting h2 {
-        font-size: 1.18rem;
+        font-size: 1.25rem;
         font-weight: 700;
         color: #0f172a;
         margin-bottom: 2px;
     }
-    .dash-greeting p { font-size: .78rem; color: #94a3b8; }
+    .dash-greeting p { font-size: 0.8rem; color: #94a3b8; }
     .dash-header-right { display: flex; align-items: center; gap: 8px; }
     .online-pill {
         display: inline-flex;
@@ -84,18 +84,18 @@
         transition: box-shadow .2s, transform .2s;
     }
     .qa-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); }
-    .qa-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+    .qa-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; flex-shrink: 0; }
     .qa-icon.blue   { background: #e8f5ff; color: #015E94; }
     .qa-icon.green  { background: #F0FDF4; color: #15803D; }
     .qa-icon.amber  { background: #FFFBEB; color: #A16207; }
     .qa-icon.red    { background: #FEF2F2; color: #B91C1C; }
-    .qa-icon.purple { background: #f5f3ff; color: #7c3aed; }
+    .qa-icon.purple { background: #e8f5ff; color: #7c3aed; }
     /* Destaque quando o atalho tem pendência real */
     .qa-card.alerta { border-color: #fecaca; background: #fffafa; }
     .qa-card.alerta .qa-value { color: #B91C1C; }
-    .qa-label { font-size: .63rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
-    .qa-value { font-size: .92rem; font-weight: 700; color: #1e293b; margin-top: 1px; white-space: nowrap; }
-    .qa-arrow { margin-left: auto; color: #cbd5e1; font-size: .68rem; flex-shrink: 0; }
+    .qa-label { font-size: 0.65rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .qa-value { font-size: 0.875rem; font-weight: 700; color: #1e293b; margin-top: 1px; white-space: nowrap; }
+    .qa-arrow { margin-left: auto; color: #cbd5e1; font-size: 0.65rem; flex-shrink: 0; }
 
     /* ── Locações ativas (lista rápida) ──────────────────── */
     .loc-row {
@@ -104,13 +104,13 @@
     }
     .loc-row:last-child { border-bottom: none; }
     .loc-placa {
-        font-family: monospace; font-size: .78rem; font-weight: 700;
+        font-family: monospace; font-size: 0.8rem; font-weight: 700;
         background: #1e293b; color: #f8fafc;
         padding: 3px 8px; border-radius: 5px; flex-shrink: 0;
     }
     .loc-info { flex: 1; min-width: 0; }
-    .loc-info strong { font-size: .82rem; color: #0f172a; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .loc-info small { font-size: .7rem; color: #94a3b8; }
+    .loc-info strong { font-size: 0.8rem; color: #0f172a; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .loc-info small { font-size: 0.72rem; color: #94a3b8; }
     .loc-valor { font-size: .8rem; font-weight: 600; color: #15803D; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 
     @media (max-width: 1024px) {
@@ -401,7 +401,7 @@
         const ctxFr = document.getElementById('chartFrota').getContext('2d');
         if (chartFrota) chartFrota.destroy();
         const frotaData = [data.veiculos_disponiveis, data.veiculos_locados, data.veiculos_manutencao];
-        const frotaColors = ['#15803D','#008cdd','#CA8A04'];
+        const frotaColors = ['#15803D','#008cdd','#A16207'];
         const frotaLabels = ['Disponível','Locado','Manutenção'];
         chartFrota = new Chart(ctxFr, {
             type: 'doughnut',
@@ -454,7 +454,7 @@
                     </div>
                     <span class="loc-valor">${l.diaria ? formatCurrency(l.diaria) + '/d' : '—'}</span>
                 </div>`).join('') +
-                (locs.length > 7 ? `<div style="text-align:center;padding:10px;font-size:.74rem;color:#94a3b8;">+${locs.length - 7} locações</div>` : '');
+                (locs.length > 7 ? `<div style="text-align:center;padding:10px;font-size:0.72rem;color:#94a3b8;">+${locs.length - 7} locações</div>` : '');
         } catch(e) {
             el.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Erro ao carregar locações</p></div>';
         }
@@ -469,7 +469,7 @@
         const medals = ['🥇','🥈','🥉'];
         tbody.innerHTML = veiculos.map((v, i) => `
             <tr>
-                <td style="color:#94a3b8;font-size:.78rem;font-weight:600;text-align:center;">${medals[i] || (i+1)}</td>
+                <td style="color:#94a3b8;font-size:0.8rem;font-weight:600;text-align:center;">${medals[i] || (i+1)}</td>
                 <td><strong>${escHtml(v.placa)}</strong> <span style="color:#64748b;">— ${escHtml(v.marca)} ${escHtml(v.modelo)}</span></td>
                 <td style="text-align:center;"><span class="badge badge-info">${parseInt(v.total_locacoes) || 0}</span></td>
             </tr>`).join('');
@@ -493,7 +493,7 @@
                 <div class="alert-item ${a.type}" ${a.url ? `onclick="location.href='${a.url}'"` : ''}>
                     <i class="fas ${a.icon} alert-icon"></i>
                     <div class="alert-text"><strong>${a.strong}</strong><small>${a.text}</small></div>
-                    ${a.url ? '<i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.7rem;"></i>' : ''}
+                    ${a.url ? '<i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.72rem;"></i>' : ''}
                 </div>`).join('');
     }
 
@@ -509,7 +509,7 @@
                         <strong>${escHtml(a.placa)} — Revisão ${escHtml(a.tipo)}</strong>
                         <small>Faltam ${(parseInt(a.km_restante) || 0).toLocaleString('pt-BR')} km</small>
                     </div>
-                    <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.7rem;"></i>
+                    <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.72rem;"></i>
                 </div>`).join('');
             if (div.innerHTML.includes('fa-check-circle')) div.innerHTML = extras;
             else div.innerHTML += extras;
@@ -539,13 +539,13 @@
                     <i class="fas fa-money-bill-wave alert-icon"></i>
                     <div class="alert-text" style="flex:1;">
                         <strong style="color:#0f172a;">${escHtml(g.cliente)}</strong>
-                        <small style="display:block;color:#374151;">
+                        <small style="display:block;color:#334155;">
                             <span style="font-family:monospace;font-weight:700;background:#1e293b;color:#f8fafc;border-radius:4px;padding:1px 6px;font-size:.72rem;margin-right:6px;">${escHtml(g.placa)}</span>
                             ${escHtml(g.marca)} ${escHtml(g.modelo)}
                         </small>
                         <small style="color:#B91C1C;font-weight:600;">${g.count} cobrança${g.count > 1 ? 's' : ''} vencida${g.count > 1 ? 's' : ''} · ${fmtR(g.total)}</small>
                     </div>
-                    <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.7rem;"></i>
+                    <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.72rem;"></i>
                 </div>`).join('');
             if (div.innerHTML.includes('fa-check-circle')) div.innerHTML = extras;
             else div.innerHTML += extras;
@@ -595,7 +595,7 @@
                         <strong>${escHtml(c.condutor)}</strong>
                         <small>${escHtml(c.placa)} · ${txt}</small>
                     </div>
-                    <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.7rem;"></i>
+                    <i class="fas fa-chevron-right" style="color:#cbd5e1;font-size:0.72rem;"></i>
                 </div>`;
             }).join('');
             if (div.innerHTML.includes('fa-check-circle')) div.innerHTML = extras;

@@ -7,23 +7,23 @@
 /* ── Barra de status da sincronizacao com o eFrotas ── */
 .sinc-barra {
     display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-    background:#f0f9ff; border:1px solid #b1dcfb; border-radius:10px;
-    padding:10px 14px; margin-bottom:16px; font-size:.82rem; color:#015e94;
+    background:#F0F9FF; border:1px solid #b1dcfb; border-radius:10px;
+    padding:10px 14px; margin-bottom:16px; font-size:0.8rem; color:#015e94;
 }
 .sinc-barra.pendente { background:#FFFBEB; border-color:#fde68a; color:#A16207; }
 .sinc-barra.off      { background:#f8fafc; border-color:#e2e8f0; color:#64748b; }
 .sinc-acoes { margin-left:auto; display:flex; gap:8px; }
 .sinc-alerta {
     background:#FEF2F2; color:#B91C1C; border:1px solid #fecaca; border-radius:20px;
-    padding:2px 10px; font-size:.74rem; font-weight:700; cursor:pointer;
+    padding:2px 10px; font-size:0.72rem; font-weight:700; cursor:pointer;
 }
-.sinc-alerta:hover { background:#fee2e2; }
+.sinc-alerta:hover { background:#FEF2F2; }
 
 /* ── Resultado da consulta por placa ── */
 .cp-resumo {
     display:flex; justify-content:space-between; align-items:center;
     padding:9px 12px; background:#f8fafc; border-radius:8px;
-    font-size:.8rem; color:#374151; margin-bottom:8px;
+    font-size:.8rem; color:#334155; margin-bottom:8px;
 }
 .cp-novas { background:#008cdd; color:#fff; border-radius:20px; padding:2px 10px;
             font-size:.72rem; font-weight:700; }
@@ -33,15 +33,15 @@
     padding:10px 12px; border-bottom:1px solid #f1f5f9;
 }
 .cp-item:last-child { border-bottom:none; }
-.cp-item.ja { background:#fafafa; opacity:.75; }
-.cp-desc  { font-size:.82rem; font-weight:600; color:#0f172a; line-height:1.3; }
-.cp-meta  { font-size:.71rem; color:#94a3b8; margin-top:2px; }
+.cp-item.ja { background:#f8fafc; opacity:.75; }
+.cp-desc  { font-size:0.8rem; font-weight:600; color:#0f172a; line-height:1.3; }
+.cp-meta  { font-size:0.72rem; color:#94a3b8; margin-top:2px; }
 .cp-pts   { background:#eef2f7; color:#475569; border-radius:4px; padding:1px 6px;
             margin-left:6px; font-weight:600; }
 .cp-cond  { font-size:.72rem; color:#015e94; margin-top:3px; }
-.cp-ja    { font-size:.7rem; color:#15803D; margin-top:2px; font-weight:600; }
-.cp-valor { font-size:.88rem; font-weight:700; color:#B91C1C; font-variant-numeric:tabular-nums; }
-.cp-vazio { text-align:center; padding:22px; border-radius:8px; font-size:.84rem; margin-top:8px; }
+.cp-ja    { font-size:0.72rem; color:#15803D; margin-top:2px; font-weight:600; }
+.cp-valor { font-size:0.875rem; font-weight:700; color:#B91C1C; font-variant-numeric:tabular-nums; }
+.cp-vazio { text-align:center; padding:22px; border-radius:8px; font-size:0.875rem; margin-top:8px; }
 .cp-vazio.ok   { background:#F0FDF4; color:#15803D; border:1px solid #bbf7d0; }
 .cp-vazio.erro { background:#FEF2F2; color:#B91C1C; border:1px solid #fecaca; }
 
@@ -54,28 +54,28 @@
 .cf-num   { font-size:1.5rem; font-weight:800; color:#0f172a; line-height:1; }
 .cf-card.ok .cf-num     { color:#15803D; }
 .cf-card.alerta .cf-num { color:#B91C1C; }
-.cf-lbl   { font-size:.66rem; color:#64748b; text-transform:uppercase;
+.cf-lbl   { font-size:0.65rem; color:#64748b; text-transform:uppercase;
             letter-spacing:.04em; margin-top:4px; }
 .cf-barra { height:7px; background:#e2e8f0; border-radius:4px; overflow:hidden; margin-bottom:4px; }
 .cf-barra-fill { height:100%; background:#15803D; border-radius:4px; transition:width .4s; }
 .cf-sec   { margin-top:14px; }
-.cf-sec-tit { font-size:.78rem; font-weight:700; color:#374151; margin-bottom:7px;
+.cf-sec-tit { font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:7px;
               display:flex; align-items:center; gap:6px; }
 .cf-sec-tit.alerta { color:#B91C1C; }
 .cf-lista { border:1px solid #e2e8f0; border-radius:8px; max-height:190px; overflow-y:auto; }
 .cf-item  { display:grid; grid-template-columns:92px 1fr auto; gap:10px; align-items:center;
-            padding:7px 11px; border-bottom:1px solid #f1f5f9; font-size:.79rem; }
+            padding:7px 11px; border-bottom:1px solid #f1f5f9; font-size:0.8rem; }
 .cf-item:last-child { border-bottom:none; }
 .cf-placa { font-family:monospace; font-weight:700; background:#1e293b; color:#f8fafc;
-            border-radius:4px; padding:2px 7px; font-size:.73rem; text-align:center; }
+            border-radius:4px; padding:2px 7px; font-size:0.72rem; text-align:center; }
 .cf-modelo{ color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.cf-tag   { font-size:.64rem; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+.cf-tag   { font-size:0.65rem; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; }
 .cf-tag.ok    { background:#F0FDF4; color:#15803D; border:1px solid #bbf7d0; }
 .cf-tag.fora  { background:#FEF2F2; color:#B91C1C; border:1px solid #fecaca; }
 .cf-tag.extra { background:#FFFBEB; color:#A16207; border:1px solid #fde68a; }
-.cf-nota  { font-size:.71rem; color:#64748b; margin-top:7px; line-height:1.45; }
+.cf-nota  { font-size:0.72rem; color:#64748b; margin-top:7px; line-height:1.45; }
 .cf-det   { margin-top:14px; }
-.cf-det summary { font-size:.76rem; color:#008cdd; cursor:pointer; }
+.cf-det summary { font-size:0.72rem; color:#008cdd; cursor:pointer; }
 </style>
 
 <style>
@@ -127,7 +127,7 @@
     --g-outra: #CBD5E1;
     --p-vencido: #7F1D1D;
     --p-critico: #B91C1C;
-    --p-atencao: #CA8A04;
+    --p-atencao: #A16207;
     --p-ok:      #15803D;
 }
 
@@ -135,17 +135,17 @@
     display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;
 }
 .pm-head h2 {
-    font-size:.82rem; font-weight:700; color:#0f172a; text-transform:uppercase;
+    font-size:0.8rem; font-weight:700; color:#0f172a; text-transform:uppercase;
     letter-spacing:.05em; margin:0;
 }
 .pm-periodo { font-size:.72rem; color:#94a3b8; }
 .pm-head-acoes { margin-left:auto; display:flex; gap:8px; align-items:center; }
 .pm-sel {
-    font-size:.74rem; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px;
-    background:#fff; color:#374151; cursor:pointer;
+    font-size:0.72rem; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px;
+    background:#fff; color:#334155; cursor:pointer;
 }
 .pm-toggle {
-    font-size:.74rem; color:#008cdd; background:none; border:none; cursor:pointer;
+    font-size:0.72rem; color:#008cdd; background:none; border:none; cursor:pointer;
     font-weight:600; display:flex; align-items:center; gap:5px;
 }
 
@@ -169,7 +169,7 @@
     color:#64748b; display:flex; align-items:center; gap:6px;
 }
 .pm-acao-val {
-    font-size:1.6rem; font-weight:800; color:#0f172a; line-height:1.1; margin-top:5px;
+    font-size:1.5rem; font-weight:800; color:#0f172a; line-height:1.1; margin-top:5px;
     font-variant-numeric:tabular-nums;
 }
 .pm-acao.critico .pm-acao-val { color:var(--p-critico); }
@@ -189,11 +189,11 @@
     box-shadow:var(--card-shadow); min-width:0;
 }
 .pm-box-tit {
-    font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
     color:#475569; margin-bottom:2px; display:flex; align-items:center; gap:7px;
 }
-.pm-box-sub { font-size:.7rem; color:#94a3b8; margin-bottom:11px; }
-.pm-vazio { text-align:center; padding:26px 10px; color:#94a3b8; font-size:.78rem; }
+.pm-box-sub { font-size:0.72rem; color:#94a3b8; margin-bottom:11px; }
+.pm-vazio { text-align:center; padding:26px 10px; color:#94a3b8; font-size:0.8rem; }
 
 /* ── Fila de prazos ── */
 .pm-prazos { max-height:268px; overflow-y:auto; margin:0 -6px; }
@@ -206,9 +206,9 @@
 .pm-prazo:hover { background:#f8fafc; }
 .pm-dias {
     text-align:center; border-radius:6px; padding:4px 0; font-weight:800;
-    font-size:.9rem; line-height:1; color:#fff; font-variant-numeric:tabular-nums;
+    font-size:0.875rem; line-height:1; color:#fff; font-variant-numeric:tabular-nums;
 }
-.pm-dias small { display:block; font-size:.55rem; font-weight:600; opacity:.85;
+.pm-dias small { display:block; font-size:0.65rem; font-weight:600; opacity:.85;
                  text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
 .pm-dias.vencido { background:var(--p-vencido); }
 .pm-dias.critico { background:var(--p-critico); }
@@ -218,9 +218,9 @@
     font-family:monospace; font-weight:700; background:#1e293b; color:#f8fafc;
     border-radius:4px; padding:3px 0; font-size:.72rem; text-align:center;
 }
-.pm-prazo-desc { font-size:.78rem; color:#0f172a; font-weight:600;
+.pm-prazo-desc { font-size:0.8rem; color:#0f172a; font-weight:600;
                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pm-prazo-meta { font-size:.68rem; color:#94a3b8; margin-top:2px;
+.pm-prazo-meta { font-size:0.65rem; color:#94a3b8; margin-top:2px;
                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pm-prazo-meta .semdono { color:#B45309; font-weight:600; }
 .pm-prazo-val { font-size:.8rem; font-weight:700; color:#334155;
@@ -231,22 +231,22 @@
             background:#f1f5f9; margin-bottom:9px; }
 .pm-barra span { display:block; height:100%; }
 .pm-leg { display:flex; flex-direction:column; gap:6px; }
-.pm-leg-item { display:flex; align-items:center; gap:8px; font-size:.75rem; color:#475569; }
+.pm-leg-item { display:flex; align-items:center; gap:8px; font-size:0.72rem; color:#475569; }
 .pm-leg-dot  { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
 .pm-leg-val  { margin-left:auto; font-weight:700; color:#0f172a;
                font-variant-numeric:tabular-nums; }
-.pm-leg-pct  { font-size:.68rem; color:#94a3b8; min-width:38px; text-align:right; }
+.pm-leg-pct  { font-size:0.65rem; color:#94a3b8; min-width:38px; text-align:right; }
 
 /* ── Funil de fases ── */
 .pm-fases { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px;
             padding-top:13px; border-top:1px solid #f1f5f9; }
 .pm-fase { text-align:center; }
-.pm-fase-n { font-size:1.15rem; font-weight:800; color:#0f172a; line-height:1;
+.pm-fase-n { font-size:1.25rem; font-weight:800; color:#0f172a; line-height:1;
              font-variant-numeric:tabular-nums; }
-.pm-fase-l { font-size:.62rem; color:#64748b; text-transform:uppercase;
+.pm-fase-l { font-size:0.65rem; color:#64748b; text-transform:uppercase;
              letter-spacing:.03em; margin-top:4px; }
 .pm-fase-b { height:3px; border-radius:2px; margin-top:6px; background:#e2e8f0; }
-.pm-fase.f1 .pm-fase-b { background:#93C5FD; }
+.pm-fase.f1 .pm-fase-b { background:#b1dcfb; }
 .pm-fase.f2 .pm-fase-b { background:var(--p-atencao); }
 .pm-fase.f3 .pm-fase-b { background:var(--p-critico); }
 
@@ -254,26 +254,26 @@
 .pm-rank { display:flex; flex-direction:column; gap:9px; max-height:280px; overflow-y:auto; }
 .pm-rank-item { display:grid; grid-template-columns:76px minmax(0,1fr) auto;
                 gap:10px; align-items:center; }
-.pm-rank-lbl  { font-size:.74rem; color:#334155; font-weight:600;
+.pm-rank-lbl  { font-size:0.72rem; color:#334155; font-weight:600;
                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pm-rank-lbl.mono { font-family:monospace; font-weight:700; background:#1e293b;
                     color:#f8fafc; border-radius:4px; padding:3px 0; text-align:center;
-                    font-size:.71rem; }
+                    font-size:0.72rem; }
 .pm-stack { display:flex; height:17px; border-radius:4px; overflow:hidden; background:#f8fafc; }
 .pm-stack span { height:100%; }
-.pm-rank-num { font-size:.75rem; font-weight:700; color:#0f172a; min-width:26px;
+.pm-rank-num { font-size:0.72rem; font-weight:700; color:#0f172a; min-width:26px;
                text-align:right; font-variant-numeric:tabular-nums; }
-.pm-rank-sub { font-size:.68rem; color:#94a3b8; }
+.pm-rank-sub { font-size:0.65rem; color:#94a3b8; }
 
 /* ── Legenda de gravidade ── */
 .pm-gleg { display:flex; flex-wrap:wrap; gap:11px; margin-top:11px;
            padding-top:10px; border-top:1px solid #f1f5f9; }
-.pm-gleg span { display:flex; align-items:center; gap:5px; font-size:.68rem; color:#64748b; }
+.pm-gleg span { display:flex; align-items:center; gap:5px; font-size:0.65rem; color:#64748b; }
 .pm-gleg i { width:9px; height:9px; border-radius:2px; display:block; }
 
 /* ── Tabela de clientes ── */
-.pm-tab { width:100%; border-collapse:collapse; font-size:.76rem; }
-.pm-tab th { text-align:left; font-size:.62rem; text-transform:uppercase;
+.pm-tab { width:100%; border-collapse:collapse; font-size:0.72rem; }
+.pm-tab th { text-align:left; font-size:0.65rem; text-transform:uppercase;
              letter-spacing:.04em; color:#94a3b8; font-weight:700;
              padding:0 8px 7px; border-bottom:1px solid #f1f5f9; }
 .pm-tab td { padding:7px 8px; border-bottom:1px solid #f8fafc; color:#334155; }
@@ -281,7 +281,7 @@
 .pm-tab .num { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
 .pm-tab .nome { font-weight:600; color:#0f172a; max-width:150px;
                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pm-pill { font-size:.63rem; font-weight:700; padding:2px 7px; border-radius:20px;
+.pm-pill { font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:20px;
            background:#FFFBEB; color:#A16207; border:1px solid #fde68a; white-space:nowrap; }
 
 .pm-rank-item.infr { grid-template-columns:minmax(0,1fr) 190px 66px; }
@@ -297,7 +297,7 @@
 .aba-btn {
     display:flex; align-items:center; gap:8px; background:none; border:none;
     border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer;
-    padding:11px 18px; font-size:.84rem; font-weight:600; color:#64748b;
+    padding:11px 18px; font-size:0.875rem; font-weight:600; color:#64748b;
     white-space:nowrap; transition:color .15s, border-color .15s;
     font-family:inherit;
 }
@@ -306,7 +306,7 @@
 .aba-btn:focus-visible { outline:2px solid #008cdd; outline-offset:-2px; border-radius:4px; }
 .aba-badge {
     background:#eef2f7; color:#475569; border-radius:20px; padding:1px 9px;
-    font-size:.7rem; font-weight:700; font-variant-numeric:tabular-nums;
+    font-size:0.72rem; font-weight:700; font-variant-numeric:tabular-nums;
 }
 .aba-btn.ativa .aba-badge { background:#e8f5ff; color:#015e94; }
 .aba-badge.alerta { background:#FEF2F2; color:#B91C1C; }
@@ -324,7 +324,7 @@
     .pm-rank-item.infr > div:nth-child(2) { grid-area:barra; }
     .pm-prazo { grid-template-columns:52px 68px minmax(0,1fr); row-gap:4px; }
     .pm-prazo-val { grid-column:2 / -1; text-align:right; }
-    .pm-acao-val { font-size:1.35rem; }
+    .pm-acao-val { font-size:1.25rem; }
 }
 </style>
 
@@ -399,7 +399,7 @@
 <div id="abaLista" role="tabpanel" aria-labelledby="abaBtnLista" style="display:none;">
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> Multas <span id="countMultasBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+        <h3 class="card-title"><i class="fas fa-file-invoice-dollar"></i> Multas <span id="countMultasBadge" class="badge badge-info" style="margin-left:8px;font-size:0.72rem;">0</span></h3>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input type="text" class="form-control" id="buscaMulta" onkeyup="filtrarMultas()"
                    placeholder="Placa, AIT, infração ou local..." style="width: 230px;">
@@ -417,7 +417,7 @@
         </div>
     </div>
     <div id="avisoVisao" style="display:none;align-items:center;gap:9px;padding:9px 16px;
-                background:#e8f5ff;border-bottom:1px solid #b1dcfb;font-size:.78rem;color:#015e94;"></div>
+                background:#e8f5ff;border-bottom:1px solid #b1dcfb;font-size:0.8rem;color:#015e94;"></div>
     <div>
         <table data-sortable style="width:100%;border-collapse:collapse;">
             <thead style="display:none;">
@@ -490,11 +490,11 @@
             : '<span class="badge badge-success">Pago</span>';
     }
 
-    const _thM = s => `<th style="padding:5px 10px;font-size:.63rem;text-transform:uppercase;color:#64748b;background:#f8fafc;font-weight:700;white-space:nowrap;">${s}</th>`;
+    const _thM = s => `<th style="padding:5px 10px;font-size:0.65rem;text-transform:uppercase;color:#64748b;background:#f8fafc;font-weight:700;white-space:nowrap;">${s}</th>`;
 
     function _badgesMulta(pendentes, pagas) {
-        return (pendentes > 0 ? `<span style="background:#fefce8;color:#ca8a04;border:1px solid #fde68a;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;margin-right:3px;">${pendentes} pendente${pendentes>1?'s':''}</span>` : '')
-             + (pagas > 0    ? `<span style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 7px;font-size:.68rem;font-weight:600;">${pagas} paga${pagas>1?'s':''}</span>` : '');
+        return (pendentes > 0 ? `<span style="background:#FFFBEB;color:#A16207;border:1px solid #fde68a;border-radius:4px;padding:2px 7px;font-size:0.65rem;font-weight:600;margin-right:3px;">${pendentes} pendente${pendentes>1?'s':''}</span>` : '')
+             + (pagas > 0    ? `<span style="background:#f0fdf4;color:#15803D;border:1px solid #bbf7d0;border-radius:4px;padding:2px 7px;font-size:0.65rem;font-weight:600;">${pagas} paga${pagas>1?'s':''}</span>` : '');
     }
 
     function toggleGrupoMulta(gId) {
@@ -549,7 +549,7 @@
 
             const subRows = g.itens.map(m => `
                 <tr id="mrow_${m.id}" style="background:#fafbfc;">
-                    <td style="padding:7px 10px;">${m.tipo_notificacao === 'nic' ? `<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#e8f5ff;color:#015e94;border:1px solid #b1dcfb;">NIC</span>` : `<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#fef2f2;color:#c73a2e;border:1px solid #fecaca;">MULTA</span>`}</td>
+                    <td style="padding:7px 10px;">${m.tipo_notificacao === 'nic' ? `<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#e8f5ff;color:#015e94;border:1px solid #b1dcfb;">NIC</span>` : `<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#fef2f2;color:#B91C1C;border:1px solid #fecaca;">MULTA</span>`}</td>
                     <td style="padding:7px 10px;font-size:.8rem;">${formatDate(m.data_infracao)}</td>
                     <td style="padding:7px 10px;font-size:.8rem;">${m.nome_motorista || '—'}</td>
                     <td style="padding:7px 10px;font-size:.8rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.descricao||''}">${m.descricao || '—'}</td>
@@ -559,7 +559,7 @@
                     <td style="padding:7px 10px;">${getStatusBadge(m.status)}</td>
                     <td style="padding:7px 10px;text-align:center;">
                         <div style="display:flex;align-items:center;justify-content:center;gap:5px;">
-                            ${m.pdf_url ? `<button onclick="verPdfMulta(${m.id})" title="Ver PDF da Multa" style="display:inline-flex;align-items:center;gap:4px;color:#c73a2e;font-size:.75rem;font-weight:600;background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:3px 8px;white-space:nowrap;cursor:pointer;"><i class="fas fa-file-pdf"></i> Ver</button>` : ''}
+                            ${m.pdf_url ? `<button onclick="verPdfMulta(${m.id})" title="Ver PDF da Multa" style="display:inline-flex;align-items:center;gap:4px;color:#B91C1C;font-size:0.72rem;font-weight:600;background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:3px 8px;white-space:nowrap;cursor:pointer;"><i class="fas fa-file-pdf"></i> Ver</button>` : ''}
                             <div class="act-wrap">
                                 <button class="act-btn" onclick="toggleActMenu(event,${m.id})" title="Ações">⋯</button>
                                 <div id="actmenu_${m.id}" class="act-menu">
@@ -584,19 +584,19 @@
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
                             <div>
-                                <div style="font-weight:700;font-size:.92rem;color:#0f172a;">${g.nome}</div>
-                                <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${g.itens.length} multa${g.itens.length>1?'s':''}</div>
+                                <div style="font-weight:700;font-size:0.875rem;color:#0f172a;">${g.nome}</div>
+                                <div style="font-size:0.72rem;color:#94a3b8;margin-top:2px;">${g.itens.length} multa${g.itens.length>1?'s':''}</div>
                             </div>
                             <div>${_badgesMulta(pendentes, pagas)}</div>
                         </div>
                         <div style="display:flex;align-items:center;gap:20px;">
                             <div style="text-align:right;">
                                 <div style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Total</div>
-                                <div style="font-weight:700;color:${totalVal>0?'#d4a800':'#94a3b8'};">${formatCurrency(totalVal)}</div>
+                                <div style="font-weight:700;color:${totalVal>0?'#A16207':'#94a3b8'};">${formatCurrency(totalVal)}</div>
                             </div>
                             <div style="text-align:right;">
                                 <div style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;font-weight:600;">Pontos</div>
-                                <div style="font-size:.85rem;font-weight:600;">${totalPts} pts</div>
+                                <div style="font-size:0.875rem;font-weight:600;">${totalPts} pts</div>
                             </div>
                             <i class="fas fa-chevron-right" id="chevM_${gId}" style="transition:transform .2s;color:#94a3b8;font-size:.8rem;"></i>
                         </div>
@@ -606,7 +606,7 @@
             <tr id="detM_${gId}" style="display:none;">
                 <td colspan="9" style="padding:0;">
                     <div style="border-top:1px solid #e2e8f0;">
-                        <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
                             <thead><tr style="border-bottom:1px solid #e2e8f0;">
                                 ${_thM('Tipo')}${_thM('Data')}${_thM('Motorista')}${_thM('Descrição')}${_thM('Local')}${_thM('Valor')}${_thM('Pontos')}${_thM('Status')}${_thM('Ações')}
                             </tr></thead>
@@ -661,16 +661,16 @@
                 <div style="display:flex;gap:8px;margin-bottom:14px;">
                     <input type="file" id="inputPdfMulta" accept=".pdf" style="display:none" onchange="importarPdfMulta(this)">
                     <button type="button" onclick="document.getElementById('inputPdfMulta').click()"
-                        style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;border-radius:8px;border:2px dashed #e2e8f0;background:#f8fafc;color:#374151;font-size:.83rem;font-weight:600;cursor:pointer;">
-                        <i class="fas fa-file-pdf" style="color:#c73a2e;"></i> Preencher pelo PDF
+                        style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;border-radius:8px;border:2px dashed #e2e8f0;background:#f8fafc;color:#334155;font-size:0.8rem;font-weight:600;cursor:pointer;">
+                        <i class="fas fa-file-pdf" style="color:#B91C1C;"></i> Preencher pelo PDF
                     </button>
                 </div>
-                <div id="importStatusMulta" style="display:none;font-size:.78rem;color:#008cdd;margin-bottom:10px;text-align:center;">
+                <div id="importStatusMulta" style="display:none;font-size:0.8rem;color:#008cdd;margin-bottom:10px;text-align:center;">
                     <i class="fas fa-spinner fa-spin"></i> Lendo PDF...
                 </div>` : ''}
                 <input type="hidden" name="tipo_notificacao" id="fTipoNotificacao" value="${tipoAtual}">
                 <div style="margin-bottom:12px;">
-                    <span style="background:${tipoAtual==='nic'?'#e8f5ff':'#fef2f2'};color:${tipoAtual==='nic'?'#015e94':'#c73a2e'};border:1px solid ${tipoAtual==='nic'?'#b1dcfb':'#fecaca'};border-radius:4px;padding:3px 10px;font-size:.75rem;font-weight:700;">${tipoAtual==='nic'?'NIC':'MULTA'}</span>
+                    <span style="background:${tipoAtual==='nic'?'#e8f5ff':'#fef2f2'};color:${tipoAtual==='nic'?'#015e94':'#B91C1C'};border:1px solid ${tipoAtual==='nic'?'#b1dcfb':'#fecaca'};border-radius:4px;padding:3px 10px;font-size:0.72rem;font-weight:700;">${tipoAtual==='nic'?'NIC':'MULTA'}</span>
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
@@ -744,7 +744,7 @@
                     </div>
                 </div>
                 <div style="text-align: right; margin-top: 20px;">
-                    <button type="button" class="btn" onclick="fecharModal()" style="background: #6b7280; color: white; margin-right: 10px;">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()" >Cancelar</button>
                     <button type="submit" class="btn btn-primary">${isEdit ? 'Atualizar' : 'Cadastrar'}</button>
                 </div>
             </form>
@@ -801,10 +801,10 @@
 
         abrirModal('Confirmar ação', `
             <div style="text-align:center;padding:20px 0">
-                <i class="fas fa-${novoStatus === 'pago' ? 'check-circle' : 'undo'}" style="font-size:48px;color:${novoStatus === 'pago' ? '#33cd5f' : '#ffc900'};margin-bottom:16px"></i>
+                <i class="fas fa-${novoStatus === 'pago' ? 'check-circle' : 'undo'}" style="font-size:48px;color:${novoStatus === 'pago' ? '#15803D' : '#A16207'};margin-bottom:16px"></i>
                 <p style="font-size:16px;margin-bottom:24px">${msg}</p>
                 <div style="display:flex;gap:10px;justify-content:center">
-                    <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:white">Cancelar</button>
+                    <button class="btn btn-secondary" onclick="fecharModal()" >Cancelar</button>
                     <button class="btn ${novoStatus === 'pago' ? 'btn-success' : 'btn-warning'}" onclick="executarToggle(${id}, '${novoStatus}')">Confirmar</button>
                 </div>
             </div>
@@ -845,11 +845,11 @@
         if (!multa) return;
         abrirModal('Excluir Multa', `
             <div style="text-align:center;padding:20px 0">
-                <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#ef473a;margin-bottom:16px"></i>
+                <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#B91C1C;margin-bottom:16px"></i>
                 <p style="font-size:16px;margin-bottom:8px">Tem certeza que deseja excluir esta multa?</p>
-                <p style="color:#6b7280;font-size:14px;margin-bottom:24px">${multa.descricao || 'Multa'} — ${formatDate(multa.data_infracao)}</p>
+                <p style="color:#64748b;font-size:14px;margin-bottom:24px">${multa.descricao || 'Multa'} — ${formatDate(multa.data_infracao)}</p>
                 <div style="display:flex;gap:10px;justify-content:center">
-                    <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:white">Cancelar</button>
+                    <button class="btn btn-secondary" onclick="fecharModal()" >Cancelar</button>
                     <button class="btn btn-danger" onclick="excluirMulta(${id})">Excluir</button>
                 </div>
             </div>
@@ -988,7 +988,7 @@
             const emAberto = p.financeiro.qtd_aberta;
             box.innerHTML = emAberto > 0
                 ? `<div class="pm-vazio" style="text-align:left;padding:16px 6px;">
-                     <i class="fas fa-hourglass-start" style="color:#CA8A04;"></i>
+                     <i class="fas fa-hourglass-start" style="color:#A16207;"></i>
                      <strong style="color:#475569;"> ${emAberto} multa(s) em aberto, nenhuma com prazo correndo.</strong>
                      <div style="margin-top:7px;line-height:1.55;">
                        O relógio só começa quando o órgão emite o aviso da infração (NA).
@@ -1050,7 +1050,7 @@
                 </div>
                 ${p.acoes.desconto.qtd > 0 ? `
                 <div class="pm-leg-item" style="color:#15803D;">
-                    <i class="fas fa-tag" style="font-size:.7rem;"></i>
+                    <i class="fas fa-tag" style="font-size:0.72rem;"></i>
                     Desconto ainda no prazo (20%)
                     <span class="pm-leg-val" style="color:#15803D;">−${formatCurrency(p.acoes.desconto.economia)}</span>
                     <span class="pm-leg-pct">${p.acoes.desconto.qtd}</span>
@@ -1073,7 +1073,7 @@
                     <div class="pm-fase-b"></div>
                 </div>
             </div>
-            <div style="font-size:.66rem;color:#94a3b8;margin-top:8px;line-height:1.45;">
+            <div style="font-size:0.65rem;color:#94a3b8;margin-top:8px;line-height:1.45;">
                 Etapa das multas em aberto no órgão autuador. Depois da cobrança emitida
                 não cabe mais indicar condutor.
             </div>`;
@@ -1234,7 +1234,7 @@
                     </tr>`).join('')}
                 </tbody>
             </table></div>
-            <div style="font-size:.66rem;color:#94a3b8;margin-top:9px;line-height:1.45;">
+            <div style="font-size:0.65rem;color:#94a3b8;margin-top:9px;line-height:1.45;">
                 Pontos só vão para a CNH depois da indicação formal. Acima de 20 o cliente
                 fica perto da suspensão — vale avisar antes de renovar o contrato.
             </div>`;
@@ -1343,7 +1343,7 @@
             <span>Mostrando apenas multas <strong>${_ROTULO_VISAO[_visaoAtiva]}</strong></span>
             <button onclick="aplicarVisaoPainel('${_visaoAtiva}')"
                     style="margin-left:auto;background:none;border:none;color:#015e94;
-                           font-weight:700;cursor:pointer;font-size:.75rem;">
+                           font-weight:700;cursor:pointer;font-size:0.72rem;">
                 Limpar filtro
             </button>`;
     }
@@ -1371,7 +1371,7 @@
 
         row.scrollIntoView({ behavior: 'smooth', block: 'center' });
         row.style.transition = 'background .5s';
-        row.style.background = '#FEF3C7';
+        row.style.background = '#FFFBEB';
         setTimeout(() => { row.style.background = '#fafbfc'; }, 2400);
     }
 
@@ -1417,12 +1417,12 @@
                 ${urgentes}
                 <div class="sinc-acoes">
                     <button class="btn btn-sm" onclick="verCoberturaFrota()"
-                            style="background:#fff;border:1px solid #e2e8f0;color:#374151;"
+                            style="background:#fff;border:1px solid #e2e8f0;color:#334155;"
                             title="Quais placas o contrato ja alcanca">
                         <i class="fas fa-list-check"></i> Cobertura da frota
                     </button>
                     <button class="btn btn-sm" onclick="consultarPlaca()"
-                            style="background:#fff;border:1px solid #e2e8f0;color:#374151;">
+                            style="background:#fff;border:1px solid #e2e8f0;color:#334155;">
                         <i class="fas fa-magnifying-glass"></i> Consultar placa
                     </button>
                     <button class="btn btn-sm" id="btnSincAgora" onclick="sincronizarAgora()"
@@ -1499,7 +1499,7 @@
                 </div>
                 <div id="cpResultado" style="margin-top:6px;"></div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
-                    <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Fechar</button>
+                    <button class="btn btn-secondary" onclick="fecharModal()" >Fechar</button>
                     <button class="btn btn-primary" id="btnCP" onclick="executarConsultaPlaca()">
                         <i class="fas fa-magnifying-glass"></i> Consultar
                     </button>
@@ -1636,7 +1636,7 @@
         abrirModal('Cobertura da frota no contrato eFrotas', `
             <div style="text-align:center;padding:34px;color:#94a3b8;">
                 <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;"></i>
-                <p style="margin-top:10px;font-size:.84rem;">Consultando o contrato no SERPRO...</p>
+                <p style="margin-top:10px;font-size:0.875rem;">Consultando o contrato no SERPRO...</p>
             </div>`);
         try {
             const d = await fetch('/api/multas/cobertura-frota').then(r => r.json());
@@ -1646,7 +1646,7 @@
                 abrirModal('Cobertura da frota', `
                     <div class="cp-vazio erro"><i class="fas fa-circle-xmark"></i> ${escHtml(d.error || 'Falha na consulta')}</div>
                     <div style="text-align:right;margin-top:14px;">
-                        <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Fechar</button>
+                        <button class="btn btn-secondary" onclick="fecharModal()" >Fechar</button>
                     </div>`);
                 return;
             }
@@ -1720,13 +1720,13 @@
                 </details>
 
                 <div style="text-align:right;margin-top:16px;">
-                    <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Fechar</button>
+                    <button class="btn btn-secondary" onclick="fecharModal()" >Fechar</button>
                 </div>`);
         } catch {
             abrirModal('Cobertura da frota', `
                 <div class="cp-vazio erro"><i class="fas fa-circle-xmark"></i> Erro de conexão</div>
                 <div style="text-align:right;margin-top:14px;">
-                    <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Fechar</button>
+                    <button class="btn btn-secondary" onclick="fecharModal()" >Fechar</button>
                 </div>`);
         }
     }
@@ -1785,7 +1785,7 @@
             <div style="position:relative;width:100%;height:80vh;background:#f1f5f9;border-radius:8px;overflow:hidden;">
                 <iframe src="${src}" width="100%" height="100%" style="border:none;" title="Multa PDF"></iframe>
                 <a href="${src}" target="_blank"
-                   style="position:absolute;bottom:12px;right:12px;background:#c73a2e;color:#fff;border-radius:6px;padding:7px 14px;font-size:.78rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
+                   style="position:absolute;bottom:12px;right:12px;background:#B91C1C;color:#fff;border-radius:6px;padding:7px 14px;font-size:0.8rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.2);">
                     <i class="fas fa-external-link-alt"></i> Abrir em nova aba
                 </a>
             </div>

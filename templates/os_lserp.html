@@ -4,18 +4,18 @@
 <style>
 .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
 .tab-btn { padding:6px 16px; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
-           font-size:.78rem; font-weight:600; cursor:pointer; color:#64748b; transition:all .15s; }
+           font-size:0.8rem; font-weight:600; cursor:pointer; color:#64748b; transition:all .15s; }
 .tab-btn:hover  { border-color:#008cdd; color:#008cdd; }
 .tab-btn.active { background:#008cdd; border-color:#008cdd; color:#fff; }
 .badge-status { display:inline-block; font-size:.65rem; font-weight:600; padding:2px 9px;
                 border-radius:4px; border:1px solid transparent; }
-.badge-aberta  { background:#fffbeb; color:#7a6000; border-color:#fde68a; }
-.badge-fechada { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
+.badge-aberta  { background:#fffbeb; color:#A16207; border-color:#fde68a; }
+.badge-fechada { background:#f0fdf4; color:#15803D; border-color:#bbf7d0; }
 .badge-baixada { background:#e8f5ff; color:#015e94; border-color:#b1dcfb; }
 .tipo-s { background:#e0f2fe; color:#0369a1; font-size:.65rem; padding:1px 6px; border-radius:3px; font-weight:600; }
-.tipo-p { background:#fff8d0; color:#7a6000; font-size:.65rem; padding:1px 6px; border-radius:3px; font-weight:600; }
+.tipo-p { background:#FFFBEB; color:#A16207; font-size:.65rem; padding:1px 6px; border-radius:3px; font-weight:600; }
 .filtros-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; padding:12px 16px; }
-.cr-filter-label { font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:3px; }
+.cr-filter-label { font-size:0.65rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:3px; }
 .sem-cad { color:#94a3b8; font-style:italic; font-size:.8rem; }
 .os-row:hover td { background:#f8fafc; cursor:pointer; }
 </style>
@@ -94,7 +94,7 @@
                 <label class="cr-filter-label">Até</label>
                 <input type="date" id="filtroAte" class="form-control" style="width:140px;" onchange="carregarOS()">
             </div>
-            <button class="btn" style="background:#e2e8f0;color:#475569;font-size:.78rem;" onclick="limparFiltros()">
+            <button class="btn" style="background:#e2e8f0;color:#475569;font-size:0.8rem;" onclick="limparFiltros()">
                 <i class="fas fa-times"></i> Limpar
             </button>
         </div>
@@ -120,7 +120,7 @@
 <!-- ====== ABA EM MANUTENÇÃO ====== -->
 <div id="aba-emmanutencao" style="display:none;">
     <div class="card">
-        <div style="padding:10px 16px;font-size:.75rem;color:#64748b;border-bottom:1px solid #f1f5f9;">
+        <div style="padding:10px 16px;font-size:0.72rem;color:#64748b;border-bottom:1px solid #f1f5f9;">
             <i class="fas fa-info-circle" style="color:#008cdd;"></i>
             Cruzamento automático pela placa — <strong>Mudar Status</strong> atualiza apenas o cadastro local, não o LSERP.
         </div>
@@ -144,7 +144,7 @@
     <div style="background:#fff;border-radius:14px;width:90%;max-width:700px;max-height:88vh;overflow-y:auto;padding:24px;">
         <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
             <h2 style="font-size:1rem;font-weight:700;" id="detalhe-titulo">OS #—</h2>
-            <button onclick="fecharDetalhe()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#94a3b8;line-height:1;">✕</button>
+            <button onclick="fecharDetalhe()" style="background:none;border:none;font-size:1.25rem;cursor:pointer;color:#94a3b8;line-height:1;">✕</button>
         </div>
         <div id="detalhe-body"></div>
     </div>
@@ -153,8 +153,8 @@
 <!-- Modal Dar Baixa -->
 <div id="modalBaixa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1001;align-items:center;justify-content:center;" onclick="if(event.target===this)fecharBaixa()">
     <div style="background:#fff;border-radius:14px;width:90%;max-width:440px;padding:24px;">
-        <h3 style="font-size:.95rem;font-weight:700;margin-bottom:16px;">
-            <i class="fas fa-check-circle" style="color:#16a34a;"></i>
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;">
+            <i class="fas fa-check-circle" style="color:#15803D;"></i>
             Dar Baixa — OS <span id="baixa-os-label">—</span>
         </h3>
         <input type="hidden" id="baixa-os-id">
@@ -234,7 +234,7 @@ async function carregarOS() {
     } catch(e) {
         showToast('Erro ao carregar OS: ' + e.message, 'error');
         document.getElementById('tbOS').innerHTML =
-            '<tr><td colspan="7" style="text-align:center;padding:30px;color:#ef473a;"><i class="fas fa-exclamation-triangle"></i> Falha ao conectar ao LSERP</td></tr>';
+            '<tr><td colspan="7" style="text-align:center;padding:30px;color:#B91C1C;"><i class="fas fa-exclamation-triangle"></i> Falha ao conectar ao LSERP</td></tr>';
         return;
     }
     renderizarKPIs();
@@ -263,7 +263,7 @@ function renderizarManutencoes() {
             <td style="font-weight:700;color:#015e94;">#${o.id}</td>
             <td><strong>${escHtml(o.veic_placa || '—')}</strong></td>
             <td style="white-space:nowrap;">${fmtData(o.data_os)}</td>
-            <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:.82rem;">
+            <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:0.8rem;">
                 ${escHtml((o.titulo || o.obs || '—').substring(0, 70))}
             </td>
             <td style="text-align:right;font-weight:600;white-space:nowrap;">${fmtR(o.tt_liquido)}</td>
@@ -289,7 +289,7 @@ function renderizarContas() {
             ? `<span class="badge-status badge-baixada"><i class="fas fa-check"></i> Baixada ${fmtData(b.data_baixa)}</span>`
             : `<span class="badge-status badge-aberta">Pendente</span>`;
         const btnAcao = b
-            ? `<button class="btn" style="padding:2px 10px;font-size:.72rem;background:#fef2f2;color:#c73a2e;"
+            ? `<button class="btn" style="padding:2px 10px;font-size:.72rem;background:#fef2f2;color:#B91C1C;"
                        onclick="removerBaixa(${o.id})">Remover Baixa</button>`
             : `<button class="btn btn-primary" style="padding:2px 10px;font-size:.72rem;"
                        onclick="abrirBaixa(${o.id})">Dar Baixa</button>`;
@@ -297,7 +297,7 @@ function renderizarContas() {
             <td style="font-weight:700;color:#015e94;">#${o.id}</td>
             <td><strong>${escHtml(o.veic_placa || '—')}</strong></td>
             <td style="white-space:nowrap;">${fmtData(o.data_os)}</td>
-            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:.82rem;">
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:0.8rem;">
                 ${escHtml((o.titulo || o.obs || '—').substring(0, 60))}
             </td>
             <td style="text-align:right;font-weight:600;white-space:nowrap;">${fmtR(o.tt_liquido)}</td>
@@ -334,11 +334,11 @@ function renderizarEmManutencao() {
             '<span class="badge-status" style="background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;">—</span>';
         const btnStatus = vLocal
             ? (vLocal.status === 'manutencao'
-                ? `<button class="btn" style="padding:2px 10px;font-size:.72rem;background:#d4f5df;color:#1a7a35;"
+                ? `<button class="btn" style="padding:2px 10px;font-size:.72rem;background:#d4f5df;color:#15803D;"
                            onclick="mudarStatusVeiculo(${vLocal.id},'disponivel','${escHtml(vLocal.placa)}')">
                        <i class="fas fa-check"></i> Disponível
                    </button>`
-                : `<button class="btn" style="padding:2px 10px;font-size:.72rem;background:#fde8e7;color:#8c1a14;"
+                : `<button class="btn" style="padding:2px 10px;font-size:.72rem;background:#FEF2F2;color:#8c1a14;"
                            onclick="mudarStatusVeiculo(${vLocal.id},'manutencao','${escHtml(vLocal.placa)}')">
                        <i class="fas fa-tools"></i> Em Manutenção
                    </button>`)
@@ -364,9 +364,9 @@ function badgeOS(o) {
 
 function badgeStatusVeiculo(st) {
     const map = {
-        disponivel: ['#dcfce7','#166534','Disponível'],
-        locado:     ['#ddf0fb','#015e94','Locado'],
-        manutencao: ['#fff8d0','#7a6000','Em Manutenção'],
+        disponivel: ['#F0FDF4','#166534','Disponível'],
+        locado:     ['#e8f5ff','#015e94','Locado'],
+        manutencao: ['#FFFBEB','#A16207','Em Manutenção'],
         inativo:    ['#f1f5f9','#475569','Inativo'],
     };
     const [bg, cor, tx] = map[st] || ['#f1f5f9','#475569', st || '—'];
@@ -431,7 +431,7 @@ async function verDetalhe(id) {
                  <strong>Baixa registrada</strong> em ${fmtData(b.data_baixa)}
                  ${b.forma_pagamento ? ' · ' + escHtml(b.forma_pagamento) : ''}
                  ${b.observacoes ? '<br><span style="color:#64748b;">' + escHtml(b.observacoes) + '</span>' : ''}
-                 ${b.usuario_nome ? '<br><span style="color:#94a3b8;font-size:.75rem;">por ' + escHtml(b.usuario_nome) + '</span>' : ''}
+                 ${b.usuario_nome ? '<br><span style="color:#94a3b8;font-size:0.72rem;">por ' + escHtml(b.usuario_nome) + '</span>' : ''}
                </div>` : '';
 
         const btnBaixa = (os.faturado !== 'S' && !b)
@@ -440,7 +440,7 @@ async function verDetalhe(id) {
                </a>` : '';
 
         document.getElementById('detalhe-body').innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:16px;font-size:.82rem;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:16px;font-size:0.8rem;">
                 <div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Placa</span><br><strong>${escHtml(os.veic_placa||'—')}</strong></div>
                 <div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Status</span><br>${badgeOS(os)}</div>
                 <div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Data Abertura</span><br>${fmtData(os.data_abertura)}</div>
@@ -448,11 +448,11 @@ async function verDetalhe(id) {
                 ${os.veic_km ? `<div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">KM</span><br>${Number(os.veic_km).toLocaleString('pt-BR')} km</div>` : ''}
                 ${os.responsavel ? `<div><span style="color:#94a3b8;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;">Responsável</span><br>${escHtml(os.responsavel)}</div>` : ''}
             </div>
-            ${os.titulo ? `<p style="font-size:.85rem;color:#374151;margin-bottom:8px;"><strong>Título:</strong> ${escHtml(os.titulo)}</p>` : ''}
+            ${os.titulo ? `<p style="font-size:0.875rem;color:#334155;margin-bottom:8px;"><strong>Título:</strong> ${escHtml(os.titulo)}</p>` : ''}
             ${os.obs ? `<p style="font-size:.8rem;color:#64748b;margin-bottom:8px;background:#f8fafc;padding:8px 12px;border-radius:6px;">${escHtml(os.obs)}</p>` : ''}
             <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <strong style="font-size:.82rem;">Itens da OS</strong>
+                <strong style="font-size:0.8rem;">Itens da OS</strong>
                 <strong style="font-size:1rem;color:#0f172a;">${fmtR(os.tt_liquido)}</strong>
             </div>
             ${itensHtml}
@@ -461,7 +461,7 @@ async function verDetalhe(id) {
         `;
     } catch(e) {
         document.getElementById('detalhe-body').innerHTML =
-            `<p style="color:#ef473a;text-align:center;padding:20px;"><i class="fas fa-exclamation-triangle"></i> ${escHtml(e.message)}</p>`;
+            `<p style="color:#B91C1C;text-align:center;padding:20px;"><i class="fas fa-exclamation-triangle"></i> ${escHtml(e.message)}</p>`;
     }
 }
 
@@ -515,7 +515,7 @@ async function confirmarBaixa() {
 function removerBaixa(id) {
     abrirModal('Remover Baixa', `
         <div style="text-align:center;padding:20px 0;">
-            <i class="fas fa-exclamation-triangle" style="font-size:44px;color:#ef473a;margin-bottom:14px;display:block;"></i>
+            <i class="fas fa-exclamation-triangle" style="font-size:44px;color:#B91C1C;margin-bottom:14px;display:block;"></i>
             <p>Remover a baixa da OS <strong>#${id}</strong>?</p>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
                 <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
@@ -549,7 +549,7 @@ function mudarStatusVeiculo(veicId, novoStatus, placa) {
         <div style="text-align:center;padding:20px 0;">
             <i class="fas fa-car" style="font-size:40px;color:#008cdd;margin-bottom:14px;display:block;"></i>
             <p>Marcar <strong>${escHtml(placa)}</strong> como <strong>${statusTx}</strong>?</p>
-            <p style="font-size:.78rem;color:#94a3b8;margin-top:6px;">Isso <strong>não</strong> altera dados no LSERP — apenas o cadastro local.</p>
+            <p style="font-size:0.8rem;color:#94a3b8;margin-top:6px;">Isso <strong>não</strong> altera dados no LSERP — apenas o cadastro local.</p>
             <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
                 <button class="btn" onclick="fecharModal()" style="background:#e2e8f0;color:#475569;">Cancelar</button>
                 <button class="btn btn-primary" onclick="executarMudancaStatus(${veicId},'${novoStatus}','${escHtml(placa)}')">Confirmar</button>

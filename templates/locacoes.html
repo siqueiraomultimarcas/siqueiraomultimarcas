@@ -4,6 +4,13 @@
 
 {% block content %}
 
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-key"></i> Locações</h1>
+        <p>Contratos ativos, agendamentos e devoluções</p>
+    </div>
+</div>
+
 <!-- ROW 1: Criar Nova Locação + Agendamentos -->
 <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:16px;margin-bottom:16px;">
 
@@ -17,13 +24,13 @@
             <div onclick="abrirModalLocacao()"
                  class="loc-nova-card"
                  style="cursor:pointer;border:2px dashed #008cdd;border-radius:12px;padding:18px 16px;display:flex;align-items:center;gap:14px;transition:background .15s;"
-                 onmouseenter="this.style.background='#f0f9ff'" onmouseleave="this.style.background=''">
+                 onmouseenter="this.style.background='#F0F9FF'" onmouseleave="this.style.background=''">
                 <div style="width:38px;height:38px;min-width:38px;background:#008cdd;border-radius:10px;display:flex;align-items:center;justify-content:center;">
-                    <i class="fas fa-plus" style="color:white;font-size:1.05rem;"></i>
+                    <i class="fas fa-plus" style="color:white;font-size:1rem;"></i>
                 </div>
                 <div>
-                    <div style="font-weight:700;color:#0f172a;font-size:.9rem;">Cadastrar nova locação</div>
-                    <div style="font-size:.77rem;color:#64748b;margin-top:3px;line-height:1.4;">Clique aqui para criar uma locação com veículo previamente cadastrado.</div>
+                    <div style="font-weight:700;color:#0f172a;font-size:0.875rem;">Cadastrar nova locação</div>
+                    <div style="font-size:0.8rem;color:#64748b;margin-top:3px;line-height:1.4;">Clique aqui para criar uma locação com veículo previamente cadastrado.</div>
                 </div>
             </div>
         </div>
@@ -35,8 +42,8 @@
             <h3 class="card-title">Agendamentos de Locações</h3>
             <div style="display:flex;gap:8px;align-items:center;">
                 <button onclick="abrirValCNH()" style="background:none;border:none;cursor:pointer;
-                    font-size:.75rem;font-weight:600;color:#4f46e5;padding:0;display:flex;align-items:center;gap:5px;">
-                    <i class="fas fa-id-card"></i> Validade - CNH dos condutores <i class="fas fa-chevron-right" style="font-size:.6rem;"></i>
+                    font-size:0.72rem;font-weight:600;color:#015e94;padding:0;display:flex;align-items:center;gap:5px;">
+                    <i class="fas fa-id-card"></i> Validade - CNH dos condutores <i class="fas fa-chevron-right" style="font-size:0.65rem;"></i>
                 </button>
                 <a href="/reservas" class="btn btn-primary" style="font-size:.8rem;padding:6px 14px;">
                     <i class="fas fa-plus"></i> Novo agendamento
@@ -45,8 +52,8 @@
         </div>
         <div id="agendamentosContainer" style="padding:28px 20px;text-align:center;">
             <i class="fas fa-box-open" style="font-size:2.8rem;color:#cbd5e1;display:block;margin-bottom:14px;"></i>
-            <div style="font-weight:600;color:#475569;font-size:.9rem;margin-bottom:4px;">Nenhum resultado encontrado!</div>
-            <div style="font-size:.77rem;color:#94a3b8;line-height:1.5;max-width:320px;margin:0 auto;">Oops! Nenhum agendamento de locação encontrado, seus agendamentos de retirada ativos ficarão aqui.</div>
+            <div style="font-weight:600;color:#475569;font-size:0.875rem;margin-bottom:4px;">Nenhum resultado encontrado!</div>
+            <div style="font-size:0.8rem;color:#94a3b8;line-height:1.5;max-width:320px;margin:0 auto;">Oops! Nenhum agendamento de locação encontrado, seus agendamentos de retirada ativos ficarão aqui.</div>
         </div>
     </div>
 </div>
@@ -57,16 +64,16 @@
         <div style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px;">Filtros</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:14px;align-items:start;">
             <div>
-                <label style="font-size:.73rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Veículo</label>
-                <input type="text" class="form-control" id="filtroPlacaLoc" placeholder="Placa" oninput="filtrarLocacoes()" style="font-size:.84rem;">
+                <label style="font-size:0.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Veículo</label>
+                <input type="text" class="form-control" id="filtroPlacaLoc" placeholder="Placa" oninput="filtrarLocacoes()" style="font-size:0.875rem;">
             </div>
             <div>
-                <label style="font-size:.73rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Locatário</label>
-                <input type="text" class="form-control" id="filtroNomeLoc" placeholder="Nome do locatário" oninput="filtrarLocacoes()" style="font-size:.84rem;">
+                <label style="font-size:0.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Locatário</label>
+                <input type="text" class="form-control" id="filtroNomeLoc" placeholder="Nome do locatário" oninput="filtrarLocacoes()" style="font-size:0.875rem;">
             </div>
             <div>
-                <label style="font-size:.73rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Tempo mínimo de contrato</label>
-                <select class="form-control" id="filtroTempoMinLoc" onchange="filtrarLocacoes()" style="font-size:.84rem;">
+                <label style="font-size:0.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Tempo mínimo de contrato</label>
+                <select class="form-control" id="filtroTempoMinLoc" onchange="filtrarLocacoes()" style="font-size:0.875rem;">
                     <option value="">Selecione</option>
                     <option value="semanal">Semanal</option>
                     <option value="quinzenal">Quinzenal</option>
@@ -75,13 +82,13 @@
                 </select>
             </div>
             <div>
-                <label style="font-size:.73rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Valor do Aluguel</label>
-                <div style="font-size:.7rem;color:#94a3b8;margin-bottom:6px;">de <strong style="color:#64748b;">R$0</strong> até <strong style="color:#64748b;" id="rangeAluguelMax">R$0</strong></div>
+                <label style="font-size:0.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Valor do Aluguel</label>
+                <div style="font-size:0.72rem;color:#94a3b8;margin-bottom:6px;">de <strong style="color:#64748b;">R$0</strong> até <strong style="color:#64748b;" id="rangeAluguelMax">R$0</strong></div>
                 <input type="range" id="rangeAluguel" min="0" max="10000" value="10000" oninput="filtrarLocacoes()" style="width:100%;accent-color:#008cdd;height:4px;">
             </div>
             <div>
-                <label style="font-size:.73rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Valor do Caução</label>
-                <div style="font-size:.7rem;color:#94a3b8;margin-bottom:6px;">de <strong style="color:#64748b;">R$0</strong> até <strong style="color:#64748b;" id="rangeCaucaoMax">R$0</strong></div>
+                <label style="font-size:0.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:5px;">Valor do Caução</label>
+                <div style="font-size:0.72rem;color:#94a3b8;margin-bottom:6px;">de <strong style="color:#64748b;">R$0</strong> até <strong style="color:#64748b;" id="rangeCaucaoMax">R$0</strong></div>
                 <input type="range" id="rangeCaucao" min="0" max="10000" value="10000" oninput="filtrarLocacoes()" style="width:100%;accent-color:#008cdd;height:4px;">
             </div>
         </div>
@@ -93,12 +100,12 @@
     <div style="padding:16px 20px 14px;display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid #f1f5f9;">
         <div>
             <div style="font-size:1rem;font-weight:700;color:#0f172a;">Locações ativas</div>
-            <div style="font-size:.78rem;color:#64748b;margin-top:3px;" id="countLocLabel">
-                <i class="fas fa-spinner fa-spin" style="font-size:.7rem;margin-right:4px;"></i> Carregando...
+            <div style="font-size:0.8rem;color:#64748b;margin-top:3px;" id="countLocLabel">
+                <i class="fas fa-spinner fa-spin" style="font-size:0.72rem;margin-right:4px;"></i> Carregando...
             </div>
         </div>
         <a href="/clientes" style="font-size:.8rem;color:#008cdd;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:6px;">
-            Validade - CNH dos condutores <i class="fas fa-arrow-right" style="font-size:.7rem;"></i>
+            Validade - CNH dos condutores <i class="fas fa-arrow-right" style="font-size:0.72rem;"></i>
         </a>
     </div>
     <div id="listaLocacoes"></div>
@@ -111,13 +118,13 @@
     .checklist-item label { cursor: pointer; margin: 0; }
     .fotos-grid { display: flex; gap: 4px; flex-wrap: wrap; }
     .fotos-grid img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; }
-    .foto-upload-area { border: 2px dashed #d1d5db; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; }
-    .foto-upload-area:hover { border-color: #008cdd; background: #f0f9ff; }
+    .foto-upload-area { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; }
+    .foto-upload-area:hover { border-color: #008cdd; background: #F0F9FF; }
     .preview-fotos { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
     .preview-foto { position: relative; width: 80px; height: 80px; }
     .preview-foto img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
     .preview-foto .remove-btn { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; border: none; line-height: 20px; text-align: center; }
-    .upload-progress { background: #ddf0fb; border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; color: #015e94; display: none; margin-top: 8px; }
+    .upload-progress { background: #e8f5ff; border-radius: 8px; padding: 8px 12px; font-size: 0.875rem; color: #015e94; display: none; margin-top: 8px; }
     /* ── Rows de locação (estilo Velo) ── */
     .loc-row { border-bottom: 1px solid #f1f5f9; }
     .loc-row:last-child { border-bottom: none; }
@@ -128,7 +135,7 @@
     }
     .loc-row-header:hover { background: #f8fafc; }
     .loc-chevron {
-        color: #94a3b8; font-size: .75rem; flex-shrink: 0;
+        color: #94a3b8; font-size: 0.72rem; flex-shrink: 0;
         transition: transform .2s; width: 14px;
     }
     .loc-chevron.open { transform: rotate(90deg); }
@@ -138,39 +145,39 @@
     }
     .loc-car-icon.concluida { background: #f0fdf4; }
     .loc-car-icon i { color: #008cdd; font-size: 1rem; }
-    .loc-car-icon.concluida i { color: #22c55e; }
+    .loc-car-icon.concluida i { color: #15803D; }
     .loc-info { flex: 1; min-width: 0; }
-    .loc-num { font-weight: 700; color: #0f172a; font-size: .88rem; }
-    .loc-placa { font-size: .82rem; color: #008cdd; font-weight: 700; }
+    .loc-num { font-weight: 700; color: #0f172a; font-size: 0.875rem; }
+    .loc-placa { font-size: 0.8rem; color: #008cdd; font-weight: 700; }
     .loc-recibo { background: none; border: none; padding: 0; color: #64748b; font-size: .72rem; cursor: pointer; text-decoration: underline; }
     .loc-recibo:hover { color: #008cdd; }
     .loc-cliente { font-size: .8rem; color: #64748b; margin-top: 1px; }
     .loc-valores { min-width: 180px; flex-shrink: 0; }
     .loc-val-label { font-size: .72rem; color: #94a3b8; }
-    .loc-val-num { font-size: .82rem; font-weight: 600; color: #0f172a; }
+    .loc-val-num { font-size: 0.8rem; font-weight: 600; color: #0f172a; }
     .loc-inicio { min-width: 130px; flex-shrink: 0; }
     .loc-inicio-label { font-size: .72rem; color: #94a3b8; font-weight: 600; }
-    .loc-inicio-val { font-size: .82rem; color: #0f172a; margin-top: 2px; }
+    .loc-inicio-val { font-size: 0.8rem; color: #0f172a; margin-top: 2px; }
     .loc-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
     .loc-action-btn {
         background: none; border: none; cursor: pointer;
         width: 30px; height: 30px; border-radius: 7px;
         display: flex; align-items: center; justify-content: center;
-        color: #64748b; font-size: .9rem; transition: background .1s, color .1s;
+        color: #64748b; font-size: 0.875rem; transition: background .1s, color .1s;
     }
     .loc-action-btn:hover { background: #f1f5f9; color: #008cdd; }
-    .loc-action-btn.danger:hover { background: #fff1f2; color: #ef473a; }
+    .loc-action-btn.danger:hover { background: #FEF2F2; color: #B91C1C; }
     /* tabs de detalhes */
-    .vl-tab { border:none;background:none;padding:8px 14px;font-size:.82rem;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s; }
-    .vl-tab.active,.vl-tab:hover { color:#4f46e5;border-bottom-color:#4f46e5; }
+    .vl-tab { border:none;background:none;padding:8px 14px;font-size:0.8rem;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s; }
+    .vl-tab.active,.vl-tab:hover { color:#015e94;border-bottom-color:#015e94; }
     /* menu de opções da locação */
     .loc-menu-opt { text-align:center;cursor:pointer;padding:8px 4px;border-radius:10px;transition:background .1s; }
     .loc-menu-opt:hover { background:#f8fafc; }
     .loc-menu-circle { width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px; }
     .loc-expand { background: #f8fafc; border-top: 1px solid #f1f5f9; padding: 16px 20px 16px 88px; }
     .loc-expand-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
-    .loc-expand-field label { font-size: .68rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 2px; }
-    .loc-expand-field span { font-size: .82rem; font-weight: 600; color: #0f172a; }
+    .loc-expand-field label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 2px; }
+    .loc-expand-field span { font-size: 0.8rem; font-weight: 600; color: #0f172a; }
     .loc-fotos-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
     .loc-fotos-row img { width: 52px; height: 40px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #e2e8f0; }
 </style>
@@ -217,7 +224,7 @@
                 : 'Erro ao carregar dados. Tente recarregar a página.';
             showToast(msg, 'error');
             if (lista) lista.innerHTML =
-                '<div style="text-align:center;padding:40px;color:#ef473a;">' +
+                '<div style="text-align:center;padding:40px;color:#B91C1C;">' +
                 '<i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>' + msg + '</div>';
         }
     }
@@ -255,12 +262,12 @@
     }
 
     function renderizarChecklist(checklist) {
-        if (!checklist) return '<span style="color:#9ca3af;">-</span>';
+        if (!checklist) return '<span style="color:#94a3b8;">-</span>';
         try {
             const items = typeof checklist === 'string' ? JSON.parse(checklist) : checklist;
             const checked = items.filter(i => i.checked).length;
             return '<span class="badge badge-info">' + checked + '/' + items.length + '</span>';
-        } catch { return '<span style="color:#9ca3af;">-</span>'; }
+        } catch { return '<span style="color:#94a3b8;">-</span>'; }
     }
 
     // Reduz URL Cloudinary para miniatura 80x60 sem alterar o original
@@ -270,20 +277,20 @@
     }
 
     function renderizarFotos(fotos) {
-        if (!fotos) return '<span style="color:#9ca3af;">-</span>';
+        if (!fotos) return '<span style="color:#94a3b8;">-</span>';
         try {
             const parsed = typeof fotos === 'string' ? JSON.parse(fotos) : fotos;
             const lista = Array.isArray(parsed) ? parsed : [];
-            if (lista.length === 0) return '<span style="color:#9ca3af;">-</span>';
+            if (lista.length === 0) return '<span style="color:#94a3b8;">-</span>';
             const fotosJson = JSON.stringify(lista).replace(/'/g, "\\'");
-            const resto = lista.length > 1 ? `<span style="font-size:.7rem;font-weight:600;color:#64748b;margin-left:4px;">+${lista.length - 1}</span>` : '';
+            const resto = lista.length > 1 ? `<span style="font-size:0.72rem;font-weight:600;color:#64748b;margin-left:4px;">+${lista.length - 1}</span>` : '';
             return `<div style="display:flex;align-items:center;gap:4px;">
                 <img src="${thumbUrl(lista[0])}" loading="lazy"
                      onclick="abrirGaleria(${lista.map(f=>`'${f}'`).join(',')})" title="Ver todas as fotos"
                      style="width:48px;height:36px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid #e2e8f0;">
                 ${resto}
             </div>`;
-        } catch { return '<span style="color:#9ca3af;">-</span>'; }
+        } catch { return '<span style="color:#94a3b8;">-</span>'; }
     }
 
     /* ── Lightbox / Galeria ──────────────────────────────────────── */
@@ -368,7 +375,7 @@
             const valorCaucao = parseFloat(l.caucao) > 0
                 ? '<div class="loc-val-label" style="margin-top:3px;">Caução</div><div class="loc-val-num">' + formatCurrency(l.caucao) + '</div>'
                 : '';
-            const menuBtn = '<button class="loc-action-btn" onclick="event.stopPropagation();abrirMenuLocacao(' + l.id + ')" title="Ações" style="font-size:1.3rem;letter-spacing:.1em;color:#475569;font-weight:700;">⋯</button>';
+            const menuBtn = '<button class="loc-action-btn" onclick="event.stopPropagation();abrirMenuLocacao(' + l.id + ')" title="Ações" style="font-size:1.25rem;letter-spacing:.1em;color:#475569;font-weight:700;">⋯</button>';
             const delBtn  = '<button class="loc-action-btn danger" onclick="event.stopPropagation();confirmarExcluirLocacao(' + l.id + ',\'#' + numId + '\')" title="Excluir"><i class="fas fa-trash"></i></button>';
 
             // Detalhes do expand
@@ -381,20 +388,20 @@
                     '<div class="loc-expand-field"><label>KM Saída</label><span>' + (l.km_saida ? l.km_saida.toLocaleString('pt-BR') + ' km' : '—') + '</span></div>' +
                     '<div class="loc-expand-field"><label>KM Retorno</label><span>' + (l.km_retorno ? l.km_retorno.toLocaleString('pt-BR') + ' km' : '—') + '</span></div>' +
                     '<div class="loc-expand-field"><label>Data Devolução</label><span>' + formatDate(l.data_devolucao_real || l.data_fim) + '</span></div>' +
-                    '<div class="loc-expand-field"><label>Total</label><span>' + (l.total ? formatCurrency(l.total) : '<span style="color:#f59e0b;">Em aberto</span>') + '</span></div>' +
+                    '<div class="loc-expand-field"><label>Total</label><span>' + (l.total ? formatCurrency(l.total) : '<span style="color:#A16207;">Em aberto</span>') + '</span></div>' +
                 '</div>' +
                 '<div style="display:flex;gap:20px;flex-wrap:wrap;">' +
                     '<div>' +
-                        '<div style="font-size:.68rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Checklist</div>' +
+                        '<div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Checklist</div>' +
                         '<div>' + clItems + '</div>' +
                     '</div>' +
-                    (fotosSaida ? '<div><div style="font-size:.68rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Fotos Saída</div><div class="loc-fotos-row">' + fotosSaida + '</div></div>' : '') +
-                    (fotosRetorno ? '<div><div style="font-size:.68rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Fotos Retorno</div><div class="loc-fotos-row">' + fotosRetorno + '</div></div>' : '') +
+                    (fotosSaida ? '<div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Fotos Saída</div><div class="loc-fotos-row">' + fotosSaida + '</div></div>' : '') +
+                    (fotosRetorno ? '<div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Fotos Retorno</div><div class="loc-fotos-row">' + fotosRetorno + '</div></div>' : '') +
                 '</div>' +
                 '<div style="display:flex;gap:8px;margin-top:14px;">' +
-                    '<button class="btn btn-secondary" style="font-size:.78rem;padding:5px 14px;" onclick="imprimirContrato(' + l.id + ')"><i class="fas fa-print"></i> Imprimir Contrato</button>' +
-                    (l.status === 'ativa' ? '<button class="btn btn-primary" style="font-size:.78rem;padding:5px 14px;" onclick="abrirModalDevolucao(' + l.id + ')"><i class="fas fa-undo"></i> Registrar Devolução</button>' : '') +
-                    '<button class="btn" style="font-size:.78rem;padding:5px 14px;background:#f1f5f9;color:#475569;" onclick="editarLocacao(' + l.id + ')"><i class="fas fa-pen"></i> Editar</button>' +
+                    '<button class="btn btn-secondary" style="font-size:0.8rem;padding:5px 14px;" onclick="imprimirContrato(' + l.id + ')"><i class="fas fa-print"></i> Imprimir Contrato</button>' +
+                    (l.status === 'ativa' ? '<button class="btn btn-primary" style="font-size:0.8rem;padding:5px 14px;" onclick="abrirModalDevolucao(' + l.id + ')"><i class="fas fa-undo"></i> Registrar Devolução</button>' : '') +
+                    '<button class="btn" style="font-size:0.8rem;padding:5px 14px;background:#f1f5f9;color:#475569;" onclick="editarLocacao(' + l.id + ')"><i class="fas fa-pen"></i> Editar</button>' +
                 '</div>';
 
             return '<div class="loc-row">' +
@@ -439,13 +446,13 @@
     function confirmarExcluirLocacao(id, descricao) {
         abrirModal('Excluir Contrato', `
             <div style="text-align:center;padding:24px 0">
-                <i class="fas fa-exclamation-triangle" style="font-size:52px;color:#ef473a;display:block;margin-bottom:16px"></i>
+                <i class="fas fa-exclamation-triangle" style="font-size:52px;color:#B91C1C;display:block;margin-bottom:16px"></i>
                 <p style="font-size:1rem;font-weight:600;color:#0f172a;margin-bottom:8px">Excluir este contrato?</p>
-                <p style="font-size:0.85rem;color:#64748b;margin-bottom:24px">${descricao.trim()}</p>
+                <p style="font-size:0.875rem;color:#64748b;margin-bottom:24px">${descricao.trim()}</p>
                 <p style="font-size:0.8rem;color:#94a3b8;margin-bottom:20px">Esta ação não pode ser desfeita. Fotos e pagamentos vinculados também serão removidos.</p>
                 <div style="display:flex;gap:10px;justify-content:center">
-                    <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;padding:10px 20px">Cancelar</button>
-                    <button class="btn" onclick="excluirLocacao(${id})" style="background:#ef473a;color:white;padding:10px 20px"><i class="fas fa-trash" style="margin-right:6px"></i>Excluir</button>
+                    <button class="btn btn-secondary" onclick="fecharModal()" >Cancelar</button>
+                    <button class="btn" onclick="excluirLocacao(${id})" style="background:#B91C1C;color:white;padding:10px 20px"><i class="fas fa-trash" style="margin-right:6px"></i>Excluir</button>
                 </div>
             </div>
         `);
@@ -539,7 +546,7 @@
     function _toggle(nome, label, desc, val) {
         return '<label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;">' +
             '<input type="checkbox" name="' + nome + '" id="' + nome + '" style="width:18px;height:18px;accent-color:#008cdd;" ' + (val ? 'checked' : '') + '>' +
-            '<div><div style="font-size:.82rem;font-weight:600;color:#0f172a;">' + label + '</div>' +
+            '<div><div style="font-size:0.8rem;font-weight:600;color:#0f172a;">' + label + '</div>' +
             '<div style="font-size:.72rem;color:#64748b;">' + desc + '</div></div></label>';
     }
 
@@ -611,7 +618,7 @@
                 if (lista && lista.length > 0) {
                     fotosExistentes = '<div class="preview-fotos" style="margin-bottom:8px;">' +
                         lista.map(f => '<div class="preview-foto"><img src="' + f + '" onclick="verFoto(\'' + f + '\')"></div>').join('') +
-                    '</div><p style="font-size:0.8rem;color:#6b7280;margin-bottom:6px;">' + lista.length + ' foto(s) já salva(s). Adicione novas abaixo:</p>';
+                    '</div><p style="font-size:0.8rem;color:#64748b;margin-bottom:6px;">' + lista.length + ' foto(s) já salva(s). Adicione novas abaixo:</p>';
                 }
             } catch {}
         }
@@ -626,12 +633,12 @@
             return '<button type="button" data-freq="' + o.v + '" onclick="setFreqLoc(\'' + o.v + '\')" '
                 + 'style="padding:6px 12px;border-radius:8px;border:2px solid ' + (a?'#008cdd':'#e2e8f0')
                 + ';background:' + (a?'#e8f5ff':'#f8fafc') + ';color:' + (a?'#015e94':'#64748b')
-                + ';font-size:.76rem;font-weight:600;cursor:pointer;">' + o.l + '</button>';
+                + ';font-size:0.72rem;font-weight:600;cursor:pointer;">' + o.l + '</button>';
         }).join('');
 
         const _v = (k, def='') => isEdit ? (locacao[k] ?? def) : def;
         const _sec = (title, icon) =>
-            '<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#64748b;'
+            '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#64748b;'
             + 'margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;">'
             + '<i class="fas fa-' + icon + '" style="margin-right:6px;color:#008cdd;"></i>' + title + '</div>';
 
@@ -703,7 +710,7 @@
                 '<div class="form-group"><label>Valor por KM Excedente (R$)</label>' +
                 '<input type="number" class="form-control" name="km_excedente_valor" id="kmExcVal" value="' + _v('km_excedente_valor',0) + '" step="0.01" min="0" placeholder="Ex: 0.80" oninput="mostrarExemploKm()"></div>' +
             '</div>' +
-            '<div id="exemploKm" style="display:none;background:#fff8d0;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;font-size:.78rem;color:#7a6000;margin-bottom:10px;"></div>' +
+            '<div id="exemploKm" style="display:none;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:8px 12px;font-size:0.8rem;color:#A16207;margin-bottom:10px;"></div>' +
             '<div class="form-group">' +
                 '<label>Raio de Circulação Permitido</label>' +
                 '<input type="text" class="form-control" name="raio_circulacao" value="' + _v('raio_circulacao','') + '" placeholder="Ex: Região Metropolitana de Curitiba"></div>' +
@@ -736,7 +743,7 @@
             '<div class="form-group">' +
                 fotosExistentes +
                 '<div class="foto-upload-area" onclick="document.getElementById(\'inputFotosLocacao\').click()">' +
-                    '<i class="fas fa-camera" style="font-size:2rem;color:#9ca3af;"></i><br><span style="color:#6b7280;">Clique para selecionar fotos</span>' +
+                    '<i class="fas fa-camera" style="font-size:2rem;color:#94a3b8;"></i><br><span style="color:#64748b;">Clique para selecionar fotos</span>' +
                 '</div>' +
                 '<input type="file" id="inputFotosLocacao" accept="image/*" multiple style="display:none;" onchange="previewFotos(this,\'previewFotosLocacao\')">' +
                 '<div id="previewFotosLocacao" class="preview-fotos"></div>' +
@@ -751,11 +758,11 @@
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;gap:8px;">' +
                 '<div>' +
                     (isEdit && locacao.frequencia_cobranca && locacao.frequencia_cobranca !== 'avulso' && !locacao.data_fim
-                        ? '<button type="button" class="btn" id="btnGerarCobrancas" onclick="gerarCobrancasContrato(' + locacao.id + ')" style="background:#28a0e5;color:white;"><i class="fas fa-file-invoice-dollar" style="margin-right:6px"></i>Gerar Contas a Receber</button>'
+                        ? '<button type="button" class="btn" id="btnGerarCobrancas" onclick="gerarCobrancasContrato(' + locacao.id + ')" style="background:#008cdd;color:white;"><i class="fas fa-file-invoice-dollar" style="margin-right:6px"></i>Gerar Contas a Receber</button>'
                         : '') +
                 '</div>' +
                 '<div style="display:flex;gap:8px;">' +
-                    '<button type="button" class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;">Cancelar</button>' +
+                    '<button type="button" class="btn btn-secondary" onclick="fecharModal()" >Cancelar</button>' +
                     '<button type="button" class="btn btn-primary" onclick="salvarLocacao(' + (isEdit ? locacao.id : 'null') + ')">' + (isEdit ? 'Atualizar' : 'Cadastrar') + '</button>' +
                 '</div>' +
             '</div>' +
@@ -987,11 +994,11 @@
 
         const content = '<form id="formDevolucao">' +
             '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:16px;">' +
-                '<p style="margin:0;font-size:.9rem;"><strong>Veículo:</strong> ' + (loc.placa||'-') + ' — ' + (loc.marca||'') + ' ' + (loc.modelo||'') + '</p>' +
-                '<p style="margin:4px 0 0;font-size:.9rem;"><strong>Cliente:</strong> ' + (loc.nome_cliente||'-') + '</p>' +
-                '<p style="margin:4px 0 0;font-size:.9rem;"><strong>Km na Saída:</strong> ' + (kmSaida ? kmSaida.toLocaleString()+'km' : '-') +
+                '<p style="margin:0;font-size:0.875rem;"><strong>Veículo:</strong> ' + (loc.placa||'-') + ' — ' + (loc.marca||'') + ' ' + (loc.modelo||'') + '</p>' +
+                '<p style="margin:4px 0 0;font-size:0.875rem;"><strong>Cliente:</strong> ' + (loc.nome_cliente||'-') + '</p>' +
+                '<p style="margin:4px 0 0;font-size:0.875rem;"><strong>Km na Saída:</strong> ' + (kmSaida ? kmSaida.toLocaleString()+'km' : '-') +
                 (temFranquia ? ' · <strong>Franquia:</strong> ' + loc.franquia_km_diaria + ' km/dia · <strong>Excedente:</strong> R$' + parseFloat(loc.km_excedente_valor).toFixed(2).replace('.',',') + '/km' : '') + '</p>' +
-                (loc.caucao > 0 ? '<p style="margin:4px 0 0;font-size:.9rem;"><strong>Caução:</strong> ' + formatCurrency(loc.caucao) + (loc.caucao_pendente ? ' <span style="color:#ef473a">(pendente)</span>' : ' <span style="color:#16a34a">(pago)</span>') + '</p>' : '') +
+                (loc.caucao > 0 ? '<p style="margin:4px 0 0;font-size:0.875rem;"><strong>Caução:</strong> ' + formatCurrency(loc.caucao) + (loc.caucao_pendente ? ' <span style="color:#B91C1C">(pendente)</span>' : ' <span style="color:#15803D">(pago)</span>') + '</p>' : '') +
             '</div>' +
             '<div class="grid-2">' +
                 '<div class="form-group"><label>Data de Devolução *</label>' +
@@ -1004,23 +1011,23 @@
                 '<input class="form-control" value="' + combSaida + '" readonly style="background:#f8fafc;color:#64748b;"></div>' +
                 '<div class="form-group"><label>Nível Combustível Retorno</label>' + selCombRet + '</div>' +
             '</div>' +
-            '<div id="kmRodadoInfo" style="background:#ddf0fb;border-radius:8px;padding:10px 14px;font-size:.85rem;color:#015e94;margin-bottom:12px;display:none;">' +
+            '<div id="kmRodadoInfo" style="background:#e8f5ff;border-radius:8px;padding:10px 14px;font-size:0.875rem;color:#015e94;margin-bottom:12px;display:none;">' +
                 '<i class="fas fa-road"></i> <span id="kmRodadoText"></span>' +
             '</div>' +
-            '<div id="kmExcedenteInfo" style="background:#fff8d0;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:.85rem;color:#7a6000;margin-bottom:12px;display:none;">' +
+            '<div id="kmExcedenteInfo" style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;font-size:0.875rem;color:#A16207;margin-bottom:12px;display:none;">' +
                 '<i class="fas fa-exclamation-triangle"></i> <span id="kmExcedenteText"></span>' +
             '</div>' +
             '<div class="form-group">' +
                 '<label>Fotos de Retorno <small style="color:#94a3b8">(opcional)</small></label>' +
                 '<div class="foto-upload-area" onclick="document.getElementById(\'inputFotosRetorno\').click()">' +
-                    '<i class="fas fa-camera" style="font-size:2rem;color:#9ca3af;"></i><br><span style="color:#6b7280;">Selecionar fotos do retorno</span>' +
+                    '<i class="fas fa-camera" style="font-size:2rem;color:#94a3b8;"></i><br><span style="color:#64748b;">Selecionar fotos do retorno</span>' +
                 '</div>' +
                 '<input type="file" id="inputFotosRetorno" accept="image/*" multiple style="display:none;" onchange="previewFotos(this,\'previewFotosRetorno\')">' +
                 '<div id="previewFotosRetorno" class="preview-fotos"></div>' +
                 '<div id="progressDev" class="upload-progress"><i class="fas fa-spinner fa-spin"></i> Enviando fotos...</div>' +
             '</div>' +
             '<div style="text-align:right;margin-top:20px;">' +
-                '<button type="button" class="btn" onclick="fecharModal()" style="background:#6b7280;color:white;margin-right:10px;">Cancelar</button>' +
+                '<button type="button" class="btn btn-secondary" onclick="fecharModal()" >Cancelar</button>' +
                 '<button type="button" class="btn btn-success" onclick="confirmarDevolucao(' + id + ',' + kmSaida + ')"><i class="fas fa-undo"></i> Confirmar Devolução</button>' +
             '</div>' +
         '</form>';
@@ -1158,7 +1165,7 @@
             'h1{font-size:18px;text-align:center;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:4px;}' +
             '.sub{text-align:center;color:#555;font-size:11px;margin-bottom:18px;}' +
             '.section{margin-bottom:16px;}' +
-            '.section h2{font-size:11.5px;background:#f0f0f0;padding:4px 10px;margin:0 0 8px;border-left:4px solid #008cdd;text-transform:uppercase;letter-spacing:.5px;}' +
+            '.section h2{font-size:11.5px;background:#f1f5f9;padding:4px 10px;margin:0 0 8px;border-left:4px solid #008cdd;text-transform:uppercase;letter-spacing:.5px;}' +
             '.row{display:flex;gap:16px;margin-bottom:5px;}' +
             '.field{flex:1;}' +
             '.field label{display:block;font-size:10px;color:#666;margin-bottom:1px;}' +
@@ -1167,8 +1174,8 @@
             '.total-box{background:#f0f7ff;border:2px solid #008cdd;border-radius:6px;padding:12px 18px;text-align:center;margin-top:8px;}' +
             '.total-box .valor{font-size:26px;font-weight:bold;color:#008cdd;}' +
             '.badge{display:inline-block;padding:1px 8px;border-radius:4px;font-size:10px;font-weight:700;}' +
-            '.badge-ok{background:#dcfce7;color:#15803d;}' +
-            '.badge-pend{background:#fde8e7;color:#c41230;}' +
+            '.badge-ok{background:#F0FDF4;color:#15803d;}' +
+            '.badge-pend{background:#FEF2F2;color:#B91C1C;}' +
             '.assinaturas{display:flex;gap:60px;margin-top:48px;}' +
             '.assinatura{flex:1;text-align:center;}' +
             '.assinatura .linha{border-top:1px solid #333;margin-top:50px;padding-top:4px;font-size:11px;}' +
@@ -1258,27 +1265,27 @@
         if (!l) return;
         const numId = String(l.id).padStart(6,'0');
         const encerrarBtn = l.status === 'ativa'
-            ? '<button class="btn" style="background:#ef4444;color:#fff;flex:1;max-width:260px;padding:11px;font-weight:600;font-size:.88rem;" onclick="fecharModal();setTimeout(()=>abrirModalDevolucao('+id+'),120)">Encerrar Locação</button>'
+            ? '<button class="btn" style="background:#B91C1C;color:#fff;flex:1;max-width:260px;padding:11px;font-weight:600;font-size:0.875rem;" onclick="fecharModal();setTimeout(()=>abrirModalDevolucao('+id+'),120)">Encerrar Locação</button>'
             : '';
         const content =
             '<div style="display:flex;gap:8px;justify-content:center;padding:18px 0 22px;">' +
                 '<div class="loc-menu-opt" onclick="fecharModal();setTimeout(()=>abrirDetalhesLocacao('+id+'),120)">' +
-                    '<div class="loc-menu-circle" style="background:#f5f3ff;">' +
-                        '<i class="fas fa-pen" style="color:#4f46e5;font-size:1.1rem;"></i>' +
+                    '<div class="loc-menu-circle" style="background:#e8f5ff;">' +
+                        '<i class="fas fa-pen" style="color:#015e94;font-size:1rem;"></i>' +
                     '</div>' +
-                    '<div style="font-size:.74rem;color:#475569;font-weight:500;line-height:1.3;max-width:84px;margin:0 auto;">Alterar dados da locação.</div>' +
+                    '<div style="font-size:0.72rem;color:#475569;font-weight:500;line-height:1.3;max-width:84px;margin:0 auto;">Alterar dados da locação.</div>' +
                 '</div>' +
                 '<div class="loc-menu-opt" onclick="entrarEmContatoLocacao('+id+')">' +
                     '<div class="loc-menu-circle" style="background:#f0fdf4;">' +
-                        '<i class="fab fa-whatsapp" style="color:#16a34a;font-size:1.3rem;"></i>' +
+                        '<i class="fab fa-whatsapp" style="color:#15803D;font-size:1.25rem;"></i>' +
                     '</div>' +
-                    '<div style="font-size:.74rem;color:#475569;font-weight:500;line-height:1.3;max-width:84px;margin:0 auto;">Entrar em contato com o locatário.</div>' +
+                    '<div style="font-size:0.72rem;color:#475569;font-weight:500;line-height:1.3;max-width:84px;margin:0 auto;">Entrar em contato com o locatário.</div>' +
                 '</div>' +
                 '<div class="loc-menu-opt" onclick="fecharModal();setTimeout(()=>abrirDetalhesLocacao('+id+',3),120)">' +
                     '<div class="loc-menu-circle" style="background:#eff6ff;">' +
-                        '<i class="fas fa-info-circle" style="color:#3b82f6;font-size:1.1rem;"></i>' +
+                        '<i class="fas fa-info-circle" style="color:#008cdd;font-size:1rem;"></i>' +
                     '</div>' +
-                    '<div style="font-size:.74rem;color:#475569;font-weight:500;line-height:1.3;max-width:84px;margin:0 auto;">Dados da Locação e Locatário</div>' +
+                    '<div style="font-size:0.72rem;color:#475569;font-weight:500;line-height:1.3;max-width:84px;margin:0 auto;">Dados da Locação e Locatário</div>' +
                 '</div>' +
             '</div>' +
             '<div style="display:flex;gap:10px;justify-content:center;padding-bottom:4px;">' +
@@ -1312,7 +1319,7 @@
         const tabs = ['Entradas','Despesas','Manutenções','Informações'];
 
         const content =
-            '<div style="font-size:.7rem;color:#94a3b8;margin-bottom:6px;">Locação #' + numId + ' · ' + (l.placa||'') + ' · ' + (l.nome_cliente||'') + '</div>' +
+            '<div style="font-size:0.72rem;color:#94a3b8;margin-bottom:6px;">Locação #' + numId + ' · ' + (l.placa||'') + ' · ' + (l.nome_cliente||'') + '</div>' +
             '<div style="display:flex;gap:0;border-bottom:1px solid #f1f5f9;margin-bottom:14px;">' +
                 tabs.map(function(tab, i) {
                     return '<button class="vl-tab' + (i===aba?' active':'') + '" id="ltab_'+i+'" onclick="switchTabLoc('+i+')">' + tab + '</button>';
@@ -1323,7 +1330,7 @@
             '<div id="ltabPane2"' + (aba!==2?' style="display:none;"':'') + '><div id="locManutencoes" style="text-align:center;padding:20px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div></div>' +
             '<div id="ltabPane3"' + (aba!==3?' style="display:none;"':'') + '><div id="locInformacoesForm"></div></div>' +
             '<div style="text-align:right;margin-top:14px;padding-top:10px;border-top:1px solid #f1f5f9;">' +
-                (l.status==='ativa'?'<button class="btn" style="background:#ef4444;color:#fff;margin-right:8px;" onclick="fecharModal();setTimeout(()=>abrirModalDevolucao('+id+'),120)">Encerrar Locação</button>':'') +
+                (l.status==='ativa'?'<button class="btn" style="background:#B91C1C;color:#fff;margin-right:8px;" onclick="fecharModal();setTimeout(()=>abrirModalDevolucao('+id+'),120)">Encerrar Locação</button>':'') +
                 '<button class="btn" style="background:#f1f5f9;color:#475569;" onclick="fecharModal()">Fechar</button>' +
             '</div>';
 
@@ -1354,29 +1361,29 @@
             const totHtml =
                 '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">' +
                     '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;">' +
-                        '<div style="font-size:.67rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px;"><i class="fas fa-dollar-sign" style="color:#16a34a;margin-right:4px;"></i>Total Recebido</div>' +
-                        '<div style="font-size:.95rem;font-weight:700;color:#16a34a;">' + formatCurrency(data.total_recebido) + '</div>' +
+                        '<div style="font-size:0.65rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px;"><i class="fas fa-dollar-sign" style="color:#15803D;margin-right:4px;"></i>Total Recebido</div>' +
+                        '<div style="font-size:1rem;font-weight:700;color:#15803D;">' + formatCurrency(data.total_recebido) + '</div>' +
                     '</div>' +
                     '<div style="background:' + (data.total_atraso>0?'#fef2f2;border:1px solid #fecaca':'#f8fafc;border:1px solid #e2e8f0') + ';border-radius:8px;padding:12px 14px;">' +
-                        '<div style="font-size:.67rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px;"><i class="fas fa-exclamation-triangle" style="color:' + (data.total_atraso>0?'#ef4444':'#94a3b8') + ';margin-right:4px;"></i>Total em Atraso</div>' +
-                        '<div style="font-size:.95rem;font-weight:700;color:' + (data.total_atraso>0?'#ef4444':'#0f172a') + ';">' + formatCurrency(data.total_atraso) + '</div>' +
+                        '<div style="font-size:0.65rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px;"><i class="fas fa-exclamation-triangle" style="color:' + (data.total_atraso>0?'#B91C1C':'#94a3b8') + ';margin-right:4px;"></i>Total em Atraso</div>' +
+                        '<div style="font-size:1rem;font-weight:700;color:' + (data.total_atraso>0?'#B91C1C':'#0f172a') + ';">' + formatCurrency(data.total_atraso) + '</div>' +
                     '</div>' +
                     '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;">' +
-                        '<div style="font-size:.67rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px;"><i class="fas fa-receipt" style="color:#8b5cf6;margin-right:4px;"></i>Total Geral</div>' +
-                        '<div style="font-size:.95rem;font-weight:700;color:#0f172a;">' + formatCurrency(data.total_geral) + '</div>' +
+                        '<div style="font-size:0.65rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px;"><i class="fas fa-receipt" style="color:#008cdd;margin-right:4px;"></i>Total Geral</div>' +
+                        '<div style="font-size:1rem;font-weight:700;color:#0f172a;">' + formatCurrency(data.total_geral) + '</div>' +
                     '</div>' +
                 '</div>';
 
             const hoje = new Date().toISOString().slice(0,10);
             const stBadge = function(p) {
                 const isAtras = p.status==='pendente' && p.data_fim && String(p.data_fim)<hoje;
-                if (isAtras) return '<span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:#fef2f2;color:#dc2626;">Atrasado</span>';
-                if (p.status==='pago') return '<span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:#f0fdf4;color:#16a34a;">Pago</span>';
+                if (isAtras) return '<span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:#fef2f2;color:#B91C1C;">Atrasado</span>';
+                if (p.status==='pago') return '<span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:#f0fdf4;color:#15803D;">Pago</span>';
                 return '<span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:#eff6ff;color:#2563eb;">Em Aberto</span>';
             };
 
             const tabela = pags.length
-                ? '<div style="overflow-x:auto;"><table style="width:100%;font-size:.82rem;border-collapse:collapse;">' +
+                ? '<div style="overflow-x:auto;"><table style="width:100%;font-size:0.8rem;border-collapse:collapse;">' +
                   '<thead><tr style="background:#f8fafc;border-bottom:2px solid #f1f5f9;">' +
                   '<th style="padding:7px 10px;text-align:left;color:#64748b;font-weight:600;">Categoria</th>' +
                   '<th style="padding:7px 10px;text-align:left;color:#64748b;font-weight:600;">Valor</th>' +
@@ -1400,7 +1407,7 @@
             el.innerHTML = totHtml + tabela;
             if (elD) elD.innerHTML = totHtml + '<div style="text-align:center;padding:20px;color:#94a3b8;">Nenhuma despesa adicional registrada</div>';
         } catch(e) {
-            if (el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:20px;"><i class="fas fa-exclamation-circle" style="margin-right:6px;"></i>Erro ao carregar pagamentos</div>';
+            if (el) el.innerHTML = '<div style="color:#B91C1C;text-align:center;padding:20px;"><i class="fas fa-exclamation-circle" style="margin-right:6px;"></i>Erro ao carregar pagamentos</div>';
         }
     }
 
@@ -1415,7 +1422,7 @@
                 el.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;">Nenhuma manutenção registrada para este veículo</div>';
                 return;
             }
-            el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;font-size:.82rem;border-collapse:collapse;">' +
+            el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;font-size:0.8rem;border-collapse:collapse;">' +
                 '<thead><tr style="background:#f8fafc;border-bottom:2px solid #f1f5f9;">' +
                 '<th style="padding:7px 10px;text-align:left;color:#64748b;font-weight:600;">Veículo</th>' +
                 '<th style="padding:7px 10px;text-align:left;color:#64748b;font-weight:600;">Valor</th>' +
@@ -1432,7 +1439,7 @@
                 }).join('') +
                 '</tbody></table></div>';
         } catch(e) {
-            if (el) el.innerHTML = '<div style="color:#ef4444;text-align:center;padding:20px;">Erro ao carregar manutenções</div>';
+            if (el) el.innerHTML = '<div style="color:#B91C1C;text-align:center;padding:20px;">Erro ao carregar manutenções</div>';
         }
     }
 
@@ -1453,17 +1460,17 @@
             ['Total', l.total ? formatCurrency(l.total) : '—'],
         ];
         el.innerHTML =
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:.84rem;margin-bottom:16px;">' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:0.875rem;margin-bottom:16px;">' +
             campos.map(function(c) {
                 return '<div>' +
-                    '<div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">' + c[0] + '</div>' +
+                    '<div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">' + c[0] + '</div>' +
                     '<div style="font-weight:600;color:#0f172a;">' + c[1] + '</div>' +
                 '</div>';
             }).join('') +
             '</div>' +
             '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;gap:8px;flex-wrap:wrap;">' +
-                '<button class="btn btn-primary" style="font-size:.84rem;" onclick="fecharModal();setTimeout(()=>editarLocacao('+id+'),120)"><i class="fas fa-pen"></i> Editar locação</button>' +
-                '<button class="btn btn-secondary" style="font-size:.84rem;" onclick="fecharModal();setTimeout(()=>imprimirContrato('+id+'),120)"><i class="fas fa-print"></i> Imprimir contrato</button>' +
+                '<button class="btn btn-primary" style="font-size:0.875rem;" onclick="fecharModal();setTimeout(()=>editarLocacao('+id+'),120)"><i class="fas fa-pen"></i> Editar locação</button>' +
+                '<button class="btn btn-secondary" style="font-size:0.875rem;" onclick="fecharModal();setTimeout(()=>imprimirContrato('+id+'),120)"><i class="fas fa-print"></i> Imprimir contrato</button>' +
             '</div>';
     }
 
@@ -1474,12 +1481,12 @@ async function abrirValCNH() {
     const ov = document.getElementById('overlayValCNH');
     ov.style.display = 'flex';
     const lista = document.getElementById('listaCNH');
-    lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:.85rem;">Carregando...</div>';
+    lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:0.875rem;">Carregando...</div>';
     try {
         const resp = await fetch('/api/locacoes/cnh-condutores');
         const data = await resp.json();
         if (!data.length) {
-            lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:.85rem;">Nenhuma locação ativa encontrada</div>';
+            lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:0.875rem;">Nenhuma locação ativa encontrada</div>';
             return;
         }
         const hoje = new Date();
@@ -1490,20 +1497,20 @@ async function abrirValCNH() {
             let cor = '#0f172a';
             if (val) {
                 const diff = (new Date(val) - hoje) / (1000*60*60*24);
-                if (diff < 0)       { cor='#be123c'; alerta='<span style="font-size:.62rem;background:#fff1f2;color:#be123c;padding:1px 6px;border-radius:6px;font-weight:700;margin-left:6px;">VENCIDA</span>'; }
-                else if (diff < 30) { cor='#d97706'; alerta='<span style="font-size:.62rem;background:#fff8e6;color:#d97706;padding:1px 6px;border-radius:6px;font-weight:700;margin-left:6px;">Vence em breve</span>'; }
+                if (diff < 0)       { cor='#be123c'; alerta='<span style="font-size:0.65rem;background:#FEF2F2;color:#be123c;padding:1px 6px;border-radius:6px;font-weight:700;margin-left:6px;">VENCIDA</span>'; }
+                else if (diff < 30) { cor='#d97706'; alerta='<span style="font-size:0.65rem;background:#fff8e6;color:#d97706;padding:1px 6px;border-radius:6px;font-weight:700;margin-left:6px;">Vence em breve</span>'; }
             }
             return `<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
                         padding:12px 20px;border-bottom:1px solid #f1f5f9;transition:background .1s;"
                         onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
                 <div>
-                    <div style="font-weight:700;color:#0f172a;font-size:.84rem;letter-spacing:.03em;">${r.placa}</div>
-                    <div style="font-size:.74rem;color:#64748b;margin-top:2px;">Condutor: <strong style="color:#475569;">${r.condutor}</strong></div>
+                    <div style="font-weight:700;color:#0f172a;font-size:0.875rem;letter-spacing:.03em;">${r.placa}</div>
+                    <div style="font-size:0.72rem;color:#64748b;margin-top:2px;">Condutor: <strong style="color:#475569;">${r.condutor}</strong></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:.82rem;font-weight:600;color:${cor};font-variant-numeric:tabular-nums;">${dataFmt}${alerta}</span>
+                    <span style="font-size:0.8rem;font-weight:600;color:${cor};font-variant-numeric:tabular-nums;">${dataFmt}${alerta}</span>
                     <button onclick="editarValCNH(${r.cliente_id},'${escJsAttr(val)}')"
-                        style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:.95rem;padding:4px;"
+                        style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1rem;padding:4px;"
                         title="Editar validade CNH">
                         <i class="fas fa-pen"></i>
                     </button>
@@ -1511,7 +1518,7 @@ async function abrirValCNH() {
             </div>`;
         }).join('');
     } catch(e) {
-        lista.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;font-size:.85rem;">Erro ao carregar dados</div>';
+        lista.innerHTML = '<div style="text-align:center;padding:40px;color:#B91C1C;font-size:0.875rem;">Erro ao carregar dados</div>';
     }
 }
 
@@ -1522,12 +1529,12 @@ function fecharValCNH() {
 function editarValCNH(clienteId, valAtual) {
     abrirModal('Validade da CNH', `
         <div class="form-group" style="margin-bottom:18px;">
-            <label style="font-size:.72rem;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Data de Vencimento da CNH</label>
-            <input type="date" class="form-control" id="inputValCNH" value="${valAtual}" style="font-size:.88rem;">
+            <label style="font-size:.72rem;font-weight:700;color:#008cdd;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">Data de Vencimento da CNH</label>
+            <input type="date" class="form-control" id="inputValCNH" value="${valAtual}" style="font-size:0.875rem;">
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
             <button class="btn" onclick="fecharModal()" style="background:#f1f5f9;color:#64748b;">Cancelar</button>
-            <button class="btn btn-primary" onclick="_salvarValCNH(${clienteId})" style="background:#6366f1;border-color:#6366f1;">
+            <button class="btn btn-primary" onclick="_salvarValCNH(${clienteId})" style="background:#008cdd;border-color:#008cdd;">
                 <i class="fas fa-check"></i> Salvar
             </button>
         </div>
@@ -1562,7 +1569,7 @@ async function _salvarValCNH(clienteId) {
     <button onclick="fecharGaleria()" style="
         position:absolute; top:16px; right:20px;
         background:rgba(255,255,255,0.1); border:none; color:#fff;
-        width:38px; height:38px; border-radius:50%; font-size:1.2rem;
+        width:38px; height:38px; border-radius:50%; font-size:1.25rem;
         cursor:pointer; display:flex; align-items:center; justify-content:center;">
         <i class="fas fa-times"></i>
     </button>
@@ -1574,7 +1581,7 @@ async function _salvarValCNH(clienteId) {
     <div onclick="event.stopPropagation()" style="position:relative;display:flex;align-items:center;gap:12px;">
         <button id="lbBtnPrev" onclick="fotoAnterior()" style="
             background:rgba(255,255,255,0.1); border:none; color:#fff;
-            width:44px; height:44px; border-radius:50%; font-size:1.1rem;
+            width:44px; height:44px; border-radius:50%; font-size:1rem;
             cursor:pointer; display:flex; align-items:center; justify-content:center;
             transition:background .15s; flex-shrink:0;">
             <i class="fas fa-chevron-left"></i>
@@ -1587,7 +1594,7 @@ async function _salvarValCNH(clienteId) {
 
         <button id="lbBtnNext" onclick="proximaFoto()" style="
             background:rgba(255,255,255,0.1); border:none; color:#fff;
-            width:44px; height:44px; border-radius:50%; font-size:1.1rem;
+            width:44px; height:44px; border-radius:50%; font-size:1rem;
             cursor:pointer; display:flex; align-items:center; justify-content:center;
             transition:background .15s; flex-shrink:0;">
             <i class="fas fa-chevron-right"></i>
@@ -1608,12 +1615,12 @@ async function _salvarValCNH(clienteId) {
         <!-- header -->
         <div style="display:flex;align-items:center;justify-content:space-between;
                     padding:18px 20px;border-bottom:1px solid #f1f5f9;position:sticky;top:0;background:#fff;z-index:1;">
-            <h3 style="font-size:.95rem;font-weight:700;color:#0f172a;margin:0;">
-                <i class="fas fa-id-card" style="color:#4f46e5;margin-right:8px;"></i>Validade - CNH
+            <h3 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0;">
+                <i class="fas fa-id-card" style="color:#015e94;margin-right:8px;"></i>Validade - CNH
             </h3>
             <button onclick="fecharValCNH()" style="background:#f1f5f9;border:none;cursor:pointer;
                 width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
-                justify-content:center;color:#64748b;font-size:.9rem;">
+                justify-content:center;color:#64748b;font-size:0.875rem;">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -1625,7 +1632,7 @@ async function _salvarValCNH(clienteId) {
         </div>
         <!-- lista -->
         <div id="listaCNH" style="flex:1;padding:0 4px;">
-            <div style="text-align:center;padding:40px;color:#94a3b8;font-size:.85rem;">Carregando...</div>
+            <div style="text-align:center;padding:40px;color:#94a3b8;font-size:0.875rem;">Carregando...</div>
         </div>
     </div>
 </div>

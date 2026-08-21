@@ -36,7 +36,7 @@
     <div class="card-header">
         <h3 class="card-title">
             <i class="fas fa-list"></i> Fornecedores
-            <span id="countFornecBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span>
+            <span id="countFornecBadge" class="badge badge-info" style="margin-left:8px;font-size:0.72rem;">0</span>
         </h3>
         <div style="display:flex;gap:8px;align-items:center;">
             <input type="text" class="form-control search" placeholder="Buscar nome, CNPJ ou CPF..." id="buscaFornecedor" onkeyup="filtrarFornecedores()" style="width:220px;">
@@ -125,7 +125,7 @@
             </td></tr>`;
             return;
         }
-        const cores = ['#008cdd','#33cd5f','#ffc900','#8b5cf6','#ef473a','#06b6d4'];
+        const cores = ['#008cdd','#15803D','#A16207','#008cdd','#B91C1C','#06b6d4'];
         tbody.innerHTML = lista.map((f, i) => {
             const nomeDisplay = f.nome_fantasia || f.nome;
             const initials = nomeDisplay.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
@@ -144,16 +144,16 @@
                         </div>
                     </div>
                 </td>
-                <td style="font-size:0.82rem;color:#64748b;font-family:monospace;">${f.cnpj || f.cpf || '—'}</td>
+                <td style="font-size:0.8rem;color:#64748b;font-family:monospace;">${f.cnpj || f.cpf || '—'}</td>
                 <td>${f.tipo_nome ? `<span style="background:${tipoCor}18;color:${tipoCor};border:1px solid ${tipoCor}30;
                     padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;">${f.tipo_nome}</span>` : '—'}</td>
                 <td>
-                    ${f.telefone ? `<div style="font-size:0.82rem;"><i class="fas fa-phone" style="color:#94a3b8;width:14px;"></i> ${f.telefone}</div>` : ''}
-                    ${f.email ? `<div style="font-size:0.78rem;color:#64748b;"><i class="fas fa-envelope" style="color:#94a3b8;width:14px;"></i> ${f.email}</div>` : ''}
+                    ${f.telefone ? `<div style="font-size:0.8rem;"><i class="fas fa-phone" style="color:#94a3b8;width:14px;"></i> ${f.telefone}</div>` : ''}
+                    ${f.email ? `<div style="font-size:0.8rem;color:#64748b;"><i class="fas fa-envelope" style="color:#94a3b8;width:14px;"></i> ${f.email}</div>` : ''}
                     ${!f.telefone && !f.email ? '—' : ''}
                 </td>
-                <td style="font-size:0.82rem;">${f.cidade ? `${f.cidade}${f.estado ? `/${f.estado}` : ''}` : '—'}</td>
-                <td style="font-size:0.82rem;">${f.responsavel || '—'}</td>
+                <td style="font-size:0.8rem;">${f.cidade ? `${f.cidade}${f.estado ? `/${f.estado}` : ''}` : '—'}</td>
+                <td style="font-size:0.8rem;">${f.responsavel || '—'}</td>
                 <td>${getStatusBadge(f.status)}</td>
                 <td style="text-align:center;white-space:nowrap;">
                     <div class="act-wrap">
@@ -206,7 +206,7 @@
 
                 ${!isEdit ? `<div style="background:#e8f5ff;border:1px solid #b1dcfb;border-radius:10px;padding:11px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
                     <i class="fas fa-magic" style="color:#008cdd;"></i>
-                    <span style="font-size:0.79rem;color:#015e94;"><strong>Preenchimento automático via CNPJ:</strong> Digite o CNPJ e clique em <strong>Consultar</strong>.</span>
+                    <span style="font-size:0.8rem;color:#015e94;"><strong>Preenchimento automático via CNPJ:</strong> Digite o CNPJ e clique em <strong>Consultar</strong>.</span>
                 </div>` : ''}
 
                 <!-- CNPJ + CPF -->
@@ -219,7 +219,7 @@
                                 oninput="formatarCnpj(this)" style="flex:1;">
                             ${!isEdit ? `<button type="button" id="btnConsultarCnpj" onclick="consultarCnpj()"
                                 style="white-space:nowrap;padding:0 14px;background:#008cdd;color:white;border:none;
-                                       border-radius:8px;cursor:pointer;font-size:0.79rem;font-weight:700;
+                                       border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:700;
                                        display:flex;align-items:center;gap:6px;">
                                 <i class="fas fa-search" id="iconConsultar"></i> Consultar
                             </button>` : ''}
@@ -232,11 +232,11 @@
                 </div>
 
                 <!-- Status da consulta -->
-                <div id="cnpjStatusMsg" style="display:none;margin:-4px 0 12px;font-size:0.78rem;border-radius:8px;padding:8px 12px;"></div>
+                <div id="cnpjStatusMsg" style="display:none;margin:-4px 0 12px;font-size:0.8rem;border-radius:8px;padding:8px 12px;"></div>
 
                 <!-- Card Receita Federal (aparece após consulta) -->
                 <div id="receitaCard" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
-                    <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:8px;">
+                    <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:8px;">
                         <i class="fas fa-landmark"></i> Dados da Receita Federal
                     </div>
                     <div id="receitaInfos" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
@@ -304,7 +304,7 @@
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
                             <label style="margin:0;">Tipo de Fornecedor *</label>
                             <button type="button" onclick="mostrarCriarTipo()"
-                                style="font-size:0.7rem;color:#008cdd;background:none;border:none;cursor:pointer;font-weight:700;padding:0;display:flex;align-items:center;gap:4px;">
+                                style="font-size:0.72rem;color:#008cdd;background:none;border:none;cursor:pointer;font-weight:700;padding:0;display:flex;align-items:center;gap:4px;">
                                 <i class="fas fa-plus"></i> Novo tipo
                             </button>
                         </div>
@@ -316,7 +316,7 @@
                                 placeholder="Nome do novo tipo..." style="flex:1;"
                                 onkeydown="if(event.key==='Enter'){event.preventDefault();criarTipoRapido();}">
                             <button type="button" onclick="criarTipoRapido()"
-                                style="padding:8px 12px;background:#33cd5f;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.8rem;white-space:nowrap;">
+                                style="padding:8px 12px;background:#15803D;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.8rem;white-space:nowrap;">
                                 <i class="fas fa-check"></i>
                             </button>
                             <button type="button" onclick="ocultarCriarTipo()"
@@ -523,12 +523,12 @@
             // Card Receita Federal
             const situacaoOk = (d.situacao_receita || '').toUpperCase() === 'ATIVA';
             const chips = [
-                d.situacao_receita ? `<span style="background:${situacaoOk?'#dcfce7':'#fde8e7'};color:${situacaoOk?'#15803d':'#c73a2e'};border:1px solid ${situacaoOk?'#86efac':'#fca5a5'};padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
+                d.situacao_receita ? `<span style="background:${situacaoOk?'#F0FDF4':'#FEF2F2'};color:${situacaoOk?'#15803d':'#B91C1C'};border:1px solid ${situacaoOk?'#BBF7D0':'#fca5a5'};padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;">
                     <i class="fas fa-${situacaoOk?'check':'times'}-circle"></i> ${d.situacao_receita}</span>` : '',
                 d.porte ? `<span style="background:#e8f5ff;color:#015e94;border:1px solid #b1dcfb;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;">Porte: ${d.porte}</span>` : '',
-                d.simples ? `<span style="background:#fff8d0;color:#7a6000;border:1px solid #fde68a;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;"><i class="fas fa-star"></i> Simples Nacional</span>` : '',
-                d.data_fundacao ? `<span style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;"><i class="fas fa-calendar"></i> Fundação: ${d.data_fundacao.split('-').reverse().join('/')}</span>` : '',
-                d.atividade ? `<span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 10px;border-radius:20px;font-size:0.71rem;"><i class="fas fa-briefcase"></i> ${d.atividade.length > 50 ? d.atividade.slice(0,50)+'…' : d.atividade}</span>` : '',
+                d.simples ? `<span style="background:#FFFBEB;color:#A16207;border:1px solid #fde68a;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;"><i class="fas fa-star"></i> Simples Nacional</span>` : '',
+                d.data_fundacao ? `<span style="background:#e8f5ff;color:#6d28d9;border:1px solid #ddd6fe;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;"><i class="fas fa-calendar"></i> Fundação: ${d.data_fundacao.split('-').reverse().join('/')}</span>` : '',
+                d.atividade ? `<span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 10px;border-radius:20px;font-size:0.72rem;"><i class="fas fa-briefcase"></i> ${d.atividade.length > 50 ? d.atividade.slice(0,50)+'…' : d.atividade}</span>` : '',
             ].filter(Boolean);
 
             if (chips.length) {
@@ -549,13 +549,13 @@
 
     function _cnpjMsg(el, tipo, html) {
         const estilos = {
-            warn:    ['#fff8d0','#ffc900','#7a6000'],
+            warn:    ['#FFFBEB','#A16207','#A16207'],
             info:    ['#f1f5f9','#e2e8f0','#64748b'],
-            success: ['#f0fdf4','#86efac','#15803d'],
-            error:   ['#fef2f2','#fecaca','#c73a2e'],
+            success: ['#f0fdf4','#BBF7D0','#15803d'],
+            error:   ['#fef2f2','#fecaca','#B91C1C'],
         };
         const [bg, border, color] = estilos[tipo] || estilos.info;
-        el.style.cssText = `display:block;margin:-4px 0 12px;font-size:0.78rem;border-radius:8px;padding:8px 12px;background:${bg};border:1px solid ${border};color:${color};`;
+        el.style.cssText = `display:block;margin:-4px 0 12px;font-size:0.8rem;border-radius:8px;padding:8px 12px;background:${bg};border:1px solid ${border};color:${color};`;
         el.innerHTML = html;
     }
 

@@ -1,7 +1,12 @@
 ﻿{% extends "base.html" %}
 {% block title %}Veículos — Siqueirão Multimarcas{% endblock %}
 {% block content %}
-<h1 style="font-size:1.4rem;font-weight:700;color:#0f172a;margin:0 0 16px;">Carros</h1>
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-car-side"></i> Veículos</h1>
+        <p>Cadastro, situação e custos da frota</p>
+    </div>
+</div>
 
 <!-- KPI Financeiros -->
 <div class="kpi-grid" style="margin-bottom:16px;">
@@ -38,17 +43,17 @@
 <!-- Cadastrar carro -->
 <div class="card" style="margin-bottom:16px;">
     <div style="padding:16px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div style="font-size:.9rem;font-weight:700;color:#0f172a;">Cadastrar carro</div>
+        <div style="font-size:0.875rem;font-weight:700;color:#0f172a;">Cadastrar carro</div>
         <div style="display:flex;gap:0;align-items:center;flex:1;max-width:420px;">
-            <span style="background:#f8fafc;border:1px solid #e2e8f0;border-right:none;border-radius:8px 0 0 8px;padding:9px 12px;color:#f59e0b;">
+            <span style="background:#f8fafc;border:1px solid #e2e8f0;border-right:none;border-radius:8px 0 0 8px;padding:9px 12px;color:#A16207;">
                 <i class="fas fa-hand-point-right"></i>
             </span>
             <input type="text" id="inputCadastroCarro" class="form-control"
                    placeholder="Digite a Placa do carro"
-                   style="border-radius:0;border-left:none;border-right:none;font-size:.85rem;"
+                   style="border-radius:0;border-left:none;border-right:none;font-size:0.875rem;"
                    oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
             <button onclick="abrirCadastroComPlaca()"
-                    style="background:#4f46e5;border:1px solid #4f46e5;border-left:none;border-radius:0 8px 8px 0;padding:9px 18px;color:white;cursor:pointer;font-size:.88rem;font-weight:600;white-space:nowrap;">
+                    style="background:#015e94;border:1px solid #015e94;border-left:none;border-radius:0 8px 8px 0;padding:9px 18px;color:white;cursor:pointer;font-size:0.875rem;font-weight:600;white-space:nowrap;">
                 Cadastrar
             </button>
         </div>
@@ -61,28 +66,28 @@
 <!-- Filtros -->
 <div class="card" style="margin-bottom:16px;">
     <div style="padding:14px 20px 16px;">
-        <div style="font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Filtros</div>
+        <div style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Filtros</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
             <div>
                 <label style="font-size:.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">Modelo</label>
-                <select class="form-control" id="filtroModelo" onchange="filtrarVeiculos()" style="font-size:.84rem;">
+                <select class="form-control" id="filtroModelo" onchange="filtrarVeiculos()" style="font-size:0.875rem;">
                     <option value="">Selecione</option>
                 </select>
             </div>
             <div>
                 <label style="font-size:.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">Marca</label>
-                <select class="form-control" id="filtroMarca" onchange="filtrarVeiculos()" style="font-size:.84rem;">
+                <select class="form-control" id="filtroMarca" onchange="filtrarVeiculos()" style="font-size:0.875rem;">
                     <option value="">Selecione</option>
                 </select>
             </div>
             <div>
                 <label style="font-size:.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">Carro / Placa</label>
                 <input type="text" class="form-control" id="buscaVeiculo" placeholder="Buscar placa..."
-                       oninput="filtrarVeiculos()" style="font-size:.84rem;">
+                       oninput="filtrarVeiculos()" style="font-size:0.875rem;">
             </div>
             <div>
                 <label style="font-size:.72rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">Status</label>
-                <select class="form-control" id="filtroStatus" onchange="filtrarVeiculos()" style="font-size:.84rem;">
+                <select class="form-control" id="filtroStatus" onchange="filtrarVeiculos()" style="font-size:0.875rem;">
                     <option value="">Selecione</option>
                     <option value="disponivel">Disponível</option>
                     <option value="locado">Locado</option>
@@ -99,7 +104,7 @@
     <div style="padding:14px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9;">
         <div>
             <div style="font-size:1rem;font-weight:700;color:#0f172a;">Meus Carros</div>
-            <div style="font-size:.76rem;color:#64748b;margin-top:2px;" id="countCarros">0 Carros</div>
+            <div style="font-size:0.72rem;color:#64748b;margin-top:2px;" id="countCarros">0 Carros</div>
         </div>
         <button onclick="exportarCarros()" class="btn" style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;font-size:.8rem;padding:6px 14px;">
             <i class="fas fa-download"></i> Exportar
@@ -107,9 +112,9 @@
     </div>
     <div style="display:grid;grid-template-columns:56px 180px 1fr 120px 110px;gap:0;padding:8px 20px;background:#f8fafc;border-bottom:1px solid #f1f5f9;">
         <div></div>
-        <div style="font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Placa</div>
-        <div style="font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Modelo</div>
-        <div style="font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Status</div>
+        <div style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Placa</div>
+        <div style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Modelo</div>
+        <div style="font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">Status</div>
         <div></div>
     </div>
     <div id="listaCarros"><div style="text-align:center;padding:40px;color:#94a3b8;">Carregando...</div></div>
@@ -128,22 +133,22 @@
         <div style="display:flex;justify-content:space-between;align-items:center;
                     padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
             <div style="display:flex;align-items:center;gap:10px;">
-                <i class="fas fa-file-alt" style="color:#7dc5ee;font-size:1.1rem;"></i>
-                <span style="color:#f1f5f9;font-size:0.95rem;font-weight:600;">CRLV — Certificado de Registro do Veículo</span>
+                <i class="fas fa-file-alt" style="color:#30a2e4;font-size:1rem;"></i>
+                <span style="color:#f1f5f9;font-size:1rem;font-weight:600;">CRLV — Certificado de Registro do Veículo</span>
             </div>
             <div style="display:flex;gap:10px;align-items:center;">
                 <a id="pdfDownloadBtn" href="#" class="btn btn-sm"
-                   style="background:#16a34a;color:#fff;text-decoration:none;">
+                   style="background:#15803D;color:#fff;text-decoration:none;">
                     <i class="fas fa-download"></i> Baixar PDF
                 </a>
                 <button onclick="fecharModalPDF()"
-                        style="background:none;border:none;color:#9ca3af;font-size:1.6rem;
+                        style="background:none;border:none;color:#94a3b8;font-size:1.5rem;
                                cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
             </div>
         </div>
         <!-- Iframe do viewer -->
         <iframe id="iframePDF" src="" frameborder="0"
-                style="flex:1;border:none;background:#374151;width:100%;"></iframe>
+                style="flex:1;border:none;background:#334155;width:100%;"></iframe>
     </div>
 </div>
 
@@ -199,7 +204,7 @@
             </div>
             <div class="crlv-preview-grid" id="crlvPreviewGrid"></div>
             <div class="crlv-footer">
-                <button class="btn" style="background:#6b7280;color:#fff;" onclick="voltarStep1()">
+                <button class="btn btn-secondary"  onclick="voltarStep1()">
                     <i class="fas fa-arrow-left"></i> Voltar
                 </button>
                 <button class="btn btn-primary" onclick="usarDadosCRLV()">
@@ -216,19 +221,21 @@
 <style>
 /* ----- botão CRLV ----- */
 .btn-crlv {
-    background: linear-gradient(135deg,#0d9488,#0891b2);
-    color: #fff; border: none; border-radius: 8px;
-    padding: 10px 18px; font-size: 0.86rem; font-weight: 600;
-    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
-    transition: opacity .15s, transform .1s;
+    background: var(--surface); color: var(--ink-2);
+    border: 1px solid var(--line); border-radius: var(--r-sm);
+    padding: 9px 16px; font-size: var(--fs-base); font-weight: 600;
+    font-family: inherit; cursor: pointer;
+    display: inline-flex; align-items: center; gap: var(--sp-2);
+    transition: background .15s, border-color .15s;
 }
-.btn-crlv:hover { opacity: .9; transform: translateY(-1px); }
+.btn-crlv:hover { background: var(--surface-2); border-color: #cbd5e1; }
+.btn-crlv i { color: var(--primary); }
 
 /* ----- tabela ----- */
 .foto-preview   { max-width:100%;max-height:150px;object-fit:contain;border-radius:8px;display:block;margin:0 auto; }
-.foto-thumbnail { width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb; }
-.foto-placeholder { width:48px;height:48px;border-radius:6px;background:#f3f4f6;border:1px solid #e5e7eb;
-    display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:1.1rem; }
+.foto-thumbnail { width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0; }
+.foto-placeholder { width:48px;height:48px;border-radius:6px;background:#f1f5f9;border:1px solid #e2e8f0;
+    display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:1rem; }
 
 /* ----- overlay do modal CRLV ----- */
 .crlv-overlay {
@@ -245,19 +252,19 @@
 .crlv-head {
     display:flex;align-items:center;justify-content:space-between;
     padding:20px 24px;
-    background:linear-gradient(135deg,#0d9488 0%,#0891b2 100%);
+    background:linear-gradient(135deg,#0369A1 0%,#0369A1 100%);
 }
 .crlv-head-icon {
     width:40px;height:40px;border-radius:10px;
     background:rgba(255,255,255,.2);
     display:flex;align-items:center;justify-content:center;
-    font-size:1.1rem;color:#fff;
+    font-size:1rem;color:#fff;
 }
 .crlv-head-title { font-size:1rem;font-weight:700;color:#fff; }
-.crlv-head-sub   { font-size:.74rem;color:rgba(255,255,255,.75);margin-top:1px; }
+.crlv-head-sub   { font-size:0.72rem;color:rgba(255,255,255,.75);margin-top:1px; }
 .crlv-close {
     width:34px;height:34px;border-radius:8px;border:none;cursor:pointer;
-    background:rgba(255,255,255,.15);color:#fff;font-size:.9rem;
+    background:rgba(255,255,255,.15);color:#fff;font-size:0.875rem;
     display:flex;align-items:center;justify-content:center;
     transition:background .15s;
 }
@@ -267,53 +274,53 @@
 
 /* drop zone */
 .drop-zone {
-    border:2px dashed #d1d5db;border-radius:12px;
+    border:2px dashed #cbd5e1;border-radius:12px;
     padding:44px 24px;text-align:center;
-    background:#fafafa;transition:border-color .2s,background .2s;cursor:pointer;
+    background:#f8fafc;transition:border-color .2s,background .2s;cursor:pointer;
 }
-.drop-zone.drag-over { border-color:#0d9488;background:#f0fdfa; }
-.drop-icon { font-size:3rem;color:#d1d5db;margin-bottom:14px; }
-.drop-title { font-size:1rem;font-weight:600;color:#111827;margin-bottom:6px; }
-.drop-sub   { font-size:.82rem;color:#6b7280; }
-.drop-note  { margin-top:16px;font-size:.72rem;color:#9ca3af;display:flex;align-items:center;justify-content:center;gap:5px; }
+.drop-zone.drag-over { border-color:#0369A1;background:#f0fdfa; }
+.drop-icon { font-size:3rem;color:#cbd5e1;margin-bottom:14px; }
+.drop-title { font-size:1rem;font-weight:600;color:#0f172a;margin-bottom:6px; }
+.drop-sub   { font-size:0.8rem;color:#64748b; }
+.drop-note  { margin-top:16px;font-size:.72rem;color:#94a3b8;display:flex;align-items:center;justify-content:center;gap:5px; }
 
 /* processando */
 .crlv-processing { text-align:center;padding:20px 0; }
 .crlv-spinner {
     width:52px;height:52px;border-radius:50%;
-    border:4px solid #e5e7eb;border-top-color:#0d9488;
+    border:4px solid #e2e8f0;border-top-color:#0369A1;
     animation:spin .8s linear infinite;margin:0 auto 20px;
 }
 @keyframes spin { to { transform:rotate(360deg); } }
-.crlv-proc-title { font-size:1rem;font-weight:600;color:#111827;margin-bottom:6px; }
-.crlv-proc-sub   { font-size:.82rem;color:#6b7280; }
+.crlv-proc-title { font-size:1rem;font-weight:600;color:#0f172a;margin-bottom:6px; }
+.crlv-proc-sub   { font-size:0.8rem;color:#64748b; }
 
 /* preview */
 .crlv-success-bar {
     display:flex;align-items:center;gap:8px;
     background:#f0fdf4;border:1px solid #bbf7d0;
     border-radius:8px;padding:10px 14px;
-    font-size:.83rem;font-weight:600;color:#15803d;
+    font-size:0.8rem;font-weight:600;color:#15803d;
     margin-bottom:18px;
 }
 .crlv-preview-grid {
     display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;
 }
 .crlv-field {
-    background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;
+    background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;
 }
 .crlv-field-label {
-    font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-    color:#9ca3af;margin-bottom:3px;
+    font-size:0.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:#94a3b8;margin-bottom:3px;
 }
 .crlv-field-value {
-    font-size:.9rem;font-weight:600;color:#111827;font-family:monospace;
+    font-size:0.875rem;font-weight:600;color:#0f172a;font-family:monospace;
 }
-.crlv-field-value.empty { color:#d1d5db;font-style:italic;font-family:sans-serif; }
+.crlv-field-value.empty { color:#cbd5e1;font-style:italic;font-family:sans-serif; }
 
 .crlv-footer {
     display:flex;justify-content:flex-end;gap:10px;
-    border-top:1px solid #f3f4f6;padding-top:18px;
+    border-top:1px solid #f1f5f9;padding-top:18px;
 }
 
 /* form grid 3 colunas */
@@ -328,8 +335,8 @@
 .vl-act-btn:hover { background:#e2e8f0; }
 .vl-expand { background:#fafbfc;border-top:1px solid #f1f5f9; }
 /* ----- tabs no modal de detalhes ----- */
-.vl-tab { border:none;background:none;padding:8px 16px;font-size:.82rem;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s; }
-.vl-tab.active,.vl-tab:hover { color:#4f46e5;border-bottom-color:#4f46e5; }
+.vl-tab { border:none;background:none;padding:8px 16px;font-size:0.8rem;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s; }
+.vl-tab.active,.vl-tab:hover { color:#015e94;border-bottom-color:#015e94; }
 .vl-tab-pane { min-height:80px; }
 
 </style>
@@ -435,51 +442,51 @@ function _renderPageV() {
     const lista  = _filtradosV.slice(inicio, inicio + _POR_PAG_V);
 
     const stMap = {
-        disponivel:  { label:'Disponível',  color:'#16a34a', bg:'#f0fdf4' },
+        disponivel:  { label:'Disponível',  color:'#15803D', bg:'#f0fdf4' },
         locado:      { label:'Locado',       color:'#2563eb', bg:'#eff6ff' },
-        manutencao:  { label:'Manutenção',   color:'#dc2626', bg:'#fef2f2' },
-        indisponivel:{ label:'Indisponível', color:'#6b7280', bg:'#f9fafb' }
+        manutencao:  { label:'Manutenção',   color:'#B91C1C', bg:'#fef2f2' },
+        indisponivel:{ label:'Indisponível', color:'#64748b', bg:'#f8fafc' }
     };
 
     container.innerHTML = lista.map(v => {
-        const st = stMap[v.status] || { label: v.status || '—', color:'#6b7280', bg:'#f9fafb' };
+        const st = stMap[v.status] || { label: v.status || '—', color:'#64748b', bg:'#f8fafc' };
         const carIcon = v.foto
             ? `<img src="${v.foto}" style="width:36px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;">`
-            : `<div style="width:36px;height:36px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-car" style="color:#3b82f6;"></i></div>`;
+            : `<div style="width:36px;height:36px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-car" style="color:#008cdd;"></i></div>`;
         return `<div class="vl-row" id="vlrow_${v.id}">
             <div class="vl-row-header" onclick="toggleExpandCarro(${v.id})">
                 <div style="display:flex;align-items:center;gap:6px;">
-                    <i class="fas fa-chevron-down" id="vlchev_${v.id}" style="font-size:.6rem;color:#cbd5e1;transition:transform .2s;"></i>
+                    <i class="fas fa-chevron-down" id="vlchev_${v.id}" style="font-size:0.65rem;color:#cbd5e1;transition:transform .2s;"></i>
                     ${carIcon}
                 </div>
                 <div>
-                    <div style="font-weight:700;color:#0f172a;font-size:.88rem;">${v.placa.toUpperCase()}</div>
-                    <div style="font-size:.74rem;color:#94a3b8;">${(v.km_atual||0).toLocaleString('pt-BR')} KM</div>
+                    <div style="font-weight:700;color:#0f172a;font-size:0.875rem;">${v.placa.toUpperCase()}</div>
+                    <div style="font-size:0.72rem;color:#94a3b8;">${(v.km_atual||0).toLocaleString('pt-BR')} KM</div>
                 </div>
                 <div>
-                    <div style="font-size:.84rem;color:#0f172a;">${v.marca} ${v.modelo}</div>
-                    <div style="font-size:.74rem;color:#94a3b8;">${v.ano||''}${v.combustivel?' · '+v.combustivel:''}</div>
+                    <div style="font-size:0.875rem;color:#0f172a;">${v.marca} ${v.modelo}</div>
+                    <div style="font-size:0.72rem;color:#94a3b8;">${v.ano||''}${v.combustivel?' · '+v.combustivel:''}</div>
                 </div>
                 <div>
-                    <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:600;background:${st.bg};color:${st.color};">${st.label}</span>
+                    <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;background:${st.bg};color:${st.color};">${st.label}</span>
                 </div>
                 <div style="display:flex;gap:4px;align-items:center;justify-content:flex-end;">
                     <button onclick="event.stopPropagation();editarVeiculo(${v.id})" class="vl-act-btn" title="Editar"><i class="fas fa-pen"></i></button>
-                    <button onclick="event.stopPropagation();abrirCRLV(${v.id},'${v.crlv_url||''}')" class="vl-act-btn" title="${v.crlv_url?'Ver CRLV':'Enviar CRLV'}" style="${v.crlv_url?'color:#16a34a;background:#f0fdf4;':'color:#94a3b8;'}"><i class="fas fa-file-alt"></i></button>
-                    <button onclick="event.stopPropagation();abrirDetalhesVeiculo(${v.id})" class="vl-act-btn" title="Informações"><i class="fas fa-info-circle" style="color:#3b82f6;"></i></button>
+                    <button onclick="event.stopPropagation();abrirCRLV(${v.id},'${v.crlv_url||''}')" class="vl-act-btn" title="${v.crlv_url?'Ver CRLV':'Enviar CRLV'}" style="${v.crlv_url?'color:#15803D;background:#f0fdf4;':'color:#94a3b8;'}"><i class="fas fa-file-alt"></i></button>
+                    <button onclick="event.stopPropagation();abrirDetalhesVeiculo(${v.id})" class="vl-act-btn" title="Informações"><i class="fas fa-info-circle" style="color:#008cdd;"></i></button>
                 </div>
             </div>
             <div id="vlexp_${v.id}" class="vl-expand" style="display:none;">
                 <div style="padding:10px 20px 10px 76px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
-                    <div style="font-size:.78rem;color:#64748b;">Valor de compra: <strong style="color:#0f172a;">${v.valor_compra ? formatCurrency(v.valor_compra) : '—'}</strong></div>
-                    <div style="font-size:.78rem;color:#64748b;">Valor FIPE: <strong style="color:#7c3aed;">${v.valor_fipe ? formatCurrency(v.valor_fipe) : '—'}</strong></div>
-                    <div style="font-size:.78rem;color:#64748b;">Diária: <strong style="color:#0f172a;">${formatCurrency(v.diaria)}</strong></div>
+                    <div style="font-size:0.8rem;color:#64748b;">Valor de compra: <strong style="color:#0f172a;">${v.valor_compra ? formatCurrency(v.valor_compra) : '—'}</strong></div>
+                    <div style="font-size:0.8rem;color:#64748b;">Valor FIPE: <strong style="color:#7c3aed;">${v.valor_fipe ? formatCurrency(v.valor_fipe) : '—'}</strong></div>
+                    <div style="font-size:0.8rem;color:#64748b;">Diária: <strong style="color:#0f172a;">${formatCurrency(v.diaria)}</strong></div>
                     ${v.crlv_url
-                        ? `<button class="btn btn-sm" style="background:#16a34a;color:#fff;font-size:.74rem;padding:4px 12px;" onclick="event.stopPropagation();abrirCRLV(${v.id},'${v.crlv_url}')"><i class="fas fa-file-alt"></i> CRLV</button>`
-                        : `<button class="btn btn-sm" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;font-size:.74rem;padding:4px 12px;" onclick="event.stopPropagation();abrirCRLV(${v.id},'')"><i class="fas fa-upload"></i> Enviar CRLV</button>`
+                        ? `<button class="btn btn-sm" style="background:#15803D;color:#fff;font-size:0.72rem;padding:4px 12px;" onclick="event.stopPropagation();abrirCRLV(${v.id},'${v.crlv_url}')"><i class="fas fa-file-alt"></i> CRLV</button>`
+                        : `<button class="btn btn-sm" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;font-size:0.72rem;padding:4px 12px;" onclick="event.stopPropagation();abrirCRLV(${v.id},'')"><i class="fas fa-upload"></i> Enviar CRLV</button>`
                     }
-                    <button class="btn btn-sm" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;font-size:.74rem;padding:4px 12px;" onclick="event.stopPropagation();atualizarFipeVeiculo(${v.id})"><i class="fas fa-sync-alt"></i> Atualizar valor FIPE</button>
-                    <button class="btn btn-sm btn-danger" style="font-size:.74rem;padding:4px 12px;margin-left:auto;" onclick="event.stopPropagation();confirmarExcluir(${v.id},'${v.placa}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm" style="background:#e8f5ff;color:#7c3aed;border:1px solid #ddd6fe;font-size:0.72rem;padding:4px 12px;" onclick="event.stopPropagation();atualizarFipeVeiculo(${v.id})"><i class="fas fa-sync-alt"></i> Atualizar valor FIPE</button>
+                    <button class="btn btn-sm btn-danger" style="font-size:0.72rem;padding:4px 12px;margin-left:auto;" onclick="event.stopPropagation();confirmarExcluir(${v.id},'${v.placa}')"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         </div>`;
@@ -487,8 +494,8 @@ function _renderPageV() {
 
     if (!pag) return;
     if (totalPags <= 1) { pag.innerHTML = ''; return; }
-    const btnS = (a) => `style="border:1px solid #e2e8f0;background:${a?'#4f46e5':'#f8fafc'};color:${a?'#fff':'#475569'};border-radius:6px;padding:4px 10px;font-size:.74rem;cursor:pointer;"`;
-    let h = `<span style="font-size:.74rem;color:#64748b;">${inicio+1}–${Math.min(inicio+_POR_PAG_V,_filtradosV.length)} de ${_filtradosV.length}</span>`;
+    const btnS = (a) => `style="border:1px solid #e2e8f0;background:${a?'#015e94':'#f8fafc'};color:${a?'#fff':'#475569'};border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;"`;
+    let h = `<span style="font-size:0.72rem;color:#64748b;">${inicio+1}–${Math.min(inicio+_POR_PAG_V,_filtradosV.length)} de ${_filtradosV.length}</span>`;
     h += `<button ${btnS(false)} onclick="_irPagV(${_pagV-1})" ${_pagV===1?'disabled':''}>‹</button>`;
     for (let p=Math.max(1,_pagV-2);p<=Math.min(totalPags,_pagV+2);p++)
         h += `<button ${btnS(p===_pagV)} onclick="_irPagV(${p})">${p}</button>`;
@@ -526,8 +533,8 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
     if (temFoto) {
         fotoHtml = `<img id="preview-img" src="${v.foto}" class="foto-preview">`;
     } else {
-        fotoHtml = `<div id="preview-placeholder" style="width:100%;height:120px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;border-radius:8px;border:2px dashed #d1d5db;">
-            <i class="fas fa-car" style="font-size:2.5rem;color:#9ca3af;"></i></div>
+        fotoHtml = `<div id="preview-placeholder" style="width:100%;height:120px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;border-radius:8px;border:2px dashed #cbd5e1;">
+            <i class="fas fa-car" style="font-size:2.5rem;color:#94a3b8;"></i></div>
             <img id="preview-img" style="display:none;" class="foto-preview">`;
     }
 
@@ -544,7 +551,7 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
                     </button>
                     ${temFoto ? `<button type="button" class="btn btn-sm btn-danger" onclick="removerFoto(${v.id})"><i class="fas fa-trash"></i> Remover</button>` : ''}
                 </div>
-                <small style="color:#6b7280;">JPG, PNG, GIF — máx. 16 MB</small>
+                <small style="color:#64748b;">JPG, PNG, GIF — máx. 16 MB</small>
             </div>
         </div>
 
@@ -668,16 +675,16 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
         </div>
 
         <!-- ── Defaults de Locação ── -->
-        <div style="border:1px solid #ddf0fb;border-radius:8px;overflow:hidden;margin-bottom:14px;">
+        <div style="border:1px solid #e8f5ff;border-radius:8px;overflow:hidden;margin-bottom:14px;">
             <div style="background:#e8f5ff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;"
                  onclick="toggleDefaultsSection()">
-                <span style="font-size:.82rem;font-weight:600;color:#015e94;">
+                <span style="font-size:0.8rem;font-weight:600;color:#015e94;">
                     <i class="fas fa-sliders-h" style="margin-right:6px;"></i>Padrões de Locação
-                    <span style="font-size:.7rem;color:#64748b;font-weight:400;margin-left:8px;">pré-preenchem o formulário de nova locação</span>
+                    <span style="font-size:0.72rem;color:#64748b;font-weight:400;margin-left:8px;">pré-preenchem o formulário de nova locação</span>
                 </span>
                 <i id="defaultsChevron" class="fas fa-chevron-down" style="color:#30a2e4;font-size:.8rem;"></i>
             </div>
-            <div id="defaultsSection" style="display:none;padding:14px;border-top:1px solid #ddf0fb;background:#fff;">
+            <div id="defaultsSection" style="display:none;padding:14px;border-top:1px solid #e8f5ff;background:#fff;">
                 <div class="grid-3">
                     <div class="form-group" style="margin-bottom:6px;">
                         <label style="font-size:.72rem;color:#64748b;">Caução Padrão (R$)</label>
@@ -716,9 +723,9 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
         <div style="border:1px solid #b1dcfb;border-radius:8px;overflow:hidden;margin-bottom:14px;">
             <div style="background:#e8f5ff;padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;"
                  onclick="toggleFipeSection()">
-                <span style="font-size:0.82rem;font-weight:600;color:#015e94;">
+                <span style="font-size:0.8rem;font-weight:600;color:#015e94;">
                     <i class="fas fa-search-dollar" style="margin-right:6px;"></i>Consultar Tabela FIPE
-                    ${v && v.valor_fipe ? `<span style="margin-left:10px;background:#ddf0fb;color:#015e94;border-radius:4px;padding:2px 8px;font-size:0.72rem;">${formatCurrency(v.valor_fipe)}</span>` : ''}
+                    ${v && v.valor_fipe ? `<span style="margin-left:10px;background:#e8f5ff;color:#015e94;border-radius:4px;padding:2px 8px;font-size:0.72rem;">${formatCurrency(v.valor_fipe)}</span>` : ''}
                 </span>
                 <i id="fipeChevronIcon" class="fas fa-chevron-down" style="color:#30a2e4;font-size:0.8rem;"></i>
             </div>
@@ -752,7 +759,7 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
                             <option value="">— selecione o modelo —</option>
                         </select>
                     </div>
-                    <div id="fipeResultado" style="font-size:0.78rem;color:#94a3b8;">Selecione marca, modelo e ano para consultar.</div>
+                    <div id="fipeResultado" style="font-size:0.8rem;color:#94a3b8;">Selecione marca, modelo e ano para consultar.</div>
                 </div>
             </div>
         </div>
@@ -763,7 +770,7 @@ function abrirModalVeiculo(veiculo = null, dadosPre = null) {
         </div>
 
         <div style="text-align:right;margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
-            <button type="button" class="btn" style="background:#6b7280;color:#fff;" onclick="fecharModal()">Cancelar</button>
+            <button type="button" class="btn btn-secondary"  onclick="fecharModal()">Cancelar</button>
             <button type="button" class="btn btn-primary" onclick="salvarVeiculo(${isEdit ? v.id : 'null'})">
                 <i class="fas fa-${isEdit ? 'save' : 'plus'}"></i> ${isEdit ? 'Atualizar' : 'Cadastrar'}
             </button>
@@ -832,7 +839,7 @@ function previewFoto(input) {
 async function removerFoto(id) {
     const content = `<p style="margin-bottom:20px;">Deseja remover a foto deste veículo?</p>
         <div style="text-align:right;display:flex;gap:10px;justify-content:flex-end;">
-            <button class="btn" style="background:#6b7280;color:#fff;" onclick="fecharModal()">Cancelar</button>
+            <button class="btn btn-secondary"  onclick="fecharModal()">Cancelar</button>
             <button class="btn btn-danger" onclick="_confirmaRemoverFoto(${id})">
                 <i class="fas fa-trash"></i> Remover
             </button>
@@ -860,7 +867,7 @@ function editarVeiculo(id) {
 function confirmarExcluir(id, placa) {
     const content = `<p style="margin-bottom:20px;">Confirma a exclusão do veículo <strong>${placa.toUpperCase()}</strong>? Esta ação não pode ser desfeita.</p>
         <div style="text-align:right;display:flex;gap:10px;justify-content:flex-end;">
-            <button class="btn" style="background:#6b7280;color:#fff;" onclick="fecharModal()">Cancelar</button>
+            <button class="btn btn-secondary"  onclick="fecharModal()">Cancelar</button>
             <button class="btn btn-danger" onclick="_confirmaExcluir(${id})">
                 <i class="fas fa-trash"></i> Excluir
             </button>
@@ -996,13 +1003,13 @@ function abrirCRLV(id, url) {
         return;
     } else {
         const content = `
-            <p style="margin-bottom:16px;color:#6b7280;">Nenhum CRLV cadastrado para este veículo. Envie o PDF do documento.</p>
+            <p style="margin-bottom:16px;color:#64748b;">Nenhum CRLV cadastrado para este veículo. Envie o PDF do documento.</p>
             <div class="form-group">
                 <label>Arquivo PDF do CRLV</label>
                 <input type="file" id="inputCRLVVeiculo" accept=".pdf" class="form-control">
             </div>
             <div style="text-align:right;margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
-                <button class="btn" style="background:#6b7280;color:#fff;" onclick="fecharModal()">Cancelar</button>
+                <button class="btn btn-secondary"  onclick="fecharModal()">Cancelar</button>
                 <button class="btn btn-primary" onclick="_enviarCRLV(${id})">
                     <i class="fas fa-upload"></i> Enviar CRLV
                 </button>
@@ -1147,17 +1154,17 @@ async function abrirDetalhesVeiculo(id) {
         ).join('')}
     </div>
     <div id="vtabPane0" class="vl-tab-pane">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:.84rem;">
-            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Marca</div><div style="font-weight:600;color:#4f46e5;">${v.marca||'—'}</div></div>
-            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Ano</div><div style="font-weight:600;">${v.ano||'—'}</div></div>
-            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Modelo</div><div style="font-weight:600;">${v.modelo||'—'}</div></div>
-            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">KM Atual</div><div style="font-weight:600;color:#4f46e5;">${(v.km_atual||0).toLocaleString('pt-BR')}</div></div>
-            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Chassi</div><div style="font-weight:600;font-family:monospace;font-size:.8rem;">${v.chassi||'—'}</div></div>
-            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Renavam</div><div style="font-weight:600;">${v.renavam||'—'}</div></div>
-            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Nº Motor</div><div style="font-weight:600;font-family:monospace;font-size:.8rem;">${v.numero_motor||'—'}</div></div>
-            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Cor</div><div style="font-weight:600;">${(v.cor||'—').toUpperCase()}</div></div>
-            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Combustível</div><div style="font-weight:600;">${v.combustivel||'—'}</div></div>
-            <div><div style="font-size:.67rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Status</div><div>${getStatusBadge(v.status)}</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:0.875rem;">
+            <div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Marca</div><div style="font-weight:600;color:#015e94;">${v.marca||'—'}</div></div>
+            <div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Ano</div><div style="font-weight:600;">${v.ano||'—'}</div></div>
+            <div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Modelo</div><div style="font-weight:600;">${v.modelo||'—'}</div></div>
+            <div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">KM Atual</div><div style="font-weight:600;color:#015e94;">${(v.km_atual||0).toLocaleString('pt-BR')}</div></div>
+            <div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Chassi</div><div style="font-weight:600;font-family:monospace;font-size:.8rem;">${v.chassi||'—'}</div></div>
+            <div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Renavam</div><div style="font-weight:600;">${v.renavam||'—'}</div></div>
+            <div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Nº Motor</div><div style="font-weight:600;font-family:monospace;font-size:.8rem;">${v.numero_motor||'—'}</div></div>
+            <div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Cor</div><div style="font-weight:600;">${(v.cor||'—').toUpperCase()}</div></div>
+            <div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Combustível</div><div style="font-weight:600;">${v.combustivel||'—'}</div></div>
+            <div><div style="font-size:0.65rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">Status</div><div>${getStatusBadge(v.status)}</div></div>
         </div>
     </div>
     <div id="vtabPane1" class="vl-tab-pane" style="display:none;">
@@ -1178,7 +1185,7 @@ async function abrirDetalhesVeiculo(id) {
         if (!el) return;
         const minha = Array.isArray(locs) ? locs.filter(l=>l.veiculo_id===v.id) : [];
         if (!minha.length) { el.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;">Nenhuma locação registrada</div>'; return; }
-        el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;font-size:.81rem;border-collapse:collapse;"><thead><tr style="background:#f8fafc;">' +
+        el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;font-size:0.8rem;border-collapse:collapse;"><thead><tr style="background:#f8fafc;">' +
             '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Cliente</th>' +
             '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Início</th>' +
             '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Fim</th>' +
@@ -1196,7 +1203,7 @@ async function abrirDetalhesVeiculo(id) {
         if (!el) return;
         const minha = Array.isArray(mans) ? mans.filter(m=>m.veiculo_id===v.id) : [];
         if (!minha.length) { el.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;">Nenhuma manutenção registrada</div>'; return; }
-        el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;font-size:.81rem;border-collapse:collapse;"><thead><tr style="background:#f8fafc;">' +
+        el.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;font-size:0.8rem;border-collapse:collapse;"><thead><tr style="background:#f8fafc;">' +
             '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Tipo</th>' +
             '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Data</th>' +
             '<th style="padding:6px 10px;text-align:left;color:#64748b;font-weight:600;">Custo</th>' +
@@ -1291,7 +1298,7 @@ function toggleFipeSection() {
             if (v.marca || v.modelo) {
                 const partes = [v.marca, v.modelo, v.ano, v.combustivel].filter(Boolean);
                 document.getElementById('fipeResultado').innerHTML =
-                    `<span style="color:#30a2e4;font-size:0.78rem;">
+                    `<span style="color:#30a2e4;font-size:0.8rem;">
                         <i class="fas fa-magic"></i> Preenchendo automaticamente com:
                         <strong>${partes.join(' · ')}</strong>
                     </span>`;
@@ -1328,7 +1335,7 @@ async function fipeCarregarMarcas(autoMarca='', autoModelo='', autoAno='', autoC
                 await fipeCarregarModelos(autoModelo, autoAno, autoComb);
             } else {
                 document.getElementById('fipeResultado').innerHTML =
-                    `<span style="color:#ffc900;font-size:0.78rem;"><i class="fas fa-info-circle"></i>
+                    `<span style="color:#A16207;font-size:0.8rem;"><i class="fas fa-info-circle"></i>
                     Marca "<strong>${autoMarca}</strong>" não encontrada na FIPE. Selecione manualmente.</span>`;
             }
         }
@@ -1364,7 +1371,7 @@ async function fipeCarregarModelos(autoModelo='', autoAno='', autoComb='') {
                 await fipeCarregarAnos(autoAno, autoComb);
             } else {
                 document.getElementById('fipeResultado').innerHTML =
-                    `<span style="color:#ffc900;font-size:0.78rem;"><i class="fas fa-info-circle"></i>
+                    `<span style="color:#A16207;font-size:0.8rem;"><i class="fas fa-info-circle"></i>
                     Modelo "<strong>${autoModelo}</strong>" não encontrado automaticamente.
                     Selecione o modelo na lista acima.</span>`;
             }
@@ -1430,16 +1437,16 @@ async function fipeBuscarPreco() {
         }
 
         res.innerHTML = `
-            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;">
-                <div style="font-size:0.68rem;color:#15803d;font-weight:600;letter-spacing:.04em;margin-bottom:2px;">
+            <div style="background:#f0fdf4;border:1px solid #BBF7D0;border-radius:8px;padding:10px 14px;">
+                <div style="font-size:0.65rem;color:#15803d;font-weight:600;letter-spacing:.04em;margin-bottom:2px;">
                     FIPE ${d.codigoFipe} · ${d.mesReferencia}
                 </div>
-                <div style="font-size:1.15rem;font-weight:800;color:#27a84f;">${d.valor}</div>
-                <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">${d.modelo}</div>
+                <div style="font-size:1.25rem;font-weight:800;color:#15803D;">${d.valor}</div>
+                <div style="font-size:0.72rem;color:#64748b;margin-top:2px;">${d.modelo}</div>
             </div>`;
         showToast(`FIPE: ${d.valor} — preenchida no formulário`, 'success');
     } catch(e) {
-        res.innerHTML = '<span style="color:#ef473a;font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> Erro ao consultar FIPE. Tente novamente.</span>';
+        res.innerHTML = '<span style="color:#B91C1C;font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> Erro ao consultar FIPE. Tente novamente.</span>';
     }
 }
 </script>

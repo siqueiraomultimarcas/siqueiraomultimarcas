@@ -9,7 +9,7 @@
         <p style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">Cadastro e gestão de clientes da locadora</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <label class="btn" style="background:#16a34a;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Importar clientes de planilha Excel (.xls ou .xlsx)">
+        <label class="btn" style="background:#15803D;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Importar clientes de planilha Excel (.xls ou .xlsx)">
             <i class="fas fa-file-excel"></i> Importar Excel
             <input type="file" accept=".xls,.xlsx" style="display:none" onchange="importarPlanilha(this)">
         </label>
@@ -47,7 +47,7 @@
 <!-- Clientes -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-users"></i> Clientes <span id="countClientesBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+        <h3 class="card-title"><i class="fas fa-users"></i> Clientes <span id="countClientesBadge" class="badge badge-info" style="margin-left:8px;font-size:0.72rem;">0</span></h3>
         <div style="display:flex;gap:8px;align-items:center;">
             <input type="text" class="form-control search" placeholder="Buscar cliente por nome ou CPF..." id="buscaCliente" onkeyup="filtrarClientes()">
             <select class="form-control" id="filtroStatus" onchange="filtrarClientes()" style="width: 150px;">
@@ -170,8 +170,8 @@
         `).join('');
 
         if (totalPags <= 1) { pag.innerHTML = ''; return; }
-        const btnStyle = (ativo) => `style="border:1px solid rgba(255,255,255,.15);background:${ativo ? '#008cdd' : 'rgba(255,255,255,.05)'};color:${ativo ? '#fff' : '#94a3b8'};border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;"`;
-        let html = `<span style="font-size:.75rem;color:#64748b;">${inicio+1}–${Math.min(inicio+_POR_PAG_C, sorted.length)} de ${sorted.length}</span>`;
+        const btnStyle = (ativo) => `style="border:1px solid rgba(255,255,255,.15);background:${ativo ? '#008cdd' : 'rgba(255,255,255,.05)'};color:${ativo ? '#fff' : '#94a3b8'};border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;"`;
+        let html = `<span style="font-size:0.72rem;color:#64748b;">${inicio+1}–${Math.min(inicio+_POR_PAG_C, sorted.length)} de ${sorted.length}</span>`;
         html += `<button ${btnStyle(false)} onclick="_irPagC(${_pagC-1})" ${_pagC===1?'disabled':''}>‹</button>`;
         for (let p = Math.max(1,_pagC-2); p <= Math.min(totalPags,_pagC+2); p++) {
             html += `<button ${btnStyle(p===_pagC)} onclick="_irPagC(${p})">${p}</button>`;
@@ -232,7 +232,7 @@
                                    value="${cliente ? (cliente.cep||'') : ''}"
                                    placeholder="00000-000" maxlength="9"
                                    oninput="maskCep(this)" onblur="buscarCEP()">
-                            <span id="cepStatus" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:0.85rem;"></span>
+                            <span id="cepStatus" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:0.875rem;"></span>
                         </div>
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
@@ -372,16 +372,16 @@
 
                 conteudo = '<div style="display:flex;gap:20px;margin-bottom:16px;">' +
                     '<div style="flex:1;background:#f0fdf4;border-radius:8px;padding:12px;text-align:center;">' +
-                        '<div style="font-size:1.4rem;font-weight:700;color:#1a7a35;">' + locacoes.length + '</div>' +
-                        '<div style="font-size:0.8rem;color:#374151;">Total de Locações</div>' +
+                        '<div style="font-size:1.5rem;font-weight:700;color:#15803D;">' + locacoes.length + '</div>' +
+                        '<div style="font-size:0.8rem;color:#334155;">Total de Locações</div>' +
                     '</div>' +
-                    '<div style="flex:1;background:#ddf0fb;border-radius:8px;padding:12px;text-align:center;">' +
-                        '<div style="font-size:1.4rem;font-weight:700;color:#015e94;">' + ativas + '</div>' +
-                        '<div style="font-size:0.8rem;color:#374151;">Ativas</div>' +
+                    '<div style="flex:1;background:#e8f5ff;border-radius:8px;padding:12px;text-align:center;">' +
+                        '<div style="font-size:1.5rem;font-weight:700;color:#015e94;">' + ativas + '</div>' +
+                        '<div style="font-size:0.8rem;color:#334155;">Ativas</div>' +
                     '</div>' +
-                    '<div style="flex:1;background:#fff8d0;border-radius:8px;padding:12px;text-align:center;">' +
-                        '<div style="font-size:1.1rem;font-weight:700;color:#7a6000;">' + formatCurrency(total) + '</div>' +
-                        '<div style="font-size:0.8rem;color:#374151;">Total Gasto</div>' +
+                    '<div style="flex:1;background:#FFFBEB;border-radius:8px;padding:12px;text-align:center;">' +
+                        '<div style="font-size:1rem;font-weight:700;color:#A16207;">' + formatCurrency(total) + '</div>' +
+                        '<div style="font-size:0.8rem;color:#334155;">Total Gasto</div>' +
                     '</div>' +
                 '</div>' +
                 '<div class="table-container"><table><thead><tr>' +
@@ -464,7 +464,7 @@
             const d = await resp.json();
             if (d.erro) {
                 status.textContent = '✗';
-                status.style.color = '#ef473a';
+                status.style.color = '#B91C1C';
                 showToast('CEP não encontrado', 'error');
                 return;
             }
@@ -475,10 +475,10 @@
             const sel = document.getElementById('inputEstado');
             if (sel && d.uf) sel.value = d.uf;
             status.textContent = '✓';
-            status.style.color = '#16a34a';
+            status.style.color = '#15803D';
         } catch (err) {
             status.textContent = '✗';
-            status.style.color = '#ef473a';
+            status.style.color = '#B91C1C';
             showToast('Erro ao buscar CEP', 'error');
         }
     }

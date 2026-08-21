@@ -4,18 +4,21 @@
 
 {% block content %}
 <div class="page-header">
-    <h1><i class="fas fa-user-cog"></i> Gestão de Usuários</h1>
+    <div>
+        <h1><i class="fas fa-user-cog"></i> Gestão de Usuários</h1>
+        <p>Quem acessa o sistema e com qual permissão</p>
+    </div>
     <button class="btn btn-primary" onclick="abrirModalUsuario()">
         <i class="fas fa-plus"></i> Novo Usuário
     </button>
 </div>
 
-<div class="card" style="background:#fff8d0;border:1px solid #ffc900;">
+<div class="card" style="background:#FFFBEB;border:1px solid #A16207;">
     <div style="display:flex;align-items:center;gap:12px;">
-        <i class="fas fa-shield-alt" style="font-size:1.5rem;color:#ffc900;"></i>
+        <i class="fas fa-shield-alt" style="font-size:1.5rem;color:#A16207;"></i>
         <div>
             <strong>Sobre os níveis de acesso</strong><br>
-            <span style="font-size:0.85rem;color:#7a6000;">
+            <span style="font-size:0.875rem;color:#A16207;">
                 <strong>Admin</strong> — acesso total: gerencia usuários, veículos, clientes, locações, relatórios e todas as configurações.<br>
                 <strong>Operador</strong> — acesso operacional: registra locações, manutenções, abastecimentos e multas. Não gerencia usuários.
             </span>
@@ -56,7 +59,7 @@
 
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-user-cog"></i> Usuários do Sistema <span id="countUsuariosBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+        <h3 class="card-title"><i class="fas fa-user-cog"></i> Usuários do Sistema <span id="countUsuariosBadge" class="badge badge-info" style="margin-left:8px;font-size:0.72rem;">0</span></h3>
     </div>
     <div class="table-container">
         <table data-sortable>
@@ -120,7 +123,7 @@
             const ownUser = u.id == {{ current_user.id }};
 
             return '<tr>' +
-                '<td><strong>' + u.nome + '</strong>' + (ownUser ? ' <span style="font-size:0.75rem;color:#6b7280;">(você)</span>' : '') + '</td>' +
+                '<td><strong>' + u.nome + '</strong>' + (ownUser ? ' <span style="font-size:0.72rem;color:#64748b;">(você)</span>' : '') + '</td>' +
                 '<td style="font-family:monospace;">' + u.email + '</td>' +
                 '<td>' + nivelBadge + '</td>' +
                 '<td>' + statusBadge + '</td>' +
@@ -147,7 +150,7 @@
             '<div class="form-group"><label>Senha ' + (isEdit ? '(deixe em branco para não alterar)' : '*') + '</label>' +
                 '<div style="position:relative">' +
                     '<input type="password" class="form-control" name="senha" id="inputSenha" ' + (isEdit ? '' : 'required') + ' placeholder="' + (isEdit ? 'Nova senha (opcional)' : 'Mínimo 4 caracteres') + '" autocomplete="new-password" style="padding-right:40px;">' +
-                    '<button type="button" onclick="toggleSenha()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#6b7280;"><i class="fas fa-eye" id="iconSenha"></i></button>' +
+                    '<button type="button" onclick="toggleSenha()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#64748b;"><i class="fas fa-eye" id="iconSenha"></i></button>' +
                 '</div>' +
             '</div>' +
             '<div class="form-group"><label>Nível de Acesso</label>' +

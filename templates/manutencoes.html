@@ -56,7 +56,7 @@
 <!-- Manutenções -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-tools"></i> Manutenções — Painel Unificado <span id="countManutBadge" class="badge badge-info" style="margin-left:8px;font-size:0.7rem;">0</span></h3>
+        <h3 class="card-title"><i class="fas fa-tools"></i> Manutenções — Painel Unificado <span id="countManutBadge" class="badge badge-info" style="margin-left:8px;font-size:0.72rem;">0</span></h3>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input type="text" class="form-control" id="filtroPlaca" placeholder="Placa" oninput="filtrarManutencoes()" style="width:110px;" maxlength="8">
             <input type="date" class="form-control" id="filtroDe" onchange="filtrarManutencoes()" style="width:145px;" title="Data de">
@@ -202,12 +202,12 @@
                             onchange="_updateItemManut(${idx},'valor_unitario',this.value)"
                             style="width:88px;border:1px solid #e2e8f0;border-radius:5px;padding:5px 4px;font-size:0.8rem;text-align:right;outline:none;">
                     </td>
-                    <td id="itemTotal_${idx}" style="padding:5px 8px;text-align:right;font-weight:700;color:#27a84f;font-size:0.82rem;white-space:nowrap;">
+                    <td id="itemTotal_${idx}" style="padding:5px 8px;text-align:right;font-weight:700;color:#15803D;font-size:0.8rem;white-space:nowrap;">
                         ${formatCurrency(it.valor_total)}
                     </td>
                     <td style="padding:5px 4px;text-align:center;">
                         <button type="button" onclick="removerItemManut(${idx})"
-                            style="background:#fde8e7;color:#c73a2e;border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:1rem;line-height:1;" title="Remover">×</button>
+                            style="background:#FEF2F2;color:#B91C1C;border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:1rem;line-height:1;" title="Remover">×</button>
                     </td>
                 </tr>`).join('');
         }
@@ -340,9 +340,9 @@
             // ── Linha de OS LSERP (AF Car Center) ──────────────────────────────
             if (m._fonte === 'lserp') {
                 const tipoLbl  = m.tipo
-                    ? `<span style="background:#f0fdf4;color:#15803d;font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:4px;">${m.tipo}</span>`
-                    : `<span style="color:#94a3b8;font-size:.75rem;cursor:pointer;" onclick="definirTipoOS(${m.id})" title="Clique para definir o tipo"><i class="fas fa-tag"></i> Definir</span>`;
-                const statusStyle = m.status === 'andamento' ? 'color:#d4a800;' : 'color:#27a84f;';
+                    ? `<span style="background:#f0fdf4;color:#15803d;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;">${m.tipo}</span>`
+                    : `<span style="color:#94a3b8;font-size:0.72rem;cursor:pointer;" onclick="definirTipoOS(${m.id})" title="Clique para definir o tipo"><i class="fas fa-tag"></i> Definir</span>`;
+                const statusStyle = m.status === 'andamento' ? 'color:#A16207;' : 'color:#15803D;';
                 const statusLbl   = m.status === 'andamento' ? 'Em Andamento' : 'Concluída';
                 return `
                 <tr style="background:#f8fbff;">
@@ -353,21 +353,21 @@
                     </td>
                     <td>${tipoLbl}</td>
                     <td style="white-space:nowrap;">
-                        <span style="font-weight:600;color:#1e293b;font-size:.85rem;">OS #${m.id}</span>
-                        ${m._obs ? `<button onclick="event.stopPropagation();mostrarObsOS(${m.id})" title="${m._obs.replace(/"/g,'&quot;')}" style="margin-left:6px;background:#fff8d0;border:1px solid #fcd34d;color:#7a6000;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:800;cursor:pointer;padding:0;line-height:18px;">!</button>` : ''}
+                        <span style="font-weight:600;color:#1e293b;font-size:0.875rem;">OS #${m.id}</span>
+                        ${m._obs ? `<button onclick="event.stopPropagation();mostrarObsOS(${m.id})" title="${m._obs.replace(/"/g,'&quot;')}" style="margin-left:6px;background:#FFFBEB;border:1px solid #FDE68A;color:#A16207;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:800;cursor:pointer;padding:0;line-height:18px;">!</button>` : ''}
                     </td>
                     <td style="white-space:nowrap;">${m.km_manutencao ? m.km_manutencao.toLocaleString() + ' km' : '-'}</td>
                     <td style="font-weight:700;color:#1e293b;">${formatCurrency(m.custo)}</td>
-                    <td style="font-size:.82rem;font-weight:600;color:#015e94;">AF CAR CENTER</td>
-                    <td><span style="font-size:.75rem;font-weight:600;${statusStyle}">${statusLbl}</span></td>
+                    <td style="font-size:0.8rem;font-weight:600;color:#015e94;">AF CAR CENTER</td>
+                    <td><span style="font-size:0.72rem;font-weight:600;${statusStyle}">${statusLbl}</span></td>
                     <td style="white-space:nowrap;text-align:center;">
                         <div class="act-wrap">
                             <button class="act-btn" onclick="toggleActMenu(event,'lserp_${m.id}')" title="Ações">⋯</button>
                             <div id="actmenu_lserp_${m.id}" class="act-menu" onclick="event.stopPropagation()">
                                 <button onclick="toggleActMenu(event,-1);verOSLSERP(${m.id})"><i class="fas fa-search" style="color:#008cdd;"></i> Ver OS</button>
-                                <button onclick="toggleActMenu(event,-1);definirTipoOS(${m.id})"><i class="fas fa-tag" style="color:#8b5cf6;"></i> Definir Tipo</button>
+                                <button onclick="toggleActMenu(event,-1);definirTipoOS(${m.id})"><i class="fas fa-tag" style="color:#008cdd;"></i> Definir Tipo</button>
                                 <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
-                                <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${escJsAttr(m.placa)}')"><i class="fas fa-car" style="color:#16a34a;"></i> Status do Veículo</button>
+                                <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${escJsAttr(m.placa)}')"><i class="fas fa-car" style="color:#15803D;"></i> Status do Veículo</button>
                                 <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
                                 <button class="danger" onclick="toggleActMenu(event,-1);ocultarOSLSERP(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
                             </div>
@@ -381,13 +381,13 @@
             const temItens = itens.length > 0;
 
             const pedidoBadge = m.numero_pedido
-                ? `<div style="margin-bottom:3px;"><span style="background:#ddf0fb;color:#015e94;font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;">Ped. Nº ${m.numero_pedido}</span></div>`
+                ? `<div style="margin-bottom:3px;"><span style="background:#e8f5ff;color:#015e94;font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;">Ped. Nº ${m.numero_pedido}</span></div>`
                 : '';
 
             const itensBadge = temItens
-                ? ` <span style="display:inline-block;background:#ddf0fb;color:#015e94;font-size:0.62rem;font-weight:700;padding:2px 6px;border-radius:4px;vertical-align:middle;">${itens.length} ${itens.length===1?'item':'itens'}</span>`
+                ? ` <span style="display:inline-block;background:#e8f5ff;color:#015e94;font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:4px;vertical-align:middle;">${itens.length} ${itens.length===1?'item':'itens'}</span>`
                 : '';
-            const descHtml = `<span style="color:#374151;">${m.descricao || '-'}</span>${itensBadge}`;
+            const descHtml = `<span style="color:#334155;">${m.descricao || '-'}</span>${itensBadge}`;
 
             return `
                 <tr class="${temItens ? 'tr-tem-itens' : ''}">
@@ -401,7 +401,7 @@
                     <td>${descHtml}</td>
                     <td style="white-space:nowrap;">${m.km_manutencao ? m.km_manutencao.toLocaleString() + ' km' : '-'}</td>
                     <td style="font-weight:700;color:#1e293b;">${formatCurrency(m.custo)}</td>
-                    <td style="font-size:0.82rem;">${m.oficina || '-'}</td>
+                    <td style="font-size:0.8rem;">${m.oficina || '-'}</td>
                     <td>${getStatusBadge(m.status)}</td>
                     <td style="white-space:nowrap;text-align:center;">
                         <div class="act-wrap">
@@ -409,7 +409,7 @@
                             <div id="actmenu_${m.id}" class="act-menu" onclick="event.stopPropagation()">
                                 ${temItens ? `<button onclick="toggleActMenu(event,-1);verDetalhes(${m.id})"><i class="fas fa-list-ul"></i> Ver Itens</button>` : ''}
                                 <button onclick="toggleActMenu(event,-1);editarManutencao(${m.id})"><i class="fas fa-edit"></i> Editar</button>
-                                <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${escJsAttr(m.placa)}')"><i class="fas fa-car" style="color:#16a34a;"></i> Status do Veículo</button>
+                                <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${escJsAttr(m.placa)}')"><i class="fas fa-car" style="color:#15803D;"></i> Status do Veículo</button>
                                 <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
                                 <button class="danger" onclick="toggleActMenu(event,-1);excluirManutencao(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
                             </div>
@@ -426,15 +426,15 @@
         const valorTotal = parseFloat(m.custo) || 0;
 
         const rowsHtml = itens.map((it, idx) => `
-            <tr style="border-bottom:1px solid #f1f5f9;${idx % 2 === 1 ? 'background:#fafafa;' : ''}">
+            <tr style="border-bottom:1px solid #f1f5f9;${idx % 2 === 1 ? 'background:#f8fafc;' : ''}">
                 <td style="padding:11px 16px;">
                     <span style="font-weight:600;color:#1e293b;">${it.descricao}</span>
-                    ${it.codigo ? `<span style="font-size:0.7rem;color:#94a3b8;margin-left:6px;">${it.codigo}</span>` : ''}
+                    ${it.codigo ? `<span style="font-size:0.72rem;color:#94a3b8;margin-left:6px;">${it.codigo}</span>` : ''}
                 </td>
                 <td style="padding:11px 16px;text-align:center;color:#475569;">${(it.quantidade||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-                <td style="padding:11px 16px;text-align:center;color:#64748b;font-size:0.75rem;text-transform:uppercase;">${it.unidade||''}</td>
+                <td style="padding:11px 16px;text-align:center;color:#64748b;font-size:0.72rem;text-transform:uppercase;">${it.unidade||''}</td>
                 <td style="padding:11px 16px;text-align:right;color:#475569;">${formatCurrency(it.valor_unitario)}</td>
-                <td style="padding:11px 16px;text-align:right;font-weight:700;color:#27a84f;">${formatCurrency(it.valor_total)}</td>
+                <td style="padding:11px 16px;text-align:right;font-weight:700;color:#15803D;">${formatCurrency(it.valor_total)}</td>
             </tr>`).join('');
 
         const content = `
@@ -444,24 +444,24 @@
                     &nbsp;·&nbsp;<i class="fas fa-road"></i> ${m.km_manutencao ? m.km_manutencao.toLocaleString() + ' km' : '-'}
                     &nbsp;·&nbsp;<i class="fas fa-calendar"></i> ${formatDate(m.data_manutencao)}
                 </div>
-                <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:0.85rem;">
-                    <span><i class="fas fa-store" style="color:#7dc5ee;margin-right:5px;"></i>${m.oficina || 'Não informado'}</span>
-                    ${m.numero_pedido ? `<span><i class="fas fa-file-invoice" style="color:#7dc5ee;margin-right:5px;"></i>Pedido Nº <strong>${m.numero_pedido}</strong></span>` : ''}
-                    <span><i class="fas fa-tag" style="color:#7dc5ee;margin-right:5px;"></i>${m.tipo}</span>
+                <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:0.875rem;">
+                    <span><i class="fas fa-store" style="color:#30a2e4;margin-right:5px;"></i>${m.oficina || 'Não informado'}</span>
+                    ${m.numero_pedido ? `<span><i class="fas fa-file-invoice" style="color:#30a2e4;margin-right:5px;"></i>Pedido Nº <strong>${m.numero_pedido}</strong></span>` : ''}
+                    <span><i class="fas fa-tag" style="color:#30a2e4;margin-right:5px;"></i>${m.tipo}</span>
                 </div>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
                 <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center;">
-                    <div style="font-size:0.62rem;color:#27a84f;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Itens</div>
-                    <div style="font-size:1.6rem;font-weight:800;color:#1a7a35;">${itens.length}</div>
+                    <div style="font-size:0.65rem;color:#15803D;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Itens</div>
+                    <div style="font-size:1.5rem;font-weight:800;color:#15803D;">${itens.length}</div>
                 </div>
                 <div style="background:#e8f5ff;border:1px solid #b1dcfb;border-radius:10px;padding:14px;text-align:center;">
-                    <div style="font-size:0.62rem;color:#015e94;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Valor Total</div>
-                    <div style="font-size:1.2rem;font-weight:800;color:#1e3a8a;">${formatCurrency(valorTotal)}</div>
+                    <div style="font-size:0.65rem;color:#015e94;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Valor Total</div>
+                    <div style="font-size:1.25rem;font-weight:800;color:#1e3a8a;">${formatCurrency(valorTotal)}</div>
                 </div>
                 <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px;text-align:center;">
-                    <div style="font-size:0.62rem;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Status</div>
+                    <div style="font-size:0.65rem;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Status</div>
                     <div style="margin-top:4px;">${getStatusBadge(m.status)}</div>
                 </div>
             </div>
@@ -470,7 +470,7 @@
                 <div style="background:#f8fafc;padding:11px 16px;font-weight:700;font-size:0.8rem;color:#475569;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:6px;">
                     <i class="fas fa-list-ul" style="color:#008cdd;"></i> Itens do Serviço
                 </div>
-                <table style="width:100%;border-collapse:collapse;font-size:0.83rem;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
                     <thead>
                         <tr style="background:#f8fafc;">
                             <th style="padding:10px 16px;text-align:left;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;">Descrição</th>
@@ -483,15 +483,15 @@
                     <tbody>${rowsHtml}</tbody>
                     <tfoot>
                         <tr style="background:#f0fdf4;border-top:2px solid #bbf7d0;">
-                            <td colspan="4" style="padding:12px 16px;font-weight:700;color:#374151;">Total Geral</td>
-                            <td style="padding:12px 16px;text-align:right;font-weight:800;color:#27a84f;font-size:1rem;">${formatCurrency(valorTotal)}</td>
+                            <td colspan="4" style="padding:12px 16px;font-weight:700;color:#334155;">Total Geral</td>
+                            <td style="padding:12px 16px;text-align:right;font-weight:800;color:#15803D;font-size:1rem;">${formatCurrency(valorTotal)}</td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
 
-            ${m.descricao ? `<div style="padding:12px 16px;background:#fafafa;border:1px solid #e2e8f0;border-radius:8px;font-size:0.82rem;color:#475569;margin-bottom:16px;">
-                <span style="font-weight:600;color:#374151;">Observação:</span> ${m.descricao}
+            ${m.descricao ? `<div style="padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:0.8rem;color:#475569;margin-bottom:16px;">
+                <span style="font-weight:600;color:#334155;">Observação:</span> ${m.descricao}
             </div>` : ''}
 
             <div style="text-align:right;">
@@ -507,8 +507,8 @@
     function ocultarOSLSERP(osId) {
         abrirModal('Excluir OS da lista', `
             <div style="text-align:center;padding:16px 0 8px;">
-                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ef473a;margin-bottom:12px;display:block;"></i>
-                <p style="color:#374151;font-size:.95rem;">Deseja remover a <strong>OS #${osId}</strong> da lista de manutenções?</p>
+                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#B91C1C;margin-bottom:12px;display:block;"></i>
+                <p style="color:#334155;font-size:1rem;">Deseja remover a <strong>OS #${osId}</strong> da lista de manutenções?</p>
                 <p style="color:#64748b;font-size:.8rem;margin-top:4px;">A OS continuará existindo no AF Car Center. Esta ação pode ser desfeita pelo suporte.</p>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
@@ -535,7 +535,7 @@
         const obs = m && m._obs ? m._obs : '—';
         abrirModal(`OS #${osId} — Observação`, `
             <div style="padding:8px 0 16px;">
-                <p style="color:#374151;line-height:1.6;white-space:pre-wrap;">${obs}</p>
+                <p style="color:#334155;line-height:1.6;white-space:pre-wrap;">${obs}</p>
             </div>
             <div style="text-align:right;">
                 <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
@@ -555,34 +555,34 @@
             const itens = os.itens || [];
 
             const linhasItens = itens.map((it, i) => `
-                <tr style="${i%2===1?'background:#fafafa;':''}">
+                <tr style="${i%2===1?'background:#f8fafc;':''}">
                     <td style="padding:9px 14px;">
-                        <span style="font-size:.75rem;background:${it.tipo==='S'?'#e8f5ff':'#f0fdf4'};color:${it.tipo==='S'?'#015e94':'#16a34a'};font-weight:700;padding:1px 6px;border-radius:3px;margin-right:6px;">${it.tipo==='S'?'SERV':'PEÇA'}</span>
+                        <span style="font-size:0.72rem;background:${it.tipo==='S'?'#e8f5ff':'#f0fdf4'};color:${it.tipo==='S'?'#015e94':'#15803D'};font-weight:700;padding:1px 6px;border-radius:3px;margin-right:6px;">${it.tipo==='S'?'SERV':'PEÇA'}</span>
                         ${it.descricao || '—'}
                     </td>
                     <td style="padding:9px 14px;text-align:center;color:#475569;">${it.qtd || 1}</td>
                     <td style="padding:9px 14px;text-align:right;color:#475569;">${formatCurrency(it.vl_unitario)}</td>
-                    <td style="padding:9px 14px;text-align:right;font-weight:700;color:#27a84f;">${formatCurrency(it.vl_total)}</td>
+                    <td style="padding:9px 14px;text-align:right;font-weight:700;color:#15803D;">${formatCurrency(it.vl_total)}</td>
                 </tr>`).join('');
 
             const content = `
                 <div style="margin:-20px -20px 20px;background:linear-gradient(135deg,#1e3a8a,#015e94);padding:18px 24px;color:#fff;border-radius:0;">
-                    <div style="font-size:.72rem;color:#93c5fd;margin-bottom:6px;">
+                    <div style="font-size:.72rem;color:#b1dcfb;margin-bottom:6px;">
                         <i class="fas fa-car"></i> ${os.veic_placa || '—'}
                         &nbsp;·&nbsp;<i class="fas fa-calendar"></i> ${formatDate(os.dh_inc)}
                         &nbsp;·&nbsp;<i class="fas fa-tag"></i> OS #${os.id}
                     </div>
-                    <div style="font-size:.88rem;">${os.titulo || os.obs || 'Sem descrição'}</div>
+                    <div style="font-size:0.875rem;">${os.titulo || os.obs || 'Sem descrição'}</div>
                 </div>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
                     <div style="background:#e8f5ff;border:1px solid #b1dcfb;border-radius:10px;padding:14px;text-align:center;">
-                        <div style="font-size:.62rem;color:#015e94;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Total OS</div>
-                        <div style="font-size:1.3rem;font-weight:800;color:#1e3a8a;">${formatCurrency(os.tt_liquido)}</div>
+                        <div style="font-size:0.65rem;color:#015e94;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Total OS</div>
+                        <div style="font-size:1.25rem;font-weight:800;color:#1e3a8a;">${formatCurrency(os.tt_liquido)}</div>
                     </div>
                     <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px;text-align:center;">
-                        <div style="font-size:.62rem;color:#7c3aed;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Itens</div>
-                        <div style="font-size:1.3rem;font-weight:800;color:#6b21a8;">${itens.length}</div>
+                        <div style="font-size:0.65rem;color:#7c3aed;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Itens</div>
+                        <div style="font-size:1.25rem;font-weight:800;color:#6b21a8;">${itens.length}</div>
                     </div>
                 </div>
 
@@ -591,20 +591,20 @@
                     <div style="background:#f8fafc;padding:10px 14px;font-weight:700;font-size:.8rem;color:#475569;border-bottom:1px solid #e2e8f0;">
                         <i class="fas fa-list-ul" style="color:#008cdd;margin-right:6px;"></i> Itens do Serviço
                     </div>
-                    <table style="width:100%;border-collapse:collapse;font-size:.83rem;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
                         <thead>
                             <tr style="background:#f8fafc;">
-                                <th style="padding:9px 14px;text-align:left;font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Descrição</th>
-                                <th style="padding:9px 14px;text-align:center;font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:60px;">Qtd</th>
-                                <th style="padding:9px 14px;text-align:right;font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:110px;">Unitário</th>
-                                <th style="padding:9px 14px;text-align:right;font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:110px;">Total</th>
+                                <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Descrição</th>
+                                <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:60px;">Qtd</th>
+                                <th style="padding:9px 14px;text-align:right;font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:110px;">Unitário</th>
+                                <th style="padding:9px 14px;text-align:right;font-size:0.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:110px;">Total</th>
                             </tr>
                         </thead>
                         <tbody>${linhasItens}</tbody>
                         <tfoot>
                             <tr style="background:#f0fdf4;border-top:2px solid #bbf7d0;">
-                                <td colspan="3" style="padding:10px 14px;font-weight:700;color:#374151;">Total Geral</td>
-                                <td style="padding:10px 14px;text-align:right;font-weight:800;color:#27a84f;font-size:1rem;">${formatCurrency(os.tt_liquido)}</td>
+                                <td colspan="3" style="padding:10px 14px;font-weight:700;color:#334155;">Total Geral</td>
+                                <td style="padding:10px 14px;text-align:right;font-weight:800;color:#15803D;font-size:1rem;">${formatCurrency(os.tt_liquido)}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -618,7 +618,7 @@
                 </div>`;
             abrirModal(`OS #${id} — AF Car Center`, content);
         } catch(e) {
-            abrirModal('Erro', `<p style="color:#c73a2e;text-align:center;padding:20px;">${e.message}</p><div style="text-align:right;"><button class="btn" onclick="fecharModal()">Fechar</button></div>`);
+            abrirModal('Erro', `<p style="color:#B91C1C;text-align:center;padding:20px;">${e.message}</p><div style="text-align:right;"><button class="btn" onclick="fecharModal()">Fechar</button></div>`);
         }
     }
 
@@ -700,7 +700,7 @@
                             oninput="document.querySelector('#formManutencao [name=numero_pedido]').value=this.value">
                     </div>
                     <div class="form-group">
-                        <label>Custo Total (R$) <span style="color:#ef473a;font-size:0.75rem;">*obrigatório para relatório</span></label>
+                        <label>Custo Total (R$) <span style="color:#B91C1C;font-size:0.72rem;">*obrigatório para relatório</span></label>
                         <input type="number" class="form-control" name="custo" id="custoManutInput"
                             value="${manutencao ? (manutencao.custo||'') : ''}" step="0.01" min="0"
                             placeholder="0,00 — ou preenchido pelos itens abaixo">
@@ -712,7 +712,7 @@
                     <label style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
                         <span>Itens da Manutenção</span>
                         <button type="button" onclick="adicionarItemManut()"
-                            style="background:#008cdd;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+                            style="background:#008cdd;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:0.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
                             <i class="fas fa-plus"></i> Item
                         </button>
                     </label>
@@ -731,8 +731,8 @@
                             <tbody id="itensManutBody"></tbody>
                         </table>
                         <div id="itensManutFooter" style="display:none;justify-content:flex-end;align-items:center;gap:8px;padding:8px 12px;background:#f0fdf4;border-top:2px solid #bbf7d0;">
-                            <span style="font-size:0.8rem;color:#374151;font-weight:600;">Total dos Itens:</span>
-                            <span id="itensManutTotalVal" style="font-weight:800;color:#27a84f;font-size:1rem;">R$ 0,00</span>
+                            <span style="font-size:0.8rem;color:#334155;font-weight:600;">Total dos Itens:</span>
+                            <span id="itensManutTotalVal" style="font-weight:800;color:#15803D;font-size:1rem;">R$ 0,00</span>
                         </div>
                     </div>
                 </div>
@@ -846,8 +846,8 @@
     function excluirManutencao(id) {
         const content = `
             <div style="text-align:center;padding:10px 0 20px;">
-                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#ffc900;margin-bottom:14px;display:block;"></i>
-                <p style="font-size:0.95rem;color:#374151;line-height:1.6;">Deseja excluir esta manutenção?<br>Esta ação não pode ser desfeita.</p>
+                <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#A16207;margin-bottom:14px;display:block;"></i>
+                <p style="font-size:1rem;color:#334155;line-height:1.6;">Deseja excluir esta manutenção?<br>Esta ação não pode ser desfeita.</p>
             </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
                 <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
@@ -979,7 +979,7 @@
         abrirModal(`OS #${osId} — Definir Tipo`, `
             <div style="display:grid;gap:14px;">
                 <div>
-                    <label style="font-size:.7rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Tipo de Manutenção</label>
+                    <label style="font-size:0.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Tipo de Manutenção</label>
                     <select id="selTipoOS" class="form-control">
                         <option value="">— selecione —</option>
                         ${opts}
@@ -1020,16 +1020,16 @@
         if (!veic) { showToast('Veículo não encontrado no cadastro', 'warning'); return; }
         const statusAtual = veic.status || 'disponivel';
         const statusOpts = [
-            {val:'disponivel', lbl:'Disponível',   cor:'#16a34a'},
-            {val:'manutencao', lbl:'Em Manutenção', cor:'#d4a800'},
+            {val:'disponivel', lbl:'Disponível',   cor:'#15803D'},
+            {val:'manutencao', lbl:'Em Manutenção', cor:'#A16207'},
             {val:'locado',     lbl:'Locado',        cor:'#008cdd'},
-            {val:'inativo',    lbl:'Inativo',       cor:'#c73a2e'},
+            {val:'inativo',    lbl:'Inativo',       cor:'#B91C1C'},
         ];
         const bts = statusOpts.map(s => `
             <button onclick="_confirmarStatusVeic(${veic.id},'${s.val}',this)"
-                style="display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border:2px solid ${statusAtual===s.val?s.cor:'#e2e8f0'};background:${statusAtual===s.val?s.cor+'15':'#fff'};border-radius:10px;cursor:pointer;font-size:.85rem;font-weight:600;color:${statusAtual===s.val?s.cor:'#374151'};transition:.1s;">
+                style="display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border:2px solid ${statusAtual===s.val?s.cor:'#e2e8f0'};background:${statusAtual===s.val?s.cor+'15':'#fff'};border-radius:10px;cursor:pointer;font-size:0.875rem;font-weight:600;color:${statusAtual===s.val?s.cor:'#334155'};transition:.1s;">
                 <span style="width:10px;height:10px;border-radius:50%;background:${s.cor};flex-shrink:0;"></span>
-                ${s.lbl} ${statusAtual===s.val?'<span style="margin-left:auto;font-size:.7rem;opacity:.7;">atual</span>':''}
+                ${s.lbl} ${statusAtual===s.val?'<span style="margin-left:auto;font-size:0.72rem;opacity:.7;">atual</span>':''}
             </button>`).join('');
         abrirModal(`${placa} — Status do Veículo`, `
             <div style="display:grid;gap:8px;">
@@ -1122,24 +1122,24 @@
         document.getElementById('histKpiKm').textContent = (ultimoKm || v.km_atual || 0).toLocaleString() + ' km';
 
         // Header do veículo
-        const statusColors = {disponivel:'#27a84f',alugado:'#008cdd',manutencao:'#d4a800',inativo:'#c73a2e'};
+        const statusColors = {disponivel:'#15803D',alugado:'#008cdd',manutencao:'#A16207',inativo:'#B91C1C'};
         const statusLabels = {disponivel:'Disponível',alugado:'Locado',manutencao:'Manutenção',inativo:'Inativo'};
         const stv = v.status || 'disponivel';
         document.getElementById('histVeicInfo').innerHTML = `
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
                 <div>
-                    <span style="font-size:1.4rem;font-weight:800;color:#fff;letter-spacing:.05em;">${v.placa}</span>
-                    <span style="margin-left:10px;background:${statusColors[stv]||'#64748b'};color:#fff;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;">${statusLabels[stv]||stv}</span>
+                    <span style="font-size:1.5rem;font-weight:800;color:#fff;letter-spacing:.05em;">${v.placa}</span>
+                    <span style="margin-left:10px;background:${statusColors[stv]||'#64748b'};color:#fff;font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;">${statusLabels[stv]||stv}</span>
                 </div>
-                <div style="color:#94a3b8;font-size:0.85rem;">
+                <div style="color:#94a3b8;font-size:0.875rem;">
                     ${v.marca||''} ${v.modelo||''} &nbsp;·&nbsp; ${v.ano_fabricacao||v.ano||''} &nbsp;·&nbsp;
-                    <strong style="color:#7dc5ee;">Km atual: ${(v.km_atual||0).toLocaleString()}</strong>
+                    <strong style="color:#30a2e4;">Km atual: ${(v.km_atual||0).toLocaleString()}</strong>
                     ${v.cor ? `&nbsp;·&nbsp; ${v.cor}` : ''}
                     ${v.combustivel ? `&nbsp;·&nbsp; ${v.combustivel}` : ''}
                 </div>
             </div>`;
 
-        const badgeStatus = {concluida:'#27a84f',pendente:'#d4a800',andamento:'#008cdd'};
+        const badgeStatus = {concluida:'#15803D',pendente:'#A16207',andamento:'#008cdd'};
         const labelStatus = {concluida:'Concluída',pendente:'Pendente',andamento:'Em Andamento'};
 
         // Lista accordion: cabeçalho clicável + detalhe expansível
@@ -1160,50 +1160,50 @@
                 const itensRows = temItens
                     ? itens.map((it, i) => `
                         <tr style="border-top:1px solid #1e293b;${i%2===1?'background:#0d1526;':''}">
-                            <td style="padding:9px 14px;color:#e2e8f0;font-size:0.82rem;">
+                            <td style="padding:9px 14px;color:#e2e8f0;font-size:0.8rem;">
                                 ${it.descricao}
-                                ${it.codigo ? `<span style="color:#475569;font-size:0.7rem;margin-left:6px;">(${it.codigo})</span>` : ''}
+                                ${it.codigo ? `<span style="color:#475569;font-size:0.72rem;margin-left:6px;">(${it.codigo})</span>` : ''}
                             </td>
-                            <td style="padding:9px 14px;text-align:center;color:#94a3b8;font-size:0.82rem;">${(it.quantidade||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-                            <td style="padding:9px 14px;text-align:center;color:#475569;font-size:0.75rem;text-transform:uppercase;">${it.unidade||'—'}</td>
-                            <td style="padding:9px 14px;text-align:right;color:#94a3b8;font-size:0.82rem;">${formatCurrency(it.valor_unitario)}</td>
-                            <td style="padding:9px 14px;text-align:right;font-weight:700;color:#34d399;font-size:0.85rem;">${formatCurrency(it.valor_total)}</td>
+                            <td style="padding:9px 14px;text-align:center;color:#94a3b8;font-size:0.8rem;">${(it.quantidade||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                            <td style="padding:9px 14px;text-align:center;color:#475569;font-size:0.72rem;text-transform:uppercase;">${it.unidade||'—'}</td>
+                            <td style="padding:9px 14px;text-align:right;color:#94a3b8;font-size:0.8rem;">${formatCurrency(it.valor_unitario)}</td>
+                            <td style="padding:9px 14px;text-align:right;font-weight:700;color:#34d399;font-size:0.875rem;">${formatCurrency(it.valor_total)}</td>
                         </tr>`).join('')
-                    : `<tr><td colspan="5" style="padding:16px 14px;color:#475569;font-size:0.82rem;text-align:center;">
+                    : `<tr><td colspan="5" style="padding:16px 14px;color:#475569;font-size:0.8rem;text-align:center;">
                             ${m.descricao || 'Sem itens detalhados neste registro.'}
                         </td></tr>`;
 
                 return `
-                <div style="border:1px solid #1e293b;border-radius:10px;overflow:hidden;background:#111827;">
+                <div style="border:1px solid #1e293b;border-radius:10px;overflow:hidden;background:#0f172a;">
                     <!-- Linha clicável -->
                     <div onclick="toggleHistDetalhe(${m.id})" style="display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:0;align-items:center;padding:12px 16px;cursor:pointer;transition:background .15s;"
                          onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
                         <!-- Pedido / nº -->
                         <div style="min-width:90px;padding-right:12px;">
                             ${m.numero_pedido
-                                ? `<span style="background:#1e3a5f;color:#7dc5ee;font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:10px;border:1px solid #015e9440;white-space:nowrap;">Ped. Nº ${m.numero_pedido}</span>`
-                                : `<span style="color:#334155;font-size:0.75rem;">—</span>`}
+                                ? `<span style="background:#1e3a5f;color:#30a2e4;font-size:0.65rem;font-weight:700;padding:3px 9px;border-radius:10px;border:1px solid #015e9440;white-space:nowrap;">Ped. Nº ${m.numero_pedido}</span>`
+                                : `<span style="color:#334155;font-size:0.72rem;">—</span>`}
                         </div>
                         <!-- Data -->
                         <div style="min-width:90px;padding-right:12px;">
-                            <div style="font-size:0.78rem;color:#7dc5ee;font-weight:600;">${formatDate(m.data_manutencao)}</div>
+                            <div style="font-size:0.8rem;color:#30a2e4;font-weight:600;">${formatDate(m.data_manutencao)}</div>
                         </div>
                         <!-- Fornecedor + tipo -->
                         <div style="flex:1;padding-right:12px;">
-                            <div style="font-weight:700;color:#f1f5f9;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${m.oficina || 'Sem fornecedor'}</div>
-                            <div style="font-size:0.7rem;color:#475569;">${m.tipo}</div>
+                            <div style="font-weight:700;color:#f1f5f9;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${m.oficina || 'Sem fornecedor'}</div>
+                            <div style="font-size:0.72rem;color:#475569;">${m.tipo}</div>
                         </div>
                         <!-- KM -->
                         <div style="min-width:80px;text-align:right;padding-right:14px;">
-                            ${m.km_manutencao ? `<div style="font-size:0.75rem;color:#64748b;">${m.km_manutencao.toLocaleString()} km</div>` : ''}
+                            ${m.km_manutencao ? `<div style="font-size:0.72rem;color:#64748b;">${m.km_manutencao.toLocaleString()} km</div>` : ''}
                         </div>
                         <!-- Status -->
                         <div style="padding-right:14px;">
-                            <span style="background:${bgStatus}22;color:${bgStatus};font-size:0.67rem;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;">${labelStatus[st2]||st2}</span>
+                            <span style="background:${bgStatus}22;color:${bgStatus};font-size:0.65rem;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;">${labelStatus[st2]||st2}</span>
                         </div>
                         <!-- Valor total -->
                         <div style="min-width:90px;text-align:right;padding-right:10px;">
-                            <div style="font-weight:800;color:#34d399;font-size:0.95rem;">${formatCurrency(m.custo)}</div>
+                            <div style="font-weight:800;color:#34d399;font-size:1rem;">${formatCurrency(m.custo)}</div>
                             ${temItens ? `<div style="font-size:0.65rem;color:#334155;margin-top:1px;">${itens.length} item${itens.length>1?'s':''}</div>` : ''}
                         </div>
                         <!-- Chevron -->
@@ -1226,13 +1226,13 @@
                             <tbody>${itensRows}</tbody>
                             <tfoot>
                                 <tr style="background:#0a0f1e;border-top:2px solid #1e3a5f;">
-                                    <td colspan="4" style="padding:10px 14px;font-weight:700;color:#94a3b8;font-size:0.82rem;">Total Geral</td>
+                                    <td colspan="4" style="padding:10px 14px;font-weight:700;color:#94a3b8;font-size:0.8rem;">Total Geral</td>
                                     <td style="padding:10px 14px;text-align:right;font-weight:800;color:#34d399;font-size:1rem;">${formatCurrency(m.custo)}</td>
                                 </tr>
                             </tfoot>
                         </table>
                         <div style="padding:10px 14px;display:flex;justify-content:flex-end;">
-                            <button class="btn btn-sm" style="background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid #1e293b;font-size:0.75rem;" onclick="fecharHistorico();editarManutencao(${m.id})">
+                            <button class="btn btn-sm" style="background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid #1e293b;font-size:0.72rem;" onclick="fecharHistorico();editarManutencao(${m.id})">
                                 <i class="fas fa-edit"></i> Editar
                             </button>
                         </div>
@@ -1491,7 +1491,7 @@
                 </div>
                 <div>
                     <div style="color:#f1f5f9;font-weight:700;font-size:1rem;">Histórico do Veículo</div>
-                    <div style="color:#475569;font-size:0.73rem;">Todos os serviços e manutenções registrados</div>
+                    <div style="color:#475569;font-size:0.72rem;">Todos os serviços e manutenções registrados</div>
                 </div>
             </div>
             <button onclick="fecharHistorico()" style="background:#1e293b;border:none;color:#94a3b8;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:.15s;" onmouseover="this.style.background='#334155'" onmouseout="this.style.background='#1e293b'">
@@ -1502,15 +1502,15 @@
         <!-- Search bar -->
         <div style="padding:16px 24px;background:#0d1526;border-bottom:1px solid #1e293b;display:flex;gap:10px;align-items:center;">
             <div style="position:relative;flex:1;">
-                <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#475569;font-size:0.85rem;pointer-events:none;"></i>
+                <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#475569;font-size:0.875rem;pointer-events:none;"></i>
                 <input type="text" id="histPlacaInput" list="histPlacaList" placeholder="Digite a placa (ex: MLZ0G37)..."
-                    style="width:100%;padding:10px 12px 10px 36px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#f1f5f9;font-size:0.9rem;font-weight:600;letter-spacing:.05em;outline:none;box-sizing:border-box;"
+                    style="width:100%;padding:10px 12px 10px 36px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#f1f5f9;font-size:0.875rem;font-weight:600;letter-spacing:.05em;outline:none;box-sizing:border-box;"
                     oninput="this.value=this.value.toUpperCase()"
                     onkeydown="if(event.key==='Enter') executarBuscaHistorico(this.value)">
                 <datalist id="histPlacaList"></datalist>
             </div>
             <button onclick="executarBuscaHistorico(document.getElementById('histPlacaInput').value)"
-                style="padding:10px 20px;background:linear-gradient(135deg,#008cdd,#015e94);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.85rem;display:flex;align-items:center;gap:6px;">
+                style="padding:10px 20px;background:linear-gradient(135deg,#008cdd,#015e94);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.875rem;display:flex;align-items:center;gap:6px;">
                 <i class="fas fa-search"></i> Buscar
             </button>
         </div>
@@ -1522,16 +1522,16 @@
             <!-- KPIs -->
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid #1e293b;">
                 <div style="padding:14px 24px;border-right:1px solid #1e293b;text-align:center;">
-                    <div style="font-size:0.62rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Manutenções</div>
-                    <div id="histKpiManut" style="font-size:1.6rem;font-weight:800;color:#7dc5ee;">0</div>
+                    <div style="font-size:0.65rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Manutenções</div>
+                    <div id="histKpiManut" style="font-size:1.5rem;font-weight:800;color:#30a2e4;">0</div>
                 </div>
                 <div style="padding:14px 24px;border-right:1px solid #1e293b;text-align:center;">
-                    <div style="font-size:0.62rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Valor Total Gasto</div>
-                    <div id="histKpiTotal" style="font-size:1.4rem;font-weight:800;color:#34d399;">R$ 0,00</div>
+                    <div style="font-size:0.65rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Valor Total Gasto</div>
+                    <div id="histKpiTotal" style="font-size:1.5rem;font-weight:800;color:#34d399;">R$ 0,00</div>
                 </div>
                 <div style="padding:14px 24px;text-align:center;">
-                    <div style="font-size:0.62rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Último Km Registrado</div>
-                    <div id="histKpiKm" style="font-size:1.4rem;font-weight:800;color:#fb923c;">0 km</div>
+                    <div style="font-size:0.65rem;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Último Km Registrado</div>
+                    <div id="histKpiKm" style="font-size:1.5rem;font-weight:800;color:#fb923c;">0 km</div>
                 </div>
             </div>
 
@@ -1542,18 +1542,18 @@
         <!-- Loading -->
         <div id="histLoading" style="display:none;padding:64px;flex-direction:column;align-items:center;gap:16px;">
             <div style="width:48px;height:48px;border:3px solid #1e293b;border-top-color:#008cdd;border-radius:50%;animation:spin .8s linear infinite;"></div>
-            <div style="color:#94a3b8;font-size:0.85rem;">Buscando histórico...</div>
+            <div style="color:#94a3b8;font-size:0.875rem;">Buscando histórico...</div>
         </div>
 
         <!-- Empty state -->
         <div id="histEmpty" style="display:none;padding:64px;text-align:center;">
             <i class="fas fa-car-crash" style="font-size:3rem;color:#334155;display:block;margin-bottom:16px;"></i>
-            <div style="color:#94a3b8;font-size:0.95rem;font-weight:600;">Veículo não encontrado</div>
+            <div style="color:#94a3b8;font-size:1rem;font-weight:600;">Veículo não encontrado</div>
             <div style="color:#475569;font-size:0.8rem;margin-top:6px;">Verifique a placa ou cadastre o veículo primeiro</div>
         </div>
 
         <div style="padding:14px 24px;border-top:1px solid #1e293b;text-align:right;background:#0a0f1e;">
-            <button onclick="fecharHistorico()" style="padding:8px 18px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:8px;cursor:pointer;font-size:0.82rem;">Fechar</button>
+            <button onclick="fecharHistorico()" style="padding:8px 18px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:8px;cursor:pointer;font-size:0.8rem;">Fechar</button>
         </div>
     </div>
 </div>
@@ -1566,11 +1566,11 @@
         <div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
             <div style="display:flex;align-items:center;gap:12px;">
                 <div style="width:40px;height:40px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;">
-                    <i class="fas fa-file-import" style="color:#fff;font-size:1.1rem;"></i>
+                    <i class="fas fa-file-import" style="color:#fff;font-size:1rem;"></i>
                 </div>
                 <div>
-                    <div style="color:#fff;font-weight:700;font-size:1.05rem;">Importar Manutenção</div>
-                    <div style="color:#94a3b8;font-size:0.75rem;">Leitura automática de pedido PDF</div>
+                    <div style="color:#fff;font-weight:700;font-size:1rem;">Importar Manutenção</div>
+                    <div style="color:#94a3b8;font-size:0.72rem;">Leitura automática de pedido PDF</div>
                 </div>
             </div>
             <button onclick="fecharImportar()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;">
@@ -1587,15 +1587,15 @@
                  ondrop="handleDrop(event)">
                 <div style="pointer-events:none;">
                     <i class="fas fa-file-pdf" style="font-size:3rem;color:#e53e3e;margin-bottom:16px;display:block;"></i>
-                    <div style="font-weight:700;font-size:1.05rem;color:#1e293b;margin-bottom:6px;">Arraste o PDF do pedido aqui</div>
-                    <div style="color:#64748b;font-size:0.85rem;">ou clique para selecionar o arquivo</div>
+                    <div style="font-weight:700;font-size:1rem;color:#1e293b;margin-bottom:6px;">Arraste o PDF do pedido aqui</div>
+                    <div style="color:#64748b;font-size:0.875rem;">ou clique para selecionar o arquivo</div>
                     <div style="margin-top:16px;display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 16px;color:#475569;font-size:0.8rem;">
                         <i class="fas fa-lock" style="color:#94a3b8;"></i> Apenas arquivos .pdf
                     </div>
                 </div>
             </div>
             <input type="file" id="pdfInput" accept=".pdf" style="display:none" onchange="handleFileSelect(event)">
-            <div id="pdfFileName" style="margin-top:12px;font-size:0.82rem;color:#475569;display:flex;align-items:center;gap:6px;min-height:20px;"></div>
+            <div id="pdfFileName" style="margin-top:12px;font-size:0.8rem;color:#475569;display:flex;align-items:center;gap:6px;min-height:20px;"></div>
             <div style="text-align:right;margin-top:20px;">
                 <button onclick="fecharImportar()" class="btn btn-secondary" style="margin-right:10px;">Cancelar</button>
                 <button id="btnProcessarPdf" onclick="processarPdf()" class="btn btn-primary" style="display:none;align-items:center;gap:6px;">
@@ -1608,7 +1608,7 @@
         <div id="importLoadingState" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;gap:16px;">
             <div style="width:56px;height:56px;border:4px solid #e2e8f0;border-top-color:#008cdd;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
             <div style="font-weight:600;color:#1e293b;">Analisando o PDF...</div>
-            <div style="font-size:0.82rem;color:#64748b;">Extraindo dados do pedido</div>
+            <div style="font-size:0.8rem;color:#64748b;">Extraindo dados do pedido</div>
         </div>
 
         <!-- State: Review -->
@@ -1628,11 +1628,11 @@
 
             <!-- Items table -->
             <div id="rev_itens_section" style="display:none;margin-bottom:18px;">
-                <div style="font-weight:700;color:#1e293b;font-size:0.85rem;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                <div style="font-weight:700;color:#1e293b;font-size:0.875rem;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
                     <i class="fas fa-list" style="color:#008cdd;"></i> Itens do Pedido
                 </div>
                 <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
-                    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
                         <thead>
                             <tr style="background:#f8fafc;">
                                 <th style="padding:10px 12px;text-align:left;color:#475569;font-weight:600;border-bottom:1px solid #e2e8f0;">Descrição</th>
@@ -1651,7 +1651,7 @@
             </div>
 
             <!-- Form fields -->
-            <div style="font-weight:700;color:#1e293b;font-size:0.85rem;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+            <div style="font-weight:700;color:#1e293b;font-size:0.875rem;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
                 <i class="fas fa-edit" style="color:#008cdd;"></i> Dados da Manutenção
             </div>
             <input type="hidden" id="rev_veiculo_id">
@@ -1757,15 +1757,15 @@
     gap: 12px;
 }
 .import-match-card.found {
-    background: linear-gradient(135deg, #27a84f, #33cd5f);
+    background: linear-gradient(135deg, #15803D, #15803D);
     color: #fff;
 }
 .import-match-card.warn {
-    background: linear-gradient(135deg, #d4a800, #ffc900);
+    background: linear-gradient(135deg, #A16207, #A16207);
     color: #fff;
 }
 .import-match-card.not-found {
-    background: linear-gradient(135deg, #c73a2e, #ef473a);
+    background: linear-gradient(135deg, #B91C1C, #B91C1C);
     color: #fff;
 }
 .import-match-card .match-icon {
@@ -1774,7 +1774,7 @@
     margin-top: 2px;
 }
 .import-match-card .match-title {
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .05em;
@@ -1783,20 +1783,20 @@
 }
 .import-match-card .match-main {
     font-weight: 700;
-    font-size: 0.92rem;
+    font-size: 0.875rem;
     margin-bottom: 2px;
 }
 .import-match-card .match-sub {
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     opacity: .85;
 }
 
 #rev_itens_tbody tr { border-bottom: 1px solid #f1f5f9; }
 #rev_itens_tbody tr:last-child { border-bottom: none; }
-#rev_itens_tbody td { padding: 9px 12px; color: #374151; }
+#rev_itens_tbody td { padding: 9px 12px; color: #334155; }
 
 /* Itens na tabela de manutenções */
-.itens-lista-mini { font-size: 0.76rem; }
+.itens-lista-mini { font-size: 0.72rem; }
 .item-mini-row {
     display: flex;
     align-items: baseline;
@@ -1805,18 +1805,18 @@
     border-bottom: 1px solid #f1f5f9;
 }
 .item-mini-row:last-child { border-bottom: none; }
-.item-mini-dot { color: #008cdd; flex-shrink: 0; font-size: 0.7rem; }
-.item-mini-desc { color: #374151; flex: 1; font-size: 0.76rem; }
-.item-mini-val { color: #27a84f; font-weight: 700; font-size: 0.73rem; white-space: nowrap; }
+.item-mini-dot { color: #008cdd; flex-shrink: 0; font-size: 0.72rem; }
+.item-mini-desc { color: #334155; flex: 1; font-size: 0.72rem; }
+.item-mini-val { color: #15803D; font-weight: 700; font-size: 0.72rem; white-space: nowrap; }
 .tr-tem-itens td { vertical-align: top; padding-top: 10px; }
 
 .btn-itens {
     background: #f0fdf4;
-    color: #27a84f;
+    color: #15803D;
     border: 1px solid #bbf7d0;
 }
 .btn-itens:hover {
-    background: #dcfce7;
+    background: #F0FDF4;
     color: #047857;
 }
 

@@ -8,8 +8,8 @@
 .stat-chip  { background:#fff; border:1px solid #e2e8f0; border-radius:12px;
               padding:10px 16px; display:flex; align-items:center; gap:10px;
               box-shadow:0 1px 3px rgba(0,0,0,.06); }
-.stat-chip .sc-val { font-size:.95rem; font-weight:700; font-variant-numeric:tabular-nums; }
-.stat-chip .sc-lbl { font-size:.68rem; color:#64748b; margin-top:1px; }
+.stat-chip .sc-val { font-size:1rem; font-weight:700; font-variant-numeric:tabular-nums; }
+.stat-chip .sc-lbl { font-size:0.65rem; color:#64748b; margin-top:1px; }
 
 /* ── filter row ─────────────────────────────────────────────── */
 .filter-row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
@@ -17,7 +17,7 @@
 .filter-row select,
 .filter-row input[type=date],
 .filter-row input[type=month] { border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px;
-                                  font-size:.82rem; font-family:'Poppins',sans-serif;
+                                  font-size:0.8rem; font-family:'Poppins',sans-serif;
                                   color:#0f172a; background:#fff; outline:none; }
 .filter-row select:focus,
 .filter-row input:focus { border-color:#008cdd; }
@@ -25,9 +25,9 @@
 /* ── evolução ────────────────────────────────────────────────── */
 .evolucao-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-top:4px; }
 .ev-cell { background:#f8fafc; border-radius:8px; padding:10px 12px; text-align:center; }
-.ev-cell .ev-mes   { font-size:.62rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
-.ev-cell .ev-val   { font-size:.95rem; font-weight:700; color:#0f172a; font-variant-numeric:tabular-nums; }
-.ev-cell .ev-rec   { font-size:.72rem; color:#16a34a; margin-top:2px; font-variant-numeric:tabular-nums; }
+.ev-cell .ev-mes   { font-size:0.65rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+.ev-cell .ev-val   { font-size:1rem; font-weight:700; color:#0f172a; font-variant-numeric:tabular-nums; }
+.ev-cell .ev-rec   { font-size:.72rem; color:#15803D; margin-top:2px; font-variant-numeric:tabular-nums; }
 .ev-cell.atual     { background:#e8f5ff; border:1px solid #b1dcfb; }
 .ev-cell.atual .ev-mes { color:#008cdd; }
 
@@ -36,15 +36,15 @@
 .veiculo-row:last-child { border-bottom:none; }
 .veiculo-placa { background:#1e293b; color:#fff; font-size:.72rem; font-weight:700; padding:3px 8px;
                  border-radius:5px; letter-spacing:.05em; flex-shrink:0; }
-.veiculo-nome  { flex:1; font-size:.82rem; font-weight:500; color:#0f172a; }
-.veiculo-val   { font-size:.88rem; font-weight:700; color:#16a34a; font-variant-numeric:tabular-nums; flex-shrink:0; }
-.veiculo-bar   { height:4px; border-radius:2px; background:#16a34a; transition:width .4s; }
+.veiculo-nome  { flex:1; font-size:0.8rem; font-weight:500; color:#0f172a; }
+.veiculo-val   { font-size:0.875rem; font-weight:700; color:#15803D; font-variant-numeric:tabular-nums; flex-shrink:0; }
+.veiculo-bar   { height:4px; border-radius:2px; background:#15803D; transition:width .4s; }
 
 /* ── histórico de entradas ───────────────────────────────────── */
 .hist-tabs { display:flex; gap:6px; }
-.hist-tab  { padding:5px 14px; border-radius:20px; font-size:.76rem; font-weight:600;
+.hist-tab  { padding:5px 14px; border-radius:20px; font-size:0.72rem; font-weight:600;
              cursor:pointer; border:1px solid #e2e8f0; color:#64748b; background:#fff; transition:all .15s; }
-.hist-tab.active      { background:#4f46e5; color:#fff; border-color:#4f46e5; }
+.hist-tab.active      { background:#015e94; color:#fff; border-color:#015e94; }
 .hist-tab:hover:not(.active) { background:#f1f5f9; }
 
 .ent-row { display:flex; align-items:center; gap:12px; padding:10px 14px;
@@ -54,24 +54,24 @@
 
 .ent-avatar { width:38px; height:38px; border-radius:10px; flex-shrink:0;
               display:flex; align-items:center; justify-content:center;
-              color:#fff; font-size:.85rem; font-weight:700; }
+              color:#fff; font-size:0.875rem; font-weight:700; }
 .ent-info   { flex:1; min-width:0; }
-.ent-nome   { font-size:.84rem; font-weight:600; color:#0f172a;
+.ent-nome   { font-size:0.875rem; font-weight:600; color:#0f172a;
               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ent-sub    { font-size:.71rem; color:#64748b; margin-top:2px; }
-.ent-val    { font-size:.92rem; font-weight:700; color:#0f172a;
+.ent-sub    { font-size:0.72rem; color:#64748b; margin-top:2px; }
+.ent-val    { font-size:0.875rem; font-weight:700; color:#0f172a;
               font-variant-numeric:tabular-nums; flex-shrink:0; min-width:88px; text-align:right; }
 
 .bdg-pend { background:#fff8e6; color:#d97706; border:1px solid #fde68a;
-            padding:3px 10px; border-radius:10px; font-size:.7rem; font-weight:700;
+            padding:3px 10px; border-radius:10px; font-size:0.72rem; font-weight:700;
             cursor:pointer; transition:background .15s; white-space:nowrap; }
-.bdg-pend:hover { background:#fef3c7; }
-.bdg-venc { background:#fff1f2; color:#be123c; border:1px solid #fecdd3;
-            padding:3px 10px; border-radius:10px; font-size:.7rem; font-weight:700;
+.bdg-pend:hover { background:#FFFBEB; }
+.bdg-venc { background:#FEF2F2; color:#be123c; border:1px solid #fecdd3;
+            padding:3px 10px; border-radius:10px; font-size:0.72rem; font-weight:700;
             cursor:pointer; transition:background .15s; white-space:nowrap; }
 .bdg-venc:hover { background:#ffe4e6; }
-.bdg-pago { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0;
-            padding:3px 10px; border-radius:10px; font-size:.7rem; font-weight:700; white-space:nowrap; }
+.bdg-pago { background:#f0fdf4; color:#15803D; border:1px solid #bbf7d0;
+            padding:3px 10px; border-radius:10px; font-size:0.72rem; font-weight:700; white-space:nowrap; }
 
 .ent-menu-wrap { position:relative; flex-shrink:0; }
 .ent-menu-btn  { width:30px; height:30px; border:1px solid #e2e8f0; border-radius:8px;
@@ -84,12 +84,12 @@
                 min-width:210px; z-index:200; padding:6px 0; display:none; }
 .ent-dropdown.open { display:block; }
 .ent-dd-item  { display:flex; align-items:center; gap:10px;
-                padding:9px 14px; font-size:.82rem; color:#0f172a;
+                padding:9px 14px; font-size:0.8rem; color:#0f172a;
                 cursor:pointer; transition:background .1s; }
 .ent-dd-item:hover { background:#f8fafc; }
 .ent-dd-item i { width:16px; text-align:center; color:#64748b; }
-.ent-dd-item.danger { color:#ef4444; }
-.ent-dd-item.danger i { color:#ef4444; }
+.ent-dd-item.danger { color:#B91C1C; }
+.ent-dd-item.danger i { color:#B91C1C; }
 .ent-dd-sep { border:none; border-top:1px solid #f1f5f9; margin:4px 0; }
 
 /* ── modal overlay genérico ──────────────────────────────────── */
@@ -98,19 +98,19 @@
 .fn-card    { background:#fff; border-radius:16px; padding:28px;
               width:100%; max-width:430px; box-shadow:0 20px 60px rgba(0,0,0,.22);
               position:relative; }
-.fn-card h3 { font-size:.9rem; font-weight:700; color:#0f172a; margin-bottom:20px; text-align:center; }
+.fn-card h3 { font-size:0.875rem; font-weight:700; color:#0f172a; margin-bottom:20px; text-align:center; }
 .fn-close   { position:absolute; top:14px; right:14px; width:28px; height:28px;
               border-radius:8px; background:#f1f5f9; border:none; cursor:pointer;
               display:flex; align-items:center; justify-content:center; color:#64748b;
-              font-size:.95rem; transition:background .1s; }
+              font-size:1rem; transition:background .1s; }
 .fn-close:hover { background:#e2e8f0; }
 
-.fn-label   { font-size:.7rem; font-weight:700; color:#6366f1; display:block; margin-bottom:5px;
+.fn-label   { font-size:0.72rem; font-weight:700; color:#008cdd; display:block; margin-bottom:5px;
               text-transform:uppercase; letter-spacing:.06em; }
 .fn-input   { width:100%; border:1px solid #e2e8f0; border-radius:10px;
-              padding:10px 14px; font-size:.88rem; color:#0f172a;
+              padding:10px 14px; font-size:0.875rem; color:#0f172a;
               font-family:'Poppins',sans-serif; box-sizing:border-box; }
-.fn-input:focus { outline:none; border-color:#6366f1; }
+.fn-input:focus { outline:none; border-color:#008cdd; }
 .fn-group   { margin-bottom:16px; }
 
 .fn-toggle-wrap { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
@@ -119,16 +119,16 @@
 .fn-toggle-sl { position:absolute; inset:0; background:#e2e8f0; border-radius:11px; transition:.3s; }
 .fn-toggle-sl:before { content:''; position:absolute; left:3px; top:3px;
                          width:16px; height:16px; border-radius:50%; background:#fff; transition:.3s; }
-.fn-toggle input:checked + .fn-toggle-sl { background:#6366f1; }
+.fn-toggle input:checked + .fn-toggle-sl { background:#008cdd; }
 .fn-toggle input:checked + .fn-toggle-sl:before { transform:translateX(18px); }
-.fn-toggle-label { font-size:.82rem; color:#0f172a; font-weight:500; }
+.fn-toggle-label { font-size:0.8rem; color:#0f172a; font-weight:500; }
 
 .fn-footer  { display:flex; gap:10px; justify-content:flex-end; margin-top:4px; }
 
 /* info modal */
 .if-val { display:flex; align-items:center; gap:8px;
           border:1px solid #e2e8f0; border-radius:8px;
-          padding:9px 12px; font-size:.84rem; color:#0f172a; background:#f8fafc; }
+          padding:9px 12px; font-size:0.875rem; color:#0f172a; background:#f8fafc; }
 .if-val i { color:#94a3b8; width:16px; flex-shrink:0; }
 .info-2col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 </style>
@@ -171,7 +171,7 @@
 
 <!-- ── label do mês + 4 KPIs Velo-style ──────────────────────── -->
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-    <div id="tituloMes" style="font-size:.78rem;font-weight:700;color:#94a3b8;
+    <div id="tituloMes" style="font-size:0.8rem;font-weight:700;color:#94a3b8;
          text-transform:uppercase;letter-spacing:.08em;">Carregando...</div>
 </div>
 
@@ -213,35 +213,35 @@
 <!-- chips secundários -->
 <div class="stat-chips">
     <div class="stat-chip">
-        <i class="fas fa-exclamation-triangle" style="color:#c73a2e;font-size:.9rem;"></i>
+        <i class="fas fa-exclamation-triangle" style="color:#B91C1C;font-size:0.875rem;"></i>
         <div>
-            <div class="sc-val" style="color:#c73a2e;" id="kpiVencido">0</div>
+            <div class="sc-val" style="color:#B91C1C;" id="kpiVencido">0</div>
             <div class="sc-lbl">Vencidos sem pagar</div>
         </div>
     </div>
     <div class="stat-chip">
-        <i class="fas fa-shield-alt" style="color:#7c3aed;font-size:.9rem;"></i>
+        <i class="fas fa-shield-alt" style="color:#7c3aed;font-size:0.875rem;"></i>
         <div>
             <div class="sc-val" style="color:#7c3aed;" id="kpiCaucao">R$ 0</div>
             <div class="sc-lbl">Caução Pendente</div>
         </div>
     </div>
     <div class="stat-chip">
-        <i class="fas fa-road" style="color:#0891b2;font-size:.9rem;"></i>
+        <i class="fas fa-road" style="color:#0369A1;font-size:0.875rem;"></i>
         <div>
-            <div class="sc-val" style="color:#0891b2;" id="kpiKmExc">R$ 0</div>
+            <div class="sc-val" style="color:#0369A1;" id="kpiKmExc">R$ 0</div>
             <div class="sc-lbl">KM Excedente</div>
         </div>
     </div>
     <div class="stat-chip">
-        <i class="fas fa-key" style="color:#0f172a;font-size:.9rem;"></i>
+        <i class="fas fa-key" style="color:#0f172a;font-size:0.875rem;"></i>
         <div>
             <div class="sc-val" id="kpiAtivas">0</div>
             <div class="sc-lbl">Locações Ativas</div>
         </div>
     </div>
     <div class="stat-chip">
-        <i class="fas fa-file-invoice-dollar" style="color:#008cdd;font-size:.9rem;"></i>
+        <i class="fas fa-file-invoice-dollar" style="color:#008cdd;font-size:0.875rem;"></i>
         <div>
             <div class="sc-val" style="color:#008cdd;" id="kpiVencidoSub">—</div>
             <div class="sc-lbl">Status vencidos</div>
@@ -253,7 +253,7 @@
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
     <div class="card">
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-            <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin:0;">
+            <h3 style="font-size:0.875rem;font-weight:700;color:#0f172a;margin:0;">
                 <i class="fas fa-chart-line" style="color:#008cdd;margin-right:6px;"></i>Evolução (6 meses)
             </h3>
         </div>
@@ -263,10 +263,10 @@
     </div>
     <div class="card">
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-            <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin:0;">
-                <i class="fas fa-car" style="color:#16a34a;margin-right:6px;"></i>Receita por Veículo
+            <h3 style="font-size:0.875rem;font-weight:700;color:#0f172a;margin:0;">
+                <i class="fas fa-car" style="color:#15803D;margin-right:6px;"></i>Receita por Veículo
             </h3>
-            <span id="veiculoMesTxt" style="font-size:.7rem;color:#94a3b8;"></span>
+            <span id="veiculoMesTxt" style="font-size:0.72rem;color:#94a3b8;"></span>
         </div>
         <div id="veiculoList" style="padding:4px 0;">
             <div style="color:#94a3b8;font-size:.8rem;padding:20px;text-align:center;">Carregando...</div>
@@ -277,8 +277,8 @@
 <!-- ── histórico de entradas ─────────────────────────────────── -->
 <div class="card" style="margin-bottom:20px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin:0;">
-            <i class="fas fa-arrow-down" style="color:#16a34a;margin-right:6px;"></i>Histórico de Entradas
+        <h3 style="font-size:0.875rem;font-weight:700;color:#0f172a;margin:0;">
+            <i class="fas fa-arrow-down" style="color:#15803D;margin-right:6px;"></i>Histórico de Entradas
         </h3>
         <div class="hist-tabs">
             <div class="hist-tab active" onclick="filtrarEntradas('todos', this)">Todos</div>
@@ -288,7 +288,7 @@
         </div>
     </div>
     <div id="listaEntradas">
-        <div style="text-align:center;padding:30px;color:#94a3b8;font-size:.85rem;">Carregando...</div>
+        <div style="text-align:center;padding:30px;color:#94a3b8;font-size:0.875rem;">Carregando...</div>
     </div>
 </div>
 
@@ -298,23 +298,23 @@
     <!-- Valores a Receber -->
     <div class="card" style="padding:0;overflow:hidden;">
         <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-            <i class="fas fa-arrow-up" style="color:#16a34a;font-size:.9rem;"></i>
-            <span style="font-weight:700;font-size:.9rem;color:#0f172a;">Valores a Receber</span>
-            <i class="fas fa-circle" style="font-size:.38rem;color:#16a34a;"></i>
-            <span style="font-size:.75rem;color:#64748b;margin-left:2px;">Total: <strong style="color:#16a34a;font-variant-numeric:tabular-nums;" id="vrTotal">R$ 0</strong></span>
+            <i class="fas fa-arrow-up" style="color:#15803D;font-size:0.875rem;"></i>
+            <span style="font-weight:700;font-size:0.875rem;color:#0f172a;">Valores a Receber</span>
+            <i class="fas fa-circle" style="font-size:0.65rem;color:#15803D;"></i>
+            <span style="font-size:0.72rem;color:#64748b;margin-left:2px;">Total: <strong style="color:#15803D;font-variant-numeric:tabular-nums;" id="vrTotal">R$ 0</strong></span>
         </div>
         <!-- lista -->
         <div id="listaValRec" style="min-height:200px;max-height:320px;overflow-y:auto;"></div>
         <!-- paginação -->
         <div style="display:flex;justify-content:center;align-items:center;gap:12px;padding:8px 18px;border-top:1px solid #f1f5f9;">
-            <button onclick="paginaVR(-1)" style="background:#f1f5f9;border:none;width:28px;height:28px;border-radius:8px;cursor:pointer;color:#64748b;display:flex;align-items:center;justify-content:center;"><i class="fas fa-chevron-left" style="font-size:.75rem;"></i></button>
+            <button onclick="paginaVR(-1)" style="background:#f1f5f9;border:none;width:28px;height:28px;border-radius:8px;cursor:pointer;color:#64748b;display:flex;align-items:center;justify-content:center;"><i class="fas fa-chevron-left" style="font-size:0.72rem;"></i></button>
             <span id="vrPagLabel" style="font-size:.72rem;color:#94a3b8;"></span>
-            <button onclick="paginaVR(+1)" style="background:#f1f5f9;border:none;width:28px;height:28px;border-radius:8px;cursor:pointer;color:#64748b;display:flex;align-items:center;justify-content:center;"><i class="fas fa-chevron-right" style="font-size:.75rem;"></i></button>
+            <button onclick="paginaVR(+1)" style="background:#f1f5f9;border:none;width:28px;height:28px;border-radius:8px;cursor:pointer;color:#64748b;display:flex;align-items:center;justify-content:center;"><i class="fas fa-chevron-right" style="font-size:0.72rem;"></i></button>
         </div>
         <!-- chips de data -->
         <div style="display:flex;justify-content:center;gap:8px;padding:6px 18px;border-top:1px solid #f1f5f9;">
-            <span id="vrDataIni" style="background:#ede9fe;color:#4f46e5;border-radius:8px;padding:3px 12px;font-size:.74rem;font-weight:600;">—</span>
-            <span id="vrDataFim" style="background:#ede9fe;color:#4f46e5;border-radius:8px;padding:3px 12px;font-size:.74rem;font-weight:600;">—</span>
+            <span id="vrDataIni" style="background:#e8f5ff;color:#015e94;border-radius:8px;padding:3px 12px;font-size:0.72rem;font-weight:600;">—</span>
+            <span id="vrDataFim" style="background:#e8f5ff;color:#015e94;border-radius:8px;padding:3px 12px;font-size:0.72rem;font-weight:600;">—</span>
         </div>
         <!-- mini bar chart -->
         <div id="vrChart" style="padding:8px 18px 16px;display:flex;align-items:flex-end;gap:2px;height:80px;overflow:hidden;"></div>
@@ -323,21 +323,21 @@
     <!-- Contas a Pagar -->
     <div class="card" style="padding:0;overflow:hidden;">
         <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-            <i class="fas fa-arrow-down" style="color:#ef4444;font-size:.9rem;"></i>
-            <span style="font-weight:700;font-size:.9rem;color:#0f172a;">Contas a Pagar</span>
-            <i class="fas fa-circle" style="font-size:.38rem;color:#ef4444;"></i>
-            <span style="font-size:.75rem;color:#64748b;margin-left:2px;">Total: <strong style="color:#ef4444;font-variant-numeric:tabular-nums;" id="cpTotal">R$ 0</strong></span>
+            <i class="fas fa-arrow-down" style="color:#B91C1C;font-size:0.875rem;"></i>
+            <span style="font-weight:700;font-size:0.875rem;color:#0f172a;">Contas a Pagar</span>
+            <i class="fas fa-circle" style="font-size:0.65rem;color:#B91C1C;"></i>
+            <span style="font-size:0.72rem;color:#64748b;margin-left:2px;">Total: <strong style="color:#B91C1C;font-variant-numeric:tabular-nums;" id="cpTotal">R$ 0</strong></span>
         </div>
         <div id="listaCPagar" style="min-height:200px;max-height:340px;overflow-y:auto;">
-            <div style="text-align:center;padding:40px;color:#94a3b8;font-size:.85rem;">Carregando...</div>
+            <div style="text-align:center;padding:40px;color:#94a3b8;font-size:0.875rem;">Carregando...</div>
         </div>
         <div style="display:flex;gap:10px;padding:12px 18px;border-top:1px solid #f1f5f9;align-items:center;">
             <div>
-                <div style="font-size:.62rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Data Inicial</div>
+                <div style="font-size:0.65rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Data Inicial</div>
                 <input type="date" id="cpDe" class="form-control" style="font-size:.8rem;padding:5px 10px;" onchange="carregarCPagar()">
             </div>
             <div>
-                <div style="font-size:.62rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Data Final</div>
+                <div style="font-size:0.65rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Data Final</div>
                 <input type="date" id="cpAte" class="form-control" style="font-size:.8rem;padding:5px 10px;" onchange="carregarCPagar()">
             </div>
         </div>
@@ -348,30 +348,30 @@
 <!-- ── atalhos rápidos ────────────────────────────────────────── -->
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;">
     <a href="/cobrancas" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,.1);display:flex;align-items:center;justify-content:center;color:#6366f1;flex-shrink:0;"><i class="fas fa-calendar-check"></i></div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,.1);display:flex;align-items:center;justify-content:center;color:#008cdd;flex-shrink:0;"><i class="fas fa-calendar-check"></i></div>
         <div>
-            <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Calendário de Locações</div>
+            <div style="font-size:0.8rem;font-weight:700;color:#0f172a;">Calendário de Locações</div>
             <div style="font-size:.72rem;color:#94a3b8;">Checklist de pagamentos</div>
         </div>
     </a>
     <a href="/contas-receber" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(22,163,74,.1);display:flex;align-items:center;justify-content:center;color:#16a34a;flex-shrink:0;"><i class="fas fa-money-bill-wave"></i></div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(22,163,74,.1);display:flex;align-items:center;justify-content:center;color:#15803D;flex-shrink:0;"><i class="fas fa-money-bill-wave"></i></div>
         <div>
-            <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Contas a Receber</div>
+            <div style="font-size:0.8rem;font-weight:700;color:#0f172a;">Contas a Receber</div>
             <div style="font-size:.72rem;color:#94a3b8;">Pendentes e recebidos</div>
         </div>
     </a>
     <a href="/locacoes" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
         <div style="width:40px;height:40px;border-radius:10px;background:rgba(37,99,235,.1);display:flex;align-items:center;justify-content:center;color:#008cdd;flex-shrink:0;"><i class="fas fa-key"></i></div>
         <div>
-            <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Locações</div>
+            <div style="font-size:0.8rem;font-weight:700;color:#0f172a;">Locações</div>
             <div style="font-size:.72rem;color:#94a3b8;">Gerenciar contratos</div>
         </div>
     </a>
     <a href="/relatorios" class="card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;text-decoration:none;color:inherit;transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
-        <div style="width:40px;height:40px;border-radius:10px;background:rgba(217,119,6,.1);display:flex;align-items:center;justify-content:center;color:#d4a800;flex-shrink:0;"><i class="fas fa-chart-bar"></i></div>
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(217,119,6,.1);display:flex;align-items:center;justify-content:center;color:#A16207;flex-shrink:0;"><i class="fas fa-chart-bar"></i></div>
         <div>
-            <div style="font-size:.82rem;font-weight:700;color:#0f172a;">Relatórios</div>
+            <div style="font-size:0.8rem;font-weight:700;color:#0f172a;">Relatórios</div>
             <div style="font-size:.72rem;color:#94a3b8;">Análises detalhadas</div>
         </div>
     </a>
@@ -383,7 +383,7 @@
 <div id="overlayPagamento" class="fn-overlay" style="display:none;" onclick="if(event.target===this)fecharModalPagamento()">
     <div class="fn-card" style="max-width:400px;">
         <button class="fn-close" onclick="fecharModalPagamento()"><i class="fas fa-times"></i></button>
-        <h3 style="text-align:center;font-size:.88rem;font-weight:700;color:#0f172a;margin-bottom:22px;line-height:1.4;">
+        <h3 style="text-align:center;font-size:0.875rem;font-weight:700;color:#0f172a;margin-bottom:22px;line-height:1.4;">
             Clique em salvar para confirmar o pagamento!
         </h3>
 
@@ -409,10 +409,10 @@
         <!-- banco sugerido baseado no cliente — placeholder visual -->
         <div id="pmBancoSug" style="display:none;margin-bottom:14px;">
             <div style="display:inline-flex;align-items:center;gap:8px;background:#f0fdf4;
-                        border:1px solid #bbf7d0;border-radius:8px;padding:6px 12px;font-size:.78rem;color:#15803d;">
+                        border:1px solid #bbf7d0;border-radius:8px;padding:6px 12px;font-size:0.8rem;color:#15803d;">
                 <i class="fas fa-university"></i>
                 <span id="pmBancoNome"></span>
-                <i class="fas fa-chevron-right" style="font-size:.6rem;"></i>
+                <i class="fas fa-chevron-right" style="font-size:0.65rem;"></i>
             </div>
         </div>
 
@@ -431,7 +431,7 @@
 
         <div class="fn-footer">
             <button class="btn" onclick="fecharModalPagamento()" style="background:#f1f5f9;color:#64748b;">Cancelar</button>
-            <button class="btn btn-primary" onclick="confirmarPagamento()" style="background:#6366f1;border-color:#6366f1;">
+            <button class="btn btn-primary" onclick="confirmarPagamento()" style="background:#008cdd;border-color:#008cdd;">
                 <i class="fas fa-check"></i> Salvar
             </button>
         </div>
@@ -496,7 +496,7 @@
 
         <div class="fn-footer">
             <button class="btn" onclick="fecharModalInfo()" style="background:#f1f5f9;color:#64748b;">Fechar</button>
-            <button class="btn btn-primary" onclick="editarDoInfo()" style="background:#6366f1;border-color:#6366f1;">
+            <button class="btn btn-primary" onclick="editarDoInfo()" style="background:#008cdd;border-color:#008cdd;">
                 <i class="fas fa-pencil-alt"></i> Editar
             </button>
         </div>
@@ -552,7 +552,7 @@ async function carregarFinancas() {
     } catch(e) {
         showToast('Erro ao carregar dados financeiros', 'error');
         el('tituloMes').textContent = 'Erro ao carregar';
-        el('listaEntradas').innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;font-size:.85rem;">Falha ao carregar entradas</div>';
+        el('listaEntradas').innerHTML = '<div style="text-align:center;padding:30px;color:#B91C1C;font-size:0.875rem;">Falha ao carregar entradas</div>';
         return;
     }
 
@@ -632,7 +632,7 @@ function aplicarFiltroEntradas() {
 }
 
 function _avatarBg(nome) {
-    const cores=['#4f46e5','#0891b2','#16a34a','#d97706','#be123c','#7c3aed'];
+    const cores=['#015e94','#0369A1','#15803D','#d97706','#be123c','#7c3aed'];
     const i=(nome||'A').charCodeAt(0)%cores.length;
     return cores[i];
 }
@@ -655,7 +655,7 @@ function toggleGrupo(locId) {
 function renderEntradas(lista) {
     const el_le = el('listaEntradas');
     if(!lista.length) {
-        el_le.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-size:.85rem;">Nenhum lançamento encontrado</div>';
+        el_le.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-size:0.875rem;">Nenhum lançamento encontrado</div>';
         return;
     }
 
@@ -691,11 +691,11 @@ function renderEntradas(lista) {
             if(c.status==='pago') badge = `<span class="bdg-pago">Pago</span>`;
             else if(c.vencido)   badge = `<span class="bdg-venc" onclick="abrirModalPagamento(${c.id})" style="cursor:pointer;">Vencido</span>`;
             else                  badge = `<span class="bdg-pend" onclick="abrirModalPagamento(${c.id})" style="cursor:pointer;">Pendente</span>`;
-            return `<div class="ent-row" style="padding-left:52px;background:#fafafa;border-left:3px solid #e2e8f0;">
+            return `<div class="ent-row" style="padding-left:52px;background:#f8fafc;border-left:3px solid #e2e8f0;">
                 <div class="ent-info" style="flex:1;">
                     <div class="ent-sub" style="font-size:.8rem;color:#475569;">${per}</div>
                 </div>
-                <div class="ent-val" style="font-size:.88rem;">${fmtR(c.valor)}</div>
+                <div class="ent-val" style="font-size:0.875rem;">${fmtR(c.valor)}</div>
                 ${badge}
                 <div class="ent-menu-wrap">
                     <div class="ent-menu-btn" onclick="toggleMenuEnt(${c.id},event)">⋯</div>
@@ -832,12 +832,12 @@ async function gerarLinkPagamento(id) {
 
     // Pede forma de pagamento
     abrirModal('Gerar Link de Pagamento', `
-        <p style="font-size:.82rem;color:#64748b;margin-bottom:16px;">
+        <p style="font-size:0.8rem;color:#64748b;margin-bottom:16px;">
             Selecione a forma de pagamento para <strong>${c.cliente}</strong><br>
             Valor: <strong>${fmtR(c.valor)}</strong>
         </p>
         <div class="form-group">
-            <label style="font-size:.72rem;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.06em;">Forma de Pagamento</label>
+            <label style="font-size:.72rem;font-weight:700;color:#008cdd;text-transform:uppercase;letter-spacing:.06em;">Forma de Pagamento</label>
             <select class="form-control" id="linkBilling" style="margin-top:6px;">
                 <option value="PIX">PIX</option>
                 <option value="BOLETO">Boleto Bancário</option>
@@ -847,7 +847,7 @@ async function gerarLinkPagamento(id) {
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
             <button class="btn" onclick="fecharModal()" style="background:#f1f5f9;color:#64748b;">Cancelar</button>
-            <button class="btn btn-primary" onclick="_executarGerarLink(${id})" style="background:#6366f1;border-color:#6366f1;">
+            <button class="btn btn-primary" onclick="_executarGerarLink(${id})" style="background:#008cdd;border-color:#008cdd;">
                 <i class="fas fa-link"></i> Gerar Link
             </button>
         </div>
@@ -876,11 +876,11 @@ async function _executarGerarLink(id) {
 
         abrirModal('Link de Pagamento Gerado', `
             <div style="text-align:center;padding:10px 0;">
-                <i class="fas fa-check-circle" style="color:#16a34a;font-size:2rem;margin-bottom:12px;"></i>
-                <p style="font-size:.85rem;font-weight:600;color:#0f172a;margin-bottom:8px;">Link gerado com sucesso!</p>
-                <p style="font-size:.78rem;color:#64748b;margin-bottom:16px;">${(c||{}).cliente||''}</p>
+                <i class="fas fa-check-circle" style="color:#15803D;font-size:2rem;margin-bottom:12px;"></i>
+                <p style="font-size:0.875rem;font-weight:600;color:#0f172a;margin-bottom:8px;">Link gerado com sucesso!</p>
+                <p style="font-size:0.8rem;color:#64748b;margin-bottom:16px;">${(c||{}).cliente||''}</p>
                 <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;
-                            font-size:.72rem;color:#6366f1;word-break:break-all;margin-bottom:16px;text-align:left;">
+                            font-size:.72rem;color:#008cdd;word-break:break-all;margin-bottom:16px;text-align:left;">
                     ${url}
                 </div>
                 ${extra}
@@ -890,7 +890,7 @@ async function _executarGerarLink(id) {
                         <i class="fas fa-copy"></i> Copiar
                     </button>
                     <button class="btn btn-primary" onclick="window.open('${url}','_blank')"
-                            style="background:#6366f1;border-color:#6366f1;">
+                            style="background:#008cdd;border-color:#008cdd;">
                         <i class="fas fa-external-link-alt"></i> Abrir no Asaas
                     </button>
                 </div>
@@ -937,7 +937,7 @@ function renderValoresAReceber() {
 function renderPaginaVR() {
     const lista = el('listaValRec');
     if (!_vrLista.length) {
-        lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:.85rem;">Nenhum valor a receber</div>';
+        lista.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:0.875rem;">Nenhum valor a receber</div>';
         el('vrPagLabel').textContent = '';
         return;
     }
@@ -952,16 +952,16 @@ function renderPaginaVR() {
                     align-items:center;padding:10px 18px;border-bottom:1px solid #f1f5f9;
                     transition:background .1s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
             <div>
-                <div style="font-size:.88rem;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">${fmtR(c.valor)}</div>
-                <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">${fmtDate(c.data_vencimento)}</div>
+                <div style="font-size:0.875rem;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums;">${fmtR(c.valor)}</div>
+                <div style="font-size:0.72rem;color:#94a3b8;margin-top:2px;">${fmtDate(c.data_vencimento)}</div>
             </div>
             <div>
-                <div style="font-size:.68rem;color:#4f46e5;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">${tipoMap[c.tipo]||c.tipo}</div>
-                <div style="font-size:.78rem;font-weight:600;color:#0f172a;">${c.locacao_id ? '#'+c.locacao_id : '—'}</div>
+                <div style="font-size:0.65rem;color:#015e94;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">${tipoMap[c.tipo]||c.tipo}</div>
+                <div style="font-size:0.8rem;font-weight:600;color:#0f172a;">${c.locacao_id ? '#'+c.locacao_id : '—'}</div>
                 <div style="font-size:.72rem;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.cliente||'—'}</div>
             </div>
             <div style="text-align:right;">
-                <div style="font-size:.78rem;font-weight:700;color:#0f172a;letter-spacing:.06em;">${c.placa||'—'}</div>
+                <div style="font-size:0.8rem;font-weight:700;color:#0f172a;letter-spacing:.06em;">${c.placa||'—'}</div>
             </div>
         </div>`).join('');
 }
@@ -988,7 +988,7 @@ function renderChartVR() {
         const lbl = d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
         return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;">
             <div style="width:100%;height:${h}px;background:#c4b5fd;border-radius:3px 3px 0 0;" title="${lbl}: ${fmtR(grouped[k])}"></div>
-            <div style="font-size:.5rem;color:#94a3b8;white-space:nowrap;overflow:hidden;">${lbl}</div>
+            <div style="font-size:0.65rem;color:#94a3b8;white-space:nowrap;overflow:hidden;">${lbl}</div>
         </div>`;
     }).join('');
 }
@@ -1004,7 +1004,7 @@ async function carregarCPagar() {
     if (params.length) url += '?' + params.join('&');
 
     const lista = el('listaCPagar');
-    lista.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:.85rem;">Carregando...</div>';
+    lista.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:0.875rem;">Carregando...</div>';
     try {
         const resp = await fetch(url);
         const data = await resp.json();
@@ -1016,7 +1016,7 @@ async function carregarCPagar() {
         if (!pendentes.length) {
             lista.innerHTML = `<div style="text-align:center;padding:40px;">
                 <i class="fas fa-box-open" style="font-size:2.2rem;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
-                <div style="font-size:.82rem;color:#94a3b8;">Nenhum resultado encontrado!</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">Nenhum resultado encontrado!</div>
             </div>`;
             return;
         }
@@ -1025,22 +1025,22 @@ async function carregarCPagar() {
                         border-bottom:1px solid #f1f5f9;transition:background .1s;"
                  onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
                 <div style="flex:1;min-width:0;">
-                    <div style="font-size:.82rem;font-weight:600;color:#0f172a;
+                    <div style="font-size:0.8rem;font-weight:600;color:#0f172a;
                                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                         ${i.prestador||i.descricao||'—'}
                     </div>
-                    <div style="font-size:.7rem;color:#94a3b8;margin-top:2px;">
+                    <div style="font-size:0.72rem;color:#94a3b8;margin-top:2px;">
                         ${i.placa ? i.placa+' · ' : ''}${i.descricao||''}
                         ${i.vencimento ? ' · Venc. '+fmtDate(i.vencimento) : ''}
                     </div>
                 </div>
-                <div style="font-size:.88rem;font-weight:700;color:#ef4444;
+                <div style="font-size:0.875rem;font-weight:700;color:#B91C1C;
                             font-variant-numeric:tabular-nums;flex-shrink:0;">
                     ${fmtR(i.custo||i.valor||0)}
                 </div>
             </div>`).join('');
     } catch(e) {
-        lista.innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;font-size:.82rem;">Erro ao carregar</div>';
+        lista.innerHTML = '<div style="text-align:center;padding:30px;color:#B91C1C;font-size:0.8rem;">Erro ao carregar</div>';
     }
 }
 

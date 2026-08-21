@@ -6,12 +6,12 @@
 .status-chip {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 3px 10px; border-radius: 20px;
-    font-size: .7rem; font-weight: 700; letter-spacing: .03em;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: .03em;
 }
-.chip-pendente   { background: #fff8d0; color: #7a6000; }
-.chip-confirmada { background: #ddf0fb; color: #015e94; }
+.chip-pendente   { background: #FFFBEB; color: #A16207; }
+.chip-confirmada { background: #e8f5ff; color: #015e94; }
 .chip-cancelada  { background: #f1f5f9; color: #475569; }
-.chip-convertida { background: #d4f5df; color: #1a7a35; }
+.chip-convertida { background: #d4f5df; color: #15803D; }
 .timeline-bar {
     background: white; border: 1px solid #e2e8f0;
     border-radius: 10px; padding: 16px 20px; margin-bottom: 8px;
@@ -19,19 +19,22 @@
     transition: box-shadow .15s;
 }
 .timeline-bar:hover { box-shadow: var(--card-shadow-hover); }
-.tl-veiculo { font-family: monospace; font-size: .78rem; font-weight: 700; background: #1e293b; color: #f8fafc; padding: 3px 8px; border-radius: 5px; flex-shrink: 0; }
+.tl-veiculo { font-family: monospace; font-size: 0.8rem; font-weight: 700; background: #1e293b; color: #f8fafc; padding: 3px 8px; border-radius: 5px; flex-shrink: 0; }
 .tl-body { flex: 1; min-width: 0; }
-.tl-body strong { display: block; font-size: .85rem; color: #0f172a; }
+.tl-body strong { display: block; font-size: 0.875rem; color: #0f172a; }
 .tl-body small { font-size: .72rem; color: #94a3b8; }
-.tl-datas { font-size: .76rem; color: #475569; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
-.tl-valor { font-size: .82rem; font-weight: 700; color: #008cdd; flex-shrink: 0; }
+.tl-datas { font-size: 0.72rem; color: #475569; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+.tl-valor { font-size: 0.8rem; font-weight: 700; color: #008cdd; flex-shrink: 0; }
 .tl-acoes { display: flex; gap: 4px; flex-shrink: 0; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1><i class="fas fa-calendar-plus"></i> Reservas</h1>
+    <div>
+        <h1><i class="fas fa-calendar-plus"></i> Reservas</h1>
+        <p>Veículos reservados antes da retirada</p>
+    </div>
     <div style="display:flex;gap:8px;">
         <button class="btn btn-primary" onclick="abrirModalReserva()">
             <i class="fas fa-plus"></i> Nova Reserva
@@ -76,14 +79,14 @@
     <div class="card-header">
         <span class="card-title"><i class="fas fa-list"></i> Lista de Reservas</span>
         <div style="display:flex;gap:8px;">
-            <select class="form-control" id="filtroStatus" onchange="aplicarFiltro()" style="width:140px;font-size:.83rem;">
+            <select class="form-control" id="filtroStatus" onchange="aplicarFiltro()" style="width:140px;font-size:0.8rem;">
                 <option value="">Todos status</option>
                 <option value="pendente">Pendente</option>
                 <option value="confirmada">Confirmada</option>
                 <option value="convertida">Convertida</option>
                 <option value="cancelada">Cancelada</option>
             </select>
-            <input type="text" class="form-control" id="busca" placeholder="Buscar cliente ou veículo..." oninput="aplicarFiltro()" style="width:230px;font-size:.83rem;">
+            <input type="text" class="form-control" id="busca" placeholder="Buscar cliente ou veículo..." oninput="aplicarFiltro()" style="width:230px;font-size:0.8rem;">
         </div>
     </div>
     <div id="listaReservas">

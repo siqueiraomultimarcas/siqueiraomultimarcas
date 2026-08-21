@@ -8,15 +8,15 @@
 
 /* ── Bloco de instrução ─────────────────────────────────── */
 .ck-info-box {
-    background: #f5f3ff;
+    background: #e8f5ff;
     border-radius: 8px;
     padding: 14px 18px;
     margin-bottom: 20px;
 }
 .ck-info-box p { margin: 0; line-height: 1.6; }
-.ck-info-box .title { font-size: .95rem; font-weight: 700; color: #1e1b4b; margin-bottom: 3px; }
-.ck-info-box .sub   { font-size: .78rem; color: #6b7280; }
-.ck-info-box .sub strong { color: #4f46e5; font-weight: 600; }
+.ck-info-box .title { font-size: 1rem; font-weight: 700; color: #1e1b4b; margin-bottom: 3px; }
+.ck-info-box .sub   { font-size: 0.8rem; color: #64748b; }
+.ck-info-box .sub strong { color: #015e94; font-weight: 600; }
 
 /* ── Toolbar ────────────────────────────────────────────── */
 .ck-toolbar {
@@ -29,29 +29,29 @@
     border-radius: 8px;
     background: #fff;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; color: #64748b; font-size: .9rem;
+    cursor: pointer; color: #64748b; font-size: 0.875rem;
     transition: all .15s;
 }
 .ck-view-btn.active,
-.ck-view-btn:hover { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
+.ck-view-btn:hover { border-color: #008cdd; color: #008cdd; background: #eef2ff; }
 .ck-nav-btn {
     width: 32px; height: 32px;
     border: 1.5px solid #e2e8f0; border-radius: 7px;
     background: #fff; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; color: #94a3b8; font-size: .78rem; transition: all .15s;
+    cursor: pointer; color: #94a3b8; font-size: 0.8rem; transition: all .15s;
 }
-.ck-nav-btn:hover { border-color: #6366f1; color: #6366f1; }
+.ck-nav-btn:hover { border-color: #008cdd; color: #008cdd; }
 .ck-today-btn {
     padding: 0 14px; height: 32px;
     border: 1.5px solid #e2e8f0; border-radius: 7px;
-    background: #fff; font-size: .76rem; font-weight: 600;
+    background: #fff; font-size: 0.72rem; font-weight: 600;
     cursor: pointer; color: #64748b; font-family: 'Poppins', sans-serif;
     transition: all .15s;
 }
-.ck-today-btn:hover { border-color: #6366f1; color: #6366f1; }
-.ck-week-range { font-size: .78rem; color: #94a3b8; padding: 0 6px; }
+.ck-today-btn:hover { border-color: #008cdd; color: #008cdd; }
+.ck-week-range { font-size: 0.8rem; color: #94a3b8; padding: 0 6px; }
 .ck-hint-link {
-    font-size: .73rem; color: #6366f1; margin-top: 5px;
+    font-size: 0.72rem; color: #008cdd; margin-top: 5px;
     display: block; font-style: italic; padding-left: 2px;
 }
 
@@ -68,13 +68,13 @@
 /* ── Grid de colunas ────────────────────────────────────── */
 .ck-grid {
     display: flex; gap: 0; min-width: max-content;
-    border-left: 1px solid #e5e7eb;
+    border-left: 1px solid #e2e8f0;
 }
 
 /* ── Coluna ─────────────────────────────────────────────── */
 .ck-col {
     width: 160px; flex-shrink: 0;
-    border-right: 1px solid #e5e7eb;
+    border-right: 1px solid #e2e8f0;
     display: flex; flex-direction: column;
 }
 
@@ -82,18 +82,18 @@
 .ck-col-head {
     padding: 10px 0;
     text-align: center;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid #e2e8f0;
     background: #fff;
 }
 .ck-col-head .dow  {
-    font-size: .72rem; font-weight: 700; color: #374151;
+    font-size: .72rem; font-weight: 700; color: #334155;
     text-transform: capitalize; letter-spacing: .01em;
 }
-.ck-col-head .date { font-size: .72rem; color: #9ca3af; margin-top: 1px; }
+.ck-col-head .date { font-size: .72rem; color: #94a3b8; margin-top: 1px; }
 
 /* Hoje */
 .ck-col.hoje .ck-col-head {
-    background: #4f46e5;
+    background: #015e94;
     border-bottom-color: #4338ca;
 }
 .ck-col.hoje .ck-col-head .dow  { color: #fff; }
@@ -113,15 +113,15 @@
 .ck-col-body {
     flex: 1; padding: 8px 7px;
     display: flex; flex-direction: column; gap: 6px;
-    min-height: 60px; background: #fafafa;
+    min-height: 60px; background: #f8fafc;
 }
-.ck-col.hoje   .ck-col-body { background: #f5f3ff; }
-.ck-col.amanha .ck-col-body { background: #f5f3ff; }
+.ck-col.hoje   .ck-col-body { background: #e8f5ff; }
+.ck-col.amanha .ck-col-body { background: #e8f5ff; }
 
 /* ── Card de pagamento ──────────────────────────────────── */
 .ck-card {
     background: #fff;
-    border: 1.5px solid #e5e7eb;
+    border: 1.5px solid #e2e8f0;
     border-radius: 7px;
     padding: 8px 9px;
     cursor: pointer;
@@ -129,54 +129,59 @@
     user-select: none;
 }
 .ck-card:hover { border-color: #a5b4fc; box-shadow: 0 1px 6px rgba(99,102,241,.14); }
-.ck-card.pago  { background: #f9fafb; border-color: #e5e7eb; }
+.ck-card.pago  { background: #f8fafc; border-color: #e2e8f0; }
 
 /* Linha 1: checkbox + placa */
 .ck-row1 { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
 
 .ck-chk {
     width: 15px; height: 15px; flex-shrink: 0;
-    border: 2px solid #6366f1; border-radius: 3px;
+    border: 2px solid #008cdd; border-radius: 3px;
     background: #fff;
     display: flex; align-items: center; justify-content: center;
     transition: all .12s;
 }
-.ck-card.pago .ck-chk { background: #6366f1; border-color: #6366f1; }
+.ck-card.pago .ck-chk { background: #008cdd; border-color: #008cdd; }
 .ck-chk svg { display: none; }
 .ck-card.pago .ck-chk svg { display: block; }
 
 .ck-placa {
-    font-size: .75rem; font-weight: 700; color: #4f46e5;
+    font-size: 0.72rem; font-weight: 700; color: #015e94;
     letter-spacing: .03em; flex: 1;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ck-card.pago .ck-placa { color: #9ca3af; }
+.ck-card.pago .ck-placa { color: #94a3b8; }
 
 /* Linha 2: valor (pendente = roxo, pago = cinza, atrasado = vermelho) */
 .ck-valor {
-    font-size: .8rem; font-weight: 700; color: #4f46e5;
+    font-size: .8rem; font-weight: 700; color: #015e94;
     font-variant-numeric: tabular-nums;
     padding-left: 21px;
 }
-.ck-card.pago    .ck-valor    { color: #9ca3af; }
-.ck-card.atrasado             { background: #fff1f2; border-color: #fecaca; }
-.ck-card.atrasado .ck-placa   { color: #c73a2e; }
-.ck-card.atrasado .ck-valor   { color: #c73a2e; }
+.ck-card.pago    .ck-valor    { color: #94a3b8; }
+.ck-card.atrasado             { background: #FEF2F2; border-color: #fecaca; }
+.ck-card.atrasado .ck-placa   { color: #B91C1C; }
+.ck-card.atrasado .ck-valor   { color: #B91C1C; }
 
 /* Linha 3: cliente */
 .ck-cliente {
-    font-size: .67rem; color: #9ca3af;
+    font-size: 0.65rem; color: #94a3b8;
     padding-left: 21px; margin-top: 1px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     text-transform: uppercase; letter-spacing: .03em;
 }
 
 /* ── Coluna vazia ───────────────────────────────────────── */
-.ck-empty { text-align: center; color: #d1d5db; font-size: .75rem; padding: 20px 0; }
+.ck-empty { text-align: center; color: #cbd5e1; font-size: 0.72rem; padding: 20px 0; }
 </style>
 
 <!-- Título -->
-<h1 style="font-size:1.4rem;font-weight:700;color:#0f172a;margin:0 0 16px;">Checklist de Aluguéis</h1>
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-clipboard-check"></i> Checklist de Aluguéis</h1>
+        <p>Conferência de entrega e devolução dos veículos</p>
+    </div>
+</div>
 
 <!-- Instrução -->
 <div class="ck-info-box">
@@ -203,7 +208,7 @@
 <!-- Grade de dias -->
 <div class="ck-scroll" style="margin-top:10px;">
     <div class="ck-grid" id="ckGrid">
-        <div style="padding:40px;color:#9ca3af;">Carregando...</div>
+        <div style="padding:40px;color:#94a3b8;">Carregando...</div>
     </div>
 </div>
 
@@ -352,7 +357,7 @@ function abrirModalBaixaCk(id, valor, p) {
     abrirModal('Confirmar Recebimento', `
         <div style="padding:4px 0;">
             <div style="background:#f1f5f9;border-radius:10px;padding:11px 14px;margin-bottom:14px;">
-                <div style="font-weight:700;color:#0f172a;font-size:.86rem;">${escHtml(titulo)}</div>
+                <div style="font-weight:700;color:#0f172a;font-size:0.875rem;">${escHtml(titulo)}</div>
                 <div style="font-size:.8rem;color:#475569;margin-top:2px;">
                     Valor da cobrança: <strong>${_fmtR(valor)}</strong>
                 </div>
@@ -373,11 +378,11 @@ function abrirModalBaixaCk(id, valor, p) {
 
             <div style="display:flex;gap:8px;margin-bottom:12px;">
                 <button type="button" class="btn" onclick="_ckSetIntegral(${valor})"
-                        style="flex:1;background:#f1f5f9;color:#334155;font-size:.78rem;border:1px solid #e2e8f0;">
+                        style="flex:1;background:#f1f5f9;color:#334155;font-size:0.8rem;border:1px solid #e2e8f0;">
                     Recebeu tudo
                 </button>
                 <button type="button" class="btn" onclick="document.getElementById('ckValor').focus();document.getElementById('ckValor').select();"
-                        style="flex:1;background:#FFFBEB;color:#A16207;font-size:.78rem;border:1px solid #fde68a;">
+                        style="flex:1;background:#FFFBEB;color:#A16207;font-size:0.8rem;border:1px solid #fde68a;">
                     Pagamento parcial
                 </button>
             </div>
@@ -385,7 +390,7 @@ function abrirModalBaixaCk(id, valor, p) {
             <div id="ckSaldoBox" style="display:none;background:#FFFBEB;border:1px solid #fde68a;
                  border-radius:10px;padding:12px 14px;margin-bottom:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                    <span style="font-size:.78rem;font-weight:700;color:#A16207;">
+                    <span style="font-size:0.8rem;font-weight:700;color:#A16207;">
                         <i class="fas fa-scale-unbalanced"></i> Falta receber
                     </span>
                     <span id="ckSaldoVal" style="font-size:1rem;font-weight:800;color:#A16207;
@@ -393,24 +398,24 @@ function abrirModalBaixaCk(id, valor, p) {
                 </div>
                 <label class="ck-lbl" style="margin-bottom:5px;">Vencimento do residual</label>
                 <input type="date" id="ckVencResidual" class="form-control" value="${vencStr}" min="${hoje}">
-                <div style="font-size:.7rem;color:#A16207;margin-top:7px;line-height:1.4;">
+                <div style="font-size:0.72rem;color:#A16207;margin-top:7px;line-height:1.4;">
                     <i class="fas fa-arrow-right-long"></i>
                     O saldo vira uma nova cobrança pendente em <strong>Contas a Receber</strong>.
                 </div>
             </div>
 
-            <div id="ckErro" style="display:none;font-size:.76rem;color:#B91C1C;
+            <div id="ckErro" style="display:none;font-size:0.72rem;color:#B91C1C;
                  font-weight:600;margin-bottom:10px;"></div>
 
             <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button class="btn" onclick="fecharModal()" style="background:#6b7280;color:#fff;">Cancelar</button>
+                <button class="btn btn-secondary" onclick="fecharModal()" >Cancelar</button>
                 <button class="btn" id="ckBtnOk" onclick="_ckConfirmar(${id},${valor})"
                         style="background:#15803D;color:#fff;font-weight:700;">
                     <i class="fas fa-check"></i> Confirmar
                 </button>
             </div>
         </div>
-        <style>.ck-lbl{font-size:.74rem;font-weight:600;color:#374151;display:block;margin-bottom:5px;}</style>
+        <style>.ck-lbl{font-size:0.72rem;font-weight:600;color:#334155;display:block;margin-bottom:5px;}</style>
     `);
     _ckRecalc(valor);
 }

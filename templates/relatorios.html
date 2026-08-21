@@ -27,7 +27,7 @@
     border-bottom-color: #008cdd;
     font-weight: 700;
 }
-.rel-tab i { font-size: 0.82rem; }
+.rel-tab i { font-size: 0.8rem; }
 .rel-content { display: none; }
 .rel-content.active { display: block; }
 
@@ -54,7 +54,7 @@
     color: white;
     border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.83rem;
+    font-size: 0.8rem;
     box-shadow: 0 2px 8px rgba(0,140,221,0.28);
     flex-shrink: 0;
 }
@@ -66,7 +66,7 @@
     flex-wrap: wrap;
 }
 .period-label {
-    font-size: 0.68rem; font-weight: 700;
+    font-size: 0.65rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: .07em;
     color: #94a3b8;
 }
@@ -74,7 +74,7 @@
     padding: 4px 13px;
     border: 1.5px solid #e2e8f0;
     background: white; border-radius: 20px;
-    font-size: 0.73rem; font-weight: 600;
+    font-size: 0.72rem; font-weight: 600;
     color: #64748b; cursor: pointer;
     transition: all 0.18s; font-family: inherit;
 }
@@ -96,7 +96,7 @@
     border: 1.5px solid #e2e8f0;
     border-radius: 10px;
     padding: 6px;
-    background: #fafafa;
+    background: #f8fafc;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -113,8 +113,8 @@
     padding: 6px 10px;
     border-radius: 7px;
     cursor: pointer;
-    font-size: 0.79rem;
-    color: #374151;
+    font-size: 0.8rem;
+    color: #334155;
     transition: background 0.15s;
     user-select: none;
 }
@@ -140,7 +140,7 @@
 .date-field-wrap {
     display: flex;
     flex-direction: column;
-    background: #fafafa;
+    background: #f8fafc;
     border: 1.5px solid #e2e8f0;
     border-radius: 10px;
     overflow: hidden;
@@ -153,7 +153,7 @@
 }
 .date-field + .date-divider { height: 1px; background: #e2e8f0; }
 .date-field-label {
-    font-size: 0.62rem;
+    font-size: 0.65rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -164,7 +164,7 @@
     border: none !important;
     background: transparent !important;
     padding: 2px 0 !important;
-    font-size: 0.88rem !important;
+    font-size: 0.875rem !important;
     font-weight: 600 !important;
     color: #0f172a !important;
     flex: 1;
@@ -184,16 +184,16 @@
     background: white;
     cursor: pointer;
     transition: all 0.15s;
-    font-size: 0.82rem;
-    color: #374151;
+    font-size: 0.8rem;
+    color: #334155;
 }
-.cost-item:hover { border-color: #93c5fd; background: #f0f9ff; }
+.cost-item:hover { border-color: #b1dcfb; background: #F0F9FF; }
 .cost-item input[type=checkbox] { display: none; }
 .cost-icon {
     width: 28px; height: 28px; border-radius: 7px;
     background: #e8f5ff; color: #008cdd;
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.7rem; flex-shrink: 0;
+    font-size: 0.72rem; flex-shrink: 0;
     transition: background 0.15s;
 }
 .cost-label { flex: 1; }
@@ -215,22 +215,22 @@
     transition: transform 0.2s;
     box-shadow: 0 1px 4px rgba(0,0,0,0.18);
 }
-.cost-item:has(input:checked) { border-color: #93c5fd; background: #e8f5ff; }
-.cost-item:has(input:checked) .cost-icon { background: #ddf0fb; }
+.cost-item:has(input:checked) { border-color: #b1dcfb; background: #e8f5ff; }
+.cost-item:has(input:checked) .cost-icon { background: #e8f5ff; }
 .cost-item:has(input:checked) .cost-toggle { background: #008cdd; }
 .cost-item:has(input:checked) .cost-toggle::after { transform: translateX(16px); }
 
 /* ── Field section label ──────────────────────────────────── */
 .field-label {
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    color: #374151;
+    color: #334155;
     display: flex;
     align-items: center;
     gap: 6px;
     margin-bottom: 8px;
 }
-.field-label i { color: #008cdd; font-size: 0.7rem; }
+.field-label i { color: #008cdd; font-size: 0.72rem; }
 
 /* ── Empty state ──────────────────────────────────────────── */
 .rel-empty {
@@ -244,10 +244,10 @@
     background: #f1f5f9;
     display: flex; align-items: center; justify-content: center;
     margin: 0 auto 20px;
-    font-size: 1.8rem; color: #94a3b8;
+    font-size: 1.75rem; color: #94a3b8;
 }
-.rel-empty h3 { font-size: 1.05rem; font-weight: 600; color: #475569; margin-bottom: 8px; }
-.rel-empty p { font-size: 0.83rem; color: #94a3b8; max-width: 340px; margin: 0 auto; }
+.rel-empty h3 { font-size: 1rem; font-weight: 600; color: #475569; margin-bottom: 8px; }
+.rel-empty p { font-size: 0.8rem; color: #94a3b8; max-width: 340px; margin: 0 auto; }
 
 /* ── Results ──────────────────────────────────────────────── */
 .results-header {
@@ -280,7 +280,7 @@
 .part-bar-fill { height: 100%; border-radius: 3px; background: #008cdd; }
 .chart-wrap { height: 260px; padding: 4px 8px 16px; }
 .section-divider {
-    font-size: 0.7rem; font-weight: 700;
+    font-size: 0.72rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: .1em;
     color: #94a3b8; margin: 28px 0 12px;
     display: flex; align-items: center; gap: 10px;
@@ -313,11 +313,11 @@
     padding-bottom: 12px; margin-bottom: 20px;
 }
 .print-header-logo {
-    font-size: 1.3rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;
+    font-size: 1.25rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;
 }
 .print-header-logo span { color: #008cdd; }
-.print-header-info { text-align: right; font-size: 0.75rem; color: #64748b; }
-.print-header-info strong { display: block; font-size: 0.88rem; color: #0f172a; }
+.print-header-info { text-align: right; font-size: 0.72rem; color: #64748b; }
+.print-header-info strong { display: block; font-size: 0.875rem; color: #0f172a; }
 </style>
 {% endblock %}
 
@@ -359,8 +359,8 @@
             <div style="display:flex;align-items:center;gap:12px;">
                 <div class="rel-param-icon"><i class="fas fa-sliders-h"></i></div>
                 <div>
-                    <div style="font-weight:700;font-size:0.93rem;color:#0f172a;">Parâmetros do Relatório</div>
-                    <div style="font-size:0.7rem;color:#94a3b8;margin-top:1px;">Configure os filtros e clique em Gerar Relatório</div>
+                    <div style="font-weight:700;font-size:0.875rem;color:#0f172a;">Parâmetros do Relatório</div>
+                    <div style="font-size:0.72rem;color:#94a3b8;margin-top:1px;">Configure os filtros e clique em Gerar Relatório</div>
                 </div>
             </div>
             <div class="period-row">
@@ -381,13 +381,13 @@
                     <div class="field-label">
                         <i class="fas fa-car"></i> Veículos
                         <button type="button" id="btnTodosVeic" onclick="toggleTodosVeiculos()"
-                            style="margin-left:auto;font-size:0.68rem;color:#008cdd;background:none;border:none;cursor:pointer;font-weight:700;padding:0;">
+                            style="margin-left:auto;font-size:0.65rem;color:#008cdd;background:none;border:none;cursor:pointer;font-weight:700;padding:0;">
                             Desmarcar todos
                         </button>
                     </div>
                     <div id="listaVeiculos" class="veiculo-list">
-                        <div style="text-align:center;padding:24px 0;color:#94a3b8;font-size:0.78rem;">
-                            <i class="fas fa-spinner fa-spin" style="display:block;font-size:1.2rem;margin-bottom:8px;"></i>
+                        <div style="text-align:center;padding:24px 0;color:#94a3b8;font-size:0.8rem;">
+                            <i class="fas fa-spinner fa-spin" style="display:block;font-size:1.25rem;margin-bottom:8px;"></i>
                             Carregando veículos...
                         </div>
                     </div>
@@ -432,7 +432,7 @@
                             <span class="cost-toggle"></span>
                         </label>
                     </div>
-                    <button class="btn btn-primary" onclick="gerarRelatorio()" style="width:100%;margin-top:12px;padding:11px;font-size:0.88rem;">
+                    <button class="btn btn-primary" onclick="gerarRelatorio()" style="width:100%;margin-top:12px;padding:11px;font-size:0.875rem;">
                         <i class="fas fa-bolt"></i> Gerar Relatório
                     </button>
                 </div>
@@ -528,8 +528,8 @@
             <div style="display:flex;align-items:center;gap:12px;">
                 <div class="rel-param-icon"><i class="fas fa-truck"></i></div>
                 <div>
-                    <div style="font-weight:700;font-size:0.93rem;color:#0f172a;">Parâmetros do Relatório</div>
-                    <div style="font-size:0.7rem;color:#94a3b8;margin-top:1px;">Selecione o fornecedor e o período desejado</div>
+                    <div style="font-weight:700;font-size:0.875rem;color:#0f172a;">Parâmetros do Relatório</div>
+                    <div style="font-size:0.72rem;color:#94a3b8;margin-top:1px;">Selecione o fornecedor e o período desejado</div>
                 </div>
             </div>
             <div class="period-row">
@@ -565,7 +565,7 @@
                     </div>
                 </div>
             </div>
-            <button class="btn btn-primary" onclick="gerarRelatorioFornecedor()" style="margin-top:16px;padding:11px 28px;font-size:0.88rem;">
+            <button class="btn btn-primary" onclick="gerarRelatorioFornecedor()" style="margin-top:16px;padding:11px 28px;font-size:0.875rem;">
                 <i class="fas fa-bolt"></i> Gerar Relatório
             </button>
         </div>
@@ -656,8 +656,8 @@
             <div style="display:flex;align-items:center;gap:12px;">
                 <div class="rel-param-icon"><i class="fas fa-key"></i></div>
                 <div>
-                    <div style="font-weight:700;font-size:0.93rem;color:#0f172a;">Parâmetros do Relatório</div>
-                    <div style="font-size:0.7rem;color:#94a3b8;margin-top:1px;">Selecione o período para analisar locações</div>
+                    <div style="font-weight:700;font-size:0.875rem;color:#0f172a;">Parâmetros do Relatório</div>
+                    <div style="font-size:0.72rem;color:#94a3b8;margin-top:1px;">Selecione o período para analisar locações</div>
                 </div>
             </div>
             <div class="period-row">
@@ -684,7 +684,7 @@
                 </div>
             </div>
             <div>
-                <button class="btn btn-primary" onclick="gerarRelatorioLocacoes()" style="padding:11px 28px;font-size:0.88rem;">
+                <button class="btn btn-primary" onclick="gerarRelatorioLocacoes()" style="padding:11px 28px;font-size:0.875rem;">
                     <i class="fas fa-bolt"></i> Gerar Relatório
                 </button>
             </div>
@@ -850,7 +850,7 @@ async function carregarVeiculos() {
         if (lista.querySelectorAll('.veiculo-item').length > 0) return;
 
         if (veiculos.length === 0) {
-            lista.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.78rem;">Nenhum veículo cadastrado</div>';
+            lista.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:0.8rem;">Nenhum veículo cadastrado</div>';
         } else {
             lista.innerHTML = veiculos.map(v => `
                 <label class="veiculo-item">
@@ -929,9 +929,9 @@ function exibirResultados(data, di, df) {
         return `<tr class="${lucroPos ? 'row-profit' : 'row-loss'}">
             <td>
                 <div style="font-weight:600;color:#1e293b;">${escHtml(r.veiculo.placa)}</div>
-                <div style="font-size:0.75rem;color:#94a3b8;">${escHtml(r.veiculo.marca)} ${escHtml(r.veiculo.modelo)}</div>
+                <div style="font-size:0.72rem;color:#94a3b8;">${escHtml(r.veiculo.marca)} ${escHtml(r.veiculo.modelo)}</div>
             </td>
-            <td style="text-align:center;font-weight:600;color:#374151;">${r.qtd_locacoes || 0}</td>
+            <td style="text-align:center;font-weight:600;color:#334155;">${r.qtd_locacoes || 0}</td>
             <td style="text-align:right;color:#15803D;font-weight:600;">${fmtR(r.receita)}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(r.custo_manutencao)}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(r.custo_abastecimento)}</td>
@@ -940,7 +940,7 @@ function exibirResultados(data, di, df) {
             <td style="text-align:right;font-weight:700;color:${lucroPos ? '#15803D' : '#B91C1C'};">${fmtR(r.lucro)}</td>
             <td>
                 <div class="margin-wrap">
-                    <span style="font-size:0.78rem;font-weight:600;color:${lucroPos?'#15803D':'#B91C1C'};min-width:40px;">${margemPct.toFixed(1)}%</span>
+                    <span style="font-size:0.8rem;font-weight:600;color:${lucroPos?'#15803D':'#B91C1C'};min-width:40px;">${margemPct.toFixed(1)}%</span>
                     <div class="margin-bar-bg">
                         <div class="margin-bar-fill" style="width:${barWidth}%;background:${barColor};"></div>
                     </div>
@@ -959,7 +959,7 @@ function exibirResultados(data, di, df) {
             <td style="text-align:right;" colspan="3"></td>
             <td style="text-align:right;color:#B91C1C;">${fmtR(totalCustos)}</td>
             <td style="text-align:right;color:${totalLucro>=0?'#15803D':'#B91C1C'};">${fmtR(totalLucro)}</td>
-            <td><span style="font-weight:700;font-size:0.85rem;color:${totalLucro>=0?'#15803D':'#B91C1C'};">${margTotal.toFixed(1)}%</span></td>
+            <td><span style="font-weight:700;font-size:0.875rem;color:${totalLucro>=0?'#15803D':'#B91C1C'};">${margTotal.toFixed(1)}%</span></td>
         </tr>`;
 
     if (data.dados_mensais?.length) renderizarGrafico(data.dados_mensais);
@@ -1058,13 +1058,13 @@ function exibirResultadosFornecedor(data) {
         const part   = totalGasto > 0 ? (f.total_gasto / totalGasto) * 100 : 0;
         return `<tr>
             <td><strong>${escHtml(f.nome)}</strong></td>
-            <td><span class="badge badge-info" style="font-size:0.7rem;">${escHtml(f.tipo_nome) || 'Geral'}</span></td>
+            <td><span class="badge badge-info" style="font-size:0.72rem;">${escHtml(f.tipo_nome) || 'Geral'}</span></td>
             <td style="text-align:center;font-weight:600;">${f.qtd_servicos}</td>
             <td style="text-align:right;color:#64748b;">${fmtR(ticket)}</td>
             <td style="text-align:right;font-weight:700;color:#B91C1C;">${fmtR(f.total_gasto)}</td>
             <td>
                 <div class="part-wrap">
-                    <span style="font-size:0.78rem;font-weight:600;color:#008cdd;min-width:38px;">${part.toFixed(1)}%</span>
+                    <span style="font-size:0.8rem;font-weight:600;color:#008cdd;min-width:38px;">${part.toFixed(1)}%</span>
                     <div class="part-bar-bg">
                         <div class="part-bar-fill" style="width:${part}%;"></div>
                     </div>
@@ -1080,7 +1080,7 @@ function exibirResultadosFornecedor(data) {
 function renderizarGraficoFornecedor(resultados) {
     const ctx = document.getElementById('chartFornecedores').getContext('2d');
     if (chartFornecedores) chartFornecedores.destroy();
-    const cores = ['#008cdd','#15803D','#CA8A04','#B91C1C','#8b5cf6','#06b6d4','#ec4899'];
+    const cores = ['#008cdd','#15803D','#A16207','#B91C1C','#008cdd','#06b6d4','#ec4899'];
     chartFornecedores = new Chart(ctx, {
         type:'bar',
         data: {
@@ -1166,13 +1166,13 @@ function exibirResultadosLocacoes(data, di, df) {
         return `<tr>
             <td style="font-size:0.8rem;color:#94a3b8;font-weight:600;">${i < 3 ? medalhas[i] : i+1}</td>
             <td>
-                <div style="font-weight:600;color:#1e293b;font-size:0.83rem;">${escHtml(c.nome)}</div>
-                <div style="font-size:0.7rem;color:#94a3b8;">${c.qtd} locação${c.qtd > 1 ? 'ões' : ''}</div>
+                <div style="font-weight:600;color:#1e293b;font-size:0.8rem;">${escHtml(c.nome)}</div>
+                <div style="font-size:0.72rem;color:#94a3b8;">${c.qtd} locação${c.qtd > 1 ? 'ões' : ''}</div>
             </td>
-            <td style="text-align:center;font-weight:600;color:#374151;">${c.qtd}</td>
+            <td style="text-align:center;font-weight:600;color:#334155;">${c.qtd}</td>
             <td style="text-align:right;">
-                <div style="font-weight:700;color:#15803D;font-size:0.83rem;">${fmtR(c.receita)}</div>
-                <div style="font-size:0.68rem;color:#94a3b8;">${part}% do total</div>
+                <div style="font-weight:700;color:#15803D;font-size:0.8rem;">${fmtR(c.receita)}</div>
+                <div style="font-size:0.65rem;color:#94a3b8;">${part}% do total</div>
             </td>
         </tr>`;
     }).join('') || '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:20px;">Sem dados</td></tr>';
@@ -1186,14 +1186,14 @@ function exibirResultadosLocacoes(data, di, df) {
             <td style="font-size:0.8rem;color:#94a3b8;font-weight:600;">${i < 3 ? medalhas[i] : i+1}</td>
             <td>
                 <span style="font-family:monospace;font-weight:700;background:#1e293b;color:#f8fafc;border-radius:4px;padding:1px 6px;font-size:.72rem;">${escHtml(v.placa)}</span>
-                <div style="font-size:0.7rem;color:#94a3b8;margin-top:2px;">${escHtml(v.marca)} ${escHtml(v.modelo)}</div>
+                <div style="font-size:0.72rem;color:#94a3b8;margin-top:2px;">${escHtml(v.marca)} ${escHtml(v.modelo)}</div>
             </td>
             <td style="text-align:center;">
                 <div style="font-weight:700;color:#008cdd;">${v.qtd_locacoes}</div>
                 <div class="part-bar-bg" style="min-width:36px;margin-top:3px;"><div class="part-bar-fill" style="width:${barW}%;"></div></div>
             </td>
             <td style="text-align:center;color:#64748b;font-weight:600;">${v.dias_locado}d</td>
-            <td style="text-align:right;font-weight:600;color:#15803D;font-size:0.83rem;">${fmtR(v.receita)}</td>
+            <td style="text-align:right;font-weight:600;color:#15803D;font-size:0.8rem;">${fmtR(v.receita)}</td>
         </tr>`;
     }).join('') || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Sem dados</td></tr>';
 
