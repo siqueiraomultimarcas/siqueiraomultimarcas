@@ -814,15 +814,23 @@
     async function executarToggle(id, novoStatus) {
         const multa = multas.find(m => m.id === id);
         if (!multa) return;
+        // Sem a data, a multa ficava "paga" sem dizer quando — e o relatorio
+        // de multas pagas por periodo nao tinha como se apoiar em nada.
+        const dataPagamento = novoStatus === 'pago'
+            ? (multa.data_pagamento || new Date().toISOString().slice(0, 10))
+            : null;
         try {
             const response = await fetch(`/api/multas/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...multa, status: novoStatus })
+                body: JSON.stringify({ ...multa, status: novoStatus,
+                                       data_pagamento: dataPagamento })
             });
             if (response.ok) {
                 fecharModal();
-                showToast(novoStatus === 'pago' ? 'Multa marcada como paga!' : 'Status revertido para pendente', 'success');
+                showToast(novoStatus === 'pago'
+                    ? `Multa baixada em ${formatDate(dataPagamento)}`
+                    : 'Baixa desfeita — multa voltou para pendente', 'success');
                 carregarMultas();   // lista + painel
             } else {
                 showToast('Erro ao atualizar status', 'error');
@@ -1609,7 +1617,14 @@
             window.open(URL.createObjectURL(blob), '_blank');
             const doc = r.headers.get('X-Tipo-Notificacao') === 'NP'
                 ? 'Cobrança da multa' : 'Aviso da infração';
-            showToast(`${doc} aberto e arquivado na multa`, 'success');
+            // O servidor diz se conseguiu guardar o arquivo. Sem isso a tela
+            // afirmaria "arquivado" mesmo quando o Cloudinary falhou.
+            if (r.headers.get('X-Arquivado') === '1') {
+                showToast(`${doc} aberto e arquivado na multa`, 'success');
+            } else {
+                showToast(`${doc} aberto, mas não consegui guardar o arquivo — tente de novo`,
+                          'warning', 7000);
+            }
             carregarMultas();
         } catch {
             showToast('Erro de conexão ao buscar o PDF', 'error');

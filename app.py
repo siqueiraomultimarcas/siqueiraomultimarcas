@@ -4446,22 +4446,30 @@ def pdf_sne_multa(multa_id):
     if not conteudo.startswith(b'%PDF'):
         return jsonify({'error': 'O conteudo recebido nao e um PDF valido.'}), 502
 
-    # Opcional: arquiva no Cloudinary para nao depender da API depois
+    # Arquiva no Cloudinary para nao depender da API depois. Se falhar, o PDF
+    # ainda e entregue — mas a tela precisa saber, senao diria "arquivado"
+    # sobre um documento que nao foi guardado em lugar nenhum.
+    arquivado = False
     if request.args.get('salvar') == '1':
         try:
             up = cloudinary.uploader.upload(
                 io.BytesIO(conteudo),
                 public_id='siqueirao/multas/sne_%s_%s' % (multa_id, tipo),
                 resource_type='raw', overwrite=True)
+            url_salva = up.get('secure_url')
+            if not url_salva:
+                raise ValueError('Cloudinary nao devolveu a URL do arquivo')
             with _db() as (conn, cur):
                 cur.execute('UPDATE multas SET pdf_url=%s WHERE id=%s',
-                            (up.get('secure_url'), multa_id))
+                            (url_salva, multa_id))
+            arquivado = True
         except Exception as e:
-            app.logger.warning('[pdf-sne] falha ao arquivar no Cloudinary: %s', e)
+            app.logger.warning('[pdf-sne] falha ao arquivar multa %s: %s', multa_id, e)
 
     return Response(conteudo, mimetype='application/pdf', headers={
         'Content-Disposition': 'inline; filename="%s"' % nome,
-        'X-Tipo-Notificacao': tipo,          # NA = aviso, NP = cobranca
+        'X-Tipo-Notificacao': tipo,                        # NA = aviso, NP = cobranca
+        'X-Arquivado': '1' if arquivado else '0',          # guardou no sistema?
     })
 
 
