@@ -161,7 +161,7 @@ _db_initialized = False
 
 # Versão do schema. INCREMENTE SEMPRE que adicionar CREATE TABLE / ALTER TABLE
 # em init_db(), senão a migração não roda em produção.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 def init_db():
     """Cria/atualiza o schema. As migrações só rodam quando SCHEMA_VERSION muda —
@@ -420,6 +420,9 @@ def init_db():
     # Identificadores do SNE/eFrotas — necessarios para baixar o PDF da notificacao
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS codigo_orgao TEXT")
     cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS codigo_infracao TEXT")
+    # Datas de emissao das notificacoes — dizem qual documento ja existe no SNE
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS data_emissao_na DATE")
+    cur.execute("ALTER TABLE multas ADD COLUMN IF NOT EXISTS data_emissao_np DATE")
 
     # ── Novos campos de locação (v2 — formulário completo) ───────────────────
     cur.execute("ALTER TABLE locacoes ADD COLUMN IF NOT EXISTS caucao NUMERIC(10,2) DEFAULT 0")
@@ -3632,6 +3635,11 @@ def _efrotas_map_infracao(i):
         'pontos':             pontos,
         'fator_multiplicador': fator,
         'renainf':            str(i.get('renainf')) if i.get('renainf') else None,
+        'data_emissao_na':    _d(i.get('dataEmissaoNotificacaoAutuacao')),
+        'data_emissao_np':    _d(i.get('dataEmissaoNotificacaoPenalidade')),
+        'fase':               ('cobranca' if i.get('dataEmissaoNotificacaoPenalidade')
+                               else 'aviso' if i.get('dataEmissaoNotificacaoAutuacao')
+                               else 'registrada'),
         'numero_auto':        i.get('numeroAutoInfracao'),
         'codigo_infracao':    i.get('codigoInfracao'),
         'codigo_orgao':       i.get('codigoOrgaoAutuador'),
@@ -3733,7 +3741,8 @@ def baixar_pdf_efrotas():
     """Baixa o PDF da notificacao no SNE.
 
     Body: {placa, codigo_orgao, numero_ait, codigo_infracao, tipo}
-    tipo: 'NA' (Notificacao de Autuacao) ou 'NP' (Notificacao de Penalidade).
+    tipo: 'NA' = aviso da infracao (defesa/indicacao)
+          'NP' = cobranca da multa (valor e vencimento)
     """
     base, headers = _efrotas_cfg()
     if base is None:
@@ -3874,8 +3883,9 @@ def _sincronizar_multas_frota(forcar=False):
                                         descricao, valor, local_infracao, status, observacoes,
                                         numero_auto, tipo_notificacao, data_limite_defesa,
                                         numero_renainf, data_pagamento,
-                                        codigo_orgao, codigo_infracao)
-                    VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 'multa', %s, %s, %s, %s, %s)
+                                        codigo_orgao, codigo_infracao,
+                                        data_emissao_na, data_emissao_np)
+                    VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, 'multa', %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
                 ''', (veiculo_id,
                       (str(inf.get('dataAutuacao'))[:10] if inf.get('dataAutuacao') else None),
@@ -3885,7 +3895,8 @@ def _sincronizar_multas_frota(forcar=False):
                       auto, m['data_limite_defesa'],
                       str(inf.get('renainf')) if inf.get('renainf') else None,
                       m['data_pagamento'],
-                      m['codigo_orgao'], m['codigo_infracao']))
+                      m['codigo_orgao'], m['codigo_infracao'],
+                      m.get('data_emissao_na'), m.get('data_emissao_np')))
                 nova_id = cur.fetchone()[0]
 
             registro = {'id': nova_id, 'placa': placa, 'numero_auto': auto,
@@ -3976,16 +3987,16 @@ def pdf_sne_multa(multa_id):
     """Baixa o PDF da notificacao direto pelo ID da multa.
 
     Query string:
-      tipo=NA  Notificacao de Autuacao (padrao)
-      tipo=NP  Notificacao de Penalidade
+      tipo=NA  aviso da infracao — fase de defesa e indicacao (padrao)
+      tipo=NP  cobranca da multa — valor e vencimento
       salvar=1 tambem guarda o PDF no Cloudinary e preenche multas.pdf_url
 
     Usa os identificadores gravados na importacao (codigo_orgao e
     codigo_infracao); multas cadastradas a mao nao os possuem.
     """
-    tipo = (request.args.get('tipo') or 'NA').upper()
-    if tipo not in ('NA', 'NP'):
-        return jsonify({'error': "Tipo deve ser 'NA' (autuacao) ou 'NP' (penalidade)"}), 400
+    tipo = (request.args.get('tipo') or 'AUTO').upper()
+    if tipo not in ('NA', 'NP', 'AUTO'):
+        return jsonify({'error': "Tipo deve ser 'NA', 'NP' ou 'AUTO'"}), 400
 
     base, headers = _efrotas_cfg()
     if base is None:
@@ -3993,7 +4004,8 @@ def pdf_sne_multa(multa_id):
 
     with _db() as (conn, cur):
         cur.execute('''SELECT m.numero_auto, m.codigo_orgao, m.codigo_infracao,
-                              COALESCE(v.placa, '') AS placa, m.pdf_url
+                              COALESCE(v.placa, '') AS placa, m.pdf_url,
+                              m.data_emissao_na, m.data_emissao_np
                        FROM multas m
                        LEFT JOIN veiculos v ON v.id = m.veiculo_id
                        WHERE m.id = %s''', (multa_id,))
@@ -4001,7 +4013,15 @@ def pdf_sne_multa(multa_id):
 
     if not row:
         return jsonify({'error': 'Multa nao encontrada'}), 404
-    auto, orgao, cod_inf, placa, pdf_url = row
+    auto, orgao, cod_inf, placa, pdf_url, emis_na, emis_np = row
+
+    # AUTO: entrega o documento mais recente que o orgao ja emitiu.
+    # Sem as datas registradas, tenta a cobranca e cai para o aviso.
+    tentativas = [tipo]
+    if tipo == 'AUTO':
+        if emis_np:   tentativas = ['NP']
+        elif emis_na: tentativas = ['NA']
+        else:         tentativas = ['NP', 'NA']
 
     if not all([auto, orgao, cod_inf, placa]):
         return jsonify({'error': 'Esta multa nao tem os identificadores do SNE '
@@ -4009,22 +4029,29 @@ def pdf_sne_multa(multa_id):
                                  'O PDF so fica disponivel para multas importadas do eFrotas.'}), 400
 
     placa_lim = re.sub(r'[^A-Z0-9]', '', placa.upper())
-    url = ('%s/consultas/sne/pdf/placa/%s/codigoOrgao/%s/numeroAit/%s/codigoInfracao/%s/%s'
-           % (base, placa_lim, orgao, auto, cod_inf, tipo))
-
     # O SNE responde JSON com o arquivo em base64 — pedir application/pdf
     # faz o servidor devolver 500.
-    try:
-        resp = _efrotas_get(url, headers=headers, timeout=45)
-    except requests.Timeout:
-        return jsonify({'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
-    except Exception as e:
-        app.logger.error('Erro em pdf_sne_multa: %s', e)
-        return jsonify({'error': 'Falha ao conectar no eFrotas.'}), 502
+    resp = None
+    for cand in tentativas:
+        url = ('%s/consultas/sne/pdf/placa/%s/codigoOrgao/%s/numeroAit/%s/codigoInfracao/%s/%s'
+               % (base, placa_lim, orgao, auto, cod_inf, cand))
+        try:
+            r = _efrotas_get(url, headers=headers, timeout=45)
+        except requests.Timeout:
+            return jsonify({'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
+        except Exception as e:
+            app.logger.error('Erro em pdf_sne_multa: %s', e)
+            return jsonify({'error': 'Falha ao conectar no eFrotas.'}), 502
+        if r.status_code == 200:
+            resp, tipo = r, cand
+            break
+        resp = r
+    tipo = tipo if tipo in ('NA', 'NP') else tentativas[-1]
 
     if resp.status_code == 404:
-        rotulo = 'de autuacao' if tipo == 'NA' else 'de penalidade'
-        return jsonify({'error': 'A notificacao %s ainda nao esta disponivel para esta multa.' % rotulo}), 404
+        rotulo = ('O aviso da infracao ainda nao foi emitido' if tipo == 'NA'
+                  else 'A cobranca desta multa ainda nao foi emitida')
+        return jsonify({'error': '%s pelo orgao autuador.' % rotulo}), 404
     if resp.status_code != 200:
         return jsonify({'error': _efrotas_erro(resp)}), 502
 
@@ -4058,8 +4085,10 @@ def pdf_sne_multa(multa_id):
         except Exception as e:
             app.logger.warning('[pdf-sne] falha ao arquivar no Cloudinary: %s', e)
 
-    return Response(conteudo, mimetype='application/pdf',
-                    headers={'Content-Disposition': 'inline; filename="%s"' % nome})
+    return Response(conteudo, mimetype='application/pdf', headers={
+        'Content-Disposition': 'inline; filename="%s"' % nome,
+        'X-Tipo-Notificacao': tipo,          # NA = aviso, NP = cobranca
+    })
 
 
 @app.route('/api/multas/importar-efrotas', methods=['POST'])
@@ -4107,8 +4136,9 @@ def importar_multas_efrotas():
                 INSERT INTO multas (veiculo_id, motorista_id, data_infracao, hora_infracao,
                                     descricao, valor, local_infracao, status, observacoes,
                                     numero_auto, tipo_notificacao, data_limite_defesa,
-                                    data_pagamento, codigo_orgao, codigo_infracao)
-                VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    data_pagamento, codigo_orgao, codigo_infracao,
+                                    data_emissao_na, data_emissao_np)
+                VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             ''', (veiculo_id,
                   i.get('data_infracao') or None,
@@ -4122,7 +4152,9 @@ def importar_multas_efrotas():
                   i.get('data_limite_defesa') or None,
                   i.get('data_pagamento') or None,
                   i.get('codigo_orgao') or None,
-                  i.get('codigo_infracao') or None))
+                  i.get('codigo_infracao') or None,
+                  i.get('data_emissao_na') or None,
+                  i.get('data_emissao_np') or None))
             importadas.append({'id': cur.fetchone()[0], 'numero_auto': auto, 'urgente': urgente})
 
     return jsonify({
