@@ -1428,19 +1428,12 @@
                 botao.setAttribute('aria-selected', ativa ? 'true' : 'false');
             }
         }
-        try { localStorage.setItem('multasAba', qual); } catch {}
 
         if (qual === 'dashboard' && _painel) {
             renderEvolucaoPainel(_painel);
             renderGravidadePainel(_painel);
             carregarConsumoSerpro();
         }
-    }
-
-    function restaurarAba() {
-        let salva = 'dashboard';
-        try { salva = localStorage.getItem('multasAba') || 'dashboard'; } catch {}
-        trocarAba(salva === 'lista' ? 'lista' : 'dashboard');
     }
 
     /* Chama atencao na aba do dashboard quando ha algo vencendo */
@@ -1998,7 +1991,7 @@
     }
 
     window.addEventListener('load', () => {
-        restaurarAba();              // volta na aba em que o usuario estava
+        trocarAba('dashboard');      // a tela sempre abre pelo panorama
         carregarDados();
         carregarPainel();            // panorama da aba Dashboard
         carregarStatusSincronia();   // barra de status da integracao eFrotas
