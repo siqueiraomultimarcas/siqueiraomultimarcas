@@ -568,9 +568,9 @@
                                         ? `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-check"></i> Dar Baixa</button>`
                                         : `<button onclick="toggleActMenu(event,-1);togglePagamento(${m.id})"><i class="fas fa-undo"></i> Desmarcar</button>`}
                                     ${m.numero_auto && m.codigo_orgao && m.codigo_infracao ? `
-                                    <button onclick="toggleActMenu(event,-1);baixarPdfSne(${m.id})" title="Baixa a notificação oficial do SERPRO — o sistema escolhe entre aviso e cobrança conforme o que já foi emitido"><i class="fas fa-file-arrow-down" style="color:#008cdd;"></i> Notificação oficial</button>
+                                    <button onclick="toggleActMenu(event,-1);baixarPdfSne(${m.id})" title="Baixa a notificação oficial do SERPRO — o sistema escolhe entre aviso e cobrança conforme o que já foi emitido"><i class="fas fa-file-arrow-down"></i> Notificação oficial</button>
                                     <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>` : ''}
-                                    <button onclick="toggleActMenu(event,-1);abrirUploadPdf(${m.id})" title="Guarda o arquivo junto da multa — nao envia nada ao orgao"><i class="fas fa-paperclip" style="color:#64748b;"></i> ${m.pdf_url ? 'Trocar documento' : 'Anexar documento'}</button>
+                                    <button onclick="toggleActMenu(event,-1);abrirUploadPdf(${m.id})" title="Guarda o arquivo junto da multa — nao envia nada ao orgao"><i class="fas fa-paperclip"></i> ${m.pdf_url ? 'Trocar documento' : 'Anexar documento'}</button>
                                     <button class="danger" onclick="toggleActMenu(event,-1);confirmarExcluir(${m.id})"><i class="fas fa-trash"></i> Excluir</button>
                                 </div>
                             </div>
@@ -1631,22 +1631,39 @@
         }
     }
 
+    /* De quando e a lista mostrada — deixa claro que o dado pode estar velho */
+    function _rotuloCache(c) {
+        if (!c || !c.data) return '';
+        if (c.fonte === 'serpro') return 'Consultado agora no SERPRO';
+        const d = c.dias;
+        const quando = d === 0 ? 'hoje' : (d === 1 ? 'ontem' : `há ${d} dias`);
+        return `Lista do contrato consultada ${quando} · ${formatDate(c.data)}`;
+    }
+
     /* Cobertura da frota: quais placas o contrato eFrotas ja alcanca */
-    async function verCoberturaFrota() {
+    async function verCoberturaFrota(atualizar) {
         abrirModal('Cobertura da frota no contrato eFrotas', `
             <div style="text-align:center;padding:34px;color:#94a3b8;">
                 <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;"></i>
-                <p style="margin-top:10px;font-size:0.875rem;">Consultando o contrato no SERPRO...</p>
+                <p style="margin-top:10px;font-size:0.875rem;">${atualizar
+                    ? 'Consultando o contrato no SERPRO...'
+                    : 'Carregando a última consulta...'}</p>
             </div>`);
         try {
-            const d = await fetch('/api/multas/cobertura-frota').then(r => r.json());
+            // Sem "atualizar" le do cache — a lista do contrato muda raramente
+            // e cada consulta ao SERPRO tem custo.
+            const url = '/api/multas/cobertura-frota' + (atualizar ? '?atualizar=1' : '');
+            const d = await fetch(url).then(r => r.json());
             if (!d.success) {
                 document.querySelector('.modal-content .modal-body, #modalBody, .modal-content > div:last-child')
                     ?.setAttribute('data-erro','1');
                 abrirModal('Cobertura da frota', `
                     <div class="cp-vazio erro"><i class="fas fa-circle-xmark"></i> ${escHtml(d.error || 'Falha na consulta')}</div>
-                    <div style="text-align:right;margin-top:14px;">
-                        <button class="btn btn-secondary" onclick="fecharModal()" >Fechar</button>
+                    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+                        <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
+                        <button class="btn btn-primary" onclick="verCoberturaFrota(true)">
+                            <i class="fas fa-rotate"></i> Consultar o SERPRO
+                        </button>
                     </div>`);
                 return;
             }
@@ -1719,8 +1736,15 @@
                     <div class="cf-lista" style="margin-top:8px;">${d.cobertas.map(v => linha(v,'ok')).join('')}</div>
                 </details>
 
-                <div style="text-align:right;margin-top:16px;">
-                    <button class="btn btn-secondary" onclick="fecharModal()" >Fechar</button>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;">
+                    <span style="font-size:0.72rem;color:#94a3b8;">${_rotuloCache(d.cache)}</span>
+                    <div style="margin-left:auto;display:flex;gap:8px;">
+                        <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
+                        <button class="btn btn-primary" onclick="verCoberturaFrota(true)"
+                                title="Consulta o SERPRO de novo — use quando pedir inclusão de placa">
+                            <i class="fas fa-rotate"></i> Atualizar
+                        </button>
+                    </div>
                 </div>`);
         } catch {
             abrirModal('Cobertura da frota', `

@@ -4707,6 +4707,38 @@ def sugerir_condutor_multa(multa_id):
     })
 
 
+# A lista de veiculos do contrato muda raramente — guardar evita pagar uma
+# consulta ao SERPRO cada vez que alguem abre a tela de cobertura.
+COBERTURA_CACHE_KEY = 'efrotas_contrato_veiculos'
+
+
+def _cobertura_cache_ler():
+    """(lista, data) do ultimo retorno do SERPRO. (None, None) se nunca houve."""
+    try:
+        with _db() as (conn, cur):
+            cur.execute('SELECT value FROM app_config WHERE key = %s',
+                        (COBERTURA_CACHE_KEY,))
+            row = cur.fetchone()
+        if not row or not row[0]:
+            return None, None
+        guardado = json.loads(row[0])
+        return guardado.get('veiculos'), guardado.get('data')
+    except Exception as e:
+        app.logger.warning('[cobertura] cache ilegivel: %s', e)
+        return None, None
+
+
+def _cobertura_cache_gravar(veiculos, data):
+    try:
+        payload = json.dumps({'data': data, 'veiculos': veiculos})
+        with _db() as (conn, cur):
+            cur.execute('''INSERT INTO app_config (key, value) VALUES (%s, %s)
+                           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value''',
+                        (COBERTURA_CACHE_KEY, payload))
+    except Exception as e:
+        app.logger.warning('[cobertura] nao consegui gravar o cache: %s', e)
+
+
 @app.route('/api/multas/cobertura-frota')
 @login_required
 def cobertura_frota_efrotas():
@@ -4715,44 +4747,73 @@ def cobertura_frota_efrotas():
     Serve para acompanhar quais placas ja entraram no contrato e quais ainda
     nao podem ser consultadas — sem isso, a sincronizacao simplesmente ignora
     a placa e o operador nao fica sabendo.
+
+    Query string:
+      atualizar=1   busca no SERPRO e regrava o cache (consome uma consulta)
+
+    Sem 'atualizar', responde pelo cache. A lista do contrato muda raramente,
+    entao nao faz sentido pagar uma consulta so para reabrir a tela.
     """
-    base, headers = _efrotas_cfg()
-    if base is None:
-        return jsonify({'success': False, 'error': headers}), 503
+    forcar = request.args.get('atualizar') == '1'
+    cache, cache_data = _cobertura_cache_ler()
 
-    # 1. Veiculos vinculados ao contrato, no SERPRO
-    try:
-        resp = _efrotas_get('%s/consultas/v1/veiculos' % base, headers=headers,
-                            params={'pagina': 1, 'quantidade': 500}, timeout=60)
-    except requests.Timeout:
-        return jsonify({'success': False, 'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
-    except Exception as e:
-        app.logger.error('Erro em cobertura_frota_efrotas: %s', e)
-        return jsonify({'success': False, 'error': 'Falha ao conectar no eFrotas.'}), 502
+    if forcar or cache is None:
+        base, headers = _efrotas_cfg()
+        if base is None:
+            # Sem credencial ainda da para mostrar o cache, se houver
+            if cache is None:
+                return jsonify({'success': False, 'error': headers}), 503
+        else:
+            try:
+                resp = _efrotas_get('%s/consultas/v1/veiculos' % base, headers=headers,
+                                    params={'pagina': 1, 'quantidade': 500}, timeout=60)
+            except requests.Timeout:
+                if cache is None:
+                    return jsonify({'success': False,
+                                    'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
+                resp = None
+            except Exception as e:
+                app.logger.error('Erro em cobertura_frota_efrotas: %s', e)
+                if cache is None:
+                    return jsonify({'success': False,
+                                    'error': 'Falha ao conectar no eFrotas.'}), 502
+                resp = None
 
-    if resp.status_code != 200:
-        return jsonify({'success': False, 'error': _efrotas_erro(resp)}), 502
+            if resp is not None:
+                if resp.status_code != 200:
+                    if cache is None:
+                        return jsonify({'success': False, 'error': _efrotas_erro(resp)}), 502
+                else:
+                    try:
+                        lista = resp.json()
+                    except ValueError:
+                        if cache is None:
+                            return jsonify({'success': False,
+                                            'error': 'Resposta invalida do eFrotas.'}), 502
+                        lista = None
+                    if lista is not None:
+                        if isinstance(lista, dict):
+                            lista = lista.get('veiculos') or lista.get('content') or []
+                        cache = [{'placa': v.get('placa'),
+                                  'renavam': v.get('renavam'),
+                                  'modelo': v.get('descricaoMarcaModelo')}
+                                 for v in lista
+                                 if isinstance(v, dict) and v.get('placa')]
+                        cache_data = str(_date.today())
+                        _cobertura_cache_gravar(cache, cache_data)
 
-    try:
-        lista = resp.json()
-    except ValueError:
-        return jsonify({'success': False, 'error': 'Resposta invalida do eFrotas.'}), 502
-    if isinstance(lista, dict):
-        lista = lista.get('veiculos') or lista.get('content') or []
+    if cache is None:
+        return jsonify({'success': False,
+                        'error': 'Nenhuma consulta feita ainda. Use "Atualizar" '
+                                 'para buscar a lista no SERPRO.'}), 404
 
     def _limpa(p):
         return re.sub(r'[^A-Z0-9]', '', (p or '').upper())
 
-    no_contrato = {}
-    for v in lista:
-        if isinstance(v, dict) and v.get('placa'):
-            no_contrato[_limpa(v['placa'])] = {
-                'placa':   v.get('placa'),
-                'renavam': v.get('renavam'),
-                'modelo':  v.get('descricaoMarcaModelo'),
-            }
+    no_contrato = {_limpa(v['placa']): v for v in cache if v.get('placa')}
 
-    # 2. Frota cadastrada no sistema
+    # A frota vem sempre do banco: veiculo cadastrado hoje aparece agora,
+    # sem precisar de uma nova consulta ao SERPRO.
     with _db() as (conn, cur):
         cur.execute('''SELECT id, placa, marca, modelo, status
                        FROM veiculos WHERE placa IS NOT NULL
@@ -4774,13 +4835,17 @@ def cobertura_frota_efrotas():
         else:
             descobertas.append(item)
 
-    # 3. No contrato mas ausentes do sistema (comprados/vendidos sem cadastrar)
     chaves_sistema = {_limpa(v['placa']) for v in frota}
     so_no_efrotas = [d for k, d in no_contrato.items() if k not in chaves_sistema]
 
     total = len(frota)
     return jsonify({
         'success': True,
+        'cache': {
+            'data':  cache_data,
+            'dias':  abs(_dias_ate(cache_data)) if cache_data else None,
+            'fonte': 'serpro' if forcar else 'cache',
+        },
         'resumo': {
             'frota_sistema':     total,
             'no_contrato':       len(cobertas),

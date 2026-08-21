@@ -99,14 +99,14 @@
     </div>
 </div>
 
-<!-- Meus Carros -->
+<!-- Frota cadastrada -->
 <div class="card">
-    <div style="padding:14px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9;">
+    <div class="card-header">
         <div>
-            <div style="font-size:1rem;font-weight:700;color:#0f172a;">Meus Carros</div>
-            <div style="font-size:0.72rem;color:#64748b;margin-top:2px;" id="countCarros">0 Carros</div>
+            <h3 class="card-title"><i class="fas fa-list"></i> Frota cadastrada</h3>
+            <div class="page-subtitle" id="countCarros">0 Carros</div>
         </div>
-        <button onclick="exportarCarros()" class="btn" style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;font-size:.8rem;padding:6px 14px;">
+        <button onclick="exportarCarros()" class="btn btn-secondary btn-sm">
             <i class="fas fa-download"></i> Exportar
         </button>
     </div>
@@ -331,8 +331,19 @@
 .vl-row:last-child { border-bottom:none; }
 .vl-row-header { display:grid;grid-template-columns:56px 180px 1fr 120px 110px;align-items:center;gap:0;padding:13px 20px;cursor:pointer;transition:background .1s; }
 .vl-row-header:hover { background:#f8fafc; }
-.vl-act-btn { border:none;background:#f1f5f9;color:#475569;border-radius:8px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:background .1s; }
-.vl-act-btn:hover { background:#e2e8f0; }
+/* Mesmo desenho do .icon-btn global — alias para nao mexer no HTML da tabela */
+.vl-act-btn {
+    width:30px; height:30px; flex-shrink:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    background:var(--surface-2); color:var(--ink-3);
+    border:1px solid var(--line); border-radius:var(--r-sm);
+    font-size:var(--fs-sm); cursor:pointer;
+    transition:background .12s, border-color .12s, color .12s;
+}
+.vl-act-btn:hover { background:var(--line); color:var(--ink); }
+.vl-act-btn i { color:inherit; }
+.vl-act-btn.ok    { background:var(--success-soft); color:var(--success); border-color:var(--success-border); }
+.vl-act-btn.vazio { color:var(--ink-4); }
 .vl-expand { background:#fafbfc;border-top:1px solid #f1f5f9; }
 /* ----- tabs no modal de detalhes ----- */
 .vl-tab { border:none;background:none;padding:8px 16px;font-size:0.8rem;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s; }
@@ -472,8 +483,8 @@ function _renderPageV() {
                 </div>
                 <div style="display:flex;gap:4px;align-items:center;justify-content:flex-end;">
                     <button onclick="event.stopPropagation();editarVeiculo(${v.id})" class="vl-act-btn" title="Editar"><i class="fas fa-pen"></i></button>
-                    <button onclick="event.stopPropagation();abrirCRLV(${v.id},'${v.crlv_url||''}')" class="vl-act-btn" title="${v.crlv_url?'Ver CRLV':'Enviar CRLV'}" style="${v.crlv_url?'color:#15803D;background:#f0fdf4;':'color:#94a3b8;'}"><i class="fas fa-file-alt"></i></button>
-                    <button onclick="event.stopPropagation();abrirDetalhesVeiculo(${v.id})" class="vl-act-btn" title="Informações"><i class="fas fa-info-circle" style="color:#008cdd;"></i></button>
+                    <button onclick="event.stopPropagation();abrirCRLV(${v.id},'${v.crlv_url||''}')" class="vl-act-btn ${v.crlv_url?'ok':'vazio'}" title="${v.crlv_url?'Ver CRLV':'Enviar CRLV'}"><i class="fas fa-file-alt"></i></button>
+                    <button onclick="event.stopPropagation();abrirDetalhesVeiculo(${v.id})" class="vl-act-btn" title="Informações"><i class="fas fa-info-circle"></i></button>
                 </div>
             </div>
             <div id="vlexp_${v.id}" class="vl-expand" style="display:none;">

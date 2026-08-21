@@ -56,7 +56,7 @@
 <!-- Manutenções -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-tools"></i> Manutenções — Painel Unificado <span id="countManutBadge" class="badge badge-info" style="margin-left:8px;font-size:0.72rem;">0</span></h3>
+        <h3 class="card-title"><i class="fas fa-list"></i> Histórico <span id="countManutBadge" class="badge badge-info" style="margin-left:8px;font-size:0.72rem;">0</span></h3>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input type="text" class="form-control" id="filtroPlaca" placeholder="Placa" oninput="filtrarManutencoes()" style="width:110px;" maxlength="8">
             <input type="date" class="form-control" id="filtroDe" onchange="filtrarManutencoes()" style="width:145px;" title="Data de">
@@ -364,7 +364,7 @@
                         <div class="act-wrap">
                             <button class="act-btn" onclick="toggleActMenu(event,'lserp_${m.id}')" title="Ações">⋯</button>
                             <div id="actmenu_lserp_${m.id}" class="act-menu" onclick="event.stopPropagation()">
-                                <button onclick="toggleActMenu(event,-1);verOSLSERP(${m.id})"><i class="fas fa-search" style="color:#008cdd;"></i> Ver OS</button>
+                                <button onclick="toggleActMenu(event,-1);verOSLSERP(${m.id})"><i class="fas fa-search"></i> Ver OS</button>
                                 <button onclick="toggleActMenu(event,-1);definirTipoOS(${m.id})"><i class="fas fa-tag" style="color:#008cdd;"></i> Definir Tipo</button>
                                 <div class="divider" style="height:1px;background:#f1f5f9;margin:2px 0;"></div>
                                 <button onclick="toggleActMenu(event,-1);alterarStatusVeic('${escJsAttr(m.placa)}')"><i class="fas fa-car" style="color:#15803D;"></i> Status do Veículo</button>

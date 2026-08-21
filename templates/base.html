@@ -436,8 +436,31 @@
 
         /* ── Dropdown de Ações (global) ───────────────────────── */
         .act-wrap { position:relative; display:inline-block; }
-        .act-btn { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; padding:4px 10px; font-size:1rem; cursor:pointer; color:#475569; letter-spacing:2px; line-height:1; }
-        .act-btn:hover { background:#e2e8f0; }
+        .act-btn {
+            background: var(--surface-2); border: 1px solid var(--line);
+            border-radius: var(--r-sm); padding: 4px 10px; font-size: 1rem;
+            cursor: pointer; color: var(--ink-2); letter-spacing: 2px; line-height: 1;
+        }
+        .act-btn:hover { background: var(--line); }
+
+        /* ── Botao de icone em tabela — mesmo desenho no sistema todo ── */
+        .icon-btn {
+            width: 30px; height: 30px; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--surface-2); color: var(--ink-3);
+            border: 1px solid var(--line); border-radius: var(--r-sm);
+            font-size: var(--fs-sm); cursor: pointer;
+            transition: background .12s, border-color .12s, color .12s;
+        }
+        .icon-btn:hover { background: var(--line); color: var(--ink); }
+        .icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+        .icon-btn i { color: inherit; }
+        /* Estado, nao enfeite: verde = documento existe, vermelho = destrutivo */
+        .icon-btn.ok      { background: var(--success-soft); color: var(--success); border-color: var(--success-border); }
+        .icon-btn.ok:hover{ background: #dcfce7; }
+        .icon-btn.perigo  { color: var(--danger); }
+        .icon-btn.perigo:hover { background: var(--danger-soft); border-color: var(--danger-border); }
+        .icon-btn.vazio   { color: var(--ink-4); }
         .act-menu { position:absolute; right:0; top:calc(100% + 4px); z-index:300; background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.10); min-width:160px; overflow:hidden; display:none; }
         .act-menu button { display:flex; align-items:center; gap:8px; width:100%; background:none; border:none; text-align:left; padding:9px 14px; font-size:0.8rem; cursor:pointer; color:#334155; }
         .act-menu button:hover { background:#f8fafc; }
