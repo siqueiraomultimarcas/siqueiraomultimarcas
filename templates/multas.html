@@ -285,6 +285,22 @@
            background:#FFFBEB; color:#A16207; border:1px solid #fde68a; white-space:nowrap; }
 
 .pm-rank-item.infr { grid-template-columns:minmax(0,1fr) 190px 66px; }
+
+/* ── Consumo do SERPRO ── */
+.cs-linha { display:flex; align-items:center; gap:var(--sp-3); flex-wrap:wrap; }
+.cs-num   { font-size:var(--fs-xl); font-weight:800; color:var(--ink);
+            line-height:1; font-variant-numeric:tabular-nums; }
+.cs-cap   { font-size:var(--fs-2xs); color:var(--ink-3); text-transform:uppercase;
+            letter-spacing:.04em; font-weight:700; margin-top:3px; }
+.cs-sep   { width:1px; align-self:stretch; background:var(--line-soft); }
+.cs-tipos { display:flex; flex-direction:column; gap:6px; margin-top:var(--sp-4);
+            padding-top:var(--sp-3); border-top:1px solid var(--line-soft); }
+.cs-tipo  { display:grid; grid-template-columns:minmax(0,1fr) 90px 42px;
+            gap:var(--sp-2); align-items:center; font-size:var(--fs-sm); color:var(--ink-2); }
+.cs-barra { height:6px; background:var(--line-soft); border-radius:3px; overflow:hidden; }
+.cs-barra span { display:block; height:100%; background:var(--primary); border-radius:3px; }
+.cs-qtd   { text-align:right; font-weight:700; font-variant-numeric:tabular-nums; }
+.cs-nota  { font-size:var(--fs-2xs); color:var(--ink-4); margin-top:var(--sp-3); line-height:1.5; }
 .pm-tab-wrap { overflow-x:auto; }
 
 .pm-chart-wrap { position:relative; height:210px; }
@@ -383,6 +399,19 @@
                 <div class="pm-box-tit"><i class="fas fa-user-tag"></i> Reincidência por cliente</div>
                 <div class="pm-box-sub">Inclui quem estava com o carro na data, mesmo sem vínculo salvo</div>
                 <div id="pmTopClientes"></div>
+            </div>
+        </div>
+
+        <div class="pm-grid g6040">
+            <div class="pm-box">
+                <div class="pm-box-tit"><i class="fas fa-satellite-dish"></i> Consultas ao SERPRO</div>
+                <div class="pm-box-sub">Quantas chamadas o sistema fez ao contrato eFrotas</div>
+                <div id="pmConsumo"></div>
+            </div>
+            <div class="pm-box">
+                <div class="pm-box-tit"><i class="fas fa-chart-column"></i> Consultas por mês</div>
+                <div class="pm-box-sub">Para comparar com a fatura do contrato</div>
+                <div class="pm-chart-wrap" style="height:180px;"><canvas id="pmChartConsumo"></canvas></div>
             </div>
         </div>
 
@@ -934,6 +963,119 @@
         renderTopClientesPainel(p);
         renderTopInfracoesPainel(p);
         atualizarBadgeAcao(p);
+        carregarConsumoSerpro();
+    }
+
+    /* ── Consultas ao SERPRO ────────────────────────────────────────────────
+       A API nao informa consumo nem preco, entao o sistema conta do proprio
+       lado: cada chamada fica registrada junto com o id de rastreamento
+       devolvido pelo SERPRO, o que permite conferir a fatura linha a linha
+       se houver divergencia. */
+    let _chartConsumo = null;
+
+    async function carregarConsumoSerpro() {
+        const box = document.getElementById('pmConsumo');
+        if (!box) return;
+        let d;
+        try {
+            d = await fetch('/api/multas/consumo-serpro?meses=6').then(r => r.json());
+            if (!d.success) throw new Error('falha');
+        } catch {
+            box.innerHTML = '<div class="pm-vazio">Não foi possível ler o consumo.</div>';
+            return;
+        }
+
+        if (!d.desde_sempre) {
+            box.innerHTML = `<div class="pm-vazio" style="text-align:left;padding:14px 4px;">
+                <i class="fas fa-circle-info" style="color:#008cdd;"></i>
+                <strong style="color:#475569;"> Nenhuma consulta registrada ainda.</strong>
+                <div style="margin-top:7px;line-height:1.55;">
+                  A contagem começa agora. O SERPRO não devolve histórico de uso,
+                  então consultas feitas antes desta atualização não entram.
+                </div></div>`;
+            if (_chartConsumo) { _chartConsumo.destroy(); _chartConsumo = null; }
+            return;
+        }
+
+        const maxTipo = Math.max(...d.por_tipo.map(t => t.qtd), 1);
+        const tipos = d.por_tipo.map(t => `
+            <div class="cs-tipo">
+                <span title="${escHtml(t.rotulo)}">${escHtml(t.rotulo)}</span>
+                <div class="cs-barra"><span style="width:${t.qtd / maxTipo * 100}%"></span></div>
+                <span class="cs-qtd">${t.qtd}</span>
+            </div>`).join('');
+
+        const origem = Object.entries(d.por_origem || {})
+            .map(([k, v]) => `${v} ${k === 'sincronizacao' ? 'pela sincronização' : 'pela tela'}`)
+            .join(' · ');
+
+        box.innerHTML = `
+            <div class="cs-linha">
+                <div>
+                    <div class="cs-num">${d.mes_atual}</div>
+                    <div class="cs-cap">Este mês</div>
+                </div>
+                <div class="cs-sep"></div>
+                <div>
+                    <div class="cs-num">${d.hoje}</div>
+                    <div class="cs-cap">Hoje</div>
+                </div>
+                <div class="cs-sep"></div>
+                <div>
+                    <div class="cs-num">${d.desde_sempre}</div>
+                    <div class="cs-cap">Total registrado</div>
+                </div>
+                ${d.custo.informado ? `
+                <div class="cs-sep"></div>
+                <div>
+                    <div class="cs-num">${formatCurrency(d.custo.mes)}</div>
+                    <div class="cs-cap">Estimado no mês</div>
+                </div>` : ''}
+            </div>
+            ${origem ? `<div class="cs-nota" style="margin-top:9px;">${escHtml(origem)}</div>` : ''}
+            <div class="cs-tipos">${tipos}</div>
+            ${d.falhas_mes > 0 ? `
+            <div class="cs-nota" style="color:#A16207;">
+                <i class="fas fa-triangle-exclamation"></i>
+                ${d.falhas_mes} chamada(s) sem sucesso no mês — placa fora do contrato
+                conta como tentativa e pode ser cobrada.
+            </div>` : ''}
+            <div class="cs-nota">
+                ${d.custo.informado
+                    ? 'Valor estimado pelo preço configurado em EFROTAS_CUSTO_CONSULTA.'
+                    : 'O SERPRO não informa preço pela API. Para ver o valor estimado, defina EFROTAS_CUSTO_CONSULTA nas variáveis de ambiente.'}
+                Contagem iniciada em ${d.primeira ? formatDate(d.primeira) : '—'}.
+            </div>`;
+
+        renderChartConsumo(d.evolucao);
+    }
+
+    function renderChartConsumo(serie) {
+        const ctx = document.getElementById('pmChartConsumo');
+        if (!ctx) return;
+        if (_chartConsumo) _chartConsumo.destroy();
+        _chartConsumo = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: serie.map(e => _mesLabel(e.mes)),
+                datasets: [{
+                    label: 'Consultas', data: serie.map(e => e.qtd),
+                    backgroundColor: 'rgba(0,140,221,.75)', borderRadius: 4, maxBarThickness: 40,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: c => ' ' + c.parsed.y + ' consulta(s)' } }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' },
+                         ticks: { font: { size: 10 }, precision: 0 } }
+                }
+            }
+        });
     }
 
     /* ── Cards de ação: o que fazer hoje ── */
@@ -1287,6 +1429,7 @@
         if (qual === 'dashboard' && _painel) {
             renderEvolucaoPainel(_painel);
             renderGravidadePainel(_painel);
+            carregarConsumoSerpro();
         }
     }
 

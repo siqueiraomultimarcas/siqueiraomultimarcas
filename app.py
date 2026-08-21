@@ -161,7 +161,7 @@ _db_initialized = False
 
 # Versão do schema. INCREMENTE SEMPRE que adicionar CREATE TABLE / ALTER TABLE
 # em init_db(), senão a migração não roda em produção.
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 def init_db():
     """Cria/atualiza o schema. As migrações só rodam quando SCHEMA_VERSION muda —
@@ -612,6 +612,22 @@ def init_db():
         )
     ''')
     cur.execute("CREATE INDEX IF NOT EXISTS idx_login_attempts_ip ON login_attempts(ip, attempted_at)")
+
+    # ── Consultas ao SERPRO: quantas foram feitas, quando e por quem ────────
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS efrotas_consultas (
+            id              SERIAL PRIMARY KEY,
+            momento         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            operacao        TEXT,      -- infracoes | veiculos | pdf_sne | ...
+            alvo            TEXT,      -- placa ou numero do AIT
+            status          INTEGER,   -- HTTP devolvido
+            id_rastreamento TEXT,      -- x-id-rastreamento do SERPRO
+            usuario_id      INTEGER,
+            origem          TEXT       -- tela | sincronizacao
+        )
+    ''')
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_efrotas_momento ON efrotas_consultas(momento)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_efrotas_operacao ON efrotas_consultas(operacao)")
 
     # ── Configurações internas do app ────────────────────────────────────────
     cur.execute('''
@@ -3553,12 +3569,69 @@ def _efrotas_cert():
         return None
 
 
+# Cada consulta ao SERPRO pode ser cobrada pelo contrato, e a API nao informa
+# consumo. Classificar pela URL permite dizer depois "foram 26 consultas de
+# infracao e 2 de PDF" em vez de um numero solto.
+def _efrotas_operacao(url):
+    u = (url or '').lower()
+    if '/sne/pdf/' in u:            return 'pdf_notificacao'
+    if '/infracoes/placa/' in u:    return 'infracoes_placa'
+    if '/infracoes/codigoorgao' in u: return 'infracao_detalhe'
+    if '/veiculos/placa/' in u:
+        if 'renajud' in u:          return 'renajud'
+        if 'roubo' in u:            return 'roubo_furto'
+        if 'recall' in u:           return 'recall'
+        return 'veiculo_dados'
+    if '/veiculos' in u:            return 'veiculos_contrato'
+    if '/crlv' in u or '/documento/placa' in u: return 'crlv'
+    if '/openapi' in u or '/api-docs' in u:     return 'especificacao'
+    if '/notificacoes' in u:        return 'notificacoes'
+    if '/indicacoes' in u:          return 'indicacao'
+    return 'outra'
+
+
+def _efrotas_alvo(url):
+    """Placa ou AIT que a chamada mirou — para conferir linha a linha depois."""
+    m = re.search(r'/placa/([A-Za-z0-9]+)', url or '')
+    if m:
+        return m.group(1).upper()
+    m = re.search(r'/numeroAit/([A-Za-z0-9]+)', url or '', re.IGNORECASE)
+    return m.group(1) if m else None
+
+
+# Marca a origem da chamada: a sincronizacao roda em lote e sem tela aberta
+_EFROTAS_ORIGEM = 'tela'
+
+
+def _registrar_consulta_efrotas(url, status, id_rastreamento):
+    """Nunca deixa o registro derrubar a consulta — no pior caso so nao conta."""
+    try:
+        operacao = _efrotas_operacao(url)
+        if operacao == 'especificacao':
+            return                      # leitura da spec nao e consulta de dados
+        try:
+            uid = current_user.id if current_user.is_authenticated else None
+        except Exception:
+            uid = None
+        with _db() as (conn, cur):
+            cur.execute('''INSERT INTO efrotas_consultas
+                           (operacao, alvo, status, id_rastreamento, usuario_id, origem)
+                           VALUES (%s, %s, %s, %s, %s, %s)''',
+                        (operacao, _efrotas_alvo(url), status, id_rastreamento,
+                         uid, _EFROTAS_ORIGEM))
+    except Exception as e:
+        app.logger.warning('[efrotas] nao consegui registrar a consulta: %s', e)
+
+
 def _efrotas_get(url, **kwargs):
     """GET no eFrotas ja com o certificado de cliente, quando houver."""
     cert = _efrotas_cert()
     if cert:
         kwargs['cert'] = cert
-    return requests.get(url, **kwargs)
+    resp = requests.get(url, **kwargs)
+    _registrar_consulta_efrotas(url, resp.status_code,
+                                resp.headers.get('x-id-rastreamento'))
+    return resp
 
 
 def _efrotas_cfg():
@@ -3898,6 +3971,8 @@ def _sincronizar_multas_frota(forcar=False):
         cur.execute("SELECT id, placa FROM veiculos WHERE placa IS NOT NULL AND status != 'inativo'")
         veiculos = cur.fetchall()
 
+    global _EFROTAS_ORIGEM
+    _EFROTAS_ORIGEM = 'sincronizacao'
     importadas, atualizadas, urgentes, erros = [], [], [], []
     total_encontradas = 0
 
@@ -4001,6 +4076,7 @@ def _sincronizar_multas_frota(forcar=False):
             if urgente:
                 urgentes.append(registro)
 
+    _EFROTAS_ORIGEM = 'tela'
     with _db() as (conn, cur):
         cur.execute('''INSERT INTO app_config (key, value) VALUES ('multas_sync_last_run', %s)
                        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value''', (str(hoje),))
@@ -4108,6 +4184,117 @@ def _classe_prazo(dias):
     if dias <= PRAZO_DEFESA_ALERTA:
         return 'atencao'
     return 'ok'
+
+
+# ── Consumo do contrato eFrotas ──────────────────────────────────────────────
+# A API do SERPRO nao informa consumo nem preco (conferido: nenhum endpoint de
+# cota, nenhum header de limite). Quem conta somos nos, registrando toda
+# chamada em efrotas_consultas. O custo unitario, se houver no contrato, vem
+# de EFROTAS_CUSTO_CONSULTA — sem isso a tela mostra so a quantidade.
+ROTULO_OPERACAO = {
+    'infracoes_placa':   'Multas por placa',
+    'pdf_notificacao':   'PDF da notificação',
+    'veiculos_contrato': 'Veículos do contrato',
+    'veiculo_dados':     'Dados do veículo',
+    'infracao_detalhe':  'Detalhe da infração',
+    'crlv':              'CRLV digital',
+    'renajud':           'Restrições RENAJUD',
+    'roubo_furto':       'Roubo e furto',
+    'recall':            'Recall',
+    'notificacoes':      'Notificações',
+    'indicacao':         'Indicação de condutor',
+    'outra':             'Outras',
+}
+
+
+def _custo_consulta():
+    """Preco por consulta, se o contrato tiver um. 0 = nao informado."""
+    try:
+        return round(float(os.environ.get('EFROTAS_CUSTO_CONSULTA', '0') or 0), 4)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+@app.route('/api/multas/consumo-serpro')
+@login_required
+def consumo_serpro():
+    """Quantas consultas foram feitas ao SERPRO, por mes e por tipo.
+
+    Query string:
+      meses=6   janela do historico (1 a 24)
+    """
+    try:
+        meses = max(1, min(24, int(request.args.get('meses', 6))))
+    except (TypeError, ValueError):
+        meses = 6
+
+    hoje = _date.today()
+    ini_mes = hoje.replace(day=1)
+    total_m = ini_mes.year * 12 + (ini_mes.month - 1) - (meses - 1)
+    corte = _date(total_m // 12, total_m % 12 + 1, 1)
+
+    with _db() as (conn, cur):
+        cur.execute("""SELECT to_char(momento, 'YYYY-MM') AS mes, COUNT(*)
+                       FROM efrotas_consultas WHERE momento >= %s
+                       GROUP BY 1 ORDER BY 1""", (corte,))
+        por_mes = {r[0]: r[1] for r in cur.fetchall()}
+
+        cur.execute("""SELECT operacao, COUNT(*) FROM efrotas_consultas
+                       WHERE momento >= date_trunc('month', CURRENT_DATE)
+                       GROUP BY 1 ORDER BY 2 DESC""")
+        por_tipo = cur.fetchall()
+
+        cur.execute("""SELECT origem, COUNT(*) FROM efrotas_consultas
+                       WHERE momento >= date_trunc('month', CURRENT_DATE)
+                       GROUP BY 1""")
+        por_origem = {r[0] or 'tela': r[1] for r in cur.fetchall()}
+
+        cur.execute("""SELECT COUNT(*) FROM efrotas_consultas
+                       WHERE momento >= date_trunc('month', CURRENT_DATE)""")
+        mes_atual = cur.fetchone()[0]
+
+        cur.execute("""SELECT COUNT(*) FROM efrotas_consultas
+                       WHERE momento::date = CURRENT_DATE""")
+        hoje_qtd = cur.fetchone()[0]
+
+        # Chamadas que falharam tambem podem ser cobradas — vale ver de perto
+        cur.execute("""SELECT COUNT(*) FROM efrotas_consultas
+                       WHERE momento >= date_trunc('month', CURRENT_DATE)
+                         AND (status IS NULL OR status >= 400)""")
+        falhas = cur.fetchone()[0]
+
+        cur.execute("SELECT COUNT(*) FROM efrotas_consultas")
+        desde_sempre = cur.fetchone()[0]
+
+        cur.execute("""SELECT to_char(MIN(momento), 'YYYY-MM-DD') FROM efrotas_consultas""")
+        primeira = cur.fetchone()[0]
+
+    serie = []
+    cursor_m = total_m
+    for _ in range(meses):
+        d = _date(cursor_m // 12, cursor_m % 12 + 1, 1)
+        chave = d.strftime('%Y-%m')
+        serie.append({'mes': chave, 'qtd': por_mes.get(chave, 0)})
+        cursor_m += 1
+
+    custo = _custo_consulta()
+    return jsonify({
+        'success':      True,
+        'hoje':         hoje_qtd,
+        'mes_atual':    mes_atual,
+        'falhas_mes':   falhas,
+        'desde_sempre': desde_sempre,
+        'primeira':     primeira,
+        'por_origem':   por_origem,
+        'por_tipo':     [{'operacao': o, 'rotulo': ROTULO_OPERACAO.get(o, o), 'qtd': n}
+                         for o, n in por_tipo],
+        'evolucao':     serie,
+        'custo': {
+            'unitario':  custo,
+            'informado': custo > 0,
+            'mes':       round(mes_atual * custo, 2) if custo else None,
+        },
+    })
 
 
 @app.route('/api/multas/painel')
