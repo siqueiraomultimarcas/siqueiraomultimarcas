@@ -1025,26 +1025,30 @@
                     <div class="cs-num">${d.desde_sempre}</div>
                     <div class="cs-cap">Total registrado</div>
                 </div>
-                ${d.custo.informado ? `
                 <div class="cs-sep"></div>
                 <div>
-                    <div class="cs-num">${formatCurrency(d.custo.mes)}</div>
-                    <div class="cs-cap">Estimado no mês</div>
-                </div>` : ''}
+                    <div class="cs-num" style="color:#A16207;">${formatCurrency(d.custo.mes)}</div>
+                    <div class="cs-cap">Custo do mês</div>
+                </div>
             </div>
             ${origem ? `<div class="cs-nota" style="margin-top:9px;">${escHtml(origem)}</div>` : ''}
             <div class="cs-tipos">${tipos}</div>
             ${d.falhas_mes > 0 ? `
             <div class="cs-nota" style="color:#A16207;">
                 <i class="fas fa-triangle-exclamation"></i>
-                ${d.falhas_mes} chamada(s) sem sucesso no mês — placa fora do contrato
-                conta como tentativa e pode ser cobrada.
+                ${d.falhas_mes} chamada(s) sem sucesso no mês, cerca de
+                ${formatCurrency(d.falhas_mes * d.custo.unitario)} — placa fora do
+                contrato conta como tentativa e pode ser cobrada.
             </div>` : ''}
             <div class="cs-nota">
-                ${d.custo.informado
-                    ? 'Valor estimado pelo preço configurado em EFROTAS_CUSTO_CONSULTA.'
-                    : 'O SERPRO não informa preço pela API. Para ver o valor estimado, defina EFROTAS_CUSTO_CONSULTA nas variáveis de ambiente.'}
-                Contagem iniciada em ${d.primeira ? formatDate(d.primeira) : '—'}.
+                ${formatCurrency(d.custo.unitario)} por consulta —
+                faixa ${d.custo.faixa}${d.custo.faixa_ate ? ' (até ' + d.custo.faixa_ate.toLocaleString('pt-BR') + ' consultas/mês)' : ''},
+                pela ${escHtml(d.custo.fonte)}.
+                ${d.custo.proxima_faixa ? `Faltam ${d.custo.proxima_faixa.faltam.toLocaleString('pt-BR')}
+                   consultas para o preço cair a ${formatCurrency(d.custo.proxima_faixa.unitario)}.` : ''}
+                <br>Estimativa própria: a API não devolve consumo nem fatura —
+                o valor oficial é o do SERPRO. Contagem iniciada em
+                ${d.primeira ? formatDate(d.primeira) : '—'}.
             </div>`;
 
         renderChartConsumo(d.evolucao);

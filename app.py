@@ -4207,12 +4207,58 @@ ROTULO_OPERACAO = {
 }
 
 
-def _custo_consulta():
-    """Preco por consulta, se o contrato tiver um. 0 = nao informado."""
-    try:
-        return round(float(os.environ.get('EFROTAS_CUSTO_CONSULTA', '0') or 0), 4)
-    except (TypeError, ValueError):
-        return 0.0
+# Tabela publica do eFrotas — o preco por consulta cai conforme o volume.
+# (limite superior da faixa, valor unitario). None = ultima faixa, sem teto.
+TABELA_CONSULTA_EFROTAS = [
+    (250,       0.45),
+    (700,       0.44),
+    (3000,      0.43),
+    (10000,     0.41),
+    (80000,     0.39),
+    (400000,    0.38),
+    (1300000,   0.35),
+    (None,      0.32),
+]
+# Eventos (webhook) custam a parte e bem mais caro — fica registrado aqui
+# para quando/se a notificacao por evento for habilitada no contrato.
+TABELA_EVENTO_EFROTAS = [
+    (60,      1.12),
+    (300,     1.10),
+    (1000,    1.06),
+    (8000,    1.02),
+    (50000,   0.97),
+    (200000,  0.91),
+    (800000,  0.85),
+    (None,    0.79),
+]
+
+
+def _faixa_efrotas(quantidade, tabela=None):
+    """(unitario, indice da faixa, limite da faixa) para o volume informado.
+
+    O volume manda no preco de TODAS as consultas da faixa — nao e
+    progressivo como imposto de renda.
+    """
+    tabela = tabela or TABELA_CONSULTA_EFROTAS
+    for i, (teto, valor) in enumerate(tabela, start=1):
+        if teto is None or quantidade <= teto:
+            return valor, i, teto
+    return tabela[-1][1], len(tabela), None
+
+
+def _custo_consulta(quantidade=1):
+    """Valor unitario para o volume do periodo.
+
+    EFROTAS_CUSTO_CONSULTA sobrepoe a tabela — util se o contrato tiver
+    preco negociado diferente do publicado.
+    """
+    negociado = os.environ.get('EFROTAS_CUSTO_CONSULTA', '').strip()
+    if negociado:
+        try:
+            return round(float(negociado), 4)
+        except (TypeError, ValueError):
+            pass
+    return _faixa_efrotas(max(1, quantidade))[0]
 
 
 @app.route('/api/multas/consumo-serpro')
@@ -4277,7 +4323,18 @@ def consumo_serpro():
         serie.append({'mes': chave, 'qtd': por_mes.get(chave, 0)})
         cursor_m += 1
 
-    custo = _custo_consulta()
+    negociado = bool(os.environ.get('EFROTAS_CUSTO_CONSULTA', '').strip())
+    unitario, faixa, teto = _faixa_efrotas(max(1, mes_atual))
+    if negociado:
+        unitario = _custo_consulta(mes_atual)
+
+    # Quanto falta para o preco cair de faixa — so informativo
+    proxima = None
+    if teto is not None and not negociado:
+        seguinte = TABELA_CONSULTA_EFROTAS[faixa] if faixa < len(TABELA_CONSULTA_EFROTAS) else None
+        if seguinte:
+            proxima = {'faltam': teto + 1 - mes_atual, 'unitario': seguinte[1]}
+
     return jsonify({
         'success':      True,
         'hoje':         hoje_qtd,
@@ -4290,9 +4347,14 @@ def consumo_serpro():
                          for o, n in por_tipo],
         'evolucao':     serie,
         'custo': {
-            'unitario':  custo,
-            'informado': custo > 0,
-            'mes':       round(mes_atual * custo, 2) if custo else None,
+            'unitario':  unitario,
+            'informado': True,
+            'fonte':     'contrato' if negociado else 'tabela publica eFrotas',
+            'faixa':     faixa,
+            'faixa_ate': teto,
+            'mes':       round(mes_atual * unitario, 2),
+            'hoje':      round(hoje_qtd * unitario, 2),
+            'proxima_faixa': proxima,
         },
     })
 
