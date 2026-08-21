@@ -3979,6 +3979,175 @@ def pdf_sne_multa(multa_id):
                     headers={'Content-Disposition': 'inline; filename="%s"' % nome})
 
 
+@app.route('/api/multas/importar-efrotas', methods=['POST'])
+@login_required
+def importar_multas_efrotas():
+    """Importa para o sistema as infracoes escolhidas na tela de consulta.
+
+    Body: {placa, infracoes: [{numero_auto, codigo_orgao, codigo_infracao, ...}]}
+    Ignora as que ja existem (chave: numero do AIT) e nao mexe em condutor.
+    """
+    body   = request.json or {}
+    placa  = re.sub(r'[^A-Z0-9]', '', (body.get('placa') or '').upper())
+    lista  = body.get('infracoes') or []
+    if not placa or not lista:
+        return jsonify({'error': 'Informe a placa e as infracoes a importar'}), 400
+
+    hoje = _date.today()
+    importadas, ignoradas = [], 0
+
+    with _db() as (conn, cur):
+        cur.execute('SELECT id FROM veiculos WHERE UPPER(REGEXP_REPLACE(placa, %s, %s, %s)) = %s',
+                    (r'[^A-Za-z0-9]', '', 'g', placa))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Veiculo com placa %s nao encontrado no sistema' % placa}), 404
+        veiculo_id = row[0]
+
+        for i in lista:
+            auto = (i.get('numero_auto') or '').strip()
+            if not auto:
+                continue
+            cur.execute('SELECT 1 FROM multas WHERE numero_auto = %s', (auto,))
+            if cur.fetchone():
+                ignoradas += 1
+                continue
+
+            dias = _dias_ate(i.get('data_limite_defesa'))
+            urgente = dias is not None and dias <= PRAZO_DEFESA_ALERTA
+            obs = 'Importada do eFrotas em %s' % hoje
+            if urgente:
+                obs = 'PRAZO CURTO — defesa ate %s (%s dia(s)). %s' % (
+                    i.get('data_limite_defesa'), dias, obs)
+
+            cur.execute('''
+                INSERT INTO multas (veiculo_id, motorista_id, data_infracao, hora_infracao,
+                                    descricao, valor, local_infracao, status, observacoes,
+                                    numero_auto, tipo_notificacao, data_limite_defesa,
+                                    data_pagamento, codigo_orgao, codigo_infracao)
+                VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (veiculo_id,
+                  i.get('data_infracao') or None,
+                  i.get('hora_infracao') or None,
+                  i.get('descricao'),
+                  float(i.get('valor') or 0),
+                  i.get('local_infracao') or None,
+                  'pago' if i.get('pago') else 'pendente',
+                  obs, auto,
+                  'nic' if 'NAO IDENTIFICACAO' in (i.get('descricao') or '').upper() else 'multa',
+                  i.get('data_limite_defesa') or None,
+                  i.get('data_pagamento') or None,
+                  i.get('codigo_orgao') or None,
+                  i.get('codigo_infracao') or None))
+            importadas.append({'id': cur.fetchone()[0], 'numero_auto': auto, 'urgente': urgente})
+
+    return jsonify({
+        'success': True,
+        'importadas': len(importadas),
+        'ignoradas': ignoradas,
+        'urgentes': sum(1 for x in importadas if x['urgente']),
+        'detalhe': importadas,
+    })
+
+
+@app.route('/api/veiculos/consultar-efrotas/<placa>')
+@login_required
+def consultar_veiculo_efrotas(placa):
+    """Dados oficiais do veiculo no DENATRAN, via eFrotas, para o cadastro.
+
+    Devolve os campos ja no formato dos inputs da tela de veiculos, mais os
+    indicadores de roubo/furto e recall.
+    """
+    base, headers = _efrotas_cfg()
+    if base is None:
+        return jsonify({'success': False, 'error': headers}), 503
+
+    placa_lim = re.sub(r'[^A-Z0-9]', '', (placa or '').upper())
+    if len(placa_lim) != 7:
+        return jsonify({'success': False, 'error': 'Placa deve ter 7 caracteres'}), 400
+
+    try:
+        resp = _efrotas_get('%s/consultas/v1/veiculos/placa/%s' % (base, placa_lim),
+                            headers=headers, timeout=30)
+    except requests.Timeout:
+        return jsonify({'success': False, 'error': 'Tempo de conexao com o eFrotas excedido.'}), 504
+    except Exception as e:
+        app.logger.error('Erro em consultar_veiculo_efrotas: %s', e)
+        return jsonify({'success': False, 'error': 'Falha ao conectar no eFrotas.'}), 502
+
+    if resp.status_code == 403:
+        return jsonify({'success': False,
+                        'error': 'Placa %s nao esta vinculada ao contrato eFrotas.' % placa_lim}), 403
+    if resp.status_code != 200:
+        return jsonify({'success': False, 'error': _efrotas_erro(resp)}), 502
+
+    try:
+        d = resp.json()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Resposta invalida do eFrotas.'}), 502
+    if isinstance(d, list):
+        if not d:
+            return jsonify({'success': False, 'error': 'Veiculo nao encontrado'}), 404
+        d = d[0]
+
+    # "CHEV/CELTA 1.0L LT ADVAN" -> marca "Chev", modelo "Celta 1.0L Lt Advan"
+    marca_modelo = (d.get('descricaoMarcaModelo') or '').strip()
+    if '/' in marca_modelo:
+        marca, _, modelo = marca_modelo.partition('/')
+    else:
+        partes = marca_modelo.split(' ', 1)
+        marca, modelo = partes[0], (partes[1] if len(partes) > 1 else '')
+
+    def _titulo(v):
+        v = (v or '').strip()
+        return v.title() if v and v.upper() == v else v
+
+    # Combustivel do DENATRAN para o vocabulario do sistema
+    comb = (d.get('descricaoCombustivel') or '').upper()
+    if 'ALCOOL' in comb and 'GASOLINA' in comb: combustivel = 'Flex'
+    elif 'DIESEL' in comb:                      combustivel = 'Diesel'
+    elif 'ELETRIC' in comb:                     combustivel = 'Elétrico'
+    elif 'HIBRID' in comb:                      combustivel = 'Híbrido'
+    elif 'GNV' in comb:                         combustivel = 'GNV'
+    elif 'ALCOOL' in comb:                      combustivel = 'Álcool'
+    elif 'GASOLINA' in comb:                    combustivel = 'Gasolina'
+    else:                                       combustivel = _titulo(comb)
+
+    especie = (d.get('descricaoEspecie') or '').upper()
+    tipo    = (d.get('descricaoTipoVeiculo') or '').upper()
+    if 'CAMINHONETA' in tipo or 'CAMIONETA' in tipo: categoria = 'SUV'
+    elif 'CAMINHONETE' in tipo or 'CARGA' in especie: categoria = 'Utilitário'
+    elif 'PASSAGEIRO' in especie or 'AUTOMOVEL' in tipo: categoria = 'Econômico'
+    else: categoria = None
+
+    ind = d.get('indicadores') or {}
+    alertas = []
+    if ind.get('rouboFurto'): alertas.append('Consta ocorrência de ROUBO/FURTO')
+    if ind.get('recall'):     alertas.append('Consta RECALL pendente')
+
+    return jsonify({
+        'success': True,
+        'dados': {
+            'placa':           d.get('placa') or placa_lim,
+            'renavam':         d.get('renavam'),
+            'chassi':          d.get('chassi'),
+            'marca':           _titulo(marca),
+            'modelo':          _titulo(modelo),
+            'cor':             _titulo(d.get('descricaoCor')),
+            'ano':             d.get('anoModelo'),
+            'ano_fabricacao':  d.get('anoFabricacao'),
+            'combustivel':     combustivel,
+            'categoria':       categoria,
+            'municipio':       _titulo(d.get('descricaoMunicipioEmplacamento')),
+            'uf':              d.get('ufJurisdicao'),
+            'procedencia':     _titulo(d.get('procedencia')),
+        },
+        'alertas': alertas,
+        'proprietario': (d.get('proprietario') or {}).get('numeroDocumento'),
+    })
+
+
 _APIBRASIL_ESTADOS = ['MG','AL','PB','GO','MS','RR','PE','MA','TO','PA','PI','AM','SC','SE','PR']
 
 def _apibrasil_consultar_estado(url_base, token, estado, placa, renavam):
